@@ -1151,9 +1151,11 @@ Figure~\ref{fig:subset-properties}.
 \end{verbatim}
 
 \item[Side effects]
-  The macro body changes program state via assignment (of the form {\tt =},
-  {\tt {\em op}=}, {\tt -{}-}, or {\tt ++}).  We did not track calls to
-  functions or macros with side effects.  The side effect may be to a
+  The macro body directly changes program state via assignment (of the form
+  {\tt =}, {\tt {\em op}=}, {\tt -{}-}, or {\tt ++}).  
+  Indirect side
+  effects due to function or macro calls were not counted in this category.
+  The side effect may be to a
   global variable, a variable local to the macro body, a macro parameter,
   or a local variable in scope at the point of macro invocation.
   Examples of the four varieties of side effects are:
@@ -1245,7 +1247,8 @@ Figure~\ref{fig:subset-properties}.
 \end{verbatim}
   No C or C++ language mechanism can replace such macros.  This feature is
   particularly useful in debugging, in order to record the exact
-  operations being performed.
+  operations being performed.  Tables that interconvert internal names and
+  strings can also be useful for serialization.
 
 \item[Self-referential]
   The body refers to its own name, as in {\tt \#define LBIT vcat(LBIT)}.
@@ -1264,17 +1267,26 @@ Figure~\ref{fig:subset-properties}.
 
 Differences between C's execution model and Cpp's macro expansion can give
 rise to unanticipated behavior from syntactically valid programming
-constructs.  Unlike the extra-linguistic constructs discussed in
-Section~\ref{sec:extra-linguistic}, these are generally bugs rather than
-uses of Cpp mechanisms to achieve results outside the abilities of the C
-language.  We verified that many current uses in the packages we examined
-happen not to expand erroneously.
-For example, all arguments to a macro with a
-precedence error may be expressions with high precedence, or all argument
-to a macro that evaluates its argument multiple times may be
+constructs.  We call a macro erroneous if its functionality could be
+achieved by a C function, but in some contexts the macro behaves
+differently than that function would.  Unlike the extra-linguistic
+constructs discussed in Section~\ref{sec:extra-linguistic}, these are
+generally bugs rather than uses of Cpp mechanisms to achieve results
+outside the abilities of the C language.
+
+We verified that many current uses of erroneous macros in the packages we
+examined happen not to expand erroneously.  For example, all arguments to a
+macro with a precedence error may be expressions with high precedence, or
+all arguments to a macro that evaluates its argument multiple times may be
 side-effect-free.  However, future uses may well give rise to these dormant
 errors, especially by programmers not familiar with the (generally
-undocumented) caveats relating to use of each macro.
+undocumented) caveats relating to use of each macro.  If caveats for the
+macro's use were prominently documented (such as requiring arguments to be
+side-effect-free or parenthesized), then the macro definition could be
+argued to be error-prone rather than erroneous, but this was not the case
+in practice.  We call the macros erroneous because they fail to adhere to
+their implied specification\,---\,the standard C execution model.
+
 
 \begin{figure}
   {\small\centerline{\input{tbl-lint.tex}}}
@@ -1308,8 +1320,13 @@ described below.
 \end{alltt}
         the macro invocation computes the value 10, not 14.
         This warning is suppressed when the argument is the entire body
-        or is the last element of a comma-delimited list:  the commas of
-        such lists have low precedence, making a precedence error unlikely.
+        or is the last element of a comma-delimited list:  commas have
+        lower precedence than any other operator, making a precedence error
+        unlikely.
+        (C's grammar prohibits sequential expressions such as {\tt a,b} as
+        function arguments, so a precedence error can occur only for
+        functions defined via the {\tt varargs} or {\tt stdarg} facilities
+        that take multiple arguments.)
 
 \item[multiple formal uses]
   Some argument is used as an expression multiple times, so any side
@@ -1544,7 +1561,7 @@ or versions of a program.
 %% "22 out of 26, 98%": tbl-def-frequency
 %% I then added remind, since its numbers are screwed up in the current impl.
 
-Overall, 86\% of macros are defined just once; 10\% are defined twice;
+Overall, 86\% of macro names are defined just once; 10\% are defined twice;
 2.0\% are defined three times; 0.8\% are defined four times; and the other
 1.2\% are defined five or more times.
 The most frequently redefined macros are those most complicated to
@@ -1790,8 +1807,8 @@ with incompatible definitions.
     names are categorized as ``other'' (4.4\% of all multiply-defined
     macro names; overall, 2.0\% of all macro names are so categorized).
     This chart shows which different macro definition categories tend
-    to co-occur and assists in understanding the reasons for macro names
-    whose multiple definitions case them to be categorized as ``other''.}
+    to occur together and assists in understanding the reasons for macro names
+    whose multiple definitions cause them to be categorized as ``other''.}
 
   \label{fig:subset-categories}
 \end{figure}

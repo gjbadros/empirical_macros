@@ -1,0 +1,521 @@
+> What criteria did you use to prune your taxonomy for this paper?  Was
+> there anything useful in the elaboration of some taxons?  Did you do
+> some pruning on the basis of experimental measurement?  If so, it may
+> be worth saying ``a priori, we though taxon X would be significant,
+> but measurements showed otherwise, so we consider X only as it forms
+> part of Y.''
+
+> (Aside: I suspect that a discussion of the taxonomy will show that it
+> does not make sense to lump Makefiles and other non-C code in with the
+> C programs in the experimental measurements.)
+
+We process some files containing many macro definitions, some of which were
+primarily used in C code and some of which were primarily used in Makefiles
+or elsewhere.  This does occurs in practice (for instance, it may be used
+for configuration), as we've made clear in the paper.
+
+
+Be sure that we offer the code and the data (give a URL, or not?).
+
+
+> You have version numbers.  Do you have other
+> independent information (even guesses) about the packages?  Bug rates?
+> Number of users?  Can your analysis of usage within a package tell us
+> anything about that package?
+
+Though this would definitely be interesting, and we now mention it in
+our new Future work section 10, it is not our intention in this paper to 
+do a longitudinal study on a single package.  We expect our work will
+encourage and enable careful study of other features.
+
+> What does it mean to say cpp can define new syntax?
+
+Cpp can create operators (macros) which differ from any pre-existing
+language constructs -- say, by taking types as arguments.  The current
+draft doesn't spell this out, but we can add this if desired.
+
+> What does it mean to say cpp permits system dependencies to be made
+> explicit and tested?
+
+An explicit #if is superior to, say, instructions in a README file about
+different ways to build a program on different platforms.  The Cpp macros
+and tests reify those system dependences.  Again, this is not included in
+the current draft but can easily be added if necessary.
+
+> What is `disciplined' use of the preprocessor?  Who decides?  Which of
+> the usages in the paper are disciplined?  Connect the usages with
+> programmer effort and portability.
+
+Disciplined use avoids error-prone and difficult-to-understand constructs.
+The remainder of the paper investigates which constructs those are.  They
+will depend to some extent on specific circumstances and needs and as such
+are difficult to formalize.
+
+> What evidence is there that preprocessing may limit the readability
+> and reusability of the C++ templates inferred by Siff and Reps?
+
+Expansion of macros can result in code that will perform incorrectly when
+it is compiled into a system with different settings for those macros.
+More prosaically, it can convert code that was terse and high-level, with
+reasonable names, into verbose, low-level gibberish.
+
+> I'm not very convinced by your list.  It's all
+> too vague and general.  Try to improve or prune the list.  Definitely
+> give a concrete example of each.
+
+We give an example of each, with each example taken directly from one of
+the packages we studied.
+[Do we say that explicitly?]
+
+> Why is high total use problematic?  Computers are good at doing
+> the same thing over and over.
+
+People are not, however; the text refers to humans as well as tools.
+More directly to the point, one might hypothesize that the approach chosen
+by most tools -- to ignore macros -- would work well if there are few
+macros.  (The problems with such approaches -- for instance, the tool
+reports errors if the tool tries to treat macros as variables or functions,
+or discrepancies between the tool's input and the actual source code if the
+code is preprocessed before being analyzed by the tool -- are discussed
+immediately above.  A small amount of such problems might be acceptable to
+a user; a large amount is likely not to.)  The quantity of preprocessor use
+is directly relevant to that hypothesis.
+
+> Some of the value of macros comes from multiple definitions (e.g., for
+> portability or dialects).  Why is this a problem?  Make your case.
+
+The problem, as now noted in the text, is when the definitions are
+incompatible.  They apparently have different intended uses, and such name
+clashes can lead to either bugs or difficulties in understanding the code.
+
+> Disclaimer about library macros should be more prominent.
+
+Note that this is a feature, not a disclaimer.  The large number of library
+macros swamps use in the package, rendering the results meaningless for
+learning about how the package uses Cpp.  After we discovered this, we
+suppressed library macros from our results.
+
+
+
+The relationship between GNU programs and the GNU Coding Standards is
+tenuous at best.  Most GNU programs do not appear to have been written with
+an eye to the standards.
+
+>   3) There are almost no small programs.
+
+Right!  That's a feature.  Small programs are amenable to hand-analysis or
+to ad hoc techniques.  A small program can be successfully written in
+almost any style and can be successfully analyzed by almost any technique,
+including manual ones.  Since small programs may have different properties
+than large programs -- which are the only ones that are hard to deal with,
+so are of most interest to researchers and practitioners -- we have omitted
+them.
+
+>   4) Interesting codes possibly worth adding include:
+>        - the Linux kernel or parts thereof
+>        - BSD sources
+>        - Runtime system from SML/NJ or Objective CAML
+>        - tcl implementation
+>        - Hanson's C Interfaces and Implementations
+
+These are good suggestions; we had many other candidates as well.  With
+well over a million lines of code already under analysis, we decided that
+we didn't need any more programs.  Additionally, we did not wish to
+introduce even further variation into our population (say, by including
+partial programs or libraries).
+
+> I found I didn't learn anything from the fact that different packages
+> had different profiles.  I was disappointed.  Did you learn anything?
+
+One might speculate that all packages use Cpp in similar ways.  We have
+disproved that speculation.  In the absence of our data, one might further
+speculate that a tool could focus on just a few Cpp directives, ignoring
+the others that are little used, and yet handle the majority of Cpp usage.
+Our data also disproves that speculation.  This is now explained in the last
+sentence of the introduction to section 4.
+
+Additionally, it seems valuable to provide the data, as others might notice
+patterns that we did not.  Finally, we address the packages making most use
+of Cpp in section 4.2.
+
+> How much of your 11,000 lines of perl might be useful for other kinds
+> of analyses?
+
+It depends on the analysis; anywhere from nearly all of it it nearly none
+of it, we would guess.  Much of the code is an approximate, Cpp-aware
+parser that others might find useful.  Reuse of our infrastructure for
+other kinds of analyses was not a primary driver during our research.
+
+> HAVE_PROTO is worth discussing.  You may want to compare the
+> HAVE_PROTO technique to this technique:
+>   #ifdef __STDC__
+>   #define ARGS(list) list
+>   #else
+>   #define ARGS(list) ()
+>   #endif
+> and its use as
+>   extern void  *allocate ARGS((unsigned long n, unsigned a));
+> in order to make the point that it is not necessary to have so much
+> conditional compilation.
+
+Such an approach has the (often unacceptable) consequence of omitting type
+information from the declaration in the K&R case.  Some packages use a more
+convoluted style to achieve the proper effect, like this example from bc
+(files bc-1.03/dc.h and bc-1.03/dc-number.c):
+
+  #ifndef __STDC__
+  # define DC_PROTO(x)			()
+  # define DC_DECLVOID()			()
+  # define DC_DECLARG(arglist)	arglist
+  # define DC_DECLSEP				;
+  # define DC_DECLEND				;
+  #else /* __STDC__ */
+  # define DC_PROTO(x)			x
+  # define DC_DECLVOID()			(void)
+  # define DC_DECLARG(arglist)	(
+  # define DC_DECLSEP				,
+  # define DC_DECLEND				)
+  #endif /* __STDC__ */
+
+  dc_data
+  dc_getnum DC_DECLARG((input, ibase, readahead))
+	  int (*input) DC_PROTO((void)) DC_DECLSEP
+	  int ibase DC_DECLSEP
+	  int *readahead DC_DECLEND
+  {
+    /* function body */
+  }
+
+It is hard to argue that this is really superior to the HAVE_PROTO case,
+for which at least some tools (such as tags tables and approximate parsers)
+work.  We had omitted a discussion of this because of length, but can
+reinstate it if necessary.
+
+> Shouldn't the extra-linguistic category include Syntactic macros?
+
+The third sentence of the paragraph notes that extra-linguistic
+capabilities provide a feature unavailable in the C language.  By contrast,
+macros categorized as syntactic act as punctuation.  Since these are
+orthogonal classifications, some but not all syntactic macros will provide
+extra-linguistic capabilities (such as dynamic binding).
+
+> How did you develop your list of macro pitfalls?  Aren't these
+> well known in the C literature?  How does your work relate?
+> Your contribution would be more valuable if you were identifying the
+> incidence of well understood problems instead of problems of your own
+> invention. 
+
+Our list comes primarily from our own experience and examination of our
+codebase; after developing it, we formally compared it to the lists of
+others, as described in Section 8.  (We did that comparison last to avoid
+being prejudiced by others' results.  We were not completely uninfluenced
+by previous work, as some of the errors are well-known in the C/C++
+community and in many cases we had previously read those papers or
+manuals.)
+
+We have found no other list as comprehensive as ours, though most of the
+items appear on some other list of macro errors or recommendations.
+(Exceptions include free non-global variables (a potential, not certain,
+error), inconsistent arity, and null body with arguments.)
+
+All of our examples come from the packages we studied, and we culled our
+list by eliminating warnings we considered uninteresting or which did not
+appear in practice.
+
+
+Not all macros look like function calls; in particular, argumentless macros
+do not.  
+
+
+This is an example of a fact that has startled some readers while coming as
+no surprise to other readers with a different background.  Empirically, we
+have found it impossible to predict what will be interesting or boring to
+different audiences; as we note in our cover letter, responses have been
+quite varied.
+
+
+> Explain /**/-style pasting.
+
+We describe this on page 15.  If desired, we could add one more explanatory
+sentence: "For instance, in K&R C, to/**/ken is interpreted as a single
+token, and macros might be expanded on either side of the comment as well."
+
+> Page 20:
+> 
+> I don't like the games you are playing with X axes.  How about putting
+> the uses=0 data as separate blots, not connected to the rest of the
+> graph, and using a true logarithmic scale for the rest of the data?
+
+We now use a true logarithmic axis, with the addition of 0.  We have
+connected the uses=0 lines to the rest of the graph because otherwise it is
+too hard to puzzle out which of the (closely spaced) blots for uses=0 is
+associated with which curve.
+
+> In Section 6.1, are we talking multiple macros on one line or macros
+> invoking macros?  Wouldn't it be useful to distinguish those cases?
+
+This section is about dependences, which include invocations (which we call
+expansion-dependence) but are not restricted to them.  Our data give
+transitive dependences.  We hope this is now clear from our remark that the
+LEGITIMIZE_ADDRESS line, which contains five tokens (and only one macro) is
+dependent on hundreds of macros.
+
+> Figure 14 needs work.  The labels are too small.  The numbers on the X
+> axis should label the boundaries between bars, not the bars
+> themselves.  This relabeling will eliminate the need for the epsilon
+> bar (called e in the figure).  It is probably worth putting both Y
+> axes on the same scale, even if you must increase the amount of
+> vertical space devoted to the figure.
+
+[Make sure that the entries label the bars, not the spaces between the bars.]
+
+> If so, how frequent are
+> those usages according to your data?  Does the frequency vary by
+> package?
+
+We collected this data, but do not have room for it in the paper (and did
+not find it particularly illuminating).
+
+> Can the variation be correlated to maturity?  Bug reports?
+> Age relative to the ANSI standard?
+
+As mentioned earlier, a detailed study of specific software packages would
+be welcome but is beyond the scope of this paper.
+
+> You criticize Spuler and Sajeev for not justifying tradeoffs between
+> techniques that perform parsing and those that do not.  I see no such
+> justification in your paper.  You barely even explain your techniques
+> for identifying and classifying potential errors.
+
+Those tradeoffs are a major theme of the Spuler and Sageev paper, which
+contains frequent comments like "The extra cost is hardly justified, since
+incorrect warnings appear rarely," and "This technique will rarely find
+extra errors and the simpler algorithm is quite adequate."  Absolutely no
+justification is provided.  Those tradeoffs in techniques are not the major
+theme of our paper, though perhaps the community would welcome followon
+work that examined this issue more rigorously.
+
+We can add the above to the paper if it would be helpful.
+
+> Page 27:
+> 
+> Define `problematic' uses.
+
+Uses are problematic if they are likely to inhibit some task, such as
+correct execution, program understanding, or automatic analysis.  In
+particular, erroneous macros and those that expand as a sequence of tokens
+rather than a whole language construct fall under this rubric; others may,
+too, depending on the context.
+
+We have eliminated many uses of this word, often substituting
+"error-prone", but that does not capture the full connotations of
+"problematic", which we often desire.
+
+> Your argument about standardization might apply to new code.  It
+> certainly doesn't apply to legacy code.  Does that matter?
+
+It does apply to legacy code that is being maintained or otherwise
+modified.  That covers most legacy code (and essentially all legacy code
+that people or tools are examining).
+
+> How are the good practices in section 8 different from recommendations
+> made by others?  The benefits you list are very abstract.  Make a case
+> for concrete benefits; show the real problems that are created by
+> ``problematic'' macros.
+
+Section 5.3 shows specific problems caused by erroneous macros.  Other
+problems are often too lengthy for a concrete example.  Our arguments about
+understandability and ease of programming would require a very substantial
+study and then would still be open to doubt; many experienced programmers
+have found them persuasive in their current form.
+
+We also expanded this section to add more references to others' lists; some
+of those lists are also detailed in the previous section.
+
+> You claim to have found interesting and surprising features.  I'm not
+> convinced---identify the most important such features.
+
+Importance depends crucially on task, and surprise, too, depends on the
+reader's preconceptions, prejudices, and previous experience.  Also see
+point 10 of our cover letter.
+
+[Say this explicitly.]
+
+===========================================================================
+
+The revision, while much improved, is still flawed.  I have found it
+difficult to make a recommendation.  While I believe this paper is not
+suitable for publication in its current form, I also believe in the
+value of the work.  TSE rules do not permit me to recommend another
+major revision, so my only possible recommendations are rejection, or
+acceptance with minor revisions to be handled by the editor.  With
+grave reservations, I have recommended the latter.
+
+The major problem with the paper is that it does not deliver on its
+claims.  It does not produce `an understanding of actual usage.'  It
+does not `provides significant insights' about how the preprocessor is
+used in practice.  It does not `confirm or contradict intuitions'
+about the preprocessor.  The paper presents data, not insights.
+Accordingly, if the paper is to be published, the introduction and
+abstract *must* be revised to withdraw the first two claims.  Your
+revised introduction should include all of the information and caveats
+that appear in items 10 and 11 of the letter that accompanies your
+revision.  I believe you may be able substantiate the third claim,
+which you make in the conclusion; otherwise, it too must go.
+[Add some explanation of some sort here.]
+
+Another serious problem is that you still do not present sufficient
+evidence or reasoning indicating why some macros are `erroneous' or
+`problematic'.  Too often these claims are bald assertions.
+
+The taxonomy in section 5.3 contains two grave errors in judgment (in my
+opinion) and an error of fact.  For the paper to be acceptable, this
+section *must* include the *reasoning* backing up the claims.  More below.
+
+The conclusions are much too sketchy.  For example, I can't even
+identify which uses are common for purposes of writing programming
+tools.  If you haven't actually identified common uses, but expect me
+to pull them out of your data, you expect too much.  If you have
+identified common uses, share your knowledge.  As another example,
+*which* features were interesting and surprising?  Which results were
+not predictable a priori.
+
+There are areas of presentation, particularly of figures, that still
+warrant substantial improvement.  Figure 10 in particular is
+unacceptable.  You have most of the information from my first review.
+
+
+Details follow.
+
+
+What are the `difficulties' that could be caused at the end of the
+penultimate paragraph of your introduction?  I had thought section 2
+would make these clear, but it does not.  Section 2 contains only
+constructs that are asserted `problematic' without supporting evidence
+(another problem that should have been fixed in this revision).
+
+At the top of page 3, identify situations in which `only some sort of
+preprocessing of Cpp analysis can produce useful answers'.
+
+I'm alarmed that the Statement category on page 8 doesn't distinguish
+the else-capturing FREE from the other macros, nor the SIGNAL_RETURN,
+which requires a semicolon, from the SWALLOW_LINE, which may behave
+strangely when followed by semicolon 
+(e.g., if (p) SWALLOW_LINE(fp); else assert(feof(fp));)
+[Give examples of all 6.  Make clear that we kept them separate in our
+analyses, but merged them for presentation.]
+
+Even the Symbol and Unknown Symbol categories deserve examples.
+[Do this.]
+
+I still learn nothing from Figure 4.  Put it in an appendix, or better
+yet, make the data available electronically.
+
+
+You present no evidence for the `more unexpected and harder to
+understand' claim at the top of page 12.
+
+
+
+Page 14, `dangling semicolon'.  What about macros whose bodies are
+{ ... }, as in 
+
+  #define ABORT() { fprintf(stderr, "Yo mama writes C++"); kill(getpid(),SIGABRT
+); }
+
+This macro also has the property `while its invocation looks like a
+function call, it should not be used as function call'.  Why doesn't
+it appear in the same taxon?
+[Add note about that.  We have already accurately counted those elsewhere,
+so point at them.]
+
+On a related point, the recommendation at the top of page 15, to wrap
+statements in braces, is a disaster, for precisely this reason.
+Again, your credibility plummets --- this kind of error is an example
+of why you *must* present the *reasoning* behind your assertions.
+In this case, the reasoning is that macros that might reasonably
+function as statements should be acceptable anywhere a function-call
+statement would be, because the uses look too much like function
+calls, and to do anything else would be to set a trap for the unwary.
+
+[Depends on whether it must be the same "part of speech".  If so (eg, to
+avoid changing an interface depended on by other consumers), then follow
+our suggestions.  Otherwise, if you have the freedom to change all the uses
+as well, then change the part of speech.]
+
+
+
+Page 14, `side-effected formal' appears wrong.  Neither glyphs nor
+frame need be an lvalue.  I agree that frame must be the name of a
+field in a struct pointed to by glyphs, and this is passing strange.
+Consider, e.g.,
+
+  #define SET_GLYPHS_FRAME(glyphs,frame) (set_ ## #frame((glyphs), (frame)))
+
+as an alternative.  Might not this simple function call serve as well?
+Or am I overlooking something obvious?
+
+
+In section 5.5, I am surprised by the decision to consider all strings
+and character literals identical.  What happens if this element of the
+canonicalization isn't done?  Do the results change in any interesting
+way?  (If this was in the first draft, my apologies for missing it
+then.)
+
+In figure 8, if I understand what is going on, the algorithm in Figure
+7 would determine a `final' category.  I would find it most helpful if
+that column were included in Figure 8, perhaps separated by blank
+space from the other columns.  I really wish not to run Fig 7 in my
+head multiple times.
+[Do this.]
+
+
+In Figure 10, you must not connect the items at 0 to the items at 1.
+This procedure is scientifically meaningless and can only serve to
+mislead the reader.  If you need a short line segment to help the
+reader distinguish the points at 0, simply draw a flat horizontal line
+segment about 3/8 of an inch wide and centered at 0.   Do *not*, under
+*any* circumstances, connect the points at zero to the points at 1.
+The points at 0 are infinitely far away to the left and there must be
+a break.
+[We explained earlier why we connect 0 and 1.]
+
+How did you choose the widths of the buckets used on page 25?
+
+
+In your conclusions, you claim your article `serves to confirm or
+contradict intuitions about the use of the C preprocessor'.  This is
+an important claim and again unsubstantiated.  Please give us a good
+selection of intuitions and show how the information you have gathered
+serves to confirm or contradict them.
+[This would be nice to do, if possible.  But is it reasonable to do
+comprehensively in the time alotted?]
+
+
+Get TSE formatting requirements.
+
+
+END OF MESSAGE
+
+===========================================================================
+
+Greg:
+
+"SYMBOL" -> "IDENTIFIER" in figures and text
+
+I would love to see a Tukey box (median, mean, quartiles, and 90%
+confidence) added to figure 9 as a summary row.
+[Do this, probably.]
+
+Get tar file for all the raw data
+
+Please explain the huge Unknown Symbol entry for perl.
+[Do this.]
+
+Figure 10:
+  You should put a break in your X axis as well, and if
+possibly insert the usual wavy symbol for `large gap'.
+[Do add the gap and wavy line.]
+
+How did you classify the names (symbols) mentioned at the top of page
+23?
