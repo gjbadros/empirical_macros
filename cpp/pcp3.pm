@@ -147,5 +147,35 @@ sub FIsDeclAllowable {
 }
 
 
+# Support doc-property-display; this requires the defuns included there
+# All these assume filehandle TPSOURCE!
+sub AddProperty {
+  my ($kind,$fname,$s_start,$s_end,$prop,$val) = @_;
+  if ($s_start != $s_end) {
+    print TPSOURCE "#$fname:(add-$kind-property $s_start $s_end \'$prop \"$val\")\n";
+  }
+}
+
+sub AddTextProperty {
+  AddProperty("text",@_);
+}
+
+sub AddListProperty {
+  AddProperty("list",@_);
+}
+
+sub PutFaceProperty {
+  my ($fname,$s_start,$s_end,$font) = @_;
+  if ($s_start != $s_end) {
+    print TPSOURCE "#$fname:(put-face-property-if-none $s_start $s_end \'$font)\n";
+  }
+}
+
+sub PutMouseFaceProperty {
+  my ($fname,$s_start,$s_end,$font) = @_;
+  if ($s_start != $s_end) {
+    print TPSOURCE "#$fname:(put-mouse-face-property-if-none $s_start $s_end \'$font)\n";
+  }
+}
 
 1;
