@@ -387,10 +387,12 @@ XS(XS_pcp3_PushBuffer)
 	    warn("PushBuffer cannot handle strings with embedded NULLs\n");
 	}
 
-	pbuf = cpp_push_buffer(&parse_in,szBuf,len,1 /* FROM PERL */);
-	pbuf->ichSourceStart = ichStart;
+	pbuf = cpp_push_buffer(&parse_in,szBuf,length,1 /* FROM PERL */);
+	pbuf->ichSourceStart = ichStart - 1;
 	pbuf->ichSourceEnd = ichStart + length;
-#line 394 "backcalls.c"
+        pbuf->nominal_fname = "FromPerl";
+        fprintf(stderr,"cpp_push_buffer: %ld, %ld\n",pbuf->ichSourceStart,pbuf->ichSourceEnd);
+#line 396 "backcalls.c"
 	PUTBACK;
 	return;
     }
@@ -403,11 +405,11 @@ XS(XS_pcp3_EnterScope)
 	croak("Usage: pcp3::EnterScope()");
     SP -= items;
     {
-#line 348 "backcalls.xs"
+#line 350 "backcalls.xs"
 	if (!fShouldParse) goto done;
 	enter_scope(ParseStack->contxt);
 	done:
-#line 411 "backcalls.c"
+#line 413 "backcalls.c"
 	PUTBACK;
 	return;
     }
@@ -420,11 +422,11 @@ XS(XS_pcp3_ExitScope)
 	croak("Usage: pcp3::ExitScope()");
     SP -= items;
     {
-#line 360 "backcalls.xs"
+#line 362 "backcalls.xs"
 	if (!fShouldParse) goto done;
 	exit_scope(ParseStack->contxt);
 	done:
-#line 428 "backcalls.c"
+#line 430 "backcalls.c"
 	PUTBACK;
 	return;
     }
@@ -437,9 +439,9 @@ XS(XS_pcp3_PushHashTab)
 	croak("Usage: pcp3::PushHashTab()");
     SP -= items;
     {
-#line 370 "backcalls.xs"
+#line 372 "backcalls.xs"
 	cpp_push_hashtab(&parse_in);
-#line 443 "backcalls.c"
+#line 445 "backcalls.c"
 	PUTBACK;
 	return;
     }
@@ -451,9 +453,9 @@ XS(XS_pcp3_PopHashTab)
     if (items != 0)
 	croak("Usage: pcp3::PopHashTab()");
     {
-#line 378 "backcalls.xs"
+#line 380 "backcalls.xs"
 	cpp_pop_hashtab(&parse_in);
-#line 457 "backcalls.c"
+#line 459 "backcalls.c"
     }
     XSRETURN_EMPTY;
 }
@@ -464,9 +466,9 @@ XS(XS_pcp3_SetParseDebugging)
     if (items != 0)
 	croak("Usage: pcp3::SetParseDebugging()");
     {
-#line 387 "backcalls.xs"
+#line 389 "backcalls.xs"
  	ct_yydebug = 1;
-#line 470 "backcalls.c"
+#line 472 "backcalls.c"
     }
     XSRETURN_EMPTY;
 }
@@ -477,9 +479,9 @@ XS(XS_pcp3_ResetParseDebugging)
     if (items != 0)
 	croak("Usage: pcp3::ResetParseDebugging()");
     {
-#line 397 "backcalls.xs"
+#line 399 "backcalls.xs"
 	ct_yydebug = 0;
-#line 483 "backcalls.c"
+#line 485 "backcalls.c"
     }
     XSRETURN_EMPTY;
 }
@@ -490,11 +492,11 @@ XS(XS_pcp3_YYPushStackState)
     if (items != 0)
 	croak("Usage: pcp3::YYPushStackState()");
     {
-#line 405 "backcalls.xs"
+#line 407 "backcalls.xs"
 	if (!fShouldParse) goto done;
 	PushStackState();
 	done:
-#line 498 "backcalls.c"
+#line 500 "backcalls.c"
     }
     XSRETURN_EMPTY;
 }
@@ -505,11 +507,11 @@ XS(XS_pcp3_YYPopAndRestoreStackState)
     if (items != 0)
 	croak("Usage: pcp3::YYPopAndRestoreStackState()");
     {
-#line 414 "backcalls.xs"
+#line 416 "backcalls.xs"
 	if (!fShouldParse) goto done;
 	PopAndRestoreStackState();
 	done:
-#line 513 "backcalls.c"
+#line 515 "backcalls.c"
     }
     XSRETURN_EMPTY;
 }
@@ -520,11 +522,11 @@ XS(XS_pcp3_YYPopAndDiscardStackState)
     if (items != 0)
 	croak("Usage: pcp3::YYPopAndDiscardStackState()");
     {
-#line 423 "backcalls.xs"
+#line 425 "backcalls.xs"
 	if (!fShouldParse) goto done;
 	PopAndDiscardStackState();
 	done:
-#line 528 "backcalls.c"
+#line 530 "backcalls.c"
     }
     XSRETURN_EMPTY;
 }
@@ -535,11 +537,11 @@ XS(XS_pcp3_YYSwapStackState)
     if (items != 0)
 	croak("Usage: pcp3::YYSwapStackState()");
     {
-#line 433 "backcalls.xs"
+#line 435 "backcalls.xs"
 	if (!fShouldParse) goto done;
 	SwapStackState();
 	done:
-#line 543 "backcalls.c"
+#line 545 "backcalls.c"
     }
     XSRETURN_EMPTY;
 }
@@ -550,11 +552,11 @@ XS(XS_pcp3_YYPushDupTopStackState)
     if (items != 0)
 	croak("Usage: pcp3::YYPushDupTopStackState()");
     {
-#line 443 "backcalls.xs"
+#line 445 "backcalls.xs"
 	if (!fShouldParse) goto done;
 	PushDupTopStackState();
 	done:
-#line 558 "backcalls.c"
+#line 560 "backcalls.c"
     }
     XSRETURN_EMPTY;
 }
@@ -566,12 +568,12 @@ XS(XS_pcp3_YYFCompareTopStackState)
 	croak("Usage: pcp3::YYFCompareTopStackState()");
     {
 	bool	RETVAL;
-#line 453 "backcalls.xs"
+#line 455 "backcalls.xs"
         RETVAL = TRUE;
 	if (!fShouldParse) goto done;
 	RETVAL = FCompareTopStackState();
 	done:
-#line 575 "backcalls.c"
+#line 577 "backcalls.c"
 	ST(0) = boolSV(RETVAL);
 	if (SvREFCNT(ST(0))) sv_2mortal(ST(0));
     }
@@ -584,16 +586,16 @@ XS(XS_pcp3_YYGetState)
     if (items != 0)
 	croak("Usage: pcp3::YYGetState()");
     {
-#line 465 "backcalls.xs"
-	extern int yystate;
-#line 590 "backcalls.c"
-	bool	RETVAL;
 #line 467 "backcalls.xs"
+	extern int yystate;
+#line 592 "backcalls.c"
+	bool	RETVAL;
+#line 469 "backcalls.xs"
         RETVAL = 0;
 	if (!fShouldParse) goto done;
         RETVAL = yystate;
 	done:
-#line 597 "backcalls.c"
+#line 599 "backcalls.c"
 	ST(0) = boolSV(RETVAL);
 	if (SvREFCNT(ST(0))) sv_2mortal(ST(0));
     }
@@ -606,17 +608,17 @@ XS(XS_pcp3_YYGetNode)
     if (items != 0)
 	croak("Usage: pcp3::YYGetNode()");
     {
-#line 479 "backcalls.xs"
+#line 481 "backcalls.xs"
 	extern int yystate;
         extern tree_union ct_yylval;
-#line 613 "backcalls.c"
+#line 615 "backcalls.c"
 	unsigned int	RETVAL;
-#line 482 "backcalls.xs"
+#line 484 "backcalls.xs"
         RETVAL = 0;
 	if (!fShouldParse) goto done;
         RETVAL = (unsigned int) ct_yylval.node;
 	done:
-#line 620 "backcalls.c"
+#line 622 "backcalls.c"
 	ST(0) = sv_newmortal();
 	sv_setiv(ST(0), (IV)RETVAL);
     }
@@ -630,16 +632,16 @@ XS(XS_pcp3_YYSetState)
 	croak("Usage: pcp3::YYSetState(state_num)");
     {
 	int	state_num = (int)SvIV(ST(0));
-#line 496 "backcalls.xs"
+#line 498 "backcalls.xs"
 	extern int yystate;
         extern tree_union ct_yylval;
-#line 637 "backcalls.c"
-#line 499 "backcalls.xs"
+#line 639 "backcalls.c"
+#line 501 "backcalls.xs"
 	if (fShouldParse) {
           yystate = state_num;
           ct_yylval.node = 0;
         }
-#line 643 "backcalls.c"
+#line 645 "backcalls.c"
     }
     XSRETURN_EMPTY;
 }
@@ -651,15 +653,15 @@ XS(XS_pcp3_YYSetNode)
 	croak("Usage: pcp3::YYSetNode(node)");
     {
 	unsigned int	node = (unsigned int)SvIV(ST(0));
-#line 510 "backcalls.xs"
+#line 512 "backcalls.xs"
 	extern int yystate;
         extern tree_union ct_yylval;
-#line 658 "backcalls.c"
-#line 513 "backcalls.xs"
+#line 660 "backcalls.c"
+#line 515 "backcalls.xs"
 	if (fShouldParse) {
           ct_yylval.node = node;
         }
-#line 663 "backcalls.c"
+#line 665 "backcalls.c"
     }
     XSRETURN_EMPTY;
 }
@@ -671,12 +673,12 @@ XS(XS_pcp3_FLookupSymbol)
 	croak("Usage: pcp3::FLookupSymbol(szSymbol)");
     {
 	char *	szSymbol = (char *)SvPV(ST(0),na);
-#line 525 "backcalls.xs"
+#line 527 "backcalls.xs"
 	str_t *pstr;
 	symentry_t *se;
-#line 678 "backcalls.c"
+#line 680 "backcalls.c"
 	bool	RETVAL;
-#line 528 "backcalls.xs"
+#line 530 "backcalls.xs"
 	RETVAL = FALSE;
 	if (!fShouldParse) goto done; 
 	pstr = nmelook(szSymbol,strlen(szSymbol));
@@ -688,7 +690,7 @@ XS(XS_pcp3_FLookupSymbol)
 	  RETVAL = (se != NULL);
 	}
 	done:
-#line 692 "backcalls.c"
+#line 694 "backcalls.c"
 	ST(0) = boolSV(RETVAL);
 	if (SvREFCNT(ST(0))) sv_2mortal(ST(0));
     }
@@ -703,12 +705,12 @@ XS(XS_pcp3_FLookupSymbolAt)
     {
 	char *	szSymbol = (char *)SvPV(ST(0),na);
 	int	level = (int)SvIV(ST(1));
-#line 551 "backcalls.xs"
+#line 553 "backcalls.xs"
 	str_t *pstr;
 	symentry_t *se;
-#line 710 "backcalls.c"
+#line 712 "backcalls.c"
 	bool	RETVAL;
-#line 554 "backcalls.xs"
+#line 556 "backcalls.xs"
 	RETVAL = FALSE;
 	if (!fShouldParse) goto done; 
 	pstr = nmelook(szSymbol,strlen(szSymbol));
@@ -720,7 +722,7 @@ XS(XS_pcp3_FLookupSymbolAt)
 	  RETVAL = (se != NULL);
 	}
 	done:
-#line 724 "backcalls.c"
+#line 726 "backcalls.c"
 	ST(0) = boolSV(RETVAL);
 	if (SvREFCNT(ST(0))) sv_2mortal(ST(0));
     }
