@@ -1,6 +1,6 @@
 #!/uns/bin/gawk
 function pct(x) { 
-  if (usepct) { return (100*x/totLine) + 0.05 } else {return x} 
+  if (usepct) { return (100*x/totLine) } else {return x} 
 }
 
 BEGIN {
@@ -46,7 +46,7 @@ BEGIN {
 #Recursive
   recursive=18;
 
-  if (usepct) { OFMT="%2.1f" } 
+  if (usepct) { OFMT="%2.2f" } 
   if (nolatex) { OFS="\t"; } 
   else { OFS=" & "; 
   ORS="\\\\\\hline\n"; 
