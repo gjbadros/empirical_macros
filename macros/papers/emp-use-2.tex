@@ -1,5 +1,6 @@
 % $Id$
 \documentclass[10pt]{article}
+\def\typeofdocument{article}    % ``article'' or ``report''
 \usepackage{epsfig}
 \usepackage{dcolumn}
 \usepackage{alltt}
@@ -7,18 +8,14 @@
 % Delete in final version of paper.
 \newcommand{\comment}[1]{\textbf{[[#1]]}}
 
-\def\numpackages{30}
-\def\numpackageslesstwo{28}
-\def\numlines{2 million}
-\def\numlinesexact{nearly 2 million}
-\def\numlinesalmost{almost 2 million}
-\def\numlinesncnbexact{about 1.4 million}
-
-% ``article'' or ``report''
-\def\typeofdocument{article}
+\def\numpackages{26}
+\def\numdependpackages{25}
+\def\numlines{1.4 million}      % 1390186 as of 28 Jan 1999
+% \def\numlinesexact{1.4 million}
+% \def\numlinesalmost{1.4 million}
+% \def\numlinesncnbexact{1 million} % 995033 as of 28 Jan 1999
 
 \newcommand{\pkg}[1]{\textsf{#1}}
-
 \newcommand{\file}[1]{\texttt{#1}}
 
 % the "fullpage" package does almost the same thing
@@ -66,7 +63,7 @@ Department of Computer Science and Engineering \\
 University of Washington \\
 Box 352350, Seattle, WA  98195-2350  USA \\
 {\small \{{\tt mernst},{\tt gjb},{\tt notkin}\}{\tt @cs.washington.edu}} \\
-28 November 1997}  
+28 January 1999}  
 
 \maketitle
 
@@ -229,33 +226,36 @@ comprising {\numlines} lines of source code.
 The analysis focuses on potential pitfalls that complicate the work of
 software engineers and tool builders:
 \begin{description}\itemsep 0pt \parskip 0pt
-\item[high total use]  Heavy use of either macro substitution or
-  conditional compilation can overwhelm a human or tool.  Particularly
-  problematic are lines that depend on many macros or macros that control
-  many lines.
-\item[complicated bodies]  A macro body need not expand to a complete
-  C syntactic entity (like a statement or expression).
-\item[extra-linguistic features]  a macro body may exploit features of
-  the preprocessor not available in C, such as stringization, token
-  pasting, or use of free variables.
-\item[multiple definitions]  Uncertainty about the expansion of a macro
-  prevents knowledge of the actual program text.  Even more problematically,
-  two definitions of a macro may be incompatible, for instance if one is a
-  statement and the other expands to an expression or type.
-\item[macro pitfalls]  Macros introduce new varieties of programming
-  errors, such as function-like macros that fail to swallow a following
-  semicolon and macros that modify, or fail to parenthesize, uses of
-  their arguments.
-\item[inconsistent usage]  A macro used both for conditional compilation
-  and to expand code is harder to understand than one used exclusively for one
-  purpose.
-\item[mixed tests]  A single Cpp conditional ({\tt \#if} directive) may
-  test conceptually
+\item[high total use {\rm (Sections~\ref{sec:directives}, \ref{sec:macro-usage}, and~\ref{sec:dependence}):}]
+  Heavy use of either macro substitution or conditional compilation can
+  overwhelm a human or tool.  Particularly problematic are lines that
+  depend on many macros or macros that control many lines.
+\item[complicated bodies {\rm (Section~\ref{sec:categorization}):}]
+  A macro body need not expand to a complete C syntactic entity (like a
+  statement or expression).
+\item[extra-linguistic features {\rm (Section~\ref{sec:extra-linguistic}):}]
+  A macro body may exploit features of the preprocessor not available in C,
+  such as stringization, token pasting, or use of free variables.
+\item[macro pitfalls {\rm (Section~\ref{sec:lint}):}]
+  Macros introduce new varieties of programming errors, such as
+  function-like macros that fail to swallow a following semicolon and
+  macros that modify, or fail to parenthesize, uses of their arguments.
+\item[multiple definitions {\rm (Sections~\ref{sec:mult-def}--\ref{sec:inconsistent}):}]
+  Uncertainty about the expansion of a macro prevents knowledge of the
+  actual program text.  Even more problematically, two definitions of a
+  macro may be incompatible, for instance if one is a statement and the
+  other expands to an expression or type.
+\item[inconsistent usage {\rm (Section~\ref{sec:inconsistent-usage}):}]
+  A macro used both for conditional compilation and to expand code is
+  harder to understand than one used exclusively for one purpose.
+\item[mixed tests {\rm (Section~\ref{sec:ccd}):}]
+  A single Cpp conditional ({\tt \#if} directive) may test conceptually
   distinct, unrelated conditions, making it difficult to perceive the
   test's purpose.
-\item[variation in use]  In the absence of a clear pattern of use or
-  commonly-repeated paradigms, no obvious point of attack presents itself
-  to eliminate most complexity with little effort.
+\item[variation in use]
+  In the absence of a clear pattern of use or commonly-repeated paradigms,
+  no obvious point of attack presents itself to eliminate most complexity
+  with little effort.
   %% No pattern according to package size, relative or absolute Cpp use, etc.
 \end{description}
 
@@ -323,12 +323,6 @@ presents avenues for future work.
 % Section~\ref{sec:related} discusses related work.
 
 
-%[[Does anyone care about this?
-%Another niche already filled by our tool is that of a ``macro lint''
-%program which warns of potentially dangerous (or non-standard) uses of Cpp.
-%And, we wrote Cppp.]]
-
-
 
 %Overall, our analysis confirms that the C preprocessor is used in
 %exceptionally broad and diverse ways, complicating the development of C
@@ -344,13 +338,10 @@ presents avenues for future work.
 %of the added richness and benefits of C++ constructs.
 %
 
-%
-%[[Where do these two points go?]]
+%[[Where does this two point go?]]
 %
 %Another niche already filled by our tool is that of a ``macro lint''
 %program which warns of potentially dangerous (or non-standard) uses of Cpp.
-%
-%And, we wrote Cppp.
 
 %O'Callahan and Jackson also use type
 %inference, although for program understanding rather than translation;
@@ -390,7 +381,8 @@ reflects the amount of source code.
   \input{tbl-package-sizes.tex}
 }
 \captionsmall{Analyzed packages and their sizes.  NCNB lines are non-comment,
-  non-blank lines.}
+  non-blank lines.  All of these packages are publicly-available for free
+  on the Internet.  We give version numbers to permit reproducing our results.}
 \label{fig:packages}
 \end{figure}
 
@@ -567,6 +559,7 @@ names had definitions with different abstract syntax trees.
 
 
 \subsection{Macro body categorization}
+\label{sec:categorization}
 
 We categorized macro bodies into 28 categories, though for simplicity of
 presentation, this paper coalesces these into ten higher-level categories.
@@ -1116,7 +1109,7 @@ described below.
 \item[swallows else]
         The macro, which ends with an {\tt else}-less {\tt if} statement,
         swallows any {\tt else} clause that follows it.  For instance, after
-\begin{verbatim}
+\begin{alltt}
     #define TAINT_ENV() if (tainting) taint_env()
     \ldots
     if ({\rm\em{}condition})
@@ -1422,6 +1415,7 @@ information.
 
 
 \subsection{Frequency of macro usage}
+\label{sec:macro-usage}
 
 \begin{figure}
 \centerline{\epsfig{file=fig/uses-per-line.eps,height=5in}}
@@ -1487,6 +1481,7 @@ variable declaration), which makes understanding these macros critical.
 
 
 \subsection{Inconsistent usage}
+\label{sec:inconsistent-usage}
 
 Macros have two general purposes: they can control the inclusion of lines
 of code (by appearing in a \texttt{\#if} condition that controls that line)
@@ -1825,7 +1820,7 @@ mentioned above has 182 inclusion dependences (with only 13 macros in
 common with its set of expansion dependences), but over over 10,000 lines
 of \pkg{gcc} have even heavier inclusion dependences than that.
 
-On average, each line in the {\numpackageslesstwo} packages tested is 
+On average, each line in the {\numdependpackages} packages tested is 
 expansion-dependent on .04 macros, inclusion-dependent on .31 macros, has
 both varieties of dependence on .01 macros, and has some dependence on .34
 macros.
@@ -1861,7 +1856,7 @@ macros.
 
 Figure~\ref{fig:dep-bymacro} graphs how many lines are dependent on each
 macro (Figure~\ref{fig:dep-byline} gave the same information by line rather
-than by macro).  Since the {\numpackageslesstwo} packages vary in size, the
+than by macro).  Since the {\numdependpackages} packages vary in size, the
 graphs of Figure~\ref{fig:dep-bymacro} aggregate them by reporting
 percentages of a package rather than absolute numbers.
 
@@ -1933,10 +1928,19 @@ input files.
 % remaining definition, because other definitions may appear in libraries or
 % on the command line when the package is compiled.)
 
+% computed 1/28/99: I got the raw data to compute the 1.2% figure by doing
+%   foreach PACK ($PKG_DIRS)
+%      echo $PACK; cd /scratch/mernst/pack-cppp/$PACK; wc `grep -v '^#' c-files-listing` | tail -1
+%   end
+% and likewise for /scratch/mernst/packages
+
 We used Cppp to preprocess all of our test suite (and all library header
 files) with definitions for all the macros that can be depended on if using
 ANSI standard C or C++ (including prototypes and booleans) with
-POSIX-compliant libraries.  We then reran all of our experiments, but to
+POSIX-compliant libraries.
+This reduced the size of the codebase by 1.2\% overall; individual package
+reductions ranged from 3.2\% for \pkg{emacs} to none at all for \pkg{workman}.
+We then reran all of our experiments, but to
 our surprise, the
 results were little changed from the full versions of the packages (which
 generally supported both K\&R and ANSI C, and sometimes other dialects and
