@@ -306,20 +306,28 @@ SetParseStateStack()
 	}
 
 
-###%\backcall{}{PushBuffer}{$source_code_string}
+###%\backcall{}{PushBuffer}{$source_code_string, $s_start}
 ###% Adds $source_code_string to the being-processed text 
 ###% as if it existed in the input at the
-###% current location in the current file.
+###% current location in the current file. $s_start tells
+###% where the code to be processed is in the current source
+###% file, or is negative if it does not exist there.
 void
-PushBuffer($buffer_to_push)
+PushBuffer($buffer_to_push, $s_start)
 	PPCODE:
 	int length = 0;
 	int len = 0;
  	char *szBuf = SvPV(ST(0),length);
+	cpp_buffer *pbuf;
+	int ichStart = SvIV(ST(1));
 	if ((len = strlen(szBuf)) != length) {
 	    warn("PushBuffer cannot handle strings with embedded NULLs\n");
 	}
-	cpp_push_buffer(&parse_in,szBuf,len,1 /* FROM PERL */);
+	
+	pbuf = cpp_push_buffer(&parse_in,szBuf,len,1 /* FROM PERL */);
+	pbuf->ichSourceStart = ichStart;
+	pbuf->ichSourceEnd = ichStart + length;
+
 
 ###%\backcall{}{EnterScope}{}
 ###% Enters a new scoping level; useful in combination
