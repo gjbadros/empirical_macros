@@ -9,7 +9,7 @@ sub sum_through {
     
 $file = shift @ARGV;
 
-$total = <>;
+chop($total = <>);
 
 exit if $total == 0;
 
