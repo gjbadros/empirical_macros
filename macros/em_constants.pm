@@ -260,71 +260,6 @@ sub prop_contains ( $$ )
   return ($prop & $bit); }
 
 
-# 		 'token_pasting',
-# 		 'stringization',
-# 		 'has_type_argument',
-# 		 'macro_as_function', 'macro_as_type',
-# 		 'uses_type_argument',
-# 		 'assembly_code', ,
-
-
-
-
-## Old version; delete soon.
-# $catNOT_YET = 0;		# shouldn't be used; should be undefined instead
-# $catIN_PROCESS = 1;
-# $catNO_DEF = 2;
-# $catMULTIPLE = 3; # a def gets this if it expands to a macro with this category
-# $catNULL_DEFINE = 4;
-# # Expressions
-# $catEXP = 5;
-# $catEXPASSIGN = 6;
-# $catEXPFREE = 7;		# expression with free variables
-# $catLITERAL = 8;		# also specify the literal value
-# $catCONSTANT = 9;		# need to also specify the particular value, if possible
-# $catSOME_CONSTANT = 10;	# a constant, but not known which (e.g., multiple #defines)
-# # Non-expressions
-# $catFAILURE = 11;		# shouldn't have just one, should have many
-# $catHASTYPEARG = 12;		# macro argument has a type
-# # These shouldn't be failures
-# $catMACROFUN = 13;
-# $catMACROTYPE = 14;
-# $catUSESTYPEARG = 15;
-# 
-# # New categories -- higher numbers take precedence over lower ones
-# # Be sure to keep in sync w/ strings of @categoryname
-# $catASM = 16;
-# $catSYNTAX = 17;		# this goes along with MISMATCH, sort of
-# $catTYPE = 18;			# expands to a type
-# $catRESERVED_WORD  = 19;
-# $catSTATEMENT = 20;  # STATEMENT-s likely contain reserved words, but are more specific
-# $catRECURSIVE = 21;
-# $catMISMATCH  = 22;
-# $catPASTING   = 23;
-# $catSTRINGIZE = 24;
-# $catCOMMAND_LINE   = 25;
-# 
-# $catLast = 25;
-# 
-# @categoryname = (
-# 		 'uncategorized', 'being_categorized', 'never_defined',
-# 		 'multiply_categorized', 'null_define',
-# 		 'expression', 'expression_with_assignment',
-# 		 'expression_with_free_variables',
-# 		 'literal', 'constant', 'some_constant',
-# 		 'failed_categorization', 'has_type_argument',
-# 		 'macro_as_function', 'macro_as_type',
-# 		 'uses_type_argument',
-# 		 'assembly_code', 'syntax_tokens',
-# 		 'expands_to_type', 'expands_to_reserved_word',
-# 		 'statement',
-# 		 'recursive',
-# 		 'mismatched_entities',
-# 		 'token_pasting',
-# 		 'stringization',
-# 		 'command_line_arguments'
-# 		 );
-
 # Conditional Categories (for #if.* preprocessor directives)
 @cond_category_name = qw(debug portability_language_or_library portability_language_macro
 			 portability_system_macro portability_feature
@@ -387,6 +322,29 @@ sub category_lub ( $$ )
   elsif (($c2 == $catSYMBOLS)
 	 && (($c1 == $catRESERVED_WORD) || ($c1 == $catTYPE)))
     { return $c1; }
+  # if one is statement-related, choose the other if it's the corresponding plural
+  elsif ((($c1 == $catSTATEMENT) && ($c2 == $catSTATEMENTS))
+	 || (($c1 == $catSTATEMENT_SANS_SEMI) && ($c2 == $catSTATEMENTS_SANS_SEMI))
+	 || (($c1 == $catPARTIAL_STATEMENT) && ($c2 == $catPARTIAL_STATEMENTS)))
+    { $return $c2; }
+  elsif ((($c2 == $catSTATEMENT) && ($c1 == $catSTATEMENTS))
+	 || (($c2 == $catSTATEMENT_SANS_SEMI) && ($c1 == $catSTATEMENTS_SANS_SEMI))
+	 || (($c2 == $catPARTIAL_STATEMENT) && ($c1 == $catPARTIAL_STATEMENTS)))
+    { $return $c1; }
+  # if one is statement[s]_sans_semi, choose the other if it's partial_statement[s]
+  elsif ((($c1 == $catSTATEMENT_SANS_SEMI)
+	  && (($c2 == $catPARTIAL_STATEMENT) || ($c2 == $catPARTIAL_STATEMENTS)))
+	 || (($c1 == $catSTATEMENTS_SANS_SEMI) && ($c2 == $catPARTIAL_STATEMENTS)))
+    { $return $c2; }
+  elsif ((($c2 == $catSTATEMENT_SANS_SEMI)
+	  && (($c1 == $catPARTIAL_STATEMENT) || ($c1 == $catPARTIAL_STATEMENTS)))
+	 || (($c2 == $catSTATEMENTS_SANS_SEMI) && ($c1 == $catPARTIAL_STATEMENTS)))
+    { $return $c1; }
+  # if one is
+  elsif ((($c1 == $catSTATEMENTS_SANS_SEMI) && ($c2 == $catPARTIAL_STATEMENT))
+	 || (($c2 == $catSTATEMENTS_SANS_SEMI) && ($c1 == $catPARTIAL_STATEMENT)))
+    { return $catPARTIAL_STATEMENTS; }
+  # otherwise, return generic "multiple"
   else
     { return $catMULTIPLE; }
 }
