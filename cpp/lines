@@ -2,10 +2,10 @@
    1512 gram.y
     266 pcpp.c
      19 pcpp.h
-   8096 cpplib.c
+   8103 cpplib.c
     727 cpplib.h
    1287 cpphook.c
-    515 cpphook.h
+    511 cpphook.h
     264 cpphash.c
      48 cpphash.h
      64 cppalloc.c
@@ -22,9 +22,21 @@
     414 ct-token.c
     467 ct-tree.c
     312 ct-tree_stk.c
-    654 cpphook.pm
-  19668 total
+     86 globals.h
+     74 heap.h
+     63 identify.h
+     18 macro.h
+     53 nmetab.h
+    206 tree.h
+    106 tree_stk.h
+     27 utype.h
+     23 token.h
+     43 prnttree.h
+     19 ct-config.h
+     58 perly-undefs.h
+    686 cpphook.pm
+  20479 total
 Backcalls:
      26
 Hooks:
-     41
+     40
