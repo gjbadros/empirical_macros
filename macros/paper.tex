@@ -31,7 +31,7 @@ mernst@cs.washington.edu.}
 Science and Engineering\\
 University of Washington\\
 Box 352350\\
-Seattle, WA  98195-2350\\
+Seattle, WA  98195-2350  USA\\
 \today}  
 
 \maketitle
@@ -83,7 +83,7 @@ problem to programmers, maintainers, people porting code, and tool
 builders~\cite[p.~424]{Stroustrup-DesignEvolution}.
 \end{quote}
 
-Tools may ignore macro definitions altogether, accept only preprocessed
+Tools may ignore macro definitions altogether, accept only post-processed
 code (perhaps by running Cpp on their input), or attempt to emulate the
 preprocessor.
 
@@ -93,7 +93,7 @@ techniques), but accurate information about function extents, scope
 nesting, declared variables and functions, and so forth requires
 addressing the preprocessor.
 
-Operating on preprocessed code, the most common strategy, is simple to
+Operating on post-processed code, the most common strategy, is simple to
 implement, but then the tool's input differs from what the
 programmer sees.  Even when line number mappings are maintained, other
 information is lost in the mapping back to the original source code.
@@ -118,7 +118,7 @@ input, cannot be run on a non-syntactic program or one that will not
 preprocess (or produces nonsense) on the platform on which the tool is being
 run.  These constraints complicate porting and maintenance, two of the
 situations in which program understanding and transformation tools are most
-likely to be needed.  Additionally, a tool supplied with only one preprocessed
+likely to be needed.  Additionally, a tool supplied with only one post-processed
 instantiation of the source code cannot reason about the program as a
 whole, only about that version that results from one particular set of
 preprocessor variables.  (For instance, a bug in one configuration may not
@@ -206,7 +206,7 @@ macros that are never expanded.
 for example, we determined which macros simply defined a preprocessor
 symbol, which defined literals, etc.~(see
 Section~\ref{sec:categorization}).  We were particularly interested in
-determining the frequency of use of macros are difficult to convert to
+determining the frequency of use of macros that are difficult to convert to
 other language features, such as those that string together characters
 (as opposed to manipulating lexemes or syntactic units).  We found a
 very small number (under one third of a percent of all macro
@@ -214,24 +214,23 @@ definitions) of macros of this type.
 \end{itemize}
 
 Overall, our analysis confirms that the C preprocessor is used in
-exceptionally broad and diverse ways, complicating the development of
-C programming support tools.  On the other hand, the analysis also
+exceptionally broad and diverse ways, complicating the development of C
+programming support tools.  On the other hand, the analysis also
 convinces us that, by extending our analysis framework with some class
-type inferencing techniques (similar to those used by Siff and Reps
-for C to C++ translation~\cite{Siff-fse96}, O'Callahan and Jackson for
-program understanding~\cite{OCallahan-icse97}, and others), we can
-take significant steps towards a tool that usefully converts a high
-percentage of Cpp code into C++ language
-features.\footnote{Preliminary results using our tool on C++ code
-demonstrates that many C++ packages still rely on Cpp, even when C++
-provides mechanisms within the language to support a nearly identical
-construct, probably due to a combination of trivial
-translations from C to C++ and of C programmers becoming C++
-programmers without changing their habits.}  We are
+type inferencing techniques (similar to those used by Siff and Reps for
+C to C++ translation~\cite{Siff-fse96}, O'Callahan and Jackson for
+program understanding~\cite{OCallahan-icse97}, and others), we can take
+significant steps towards a tool that usefully converts a high
+percentage of Cpp code into C++ language features.\footnote{Preliminary
+  results using our tool on C++ code demonstrates that many C++ packages
+  still rely on Cpp, even when C++ provides mechanisms within the
+  language to support a nearly identical construct, probably due to a
+  combination of trivial translations from C to C++ and of C programmers
+  becoming C++ programmers without changing their habits.} We are
 interested not in translations that merely allow a C program to be
-compiled by a C++ compiler (which is usually easy, by intentional
-design of C++) but those that take advantage of the added richness of C++
-constructs.
+compiled by a C++ compiler (which is usually easy, by intentional design
+of C++) but those that take advantage of the added richness and benefits
+of C++ constructs.
 
 %[FIX: Two important points to address: C code almost *is*
 %C++ code, so what do we gain from a ``conversion''?  If we can't get all
@@ -420,14 +419,15 @@ the interactions among the definitions for a given symbol.
 \caption{Cumulative Definition Percentage\label{fig:define_count}}
 \end{figure}
 
-Figure~\ref{fig:use_count} is structured as the last figure, but it
+Figure~\ref{fig:use_count} is structured as the previous figure, but it
 represents the number of times that a defined name is expanded in
 either C code or preprocessor directives.  For instance, in the bc
 package, 74.58\% of the macros were expanded eight or fewer times.
 
 One of the more noticeable points about these data are that almost all
 packages have a significant number of defined macros that are never
-expanded.  Most packages are in the 3-10\% range, while gnuplot
+expanded.\footnote{Note that, here, we are considering only macros that are
+  defined within the package.} Most packages are in the 3-10\% range, while gnuplot
 reaches nearly 40\%.  Although it's difficult to fully account for the
 larger numbers, contributing factors include a lot of cut-and-paste
 and a lack of attention to implementations for specific platforms in
@@ -502,8 +502,7 @@ variables by the preprocessor.
   might have a single constant value everywhere (the usual case for
   expression macros without arguments), or might have a different value on
   each use (the usual case for expression macros with arguments).  Of
-  expression macros, n\% [fix: need this number!] 
-use assignment operators,
+  expression macros, 6.31\% use assignment operators,
   which have potentially unexpected results.  A macro argument that is
   assigned to is like a pass-by-reference function argument and need only
   be noted in the macro's documentation.  A global variable that is
@@ -645,7 +644,7 @@ defined macro.  We are also close to being able to infer the types of
 the bodies of defined macros, one of several steps necessary before we
 can attempt to build a converter from C to C++.  Once we can usefully
 convert C to C++, eliminating most macro usages (except for
-\verb+#include#s), this would not only programmers to shift to C++ and
+\verb+#include+s), this would not only programmers to shift to C++ and
 its constructs more easily, but even more importantly, it would
 greatly simplify the development of source-level debuggers, call graph
 extractors, and other programming support tools.
