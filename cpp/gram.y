@@ -258,8 +258,8 @@ func_def:  func_spec cmpnd_stemnt
                   }
                 }
               }
-	    gjb_call_hooks_sz(CPP_OPTIONS(&parse_in),HI_FUNCTION,
-			      szName);
+	    gjb_call_hooks_sz_i(CPP_OPTIONS(&parse_in),HI_FUNCTION,
+			      	szName, lm && (lm->tok == STATIC));
         }
 
 enter_scope:
