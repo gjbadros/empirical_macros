@@ -360,3 +360,9 @@ grammar: $(GRAMMAR_OBJECTS) grammar.o
 
 .PHONY: tags clean
 
+%.d: %.c
+	$(SHELL) -ec '$(CC) -MM $(CPPFLAGS) $(INCLUDES) $< \
+		| sed '\''s/$*\\.o[ :]*/& $@/g'\'' > $@'
+
+SOURCES = $(wildcard *.c)
+include $(SOURCES:.c=.d)
