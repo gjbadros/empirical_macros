@@ -47,7 +47,7 @@ use checkargs;
  @ftype_NONHEADER_NOT_INCLUDED @ftype_NONHEADER_INCLUDED
  @ftype_HEADER_NOT_INCLUDED @ftype_HEADER_INCLUDED
  $built_in_fake_filename $built_in_fake_fileno
- $i_usage_code $i_usage_macro $i_usage_cond
+ $i_usage_code $i_usage_macro $i_usage_cond $i_usage_cond_redef
  @i_usage_all
  @cond_category_name
  $ccatDEBUG $ccatPORT_LANLIB $ccatPORT_LANMACRO $ccatPORT_SYSMACRO
@@ -495,7 +495,8 @@ $built_in_fake_filename = "%Built In%";
 $built_in_fake_fileno = 0;
 
 # enumeration for the macros_uses indices
-@i_usage_all = ($i_usage_code, $i_usage_macro, $i_usage_cond) = (0..2);
+@i_usage_all = ($i_usage_code, $i_usage_macro, $i_usage_cond, $i_usage_cond_redef)
+  = (0..3);
 
 
 ###########################################################################

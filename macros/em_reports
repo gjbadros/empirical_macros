@@ -266,7 +266,7 @@ sub output_macros ( )
 { check_args(0, @_);
   if ($opt_v) { print STDOUT "macros..."; }
   select MACROS;
-  print "#MACROS#: name cDefs cUndefs cCodeUses cMacroUses cCondUses cTotalUses HowUsed Categories InclusionMethods\n"; # (%functionsThatUseIt)  [removed since not used in paper & no longer exported]
+  print "#MACROS#: name cDefs cUndefs cCodeUses cMacroUses cCondUses cCondRedefUses cTotalUses HowUsed Categories InclusionMethods\n"; # (%functionsThatUseIt)  [removed since not used in paper & no longer exported]
   foreach my $name (sort keys %macros) {
     #print STDERR "MNAME=$name, @{$macros{$name}}\n";
     #my $i = $macros{$name}[1];  #Should this now be 0?
@@ -286,11 +286,12 @@ sub output_macros ( )
     my $cCodeUses = $macros_uses{$name}[$i_usage_code];
     my $cMacroUses = $macros_uses{$name}[$i_usage_macro];
     my $cCondUses = $macros_uses{$name}[$i_usage_cond];
-    my $cTotalUses = $cCodeUses + $cMacroUses + $cCondUses;
+    my $cCondRedefUses = $macros_uses{$name}[$i_usage_cond_redef];
+    my $cTotalUses = $cCodeUses + $cMacroUses + $cCondUses + $cCondRedefUses;
 
     print "$name", $#{$macros{$name}}+1, $macros_c_undefs{$name},
-    $cCodeUses, $cMacroUses, $cCondUses, $cTotalUses,
-    how_used_from_code_cpp_uses($cCodeUses, $cMacroUses, $cCondUses),
+    $cCodeUses, $cMacroUses, $cCondUses, $cCondRedefUses, $cTotalUses,
+    how_used_from_code_cpp_uses($cCodeUses, $cMacroUses, $cCondUses, $cCondRedefUses),
     # These next two will be blank for things not defined, but only
     # used in cond. comp. directives
     join(",",CategoriesForMacroName($name)),
@@ -963,11 +964,12 @@ sub HistogramNumericFromList ( @ ) {
 # (one of eight (was four)); in alphabetical order:
 #   Code CodeCond CodeMacro CodeMacroCond Cond Macro MacroCond NoUses
 sub how_used_from_code_cpp_uses ( $$$ ) {
-  my ($cCodeUses, $cMacroUses, $cCondUses) = check_args(3,@_);
+  my ($cCodeUses, $cMacroUses, $cCondUses, $cCondRedefUses) = check_args(4,@_);
   my $result = "";
   $result .= "Code" if ($cCodeUses > 0);
   $result .= "Macro" if ($cMacroUses > 0);
   $result .= "Cond" if ($cCondUses > 0);
+  $result .= "Redef" if ($cCondRedefUses > 0);
   $result = "NoUses" if ($result eq "");
   return $result;
 }
