@@ -2887,7 +2887,7 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
   cchRawCall = pbuf->cur - pchAfterMacroName;
   cchOffsetInternal = CchOffset_internal(pfile);
   if (pcei) {
-    ichSourceStart = CchBufferOffset(pfile) + CchSumPceiOffsets(pcei) + pbuf->cur - pbuf->buf - 2;
+    ichSourceStart = CchBufferOffset(pfile) + CchSumPceiOffsets(pcei) + pbuf->cur - pbuf->buf - strlen(hp->name) + 1;
   } else {
     ichSourceStart = cchOffsetInternal - cchRawCall - strlen(hp->name) + 1;
   }
