@@ -1,0 +1,6 @@
+#!/uns/bin/zsh -f
+for i in $HOME/*.prn; do
+  mv $i ${i:r}
+done
+excel-ps-to-eps *.ps
+
