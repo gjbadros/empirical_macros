@@ -12,3 +12,8 @@ token.listing
 trace
 types.listing
 vars.listing
+*.exps
+*.funcs
+*.types
+*.vars
+*.cPp

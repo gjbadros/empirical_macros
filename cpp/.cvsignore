@@ -33,3 +33,8 @@ textprops-source.el
 textprops.el
 token.listing
 trace
+*.exps
+*.funcs
+*.types
+*.vars
+*.cPp
