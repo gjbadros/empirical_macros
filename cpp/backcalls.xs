@@ -241,6 +241,9 @@ ParseStateStack()
 	extern short *yyssp;
 	PPCODE:
 	short *ssp1 = yyss - 1;
+	if (!fShouldParse) {
+	    XPUSHs(sv_2mortal(newSVpv("@NOT_PARSING@",0)));
+	}
 	while (ssp1+1 != NULL && ssp1 != yyssp)
 	    XPUSHs(sv_2mortal(newSViv(*++ssp1)));
 
@@ -248,6 +251,7 @@ void
 SetParseStateStack()
 	PPCODE:
 	int i = 0;
+	if (!fShouldParse) return;
 	while (i < items) {
 	    short val = (int)SvIV(ST(i));
 	    i++;
@@ -310,7 +314,7 @@ YYPushDupTopStackState()
 bool
 YYFCompareTopStackState()
 	CODE:
-	if (!fShouldParse) return TRUE;
+	if (!fShouldParse) return;
 	RETVAL = FCompareTopStackState();
 	OUTPUT:
 	RETVAL
