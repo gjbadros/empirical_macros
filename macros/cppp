@@ -459,6 +459,8 @@ sub eval_substituted_conditional ($)
   elsif ($exp =~ /[~!]/)
     { print "File: $current_file\n";
       die "Should only find [~!] at beginning of expression: $exp"; }
+  elsif ($exp =~ /^[-+]?0[xX]?[0-9A-Fa-f]+$/)
+    { return oct($exp); }
   elsif ($exp =~ /^[-+]?[0-9]+$/)
     { return int($exp); }
   elsif ($exp =~ /^[_A-Za-z][_A-Za-z0-9\$]*$/)
