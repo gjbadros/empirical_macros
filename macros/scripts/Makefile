@@ -18,11 +18,8 @@ EXTRA_ANALYZE_FLAGS := ""
 
 PAPER_DIR := /homes/gws/gjb/macros/papers
 
-# FIX: These files should be generated from the directory names under PKG_DIR
-
 PKGS := $(shell zsh -c "echo $(PKG_DIR)/*(/:t) | sed -e 's/-[^ ]*//g'")
-# "make data" makes these files.
-# other targets operate on these files.
+
 STATE := $(addsuffix .state,$(PKGS))
 STAT := $(addsuffix .stat,$(PKGS))
 CATG := $(addsuffix .catg,$(PKGS))
@@ -77,10 +74,7 @@ clean:
 ### Data
 ###
 
-data_analyze:
-	pushd $(ANALYZE_OUTPUT_DIR); \
-	macros-make-data-analyze $(PKG_DIR) $(EXTRA_ANALYZE_FLAGS); \
-	popd
+data_analyze: $(STATE)
 
 data_reports:
 	macros-make-data-reports $(ANALYZE_OUTPUT_DIR)
@@ -89,7 +83,7 @@ clean_reports:
 	macros-clean-reports
 
 %.state:
-	em_make_state_file $(PKG_DIR) $(ANALYZE_OUTPUT_DIR) $@ $(EXTRA_ANALYZE_FLAGS)
+	em_make_state_file $(PKG_DIR) $(ANALYZE_OUTPUT_DIR) $@ $(EXTRA_ANALYZE_FLAGS) || echo $< >> $(ANALYZE_OUTPUT_DIR)/failures
 
 ###########################################################################
 ### Text tables
