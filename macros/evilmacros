@@ -78,14 +78,14 @@ $instring = 0;
 #  $$v = 0;
 #}
 # We need to suppress warnings about vars used only once:
-$cAssert = 0; $cCpu = 0;
-$cDefine = 0; $cElif = 0;
-$cElse = 0;   $cError = 0;
-$cIdent = 0;  $cIf = 0;
-$cIfdef = 0;  $cIfndef = 0;
-$cImport = 0; $cInclude = 0;
-$cLine = 0;   $cMachine = 0;
-$cPragma = 0; $cSystem = 0;
+$cAssert = 0;  $cCpu = 0;
+$cDefine = 0;  $cElif = 0;
+$cElse = 0;    $cError = 0;
+$cIdent = 0;   $cIf = 0;
+$cIfdef = 0;   $cIfndef = 0;
+$cImport = 0;  $cInclude = 0;
+$cLine = 0;    $cMachine = 0;
+$cPragma = 0;  $cSystem = 0;
 $cUnassert = 0;$cUndef = 0;
 $cWarning = 0;
 
@@ -222,7 +222,6 @@ if ($lines == 0) {
 ### Subroutines
 ###
 
-
 # Read the next logical line from <INPUT>, until no continuation char
 #   and not in string or comment.
 # Result ends with newline.
@@ -232,6 +231,7 @@ sub getline
     { return $result; }
   $lines++;
   updateinvars($result);
+
 
   # perhaps check for $mname and mention it in message if it's set
   while ($incomment || $instring || ($result =~ m/\\$/))
