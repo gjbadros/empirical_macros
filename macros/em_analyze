@@ -4202,7 +4202,7 @@ sub categorize_macro_def ($)
   elsif ($body =~ /^($float_literal_whole_re|$float_literal_frac_re|float_literal_exp_re|float_literal_noexp_re)$/)
     { $category = $catLITERAL;
       $type = $typeFLOAT; }
-  elsif ($body =~ /^($hex_literal_re|$dec_oct_literal_re)$/)
+  elsif ($body =~ /^-?($hex_literal_re|$dec_oct_literal_re)$/)
     { $category = $catLITERAL;
       $type = infer_int_type($body); }
   elsif ($body =~ /^$char_literal_re$/)
@@ -5724,19 +5724,19 @@ sub SaveMacroAnalysisState
       or die "Failed opening output file: $!";
 
   my @vars_list = qw(
-    %macros %macros_c_undefs %macros_uses 
-    %macros_file_line_uses %macros_used_in_functions 
-    @mdef_name @mdef_args @mdef_body @mdef_body_noc 
-    @mdef_file @mdef_line @mdef_physical_lines 
-    @mdef_physical_ncnb_lines @mdef_freefuns @mdef_dependenton 
-    @mdef_expansion_uses @mdef_type @mdef_category 
-    @mdef_evilness %mdef_freevars 
-    %mntype %mncategory 
-    @rg_cppcmdcounts @rg_category_counts 
-    @rg_physical_lines @rg_ncnb_lines 
-    @rg_cpp_phys_lines @rg_cpp_phys_ncnb_lines 
-    @rg_cpp_cmds @rg_category_counts 
-    %file_inclusion_method %function_name_to_macros_it_uses 
+    %macros %macros_c_undefs %macros_uses
+    %macros_file_line_uses %macros_used_in_functions
+    @mdef_name @mdef_args @mdef_body @mdef_body_noc
+    @mdef_file @mdef_line @mdef_physical_lines
+    @mdef_physical_ncnb_lines @mdef_freefuns @mdef_dependenton
+    @mdef_expansion_uses @mdef_type @mdef_category
+    @mdef_evilness %mdef_freevars
+    %mntype %mncategory
+    @rg_cppcmdcounts @rg_category_counts
+    @rg_physical_lines @rg_ncnb_lines
+    @rg_cpp_phys_lines @rg_cpp_phys_ncnb_lines
+    @rg_cpp_cmds @rg_category_counts
+    %file_inclusion_method %function_name_to_macros_it_uses
     %files_lines %function_to_locs
 		     );
 
