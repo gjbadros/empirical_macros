@@ -202,7 +202,7 @@ sub simplify_path_name ( $ ) {
 # Not the right place for this, but I want to share it between em_reports
 # and lint-summarize.
 
-sub print_lint_summary ( $$$$$$$$$$$$$$;$ )
+sub print_lint_summary ( $$$$$$$$$$$$$$$;$ )
 {
   my ($different_arity, $null_body, $newline_body, $unparen_body,
       $swallow_semi, $free_var, $formal_name, $formal_mult_use,
