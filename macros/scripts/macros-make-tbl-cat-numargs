@@ -1,0 +1,53 @@
+#!/uns/bin/perl -w
+use English;
+my $max = 0;
+my %cmd_line_posn;
+my $i = 0;
+foreach my $fname (@ARGV) {
+  my $category = $fname;
+  $category =~ s/^.*-//;
+  $cmd_line_posn{$category} = $i++;
+  chomp($total{$category} = `cat $fname | wc -l`);
+  chomp($max{$category} = `sort -n <$fname | tail -1`);
+  $max = $max{$category} if $max{$category} > $max;
+#DBG  print STDERR "$category has total = ". $total{$category}. "; max = ". $max{$category}. "\n";
+}
+#DBG print STDERR "Max is $max\n";
+foreach my $fname (@ARGV) {
+  my $category = $fname;
+  $category =~ s/^.*-//;
+  next if $max{$category} == 0;
+  open(IN,"sort -n <$fname |") or die "Cannot open $fname: $!";
+  foreach my $i (0..$max) {
+    $clines = 0;
+    while( defined($_) || ($_ = <IN>) ) {
+      last if ($_ > $i);
+      $clines++;
+      $_ = undef;
+    }
+    if ($i == 0) {
+      $ccum{$category}[$i] = $clines;
+    } else {
+      $ccum{$category}[$i] = $ccum{$category}[$i-1] +$clines;
+    }
+    $ccumpct{$category}[$i] = $ccum{$category}[$i]/$total{$category};
+  }
+}
+
+$OFS="\t";
+print "$OFS";
+my @ordered_categs = sort {$cmd_line_posn{$a} <=> $cmd_line_posn{$b}} keys %total;
+foreach $category (@ordered_categs) {
+  print $category . "$OFS";
+}
+print "\n";
+
+foreach my $i (0..$max) {
+  print $i, "";
+  foreach $category (@ordered_categs) {
+    next if $max{$category} == 0;
+#    print $ccum{$category}[$i], sprintf("%1.5f",$ccumpct{$category}[$i]), "";
+    print sprintf("%2.3f",100*$ccumpct{$category}[$i]), "";
+  }
+  print "\n";
+}

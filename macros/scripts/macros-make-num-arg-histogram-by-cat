@@ -1,0 +1,64 @@
+#!/uns/bin/perl -w
+BEGIN {
+  use em_constants;
+  print "#category","\t","name","\t","cargs","\t","cdefs","\n";
+  foreach my $i (0..$#categoryname) {
+    $CatNumber{$categoryname[$i]} = $i;
+#DBG    print STDERR "$categoryname[$i] -> $i\n";
+  }
+
+  sub lub_category_array( @ ) {
+    my (@cats) = @_;
+    my $result = $catNO_DEF;
+    foreach my $categ (@cats) {
+      my $numeric_categ = $CatNumber{$categ};
+      if (!defined($numeric_categ)) {
+	warn "$categ not in my CatNumber hash\n";
+      }
+      #DBG    print STDERR "$categoryname[$result] + $categ ($categoryname[$numeric_categ]) -> ";
+      $result = category_lub( $result, $numeric_categ );
+      #DBG    print STDERR "$result = $categoryname[$result]\n";
+    }
+    #DBG  print STDERR "@cats", " -> $categoryname[$result]", (($result == $catMULTIPLE || $result == $catFAILURE)?"%%%%":""),"\n";
+    return $result;
+  }
+  $last_mname = "";
+  $mname_cargs = 0;
+  @categories = ();
+}
+  
+  while (<>) {
+    my ($file,$line,$category,$body) = split(/:/,$_,4);
+    next unless $file =~ m%\./%; # skip non-package files
+    $category =~ s/\(.*//g;
+    $category =~ s/^\s*//g;
+    $category =~ s/\s*$//g;
+    $category =~ s/^function, //;
+    $category =~ s/\(.*?\)//g;
+
+    $body =~ s/^\s*//g;
+    $body =~ s/\s*$//g;
+    my $mname_args = "";
+    my $mname = "";
+    my $cargs = 0;
+    if ($body =~ m/(([\$\w]+)(\(.*?\))?)/) {
+      $mname_args = $1;
+      $mname = $2;
+      $cargs++ if (defined($3));
+    }
+    $cargs += ($mname_args =~ tr/,/,/);
+    if ($mname ne $last_mname) {
+      if ($last_mname ne  "") {
+	$num_cat = lub_category_array(@categories);
+	print $categoryname[$num_cat], "\t", $last_mname, "\t", $mname_cargs, "\t",
+	scalar(@categories), "\n";
+      }
+      $last_mname = $mname;
+      $mname_cargs = 0;
+      @categories = ();
+    }
+    
+    $mname_cargs = $mname_cargs > $cargs? $mname_cargs : $cargs;
+    push @categories, $category;
+  }
+

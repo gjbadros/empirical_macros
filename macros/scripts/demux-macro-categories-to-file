@@ -1,0 +1,48 @@
+#!/uns/bin/perl -w
+# use macros-make-categories-tbl-from-stat.pl *.stat
+
+my %categoryname;
+BEGIN {
+  use English;
+  use strict;
+  use em_constants;
+  use em_util;
+  use Carp;
+  use FileCache;
+  my %CatNumber;
+  my %meta_categ_for;
+  # The order here is the left->right order in the table
+  my $i = 0;
+  make_mapping_for('null_define',@mcat_NULL);
+  make_mapping_for('constant',@mcat_CONSTANT);
+  make_mapping_for('expression',@mcat_NONCONSTANT_EXPRESSION);
+  make_mapping_for('statement',@mcat_STATEMENT);
+  make_mapping_for('type_related',@mcat_TYPE);
+  make_mapping_for('syntactic',@mcat_SYNTAX);
+  make_mapping_for('other',@mcat_SYMBOL);
+  make_mapping_for('unknown_symbol',@mcat_SYMBOL_UNKNOWN);
+  make_mapping_for('not_c_code',@mcat_NON_C_CODE);
+  make_mapping_for('failure',@mcat_FAILURE);
+
+  sub make_mapping_for {
+    my ($j,@vars) = @_;
+    foreach my $varname (@vars) {
+      no strict "refs";
+      my $catname = $categoryname[$$varname];
+      $categoryname{$catname} = $j;      
+#DBG     print STDERR "Setting $catname to $j\n";
+    }
+  }
+}
+
+while(<>)  {
+  my ($cat, $num) = split(/\s+/);
+  my $file;
+  my $catname;
+  if (defined($catname = $categoryname{$cat})) {
+    $file = "catnumarg-" . $catname;
+    cacheout $file;
+    print $file $num, "\n";
+  }
+}
+
