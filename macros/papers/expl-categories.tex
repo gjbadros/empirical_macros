@@ -2,6 +2,7 @@
   \sloppy
   \emergencystretch=2em
 
+% @mcat_NULL = qw( catNULL_DEFINE );
 \item[Null define]  The {\tt \#define} gives only an
   identifier name but no macro body, as in {\tt \#define
   \verb|HAVE_PROTO|}\@.  Such macros appear most frequently in Cpp
@@ -12,6 +13,7 @@ depending on whether a debugging mode is set.  The definition which
 causes it to expand to nothing is categorized as a null define (the
 other is categorized as ``other syntactic macro'';  see below).
 
+% @mcat_CONSTANT = qw( catCONSTANT catLITERAL catSOME_CONSTANT );
 \item[Constant] The macro body is either a literal or an operator
   applied to constant values.  For instance, {\tt \#define NULL 0}, {\tt \#define
   \verb|ARG_MAX| 131072}, and {\tt \#define ETCHOSTS "/etc/hosts"} define
@@ -20,6 +22,7 @@ literals, while {\tt \#define \verb|RE_DUP_MAX| ((1<<15)-1)} and {\tt
 a constant, possibly a literal) define constants.  Such macros act like
 {\tt const} variables.
 
+% @mcat_NONCONSTANT_EXPRESSION = qw( catEXP );
 \item[Expression]  The macro body is an expression, as in {\tt \#define
   sigmask(x) (1 << ((x)-1))}.  This expression might have a single constant
 value everywhere (the usual case for expression macros without arguments,
@@ -27,6 +30,8 @@ most of which are classified as constants, above) or might have a
 different value on each use (the usual case for expression macros with
 arguments).
 
+% @mcat_STATEMENT = qw( catSTATEMENT catSTATEMENT_SANS_SEMI catPARTIAL_STATEMENT
+%                        catSTATEMENTS catSTATEMENTS_SANS_SEMI catPARTIAL_STATEMENTS );
 % Problem: can't figure out how to get typewriter curly braces in footnote.
 \item[Statement]  The macro body is a complete statement such as
   ``{\tt x = 3;}'', ``{\tt if (s) free(s);}'' or ``{\tt \verb|{| int x =
@@ -46,28 +51,42 @@ arguments).
   This includes:
     * statement
   and also smaller categories:
-    * statement sans semicolon
-    * partial statement
+    * statement missing final semicolon, like do {...} while (0)
+    * partial statement (like nothing following "else")
     * multiple statements
     * multiple statements, last one lacks semicolon
     * multiple statements, last one is partial
 
-\item[Type-related macros]  These macros either take a type as an argument, pass
+% @mcat_TYPE = qw( catTYPE catPARTIAL_TYPE catDECLARATION catDECLARATION_SANS_SEMI);
+% #my @mcat_DECLARATION = qw( catDECLARATION catDECLARATION_SANS_SEMI );
+% #folded DECLARATION into the above, TYPE
+% The DECLARATION ones are quite rare.
+\item[Type-related]  These macros either take a type as an argument, pass
   a type to another macro, expand to a type or partial type, or use such a
-  macro.  Examples include {\tt \#define \verb|__ptr_t| void *}, {\tt
-  \#define \verb|__INLINE| extern inline}, {\tt \#define \verb|ALIGN_SIZE|
-  sizeof(double)}, and {\tt \#define PTRBITS \verb|__BITS|(char*)}.  Since
-  types are not first-class in C, they may not be passed to functions or
-  returned as results; additionally, these macros may produce or use only
-  part of a type (such as a storage class).  As a result, these macros may be
-  tricky to understand, and cannot be eliminated via straightforward
-  translation (though C++ templates may provide some hope).
+  macro.  
 
-    This icludes:
-  ( catTYPE catPARTIAL_TYPE catDECLARATION catDECLARATION_SANS_SEMI)
-  where the declaration ones are quite rare.
+      These macros
+    %  either take a type as an argument, pass a type to another macro, 
+      expand to a type or partial type, or expand to a
+      declaration (possibly missing its trailing semicolon).  [[Some of these
+      get classified as ``multiple symbols''.]]
+      Examples include {\tt \#define \verb|__ptr_t| void *}, {\tt
+      \#define \verb|__INLINE| extern inline}, {\tt \#define \verb|ALIGN_SIZE|
+    sizeof(double)}, and {\tt \#define PTRBITS \verb|__BITS|(char*)}.  Since
+    types are not first-class in C, they may not be passed to functions or
+    returned as results; additionally, these macros may produce or use only
+    part of a type (such as a storage class).  As a result, these macros may be
+    tricky to understand, and cannot be eliminated via straightforward
+    translation (though C++ templates may provide some hope).
 
-\item[Syntactic]  Like stringization and pasting, these
+
+
+% This includes ( catUNBALANCED catPUNCTUATION )
+\item[Other syntactic macros]  
+  * unbalanced parentheses/braces/brackets
+  * punctuation
+
+  Like stringization and pasting, these
   macros make essential use of the unique features of the preprocessor.
   Our framework separately categorizes a number of such macros, including
   those that expand to a reserved word (such as {\tt \#define private
@@ -77,30 +96,32 @@ braces.  The latter are often used to create a block and perform actions
 that must occur at its beginning and end, as for \verb|BEGIN_GC_PROTECT|
 and \verb|END_GC_PROTECT|.
 
-This includes ( catUNBALANCED catPUNCTUATION )
-
-\item[Symbols]
-
-This includes (catRESERVED_WORD catFUNCTION_NAME catSYMBOLS)
+% @mcat_SYMBOL = qw( catRESERVED_WORD catFUNCTION_NAME catSYMBOLS);
+\item[Symbols]  Reserved word, function name, or space-separated sequence
+of symbols.
 
 The latter is really a failure of sorts.
 
-\item[Unknown symbol]
+% @mcat_SYMBOL_UNKNOWN = qw( catSYMBOL_UNKNOWN );
+\item[Unknown symbol]  Single unknown symbol, typically due to something
+defined on some other architecture (for which we don't have header files,
+or else we'd parse 'em:  we parse more than any single invocation of the
+compiler would).
+
+
+% @mcat_NON_C_CODE = qw( catCOMMAND_LINE catASSEMBLY_CODE );
+\item[Not C code]  Operating system command lines (eg, compilation
+commands, appearing in a file which is used by the preprocessor both when
+run over code and Makefiles), and assembly code.
 
 
 
-\item[Not C code]
 
 
 
 
-
-
+% @mcat_FAILURE = qw( catNOT_YET catIN_PROCESS catNO_DEF catFAILURE catMULTIPLE );
 \item[Failed classification]
-
- This includes ( catNOT_YET catIN_PROCESS catNO_DEF catFAILURE
-		       catMULTIPLE ).
-
 
   [[This needs to be rewritten, probably.]]
   [[Need to discuss why definitions fail, and give examples.]]
@@ -130,4 +151,3 @@ The latter is really a failure of sorts.
 % \pkg{gnuplot}, cvs, and \pkg{groff} accounted for over 75\% of the failures, many of
 % which could be eliminated by slightly relaxing the parsing rules.
 \end{description}
-

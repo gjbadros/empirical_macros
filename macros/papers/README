@@ -1,3 +1,12 @@
+As of 10/1/97:
+
+new-outline:  the new outline
+expl-*:		explanations of categories, properties, etc.
+cannibalize.tex:  sections of the old empirical-uses.tex that haven't yet
+		been merged into one of the above.
+
+===========================================================================
+
 Files in this directory:
 
 empirical-uses.tex	The main paper

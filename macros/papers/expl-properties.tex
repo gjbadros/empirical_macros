@@ -51,3 +51,22 @@ This is a partial lie (I think).
   defined (the preprocessor performs only one level of expansion), as in
   {\tt \#define LBIT vcat(LBIT)}.  This mechanism permits already-defined
   or to-be-defined macros to be extended or modified.
+
+===========================================================================
+
+These numbers aren't right any more -- not 10%.
+
+One tenth of expression macros in our study use assignment operators, which
+have potentially unexpected results.  A macro argument that is assigned to
+is similar to a pass-by-reference function argument and need only be noted in the
+macro's documentation.  A macro that assigns a global variable also
+presents no difficulties in understanding or translation into a C++
+inline function.
+Assignment to a local variable that is free in the macro body, however,
+demands that such a variable exist wherever the macro is invoked, and
+assigns to different variables at different invocations.\footnote{By
+  contrast, LCLint considers assignment to a macro argument dangerous but
+  does not appear to check for assignments to local
+  variables.~\cite{Evans:LCLint}} Such a macro implements a restricted form
+of dynamic scoping by capturing the instance of a variable visible at
+the point of macro invocation.
