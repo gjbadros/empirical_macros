@@ -31,7 +31,7 @@ typedef struct hashnode HASHNODE;
    politeness, for use when speed isn't so important. */
 
 #define HASHSIZE 1403
-static HASHNODE *hashtab[HASHSIZE];
+extern HASHNODE *hashtab[HASHSIZE];
 #define HASHSTEP(old, c) ((old << 2) + c)
 #define MAKE_POS(v) (v & 0x7fffffff) /* make number positive */
 
@@ -39,3 +39,10 @@ extern HASHNODE* install PARAMS ((U_CHAR*,int,enum node_type, int,char*,int));
 extern void delete_special_macro(HASHNODE *hp);
 void cpp_hash_cleanup (cpp_reader *pfile);
 
+#define SIZE_HASHTAB_STACK 32
+extern HASHNODE **rghashtab[SIZE_HASHTAB_STACK];
+extern HASHNODE **phashtab;
+extern int chashtab;
+
+void cpp_push_hashtab(cpp_reader *pfile);
+void cpp_pop_hashtab(cpp_reader *pfile);
