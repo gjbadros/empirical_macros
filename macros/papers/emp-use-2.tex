@@ -963,7 +963,7 @@ ASSERT(p) if (!(p)) botch(\verb|__STRING|(p)); else}).
 %% mcat_SYMBOL_UNKNOWN: 1798
 %%   100%  unknown_symbol (1798)
 % @mcat_SYMBOL_UNKNOWN = qw( catSYMBOL_UNKNOWN );
-\item[Unknown symbol]
+\item[Unknown identifier]
   The macro expands to a single identifier that is not defined in the package
   or in any library header files included by the package.  The symbol may
   be defined by compiler command arguments or may be used inside a
@@ -971,7 +971,7 @@ ASSERT(p) if (!(p)) botch(\verb|__STRING|(p)); else}).
   with a particular architecture, system, or library (for which we did not
   have header files available).
   
-  Unknown symbols can also be local variables, or variables or functions that we failed to
+  Unknown identifiers can also be local variables, or variables or functions that we failed to
   parse.  Our approximate parser can succeed where an exact parse would not
   (as for non-syntactic code that deviates from the language grammar
   or for entities interrupted by preprocessor
@@ -1033,7 +1033,7 @@ ASSERT(p) if (!(p)) botch(\verb|__STRING|(p)); else}).
   entities is incomplete, so case labels (4\% of failures), partial expressions (6\%),
   and some declarations (14\%) are left uncategorized, as are bodies that
   pass a non-first-class object (such as a type or operator) to another
-  macro (7\%).  The biggest problem is macros with adjacent symbols, which
+  macro (7\%).  The biggest problem is macros with adjacent identifiers, which
   is generally not permitted in C\@ (35\% of macros).  These macro bodies
   often use a macro argument that is a statement or operator or expand to
   a partial declaration or cast.  Examples include
@@ -1094,7 +1094,7 @@ syntactic as well as those described in this section.
 %%Numbers: .07% by adding stringization + pasting in tbl-subset-properties.tex
 
 We expected problems dealing with macros that use stringization (conversion
-of a preprocessor symbol to a C string) and pasting (creating a new
+of a preprocessor macro argument to a C string) and pasting (creating a new
 identifier from two existing identifiers), the two explicit
 extra-linguistic features of Cpp.  However, these features appear in only
 0.07\% of all macro definitions.  Far more prevalent, and more problematic
@@ -1142,9 +1142,9 @@ Figure~\ref{fig:subset-properties}.
 \begin{description}
 \item[Free variables]\label{page:freevar}
   The macro body uses as a subexpression (that is, applies an operator or
-  function to) a symbol that is not a formal argument, a variable defined
+  function to) an identifier that is not a formal argument, a variable defined
   in the macro body, a global variable, a reserved word, or a function, macro, or typedef
-  name.  Such symbols are typically local variables at the site of
+  name.  Such identifiers are typically local variables at the site of
   macro invocation.  Uses of local variables (in which the local definition
   in scope at the point of use captures the free variable in the macro
   body) can produce dynamic scoping, which C does not directly support.
@@ -1226,8 +1226,8 @@ Figure~\ref{fig:subset-properties}.
   as tokens but as strings, constructing a new token out of their
   concatenation.  After {\tt \#define \verb|_SIZEOF|(x) \verb|sz_|\#\#x},
   the macro invocation {\tt \verb|_SIZEOF|(int)} expands to the 
-  symbol {\tt \verb|sz_int|}.  The resulting symbol might appear literally, or
-  only as a pasted symbol, at its other uses.  Pasting is often
+  identifier {\tt \verb|sz_int|}.  The resulting identifier might appear literally, or
+  only as a pasted identifier, at its other uses.  Pasting is often
   abstracted out into a separate macro\,---\,such as {\tt \#define
   \verb|__CONCAT|(x,y) x \#\# y}\,---\,but such pasting macros are used less
   than typical macros defined in our test suite.
@@ -1507,7 +1507,7 @@ is not a meaningful Cpp directive) and {\tt \#undef
 \verb|GO_IF_INDEXABLE_BASE|(X, ADDR)} ({\tt \#undef} takes a macro name,
 not the arguments as they appeared in the {\tt \#define} directive).
 
-While ANSI~C uses {\tt \#\#} for pasting, in K\&R~C one abuts two symbols,
+While ANSI~C uses {\tt \#\#} for pasting, in K\&R~C one abuts two identifiers,
 with an empty comment in between, so that their expansions form a new
 identifier when the compiler removes the comment.  For instance, in K\&R~C,
 {\tt to/**/ken} is interpreted as a single token, and macros might be
@@ -1591,8 +1591,8 @@ settings are correct.
 % In general, distinguishing the cases is undecidable.
 
 The least frequently redefined macros are those categorized as unknown
-symbol.  This is partially due to our method of coalescing multiple
-definitions:  macro definitions categorized as unknown symbol are overridden
+identifier.  This is partially due to our method of coalescing multiple
+definitions:  macro definitions categorized as unknown identifiers are overridden
 by definitions with any other categorization (see
 Figure~\ref{fig:category-lub}).  Our
 analysis included enough library header files to include some
@@ -1651,8 +1651,8 @@ often that is the case.
 %   \captionsmall{Summary of
 %     Figures~\ref{fig:freq-def-cat},~\ref{fig:freq-ddf-cat},
 %     and~\ref{fig:freq-use-cat}.  The table is by macro name.  Add percentages?
-%     [[The 1.0 distinct defs for unknown symbol is surprising; does it indicate
-%     that it is the *same* unknown symbol in each definition?
+%     [[The 1.0 distinct defs for unknown identifier is surprising; does it indicate
+%     that it is the *same* unknown identifier in each definition?
 %     But a name is only in the category if none of its defs was
 %     recognized.  Double-check this!]]}
 %   \label{fig:freq-sum-cat}
@@ -1739,7 +1739,7 @@ To unify two macro body categories:
 
 \item If the categories are the same, use that.
 
-\item If one is an unknown symbol (or the name of an undefined macro), use
+\item If one is an unknown identifier (or the name of an undefined macro), use
   the other on the premise that the unseen definition is likely to be
   similar to the available one, which is true for well-behaved macros.
 
@@ -1755,8 +1755,8 @@ To unify two macro body categories:
 
 \item If one is a constant and the other is an expression, use the latter.
 
-\item If one is an ambiguous list of space-separated symbols and the other
-  is a reserved word or type, use the latter.  Sequences of symbols are
+\item If one is an ambiguous list of space-separated identifiers and the other
+  is a reserved word or type, use the latter.  Sequences of identifiers are
   difficult to definitively identify in isolation, but the other
   definitions of the same name indicate the intended usage.
 
@@ -1797,7 +1797,7 @@ with other types of definition and are eliminated by the category merging.
 conditionals.)  The number of statements is lower, largely because
 some macros names with statement definitions have other, incompatible
 definitions, so the macro name is categorized as ``other''.  The percentage
-of unknown symbols is higher because such macros tend to have very few
+of unknown identifiers is higher because such macros tend to have very few
 definitions, so are more prominent in a breakdown by name than by
 definition.  The number of ``other'' categorizations increased because it
 includes any macro with a definition categorized as ``other'' as well as any
@@ -2117,7 +2117,7 @@ some conditionals according to their structure or context, as follows:
   experimental feature).
       
 \item[Redefinition suppression] These guards test non-definedness of
-  symbol, and control only a definition of the same symbol, thus avoiding
+  identifiers, and control only a definition of the same identifier, thus avoiding
   preprocessor warnings about a redefinition of a name (e.g.,
   \texttt{\#ifndef FOO} followed by \texttt{\#define FOO ...} and
   \texttt{\#endif}).  
