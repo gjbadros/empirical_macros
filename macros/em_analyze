@@ -1583,6 +1583,12 @@ sub update_for_cond_comp_directive ($$) {
     $ccdCategory = $ccatCOMMENTING;
   } else {
     if ($#words < 0) {
+      if ($args =~ /^\s*'~'\s*==\s*'~'\s*$/) {
+	# it's something like: #if '\n' == '\r'  (from gs/zfileio.c)
+	# which is checking what character literals actually are
+	$ccdCategory = $ccatPORT_LANLIB;
+	goto CCD_DONE;
+      }
       print STDERR "CCD_LEXICAL_CATEGORY: No words!\n$cpp_cmd, $args\n";
       return;
     }
@@ -1624,6 +1630,7 @@ sub update_for_cond_comp_directive ($$) {
       }
     }
   }
+ CCD_DONE:
   $rg_ccd_cat_counts[$current_ftype_index][$ccdCategory]++;
 }
 
@@ -1915,7 +1922,9 @@ sub add_macro_used_by_cpp ($)
       if (!$word)
 	{ croak "Empty word"; }
       if ($word !~ /^$identifier_re$/)
-	{ warn "non-identifier word $word"; # FIXMERNST
+	{ if ($word =~ /^$number_literal_re$/)
+	    { return }  # for stuff like #if BYTEORDER > 0x4321
+	  warn "non-identifier word $word"; # FIXMERNST
 	  # stuff like "#undef ADDR_CORRECT(x) in emacs-19.34/src/m/gec63.h"
 	  $word =~ s/\(.*//; # remove suffix of argument list with parens
 	  # this should be a macro lint, since it's improper use of #undef
