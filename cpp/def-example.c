@@ -2,7 +2,8 @@
 
 #ifdef CCD1
 #  define FOO 1
-#else
+#endif
+#ifdef CCD2
 #  define FOO 2
 #endif
 
@@ -11,8 +12,7 @@
 #define BAZ 5
 #define BING 6
 
-int
-main(char **argv, int argc)
+int main(char **argv, int argc)
 {
   int fud = FUD;
   int BONG = -1;
