@@ -106,7 +106,7 @@
 
 \pagestyle{plain}
 
-\section*{ABSTRACT}
+\section*{Abstract}
 \label{sec:abstract}
 Analyses of \C{} source code usually ignore the \C{} preprocessor
 because of its complexity.  Instead, these analyses either define their
@@ -130,7 +130,7 @@ Parsing, preprocessor, cpp, lexical analysis, syntactic analysis, Perl.
 \bigskip
 
 % Introduction, including problem statement, goals, etc
-\section{INTRODUCTION}
+\section{Introduction}
 \label{sec:intro}
 More than twenty years ago, Dennis Ritchie designed the \C{}
 language~\cite{Kernighan88} to include a textual macro preprocessor
@@ -269,7 +269,7 @@ prototype tool, \pcp{}. Finally, section~\ref{sec:related} discusses
 related work, and sections~\ref{sec:limitations} and \ref{sec:conclusion}
 review the limitations of our approach and conclude.
 
-\section{THE FRAMEWORK}
+\section{The Framework}
 \label{sec:framework}
 
 The idea behind our framework is simple: provide an integrated parser
@@ -485,7 +485,7 @@ directive leave the parser in different states.
 %** parser debugging, teaching
 %** multi-version reasoning
 
-\section{FURTHER EXAMPLES}
+\section{Further Examples}
 \label{sec:further_examples}
 
 Preprocessor-specific analyses are generally especially difficult to
@@ -702,7 +702,7 @@ supplied by \pcp{} analyses.
 
 
 % PCP^3
-\section{THE \pcp{} TOOL}
+\section{The \pcp{} Tool}
 \label{sec:pcp3}
 
 Our framework combines a
@@ -807,7 +807,7 @@ seconds.  With all action code turned off, the running time is
 less than 10 seconds.  The useful analyses described in this paper involve
 only a handful of callbacks, and thus execute very quickly.
 
-\section{RELATED WORK}
+\section{Related Work}
 \label{sec:related}
 Numerous tools exist for assisting the software engineer in
 understanding and manipulating source code.  Griswold, Atkinson and McCurdy
@@ -862,7 +862,7 @@ on and relate to each other, and provide a means of visualizing the
 relationships with the goal of improving the programmer's understanding
 of the structure and properties of the configurations~\cite{Krone94}.
 
-\section{LIMITATIONS}
+\section{Limitations}
 \label{sec:limitations}
 
 % Framework problems
@@ -949,7 +949,7 @@ preprocessor-specific annotations.
 %Despite these limitations, the simplicity and flexibility of analyses
 %that \pcp{} enables prove its usefulness.
 
-\section{CONCLUSION}
+\section{Conclusion}
 \label{sec:conclusion}
 
 Our framework distinguishes itself from other software
@@ -961,7 +961,7 @@ code familiar to the programmer.  This approach empowers and simplifies
 analyses while relieving the tool builder from the burden of partially 
 re-implementing \Cpp{} for each desired analysis.
 
-\section*{ACKNOWLEDGMENTS}
+\section*{Acknowledgments}
 \label{sec:ack}
 This paper was supported by a National Science Foundation Graduate
 Fellowship. Any opinions, findings, conclusions, or recommendations
@@ -974,7 +974,7 @@ paper.
 
 \appendix
 
-\section{ABRIDGED HOOKS REFERENCE}
+\section{Abridged Hooks Reference}
 \label{sec:hooks}
 
 The below lists action hooks and the conditions under which the
@@ -1039,7 +1039,7 @@ details of the invoking action.
 
 \end{description}
 
-\section{ABRIDGED BACKCALLS REFERENCE}
+\section{Abridged Backcalls Reference}
 \label{sec:backcalls}
 
 The below backcalls are grouped by functionality.  Parameters, if any,
