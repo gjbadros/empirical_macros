@@ -551,6 +551,9 @@ my $current_function_start_line; # the first line of the current function
 my %functions = ();		# keys are all functions encountered
 				#   values are fileno:lineno, separated by ;
 my %typedefs = ();		# keys are all typedefs encountered
+my %global_symbols = ();	# computed by nm, read from external file;
+				#   primarily to double-check %functions
+				#   and to add global vars to it
 
 my $current_macro_line_number;	# Used by current_line_no when categorizing macros
 
@@ -1649,6 +1652,8 @@ sub compute_transitive_macro_dependences ( )
 ### Miscellaneous?  (Greg, where do these belong?  Surely not here...)
 ###
 
+## As of 1/29/99, these do not appear to be used.
+
 # Return a sorted version of the list
 # passed in, with duplicates removed
 sub UniquifyAndSortList ( @ ) {
@@ -1741,6 +1746,9 @@ sub get_fulltoken_line (;$)
   # This screws something up really badly.
   # if (not ($simple_result))
   #  { return $simple_result; }
+  if ($simple_result =~ /^\s*\#\s*$/)
+    { $simple_result = "\n";
+      $ncnb_lines = 0; }
 
   # Save the raw line for the convenience of error messages; don't return
   # it, for the convenience of callers.
@@ -2164,15 +2172,21 @@ sub getline_handle_preprocessor_command ( $$$$$ )
 
   if ($cpp_cmd eq "if")
     { if (cpp_trivially_false_condition($cpp_cmd_arg_noc))
-	{ if ($finding_macro_defs)
-	    # Count this as a comment, not NCNB, line.
-	    { $rg_ncnb_lines[$current_ftype_index] -= $ncnb_lines; }
-	  my $cond = discard_to_endif_or_else();
+	{ my ($cond, $physical_lines_discarded) = discard_to_endif_or_else();
 	  if ($debug_getline)
 	    { print "discard_to_endif_or_else returned '$cond'"; }
 	  if ($cond)
+	    # Make a recursive call to do the real work.
 	    { # What are the right fourth and fifth arguments here?
-	      return getline_handle_preprocessor_command("if", $cond, $cond, $phys_lines, $ncnb_lines); } }
+	      return getline_handle_preprocessor_command("if", $cond, $cond, $phys_lines, $ncnb_lines); }
+	  else
+	    { # Adjust line counts
+	      if ($finding_macro_defs)
+		{ # Count this as a comment, not NCNB, line.
+		  # But don't adjust the physical count of lines.
+		  $rg_ncnb_lines[$current_ftype_index] -= $ncnb_lines;
+		  # Add in the discarded lines from above.
+		  $rg_physical_lines[$current_ftype_index] += $physical_lines_discarded; } } }
       else
 	# Not trivially false #if.  (If trivially true, do the usual thing here.)
 	{ push(@current_inclusion_dependenton, $cpp_cmd_arg_noc);
@@ -2221,10 +2235,12 @@ sub getline_handle_preprocessor_command ( $$$$$ )
       if ($debug_cpp_if_comments)
 	{ print input_file_and_line(), ": #else testing '$last' for triviality: ", cpp_trivially_true_condition($last), "\n"; }
       if (cpp_trivially_true_condition($last))
-	{ if ($finding_macro_defs)
-	    # Count this as a comment, not NCNB, line.
-	    { $rg_ncnb_lines[$current_ftype_index] -= $ncnb_lines; }
-	  discard_to_endif(); }
+	{ my $physical_lines_discarded = discard_to_endif();
+	  if ($finding_macro_defs)
+	    { # Count this as a comment, not NCNB, line.
+	      $rg_ncnb_lines[$current_ftype_index] -= $ncnb_lines;
+	      # Add in the discarded lines from above.
+	      $rg_physical_lines[$current_ftype_index] += $physical_lines_discarded; } }
       else
 	# Not trivially true condition
 	{ push(@current_inclusion_dependenton, negate_cpp_if_condition($last)); } }
@@ -2234,7 +2250,10 @@ sub getline_handle_preprocessor_command ( $$$$$ )
 	  return "\n"; }
       my $last = pop(@current_inclusion_dependenton);
       if (cpp_trivially_true_condition($last))
-	{ discard_to_endif(); }
+	{ my $physical_lines_discarded = discard_to_endif();
+	  if ($finding_macro_defs)
+	    { # Add in the discarded lines from above.
+	      $rg_physical_lines[$current_ftype_index] += $physical_lines_discarded; } }
       else
 	# Not trivially true condition
 	{ push(@current_inclusion_dependenton,
@@ -2355,21 +2374,23 @@ sub add_macro_used_by_cpp ( $ )
 
 
 # Read and discard lines until we find the matching #endif
-# No return value.
+# Return the number of discarded physical lines.
 sub discard_to_endif ( )
 {
   check_args(0, @_);
   my $if0depth = 1;
   my $line;
+  my $total_phys = 0;
   while ($if0depth > 0)
     # Don't use get_spliced_cline(); the getline lookahead cache might not be empty.
     { my ($raw_line, $simple_line, $phys, $ncnb, $warnings)
 	= get_spliced_cline_maybe_ungot(\*INPUT, $true);
+      $total_phys += $phys;
       for my $warning (@{$warnings})
 	{ evilprint($warning); }
       if (not $raw_line)
 	{ evilprint("File ends in \#if 0\n");
-	  return; }
+	  return $total_phys; }
       cline_resetinvars();		# Abandon changes by get_spliced_cline
       if ($debug_cpp_if_comments)
 	{ print input_file_and_line(), ": discarding (to endif @current_inclusion_dependenton) $raw_line"; }
@@ -2384,24 +2405,30 @@ sub discard_to_endif ( )
 	{ $if0depth++; }
       elsif ($simple_line =~ m/^\s*\#\s*endif\b/o)
 	{ $if0depth--; } }
-  return;
+  return $total_phys;
 }
 
-# If #endif, return $false.
-# If #else or #elseif, return a fake #if condition for re-processing.
+# Return two arguments.
+# First is:
+#  * If #endif, return $false.
+#  * If #else or #elseif, return a fake #if condition for re-processing.
+# Second is number of discarded physical lines.
 sub discard_to_endif_or_else ( )
 {
   check_args(0, @_);
   my $if0depth = 1;
+  my $total_phys = 0;
   while ($if0depth > 0)
     # Don't use get_spliced_cline(); the getline lookahead cache might not be empty.
     { my ($raw_line, $simple_line, $phys, $ncnb, $warnings)
 	= get_spliced_cline_maybe_ungot(\*INPUT, $true);
+      print "line has length $phys: $raw_line";
+      $total_phys += $phys;
       for my $warning (@{$warnings})
 	{ evilprint($warning); }
       if (not $raw_line)
 	{ evilprint("File ends in \#if 0\n");
-	  return $false; }
+	  return ($false, $total_phys); }
       cline_resetinvars();		# Abandon changes by get_spliced_cline
       if ($debug_cpp_if_comments)
 	{ print input_file_and_line(), ": discarding (to endif or else; inclusion_dependenton @current_inclusion_dependenton) $raw_line"; }
@@ -2417,16 +2444,16 @@ sub discard_to_endif_or_else ( )
       elsif (($if0depth == 1) && ($simple_line =~ m/^\s*\#\s*else\b/))
 	{ if ($debug_cpp_if_comments)
 	    { print input_file_and_line(), ": returning !0 from discard_to_endif_or_else (inclusion_dependenton @current_inclusion_dependenton)\n"; }
-	  return "!0"; }
+	  return ("!0", $total_phys); }
       elsif (($if0depth == 1) && ($simple_line =~ m/^\s*\#\s*elif\s+/))
 	{ my $cond = $POSTMATCH;
 	  $cond =~ s/\s+$//;
 	  if ($debug_cpp_if_comments)
 	    { print input_file_and_line(), ": returning $cond from discard_to_endif_or_else (inclusion_dependenton @current_inclusion_dependenton)\n"; }
-	  return $cond; }
+	  return ($cond, $total_phys); }
       elsif ($simple_line =~ m/^\s*\#\s*endif\b/o)
 	{ $if0depth--; } }
-  return $false;
+  return ($false, $total_phys);
 }
 
 # This handles
@@ -3810,8 +3837,8 @@ PROCESSLINE:
 			 && (defined(peek_fulltoken_line(1)))
 			 && ((peek_fulltoken_line(1)) !~ /^\s*$/))
 		     )
-		{ # Definition or declaration (probably of a function)
-		  # split over multiple lines
+		{ # Definition or declaration (probably of a function) split
+		  # over multiple lines; combine to one line and reprocess.
 		  # print "combining function definition split over multiple lines\n";
 		  $current_function_start_line = current_line_no();
 		  my $nextline = get_fulltoken_line($true);
@@ -3828,7 +3855,8 @@ PROCESSLINE:
 	      elsif (($line =~ /^\s*($type_declarator_re)\s*([,=;\(])(?!=)/o)
 		     # must check this second, to get "int (*foo) (arg1, arg2)"
 		     || ($line =~ /^($identifier_re)\s*(\()/o))
-		{
+		{ # Definition or declaration.
+
 		  # We don't know whether we matched $type_declarator_re or
 		  # $identifier_re, so rematch, which is wasteful.
 		  my $nextchar = $LAST_PAREN_MATCH;
@@ -5314,7 +5342,7 @@ sub get_macro_properties ( $ )
 	# This may be fine; fix later.
 	{ $result |= $propUSES_MACRO_AS_TYPE; } }
 
-  ## Free variables: new implementation.
+  ## Free variables in the macro body: new implementation.
   { my %vars = ();
     if ($body !~ /^$identifier_re$/o) # if body is a symbol, never report free vars
       { foreach my $var (identifiers_in($body))
@@ -5326,6 +5354,7 @@ sub get_macro_properties ( $ )
 		|| exists($macros_used_by_cpp{$var})
 		|| exists($functions{$var})
 		|| exists($typedefs{$var})
+		|| exists($global_symbols{$var})
 		|| ($var =~ /^$reserved_word_re$/)
 		|| ($body =~ /(\.|->|\bstruct|\bunion)\s*$var\b/)
 		|| ($body =~ /\b\Q$var\E\s*(\*\s*)+\)/)
@@ -5346,7 +5375,7 @@ sub get_macro_properties ( $ )
     if ($mdef_free_vars[$index])
       { $result |= $propFREE_VAR; } }
 
-  ## Free variables: old implementation.
+  ## Free variables in the macro body: old implementation.
   #   # For each free variable, check its type.
   #   foreach my $var (keys %mdef_freevars)
   #     { # print "examining free var $var ($mdef_name[$index])\n";
@@ -6034,8 +6063,10 @@ sub macros_in_expanded ( $ )
   my @result = ();
   while ($text =~ s/\bEXPANDED_GJB_MDE_([a-zA-Z0-9_\$]+)\b/$1/)
     { push @result, $1;
+      # Comment out these two lines to run on partial packages.
       if (!defined($macros{$1}))
-	{ croak "Macro $1 prefixed by EXPANDED_GJB_MDE_ was not defined: $text"; } }
+	{ croak "Macro $1 prefixed by EXPANDED_GJB_MDE_ was not defined: $text"; }
+    }
   return @result;
 }
 
@@ -7122,6 +7153,14 @@ $opt_P = $true;
 
 $fDebugCmdProcessing && print "ARGV = @ARGV";
 
+if (-f "symbols.gjbmde")
+{ open(SYMBOLS,"symbols.gjbmde") || die "Can't read symbols.gjbmde: $!";
+  my $symbol;
+  while (defined($symbol = <CMDLINEDEFS>))
+    { chomp($symbol);
+      $global_symbols{$symbol} = $true; }
+  close(SYMBOLS); }
+
 # Add the rest of the arguments to the files list
 foreach my $file (@ARGV) {
   add_file($file, "FromCmdLine");
@@ -7170,50 +7209,24 @@ if ($opt_v) { print STDERR "Done finding macro definitions.\n"; }
   # skip indices 0 and 1, which are {built_in,command_line}_fake_filename
   for (my $ifiles = $fake_files; $ifiles <= $#files; $ifiles++)
     { my $command_line_defs_file = $files[$ifiles];
-      $command_line_defs_file =~ s/(\.[^.\/]+)$/.defgjbmde/;
+      $command_line_defs_file =~ s/(\.[^.\/]+)?$/.defgjbmde/;
       $command_line_defs_file =~ s!^\./!./../!;
-      # print STDERR "command_line_defs_file: $command_line_defs_file\n";
-      if (-f $command_line_defs_file)
-	{ print STDERR "Found command_line_defs_file $command_line_defs_file\n"; }
-      else
-	{ print STDERR "Found no command_line_defs_file for $files[$ifiles]\n"; }
-
-      if (-f $command_line_defs_file)
-	{ if (!open(CMDLINEDEFS,$command_line_defs_file))
+      if (($command_line_defs_file ne $files[$ifiles]) && (-f $command_line_defs_file))
+	{ print STDERR "Found command_line_defs_file $command_line_defs_file for $files[$ifiles]\n";
+	  if (!open(CMDLINEDEFS,$command_line_defs_file))
 	    { croak "Couldn't open existent file $command_line_defs_file"; }
 	  my $def_line;
 	  while (defined($def_line = <CMDLINEDEFS>))
 	    { if ($def_line !~ s/^\#define //)
 		{ croak "Non-#define line in $command_line_defs_file: $def_line"; }
 	      # Don't bother to remove comments here.
-	      process_macro_definition($def_line, $def_line, 0, 0); } } }
+	      process_macro_definition($def_line, $def_line, 0, 0); } }
+      else
+	{ print STDERR "Found no command_line_defs_file for $files[$ifiles]\n"; } }
   undef $current_file_number;
   undef $current_ftype_index;
 }
 
-
-## Old implementation.
-# # Take care of macros defined on the command line.
-# { # This is a hack; should parse output from pcp3 (or the original compilation
-#   # flags).
-#   my %package_command_line_macros = ("fvwm" => { 'FVWM_ICONDIR' => "",
-# 						 'FVWMDIR' => "",
-# 						 'FVWMRC' => "", },
-# 				     "plan" => { 'NOBODY_UID' => 65534,
-# 						 'NOBODY_GID' => 9999, },
-# 				     );
-#   my $basename = $statename;
-#   if (($basename =~ s/^.*\/([^\/]+)\.state$/$1/)
-#       && exists($package_command_line_macros{$basename}))
-#     { if (scalar(@current_inclusion_dependenton) != 0)
-# 	{ croak "Nonempty current_inclusion_dependenton: @current_inclusion_dependenton"; }
-#       $current_file_number = $command_line_fake_fileno;
-#       my %command_line_macro_defs = % {$package_command_line_macros{$basename}};
-#       my ($key, $value);
-#       while (($key, $value) = each %command_line_macro_defs)
-# 	{ process_macro_definition("$key $value", "$key $value", 0, 0); }
-#       undef $current_file_number; }
-# }
 
 { my %undefined_macros = ();
   for my $word (keys %macros_used_by_cpp)
