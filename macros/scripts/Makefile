@@ -68,7 +68,9 @@ TEXT_TABLES :=	tbl-package-sizes \
 		tbl-properties-percents \
 		tbl-inclusion-dependences-by-line \
 		tbl-expansion-dependences-by-line \
-		tbl-any-dependences-by-line
+		tbl-any-dependences-by-line \
+		tbl-inclusion-dependences-by-macro \
+		tbl-expansion-dependences-by-macro
 
 RAW_TABLES := tbl-directives-hist tbl-directives-breakdown \
 		tbl-def-categories tbl-subset-categories
@@ -192,16 +194,22 @@ tbl-inclusion-dependences-by-line: $(SDEPEND)
 	macros-make-dependences-by-line Inclusion $^ > $@
 
 tbl-any-dependences-by-line: $(SDEPEND)
-	macros-make-dependences-by-line Any $^ > $@
+	macros-make-dependences-by-line Any `only-non-empty-files $^` > $@
 
 tbl-expansion-dependences-by-line: $(SDEPEND)
-	macros-make-dependences-by-line Expansion $^ > $@
+	macros-make-dependences-by-line Expansion `only-non-empty-files $^` > $@
 
 %.sdepend: %.depend
 	awk '/======================================================================/,/^  thislinewontmatchanything  $$/' < $< > $@
 
 %.sdepend.bymacro: %.sdepend
 	macros-simplify-dependences-by-macro $<
+
+tbl-inclusion-dependences-by-macro: $(SDEPEND_BY_MACRO)
+	macros-make-dependences-by-macro 4 `only-non-empty-files $^` > $@ # column 4 has inclusion dependences
+
+tbl-expansion-dependences-by-macro: $(SDEPEND_BY_MACRO)
+	macros-make-dependences-by-macro 5 `only-non-empty-files $^` > $@ # column 5 has expansion dependences
 
 sdepend: $(SDEPEND)
 

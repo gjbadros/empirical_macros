@@ -1,16 +1,31 @@
 #!/uns/bin/perl -w
+# Simplify .sdepend files into .sdepend.bymacro files
+# Give the incl,exp,any dependence lines as percent of total lines in package
+# and as raw numbers
+# Also, prepend a "#" to lines containing macro names which aren't expanded
+# so that we can grep -v those lines out (along with the header line) very easily
 foreach my $file (@ARGV) {
   open(IN,"<$file") || die "Could not open $file: $!";
   open(OUT,">$file.bymacro") || die "Could not open output file $file.bymacro: $!";
   print STDERR "Handling $file...\n";
-  print OUT "#Name\tDDefs\tDefs\tIncl\tExp\tAny\n";
+  my $lines;
   while (<IN>) {
 #    print STDERR $_;
-    if (/^(\d+)\s+(\w+)\s*=\s*(\d+)\s+\[(\d+)\]\s+\*\s+\((\d+)\s*\+\s*(\d+)\)\s*$/) {
+    if (/^.*\(for\s+(\d+)\s+lines.*$/) {
+      $lines = $1;
+      $file =~ s/\..*$//;
+      print OUT "$file\t$lines\n";
+      print OUT "#Name\tDDefs\tDefs\tIncl\tExp\tAny\n";
+    } elsif (/^(\d+)\s+(\w+)\s*=\s*(\d+)\s+\[(\d+)\]\s+\*\s+\((\d+)\s*\+\s*(\d+)\)\s*$/) {
+      die "Have not seen a line count yet!" if !defined($lines);
       my ($product,$name,$ddefs,$defs,$incl,$exp) = ($1,$2,$3,$4,$5,$6);
       my $any = $product/($ddefs > 0? $ddefs: 1);
-      print OUT "$name\t$ddefs\t$defs\t$incl\t$exp\t$any\n";
+      printf OUT "%s$name\t$ddefs\t$defs\t%2.5f\t%2.5f\t%2.5f\t%d\t%d\t%d\n",
+      ($incl + $exp + $any)>0?"":"",
+      $incl*100/$lines, $exp*100/$lines, $any*100/$lines,
+      $incl, $exp, $any;
     } elsif (/^\s*$/) {
+      undef $lines;
       last;
     }
   }
