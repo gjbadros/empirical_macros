@@ -2771,8 +2771,9 @@ CbuffersDeep(cpp_reader *pfile)
 int
 CchOffset_internal(cpp_reader *pfile)
 {
-  cpp_buffer *buffer = pfile->buffer;
+  cpp_buffer *buffer = CPP_BUFFER(pfile);
   int cbuffersDeep = 0;
+  int retval = 0;
   while (buffer != CPP_NULL_BUFFER(pfile)) 
     {
     if (buffer->nominal_fname) 
@@ -2783,7 +2784,10 @@ CchOffset_internal(cpp_reader *pfile)
       buffer = CPP_PREV_BUFFER(buffer);
       }
     }
-  return buffer->cur - buffer->buf;
+  retval = buffer->cur - buffer->buf;
+  if (CPP_BUFFER(pfile)->fFromPerl)
+    retval += CPP_BUFFER(pfile)->ichSourceStart - 1;
+  return retval;
 }
 
 int
@@ -3235,17 +3239,20 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
   int cexpansionsDeep = CExpansionsDeep(pcei);
   int cchRawCall = CPP_BUFFER(pfile)->cur - pchAfterMacroName;
 #endif
-  int cchRawCall = CPP_BUFFER(pfile)->cur - pchAfterMacroName;
+  cpp_buffer *pbuf = CPP_BUFFER(pfile);
+  int cchRawCall = pbuf->cur - pchAfterMacroName;
   int cbuffersDeep = CbuffersDeep(pfile);
-  int ichSourceStart = CPP_BUFFER(pfile)->ichSourceStart;
+  int ichSourceStart = pbuf->ichSourceStart;
   int ichSourceEnd = ichSourceStart + (pcei?pcei->length:(cchRawCall + strlen(hp->name)));
   cpp_buffer *prev_buffer = CPP_PREV_BUFFER(pfile->buffer);
   if (CExpansionsDeep(pcei) > 1 && prev_buffer != CPP_NULL_BUFFER(pfile) && prev_buffer->prev != 0 && prev_buffer->ichSourceStart >= 0) {
-     ichSourceStart += prev_buffer->ichSourceStart - 1;
-     ichSourceEnd += prev_buffer->ichSourceStart - 1;
+    if (!pbuf->fFromPerl) {
+      ichSourceStart += prev_buffer->ichSourceStart - 1;
+      ichSourceEnd += prev_buffer->ichSourceStart - 1;
+    }
   }
 
-  if (cbuffersDeep == 0 || CPP_BUFFER(pfile)->has_escapes) 
+  if (cbuffersDeep == 0 || CPP_BUFFER(pfile)->has_escapes || CPP_BUFFER(pfile)->fFromPerl) 
     {
     if (pfile->fGettingDirective) 
       {
