@@ -321,7 +321,7 @@ sub do_if {
   pcp3::YYPushStackState();
   @state_stack = pcp3::ParseStateStack();
   print CPP ": Stack: @state_stack\n";
-  print STDERR "Value: $value, conditional: $conditional\n";
+#  print STDERR "Value: $value, conditional: $conditional\n";
   my $fTriviallyFalse = cpp_trivially_false_condition($conditional);
   if ($value == 0 && !$fTriviallyFalse) {
      handle_unincluded_block($s_branch_start,$s_branch_end,$skipped,"If",$conditional);
