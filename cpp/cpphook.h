@@ -74,7 +74,8 @@ typedef enum hook_index_constants {
 ///% replaces the $value argument and is non-zero iff the conditional fails
 ///% (i.e., an IFDEF with a not-defined macro, or an IFNDEF with a defined macro);
 ///% $s_branch_start gives the source code character offset of the start of
-///% the branch taken.
+///% the branch taken.  Note that this hook is called after the DO_IFDEF or DO_IFNDEF
+///% hook.
 
   HI_DO_IFDEF,
 ///% {$s_start, $s_end, $conditional, $trailer, $skipped, $value}
@@ -342,6 +343,16 @@ typedef enum hook_index_constants {
 ///% Called once after each function call is parsed.  Only argument is
 ///% the name of the function being called.
 
+  HI_TYPEDEF,
+///% {$name}
+///% Called once after each typedef is parsed.  Argument is the name
+///% of the new type.
+
+  HI_VARDECL,
+///% {$name}
+///% Called once after each variable declaration is parsed.  Argument is the name
+///% of the declared variable.
+
   HI_ANNOTATE,
 ///% {} Obsoleted
 
@@ -376,6 +387,8 @@ void gjb_call_hooks_void(struct cpp_options *, HOOK_INDEX);
 void gjb_call_hooks_i(struct cpp_options *, HOOK_INDEX, int);
 
 void gjb_call_hooks_sz(struct cpp_options *, HOOK_INDEX, char *);
+
+void gjb_call_hooks_sz_sz(struct cpp_options *, HOOK_INDEX, char *, char *);
 
 void gjb_call_hooks_sz_szl(struct cpp_options *, HOOK_INDEX, char *, char *, int);
 
