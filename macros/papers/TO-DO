@@ -34,6 +34,8 @@ Cpp can create operators (macros) which differ from any pre-existing
 language constructs -- say, by taking types as arguments.  The current
 draft doesn't spell this out, but we can add this if desired.
 
+[This is in the first sentence; careful about expanding too much here.]
+
 > What does it mean to say cpp permits system dependencies to be made
 > explicit and tested?
 
@@ -41,6 +43,8 @@ An explicit #if is superior to, say, instructions in a README file about
 different ways to build a program on different platforms.  The Cpp macros
 and tests reify those system dependences.  Again, this is not included in
 the current draft but can easily be added if necessary.
+
+[This is in the first paragraph; careful about expanding too much here.]
 
 > What is `disciplined' use of the preprocessor?  Who decides?  Which of
 > the usages in the paper are disciplined?  Connect the usages with
@@ -50,14 +54,6 @@ Disciplined use avoids error-prone and difficult-to-understand constructs.
 The remainder of the paper investigates which constructs those are.  They
 will depend to some extent on specific circumstances and needs and as such
 are difficult to formalize.
-
-> What evidence is there that preprocessing may limit the readability
-> and reusability of the C++ templates inferred by Siff and Reps?
-
-Expansion of macros can result in code that will perform incorrectly when
-it is compiled into a system with different settings for those macros.
-More prosaically, it can convert code that was terse and high-level, with
-reasonable names, into verbose, low-level gibberish.
 
 > I'm not very convinced by your list.  It's all
 > too vague and general.  Try to improve or prune the list.  Definitely
@@ -88,18 +84,7 @@ The problem, as now noted in the text, is when the definitions are
 incompatible.  They apparently have different intended uses, and such name
 clashes can lead to either bugs or difficulties in understanding the code.
 
-> Disclaimer about library macros should be more prominent.
 
-Note that this is a feature, not a disclaimer.  The large number of library
-macros swamps use in the package, rendering the results meaningless for
-learning about how the package uses Cpp.  After we discovered this, we
-suppressed library macros from our results.
-
-
-
-The relationship between GNU programs and the GNU Coding Standards is
-tenuous at best.  Most GNU programs do not appear to have been written with
-an eye to the standards.
 
 >   3) There are almost no small programs.
 
@@ -198,6 +183,7 @@ capabilities provide a feature unavailable in the C language.  By contrast,
 macros categorized as syntactic act as punctuation.  Since these are
 orthogonal classifications, some but not all syntactic macros will provide
 extra-linguistic capabilities (such as dynamic binding).
+[This is in sec:extra-linguistic.]
 
 > How did you develop your list of macro pitfalls?  Aren't these
 > well known in the C literature?  How does your work relate?
@@ -234,23 +220,6 @@ different audiences; as we note in our cover letter, responses have been
 quite varied.
 
 
-> Explain /**/-style pasting.
-
-We describe this on page 15.  If desired, we could add one more explanatory
-sentence: "For instance, in K&R C, to/**/ken is interpreted as a single
-token, and macros might be expanded on either side of the comment as well."
-
-> Page 20:
-> 
-> I don't like the games you are playing with X axes.  How about putting
-> the uses=0 data as separate blots, not connected to the rest of the
-> graph, and using a true logarithmic scale for the rest of the data?
-
-We now use a true logarithmic axis, with the addition of 0.  We have
-connected the uses=0 lines to the rest of the graph because otherwise it is
-too hard to puzzle out which of the (closely spaced) blots for uses=0 is
-associated with which curve.
-
 > In Section 6.1, are we talking multiple macros on one line or macros
 > invoking macros?  Wouldn't it be useful to distinguish those cases?
 
@@ -259,15 +228,6 @@ expansion-dependence) but are not restricted to them.  Our data give
 transitive dependences.  We hope this is now clear from our remark that the
 LEGITIMIZE_ADDRESS line, which contains five tokens (and only one macro) is
 dependent on hundreds of macros.
-
-> Figure 14 needs work.  The labels are too small.  The numbers on the X
-> axis should label the boundaries between bars, not the bars
-> themselves.  This relabeling will eliminate the need for the epsilon
-> bar (called e in the figure).  It is probably worth putting both Y
-> axes on the same scale, even if you must increase the amount of
-> vertical space devoted to the figure.
-
-[Make sure that the entries label the bars, not the spaces between the bars.]
 
 > If so, how frequent are
 > those usages according to your data?  Does the frequency vary by
@@ -282,21 +242,6 @@ not find it particularly illuminating).
 As mentioned earlier, a detailed study of specific software packages would
 be welcome but is beyond the scope of this paper.
 
-> You criticize Spuler and Sajeev for not justifying tradeoffs between
-> techniques that perform parsing and those that do not.  I see no such
-> justification in your paper.  You barely even explain your techniques
-> for identifying and classifying potential errors.
-
-Those tradeoffs are a major theme of the Spuler and Sageev paper, which
-contains frequent comments like "The extra cost is hardly justified, since
-incorrect warnings appear rarely," and "This technique will rarely find
-extra errors and the simpler algorithm is quite adequate."  Absolutely no
-justification is provided.  Those tradeoffs in techniques are not the major
-theme of our paper, though perhaps the community would welcome followon
-work that examined this issue more rigorously.
-
-We can add the above to the paper if it would be helpful.
-
 > Page 27:
 > 
 > Define `problematic' uses.
@@ -310,13 +255,6 @@ too, depending on the context.
 We have eliminated many uses of this word, often substituting
 "error-prone", but that does not capture the full connotations of
 "problematic", which we often desire.
-
-> Your argument about standardization might apply to new code.  It
-> certainly doesn't apply to legacy code.  Does that matter?
-
-It does apply to legacy code that is being maintained or otherwise
-modified.  That covers most legacy code (and essentially all legacy code
-that people or tools are examining).
 
 > How are the good practices in section 8 different from recommendations
 > made by others?  The benefits you list are very abstract.  Make a case
@@ -417,43 +355,15 @@ understand' claim at the top of page 12.
 
 
 
-Page 14, `dangling semicolon'.  What about macros whose bodies are
-{ ... }, as in 
-
-  #define ABORT() { fprintf(stderr, "Yo mama writes C++"); kill(getpid(),SIGABRT
-); }
-
-This macro also has the property `while its invocation looks like a
-function call, it should not be used as function call'.  Why doesn't
-it appear in the same taxon?
-[Add note about that.  We have already accurately counted those elsewhere,
-so point at them.]
-
-On a related point, the recommendation at the top of page 15, to wrap
-statements in braces, is a disaster, for precisely this reason.
-Again, your credibility plummets --- this kind of error is an example
-of why you *must* present the *reasoning* behind your assertions.
-In this case, the reasoning is that macros that might reasonably
-function as statements should be acceptable anywhere a function-call
-statement would be, because the uses look too much like function
-calls, and to do anything else would be to set a trap for the unwary.
-
-[Depends on whether it must be the same "part of speech".  If so (eg, to
-avoid changing an interface depended on by other consumers), then follow
-our suggestions.  Otherwise, if you have the freedom to change all the uses
-as well, then change the part of speech.]
-
-
 
 Page 14, `side-effected formal' appears wrong.  Neither glyphs nor
 frame need be an lvalue.  I agree that frame must be the name of a
 field in a struct pointed to by glyphs, and this is passing strange.
 Consider, e.g.,
-
   #define SET_GLYPHS_FRAME(glyphs,frame) (set_ ## #frame((glyphs), (frame)))
-
 as an alternative.  Might not this simple function call serve as well?
 Or am I overlooking something obvious?
+[This criticism is right; choose another example from this category.]
 
 
 In section 5.5, I am surprised by the decision to consider all strings
@@ -461,26 +371,6 @@ and character literals identical.  What happens if this element of the
 canonicalization isn't done?  Do the results change in any interesting
 way?  (If this was in the first draft, my apologies for missing it
 then.)
-
-In figure 8, if I understand what is going on, the algorithm in Figure
-7 would determine a `final' category.  I would find it most helpful if
-that column were included in Figure 8, perhaps separated by blank
-space from the other columns.  I really wish not to run Fig 7 in my
-head multiple times.
-[Do this.]
-
-
-In Figure 10, you must not connect the items at 0 to the items at 1.
-This procedure is scientifically meaningless and can only serve to
-mislead the reader.  If you need a short line segment to help the
-reader distinguish the points at 0, simply draw a flat horizontal line
-segment about 3/8 of an inch wide and centered at 0.   Do *not*, under
-*any* circumstances, connect the points at zero to the points at 1.
-The points at 0 are infinitely far away to the left and there must be
-a break.
-[We explained earlier why we connect 0 and 1.]
-
-How did you choose the widths of the buckets used on page 25?
 
 
 In your conclusions, you claim your article `serves to confirm or
@@ -491,9 +381,8 @@ serves to confirm or contradict them.
 [This would be nice to do, if possible.  But is it reasonable to do
 comprehensively in the time alotted?]
 
-
-Get TSE formatting requirements.
-
+"type" vs "type related" for a category (see figs 8, 6; they are not
+consistent).
 
 END OF MESSAGE
 

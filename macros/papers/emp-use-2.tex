@@ -254,8 +254,11 @@ Each approach has different strengths and weaknesses.
   function templates from C; however, the input ``has been
   preprocessed so that all include files are incorporated and all
   macros expanded''~\cite[p.~145]{Siff-fse96}.  Such preprocessing may
-  limit the readability and reusability of the resulting C++
-  templates.  Another example is that call graph extractors generally
+  limit the readability of the resulting C++ templates by converting
+  terse, high-level, well-named constructs into verbose, low-level code.
+  Preprocessing may also limit reusability:  the macro-expanded code will
+  perform incorrectly when compiled on a system with different settings
+  for the macros.  Another example is that call graph extractors generally
   work in terms of the post-processed code, even when a human is the
   intended consumer of the call graph~\cite{Murphy-icse18}.
 
@@ -573,7 +576,8 @@ partial constructs in conditional compilation branches.
 
 The results reported in this paper omit macros defined only in external
 libraries (such as the \file{/usr/include/} hierarchy), even when used in
-the package source code; we also omit all macro uses in libraries.  This
+the package source code; we also omit all macro uses in libraries.  
+There are many such macros and uses; omitting them
 prevents library header files and uses of macros defined in them from
 swamping the characteristics of the
 package code, which is our focus in this study.  The programmer generally
@@ -1371,7 +1375,9 @@ described below.
 
 \item[dangling semicolon]\label{item:swallow-semicolon}
         The macro body takes arguments and expands into a statement or
-        multiple statements (39\% of statement macros contain the error).
+        multiple statements (39\% of statement macros contain the error),
+        for instance by ending with a semicolon or being enclosed in
+        \verb|{|~\ldots~\verb|}|.
         Thus, its invocations look like function calls, but it should not
         be used like a function call, as in
 \begin{alltt}
@@ -1445,7 +1451,14 @@ described below.
         or, better, wrap statements in {\tt \verb|{| \ldots\ \verb|}|} and
         wrap semicolonless statements in {\tt do \verb|{| {\rm
         \ldots}\verb|; }| while (0)}.
-
+      
+        An alternative solution would convert macros whose bodies are
+        statements into semicolonless statements (wrapped in {\tt do \verb|{|
+        {\rm \ldots}\verb|; }| while (0)}, as noted above).  Invocations of
+        such macros look more like function calls are are less error-prone.
+        This solution requires notifying users of the change in the macro's
+        interface and changing all existing macro uses.
+        
 \item[inconsistent arity]
         The macro name is defined multiple times with different arity; for example,
 \begin{verbatim}
@@ -1493,7 +1506,7 @@ errors.  There are some illegal constructs such as {\tt \#module} (which
 is not a meaningful Cpp directive) and {\tt \#undef
 \verb|GO_IF_INDEXABLE_BASE|(X, ADDR)} ({\tt \#undef} takes a macro name,
 not the arguments as they appeared in the {\tt \#define} directive).
-  
+
 While ANSI~C uses {\tt \#\#} for pasting, in K\&R~C one abuts two symbols,
 with an empty comment in between, so that their expansions form a new
 identifier when the compiler removes the comment.  For instance, in K\&R~C,
@@ -1803,9 +1816,9 @@ with incompatible definitions.
     macro names (6.0\% of multiply-defined macro names), all definitions
     are either expressions or constants.
     Rows less than 0.2\%, representing 5 or fewer macro names, are omitted.
-    The arrows indicate macros for which the
-    names are categorized as ``other'' (4.4\% of all multiply-defined
-    macro names; overall, 2.0\% of all macro names are so categorized).
+    The rightmost column indicates the categorization of the macro name; 
+    4.4\% of all multiply-defined macro names, and 2.0\% macro names
+    overall, are are categorized as ``other''.
     This chart shows which different macro definition categories tend
     to occur together and assists in understanding the reasons for macro names
     whose multiple definitions cause them to be categorized as ``other''.}
@@ -2381,16 +2394,18 @@ dependent on over 176 macros.
 \epsfig{file=fig/incl-dep-bymacro.eps,angle=270,width=.48\linewidth}}
 %%Numbers: read off of Excel exp-dep-bymacro
 \captionsmall{Dependences by macro name for \numdependmacronames\ macro
-  names in \numdependpackages\ packages.  Each bar represents all macros
-  that control at least as many as the labeled percent of the lines in its
-  package (but fewer than the next bar).  For instance, the 0.17 bar in the
+  names in \numdependpackages\ packages.  The first bar represents all
+  macros that are completely unused in a package.
+  Each other bar represents all macros
+  that control a specified percentage range of the lines in a
+  package.  For instance, the 0.17--0.26 bar in the
   expansion dependence chart indicates that 257 macros each control between
   0.17\% and 0.26\% of the entire package that contains that macro.  The
   maximum falls in the penultimate bucket (i.e., the rightmost bucket is
-  the first empty one).  The $\varepsilon$ bar represents a small non-zero
-  fraction (specifically, $10^{-7}$), so that macros not controlling any lines
-  are not conflated with macros controlling very few lines.  A log scale is
-  used for the x axis.}
+  the first empty one).  The second bar of each graph represents all macros
+  controlling at least one line ($\varepsilon$ is a very small but nonzero
+  value), but no more than .01% of the entire package.  A log scale is used
+  for the x axis.}
 
 %% expansion is red; inclusion is blue
 \label{fig:dep-bymacro}
@@ -2697,6 +2712,8 @@ ones in effect at the definition site), and newlines in macro invocations
 The GNU coding standards~\cite{Stallman97} mention Cpp only to recommend
 upper case for macros and use of macros to provide meanings for standard
 symbols on platforms that don't support ANSI~C\@.
+In any event, most GNU programs do not appear to have been written with
+an eye to careful adherence to the standards.
 The Ellemtel coding standards~\cite{ellemtel92} recommend that inline
 definitions appear in separate files of their own (not in \file{.h} header
 files) that never include other files, that inline functions and {\tt
@@ -2899,9 +2916,9 @@ Check~\cite{SpulerS92} is a C macro checker that detects some instances of multi
 statements, swallowed {\tt \#else}, side effects, and precedence errors
 using largely lexical checks.  Precedence error checks are
 performed on macro uses rather than reporting error-prone definitions.  The
-authors do not report on the effectiveness of the tool in practice or
+authors do not report on the effectiveness of the tool in practice, nor do they
 justify their tradeoffs between techniques that perform parsing and those
-that do not.
+that do not, although such tradeoffs are a major theme of their paper.
 
 % I searched INSPEC for
 %       metric and cpp
@@ -3031,7 +3048,8 @@ in the base language.
 
 Since many of the most problematic uses of Cpp provide portability across
 different language dialects or different operating environments,
-standardization can obviate many such uses.  Canonicalizing library
+standardization can obviate many such uses, either in legacy code or, more
+easily, in new code.  Canonicalizing library
 function names and calling conventions makes conditional compilation less
 necessary (37\% of conditionals test operating system variances) and
 incidentally makes all programs more portable, even those that have not
