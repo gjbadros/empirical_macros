@@ -1,0 +1,13 @@
+Understanding is the key difficulty;  once an accurate analysis of the
+program exists, transforming specific parts to a new source-level
+representation is fairly straightforward.  (It's knowing that it's safe
+that is hard.)
+
+CPP is lexical, so annotating characters is more natural than annotating
+trees.  Emacs provides a good, fairly efficient, general way to annotate
+text regions.
+
+Think of emacs as a human; give it the information needed to make
+appropriate conservative transformations, and let it apply heuristics to
+perform the changes.
+
