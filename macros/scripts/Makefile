@@ -38,6 +38,7 @@ ERR  := $(addsuffix .err,$(PKGS))
 EVIL := $(addsuffix .evil,$(PKGS))
 FNLN := $(addsuffix .fnln,$(PKGS))
 FUNC := $(addsuffix .func,$(PKGS))
+LINT := $(addsuffix .lint,$(PKGS))
 MAC  := $(addsuffix .mac,$(PKGS))
 CCD  := $(addsuffix .ccd,$(PKGS))
 USECUM  := $(addsuffix .frequse_cum,$(PKGS))
@@ -159,10 +160,13 @@ tbl-def-categories: $(STAT)
 	macros-make-categories-tbl-from-stat.pl -t -p $^ > $@
 
 tbl-subset-categories: $(MAC)
-	macros-make-subset-metacateg-from-mac $^ | sort | uniq -c | sort -nr >$@
+	macros-make-subset-metacateg-from-mac -m $^ | sort | uniq -c | sort -nr >$@
 
 tbl-subset-categories.tex: tbl-subset-categories
 	latexify-meta-mark-table `sum-column 1 <$^`  < $^ > $@
+
+tbl-lint-warnings: $(LINT)
+	combine-histogram -p'\) ' -s '^Total.*: (.*)' $^ > $@
 
 package_num_files:
 	cd $(PKG_DIR); \
