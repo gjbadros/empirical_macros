@@ -6872,7 +6872,7 @@ cpp_handle_options (pfile, argc, argv)
 	opts->out_fname = argv[i];
       else {
         /* skip .o files, in case this is a link step */
-        if (strstr(argv[i],".o"))
+        if (strstr(argv[i],".o") || strstr(argv[i],".a"))
           continue;
         /* get the filename, but don't increment i */
         strcpy(szCompileFileName,argv[i]);
