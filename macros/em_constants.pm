@@ -136,7 +136,8 @@ $catLast = 24;
 			 portability_machine commenting mi_prevention redef_suppression
 			 misc_system other mixed_categories);
 
-# T
+# Define an enumeration of the various cond compilation directive categories,
+# just use the numbers from 0 on up (is there a less "clever" way to do this?)
 (
 $ccatDEBUG, 
 $ccatPORT_LANLIB,
