@@ -4,4 +4,5 @@
 # Cool (lame) hack to add one of each categories via the echo,
 # then decrement the counted (uniq's output) sum using the awk at 
 # the end of the pipeline
-(echo "Code\nCodeCond\nCodeMacro\nCodeMacroCond\nCond\nMacro\nMacroCond\nNoUses"; awk < "$1" 'NR>1 && $0 !~ /^[%#]/ && $10 !~ /^FromInclude/ {print $8}') | sort | uniq -c | awk '$1--'
+(echo "Code\nCodeCond\nCodeMacro\nCodeMacroCond\nCond\nMacro\nMacroCond\nNoUses"; 
+ awk < "$1" 'NR>1 && $0 !~ /^[%#]/ && $10 ~ /FromStdin/ {print $8}') | sort | uniq -c | awk '$1--'
