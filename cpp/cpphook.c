@@ -179,21 +179,39 @@ gjb_call_hooks_i(struct cpp_options *opts, HOOK_INDEX ih, int i)
   perl_call_sv_hooks(psvFunc, G_DISCARD);
 }
 
-void
+int
 gjb_call_hooks_sz(struct cpp_options *opts, HOOK_INDEX ih, char *sz)
 {
   SV *psvFunc = NULL;
-
+  int count, retval;
   dSP;
-  
+
   if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
-    return;
+    return -1;
+
+  ENTER ;
+  SAVETMPS;
 
   PUSHMARK(sp);
   XPUSHs(sv_2mortal(newSVpv(sz, 0)));
   PUTBACK ;
-     
-  perl_call_sv_hooks(psvFunc, G_DISCARD);
+
+  count = perl_call_sv_hooks(psvFunc, G_SCALAR);
+
+  SPAGAIN ;
+
+  if (count != 1)
+    {
+    croak("Big trouble: count != 1");
+    }
+
+  retval = POPi;
+  /*  fprintf(stderr,"retval = %d\n",retval); */
+
+  PUTBACK ;
+  FREETMPS ;
+  LEAVE ;
+  return retval;
 }
 
 void
