@@ -6,6 +6,12 @@
 #define FOO 6
 #endif
 
+#ifdef FOO
+#define baz 1
+#else
+#define baz 2
+#endif
+
 int
 main(char **argv, 
      int argc)
