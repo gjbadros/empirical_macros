@@ -4,8 +4,15 @@
 #define BOD BING
 #define BING foo
 
+#define C 8
+#define C 9
+#undef C
+C
+
 
 #define BING(a,b,c)  a a #a
+
+int rgi[C]
 
 BING(x,y,z)
 
