@@ -778,9 +778,14 @@ ASSERT(p) if (!(p)) botch(\verb|__STRING|(p)); else}).
   parentheses, braces, or brackets.  The latter are often used to create a
   block and perform actions that must occur at its beginning and end, as
   for \verb|BEGIN_GC_PROTECT| and \verb|END_GC_PROTECT|.
-  Macros in this category are inexpressible in the underlying programming
-  language, but depend on the preprocessor's manipulation of uninterpreted
-  token streams; see also Section~\ref{sec:extra-linguistic}.
+  Macros in this category are inexpressible as abstractions directly in the C
+  programming language---they depend on the preprocessor's manipulation of uninterpreted
+  token streams.  These macros result in a change to the parser's state
+  that could not be effected by a symbol alone;  see also 
+  Section~\ref{sec:extra-linguistic}.  We call these macros
+  ``syntactic'' because they hide syntax in the view of unprocessed
+  code (e.g., Emacs's C indentation will not know that text following a
+  macro that expands to a open brace should be indented further).
 
 %% mcat_SYMBOL: 775
 %%   6.1%  reserved_word (47)
@@ -1637,8 +1642,7 @@ We split macro uses into three categories:
   \texttt{\#elif} conditions.  In this section, we discard uses in Cpp
   conditionals whose only purpose is to prevent redefinition.  More
   specifically, we ignore uses in a condition that tests only a macro's
-  definedness and whose body only defines that macro.  Spot-checking
-  indicated that this conservative test is very accurate in practice.
+  definedness and whose body only defines that macro.
 \item uses in the body of a macro definition.
   Macros used in such contexts eventually control either textual
   replacement or code inclusion (according to uses of the macro being
@@ -1824,7 +1828,17 @@ as ``mixed'':
       {\tt \#if defined(\verb|STDIO_H|) || \verb|SYSV_SIGNALS|}).
 \end{description}
 
-
+These data suggest that about 20\% of conditional compilation directives
+would be unnecessary if the C preprocessor had two simple language
+features: 1) a ``define only if not already defined'' directive; and 2)
+an Objective-C-like \ppd{import} facility which automatically avoids
+multiple inclusions.  Another 30\% of conditional compilation directives
+involve handling portability across variances in target operating
+systems.  Tools such as the GNU project's \texttt{autoconf} may account
+for the prevalence of this category by making it easier to maintain code
+bases with sprinkled \ppd{ifdef}s managing multiple target operating
+system variants.  It would be interesting to compare these data to those
+collected for software that targets only a single specific platform.
 
 % \subsection{Number of arguments}
 % 
@@ -2173,10 +2187,10 @@ consistent return types.  LCLint's approach is prescriptive:  programmers
 are encouraged not to use constructs that might be dangerous, or to change
 code that contains such constructs.  For full checking, LCLint also
 requires users to add fine-grained annotations to macro definitions.  We
-tried to run LCLint\comment{what version?} on our set of packages with its macro diagnostics
+tried to run LCLint version 2.3i on our set of packages with its macro diagnostics
 enabled, but LCLint reported 3184 parse errors and 571 internal bugs when
 running on the approximately 4000 files in our suite of packages.
-  
+
 
 %LCLint considers assignment to a macro argument dangerous but does not
 %appear to check for assignments to local variables.~\cite[\S
