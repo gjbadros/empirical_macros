@@ -79,27 +79,34 @@ Box 352350, Seattle, WA  98195-2350  USA \\
 \maketitle
 
 \begin{abstract}
-  The C programming language is intimately connected to its macro
-  preprocessor, Cpp.  
-%  This relationship hinders tools built to
-%  engineer C programs, such as compilers, debuggers, call graph
-%  extractors, and translators.  Most tools make no attempt to analyze
-%  macro usage, but simply preprocess their input, which results in a
-%  number of negative consequences; an analysis that takes Cpp into
-%  account is preferable.  
-  To determine how the preprocessor is used in
-  practice, this paper analyzes {\numpackages} packages comprising
-  {\numlinesalmost} lines of publicly available C code.  We determine
-  the incidence of C preprocessor usage\,---\,whether in macro
-  definitions, macro uses, or dependences upon macros\,---\,that is
-  complex, potentially problematic, or inexpressible in terms of other
-  C or C++ language features.  We taxonomize these various aspects of
-  preprocessor use and particularly note data that are material to the
-  development of tools for C or C++, including translating from C to
-  C++ to reduce preprocessor usage.  Our results show that while most
-  Cpp usage follows fairly simple patterns, an effective program
-  analysis tool must address the preprocessor.  These results are of
-  interest to language designers, tool writers, programmers, and
+  This is the first empirical study of the use of the C macro preprocessor,
+  Cpp.  To determine how the preprocessor is used in practice, this paper
+  analyzes {\numpackages} packages comprising {\numlinesalmost} lines of
+  publicly available C code.  We determine the incidence of C preprocessor
+  usage\,---\,whether in macro definitions, macro uses, or dependences upon
+  macros\,---\,that is complex, potentially problematic, or inexpressible
+  in terms of other C or C++ language features.  We taxonomize these
+  various aspects of preprocessor use and particularly note data that are
+  material to the development of tools for C or C++, including translating
+  from C to C++ to reduce preprocessor usage.  Our results show that while
+  most Cpp usage follows fairly simple patterns, an effective program
+  analysis tool must address the preprocessor.
+  
+  The intimate connection between the C programming language and Cpp, and
+  Cpp's unstructured transformations of token streams, often hinder
+  programmer understanding of C programs and tools built to engineer C
+  programs, such as compilers, debuggers, call graph extractors, and
+  translators.  Most tools make no attempt to analyze macro usage, but
+  simply preprocess their input, which results in a number of negative
+  consequences; an analysis that takes Cpp into account is preferable, but
+  building such tools requires an understanding of actual usage.
+  Differences between the semantics of Cpp and those of C can lead to
+  subtle bugs stemming from the use of the preprocessor, but there are no
+  previous reports of the prevalence of such errors.  Use of C++ can reduce
+  some preprocessor usage, but such usage has not been previously measured.
+  Our data and analyses shed light on these issues and others related to
+  practical understanding or manipulation of real C programs.  The results
+  are of interest to language designers, tool writers, programmers, and
   software engineers.
 \end{abstract}
 
