@@ -1,6 +1,6 @@
 #!/uns/bin/zsh -f
-for i in $HOME/*.prn; do
-  mv $i ${i:r}
+for i in $HOME/*.prn(N); do
+  DEST=${i:t:r}
+  mv $i $DEST
+  excel-ps-to-eps $DEST
 done
-excel-ps-to-eps *.ps
-
