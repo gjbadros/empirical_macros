@@ -108,8 +108,8 @@ text_tables:	$(TEXT_TABLES)
 tbl-package-sizes: $(STAT)
 	macros-make-package-sizes-tbl-from-stat $^ > $@
 
-tbl-package-sizes.tex: tbl-package-sizes
-	(echo "Package	Version	Physical lines	NCNB lines	Description"; join -t'	' $(COMMON_DIR)/package_versions tbl-package-sizes | join -t'	' - $(COMMON_DIR)/package_descriptions ) | latexify > $@
+tbl-package-sizes.tex: tbl-package-sizes package_num_files
+	(echo "Package	Version	Physical lines	NCNB lines	No. Files	Description"; join -t'	' $(COMMON_DIR)/package_versions tbl-package-sizes | join -t'	' - package_num_files | join -t'	' - $(COMMON_DIR)/package_descriptions ) | latexify > $@
 
 tbl-def-frequency: $(DEFCUM)
 	macros-make-tbl-frequsedef-from-cum $^ > $@
@@ -163,6 +163,10 @@ tbl-subset-categories: $(MAC)
 
 tbl-subset-categories.tex: tbl-subset-categories
 	latexify-meta-mark-table `sum-column 1 <$^`  < $^ > $@
+
+package_num_files:
+	cd $(PKG_DIR); \
+	wc -l */c-files-listing | awk -F/ '{print $$1}' | awk -F- '{print $$1}' | awk '{print $$2 "\t" $$1}' > $(ANALYZE_OUTPUT_DIR)/$@
 
 ###########################################################################
 ### Etc.
