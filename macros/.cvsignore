@@ -10,6 +10,7 @@ checkargs.man
 cline.man
 data
 em_constants.man
+em_depend.man
 em_util.man
 test
 fast

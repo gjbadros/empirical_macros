@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 # cppp -- Partial CPP (expands specified C preprocessor macros)
 # Michael Ernst <mernst@cs.washington.edu>
-# Time-stamp: <2002-12-29 17:57:21 mernst>
+# Time-stamp: <2003-01-21 23:29:51 mernst>
 
 # cppp simplifies the conditional compilation structure (#if, #ifdef, etc.)
 # of a C file by eliminating CPP conditional directives, based on the
@@ -10,7 +10,8 @@
 # input files.  If the specified macros are insufficient to fully evaluate
 # a conditional, it is left as is.  Furthermore, in the resulting file,
 # occurrences of macros are not expanded (in code, macro definitions, or
-# conditional compilation lines).
+# conditional compilation lines).  No expansion or evaluation is ever done
+# in comments.
 
 # This program is similar to the unifdef Unix program.  Two differences are
 # that unifdef only operates on #ifdef lines, whereas cppp operates on #if
@@ -580,7 +581,7 @@ sub eval_substituted_conditional_internal ( $ )
     { return int($exp); }
   elsif ($exp =~ /^[_A-Za-z][_A-Za-z0-9\$]*$/)
     { return $unknown; }
-  elsif ($exp =~ /^\#\s*[_A-Za-z][_A-Za-z0-9\$]*$/)
+  elsif ($exp =~ /^\s*\#\s*[_A-Za-z][_A-Za-z0-9\$]*$/)
     { # I don't think stringization is legal, nor know how to deal with it.
       return $unknown; }
   else
@@ -719,8 +720,8 @@ sub process_file ( $ )
 	{ die "bad sizes for condition_stack (", scalar(@condition_stack),
 	      "), elif_needs_endif (", scalar(@elif_needs_endif), ") in $file"; }
 
-      if ($simple =~ /^\#\s*(if(n?def)?|el(se|if)|endif)\b/)
-	{ $simple =~ s/^\#\s*//;
+      if ($simple =~ /^\s*\#\s*(if(n?def)?|el(se|if)|endif)\b/)
+	{ $simple =~ s/^\s*\#\s*//;
 	  if ($debug_cppp)
 	    { print "simple preprocessor line: $simple"; }    # ends in newline
 	  if ((scalar(@condition_stack) == 0) && ($simple =~ /^(el(se|if)|endif)\b/))
@@ -817,13 +818,14 @@ sub process_file ( $ )
 			{ my $output_raw = $raw;
 			  chop $output_raw; # remove newline
 			  $output_raw =~ s/\*\//* /;
-			  print OUTPUT "#else\t/* cppp replaced: $output_raw */\n"; } }
+                          $output_raw =~ /^(\s*\#\s*)/;
+			  print OUTPUT "$1else\t/* cppp replaced: $output_raw */\n"; } }
 		  elsif (!$oldvalue)
 		    { if (is_unknown($thisvalue))
 			{ my $output_raw = $raw;
 			  chop $output_raw; # remove newline;
 			  if (! $elif_needs_endif[$#elif_needs_endif]) {
-			    $output_raw =~ s/^(\#\s*)el/$1/; # change elif to if
+			    $output_raw =~ s/^(\s*\#\s*)el/$1/; # change elif to if
 			  }
 			  print OUTPUT "$output_raw\t/* cppp replaced: elif */\n"; } } } }
 	  elsif ($simple =~ /^if(n?def)?\b/)
