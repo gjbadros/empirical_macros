@@ -494,6 +494,7 @@ each tool.  Not surprisingly, our framework is ideal for analyzing
 preprocessor constructs.
 
 \subsection{Macro expansion mappings}
+\label{ssec:macro_exp_map}
 To support useful interactions between the parser and preprocessor, it
 is essential that \pcp{} maintain an accurate mapping between the
 unprocessed source and the preprocessed source.  Macro expansions are
@@ -651,6 +652,7 @@ constant variables or \CPP{} inline functions.
 
 %% Emacs support
 \subsection{Program understanding support in Emacs}
+\label{ssec:prg_und_supp}
 %advantage over font-lock mode that you get information from the actual
 %parse, not by some lexical rules which may cause a mismatch
 Some of the analyses \pcp{} has been used to perform generate large amounts of
@@ -845,6 +847,13 @@ generally the group is optimistic about the possibilities for their
 approach.  Some of their techniques might be applicable to a future
 version of \pcp{}, especially as the AST-related backcalls mature.
 
+Several systems including NewYacc~\cite{Purtilo89} and
+ASTLog~\cite{Crew97} parse preprocessed source code and generate an
+abstract-syntax tree that can then be annotated and queried during
+analyses.  Unlike \pcp{}, these systems are not useful for an analysis
+that deals with preprocessor directives as well as \C{} language-level
+constructs.
+
 LCLint~\cite{LCLint} attempts to analyze macro definitions for dangerous or
 error-prone constructs.  It allows the programmer to add annotations to
 the code in comments.  These annotations give the LCLint checker extra
@@ -884,8 +893,8 @@ artifact and eliminates the need of individual analyses to mimic the
 preprocessor.  Nevertheless there are several weaknesses of the
 framework and our implementation in \pcp{}.
 
-First, some sophisticated preprocessor analyses (\eg{} the second
-analysis in section \ref{ssec:xform_understand}) are dependent on the order that
+First, some sophisticated preprocessor analyses (\eg{} the 
+analysis in section \ref{ssec:macro_exp_map}) are dependent on the order that
 action hooks are called.  This in turn requires an intimate
 understanding of the implementation's preprocessing and (to a lesser
 extent) parsing
