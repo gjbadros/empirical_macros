@@ -21,7 +21,7 @@ PKG_DIR := /scratch/gjb/packages
 PKG_PREFIX :=   
 # DO NOT USE "" for a null var, since that becomes a space
 # Leave MUNGED_DIR blank or set to "munged/"
-MUNGED_DIR := "/munged/"
+MUNGED_DIR := munged/
 ANALYZE_OUTPUT_DIR := $(shell pwd)
 COMMON_DIR := $(shell dirname `ls -l Makefile | awk '{print $$NF}'`)
 #COMMON_DIR := /homes/gws/mernst/research/notkin/macros/scripts
@@ -31,6 +31,8 @@ COMMON_DIR := $(shell dirname `ls -l Makefile | awk '{print $$NF}'`)
 # USER_PREFIX in Makefile.user has an effect).
 FAST_DIR = $(USER_PREFIX)/fast
 PAPER_DIR = $(USER_PREFIX)/papers
+# PAPER_FIG_DIR = $(USER_PREFIX)/papers/fig
+PAPER_FIG_DIR = $(USER_PREFIX)/papers
 PAPER_CPPP_DIR = $(USER_PREFIX)/papers/cppp
 PAPER_ORIG_DIR = $(USER_PREFIX)/papers/orig
 
@@ -52,12 +54,14 @@ SCRIPTSPATH := $(addprefix $(USER_PREFIX)/,$(SCRIPTS))
 SCRIPTSFAST := $(addprefix $(FAST_DIR)/,$(SCRIPTS))
 
 PKG_DIRS_NOMUNGE := $(shell zsh -c "setopt extendedglob; echo $(PKG_DIR)/$(PKG_PREFIX)*~*\~(/:t)")
-PKG_DIRS := $(addsuffix $(MUNGED_DIR),$(PKG_DIRS_NOMUNGE))
+PKG_DIRS := $(addsuffix /$(MUNGED_DIR),$(PKG_DIRS_NOMUNGE))
 
 # Should make this use PKG_DIRS_NOMUNGE, not recompute from scratch.
 PKGS := $(shell zsh -c "setopt extendedglob; echo $(PKG_DIR)/$(PKG_PREFIX)*~*\~(/:t) | sed -e 's/-[^ ]*//g' | uniq")
 
 STATE := $(addsuffix .state,$(PKGS))
+DSTATE := $(addsuffix .dstate,$(PKGS))
+ESTATE := $(addsuffix .estate,$(PKGS))
 STAT := $(addsuffix .stat,$(PKGS))
 CATG := $(addsuffix .catg,$(PKGS))
 ERR  := $(addsuffix .err,$(PKGS))
@@ -126,8 +130,55 @@ clean:
 	rm -f $(ALL_TABLES)
 	rm -fr made-catdefuse
 
+# Use this with extreme caution!
+totally_clean: clean clean_reports
+	# These are the files exempted by macros-clean-reports, except Makefiles
+	rm -f $(STATE) $(DSTATE) $(ESTATE) $(ERR) $(EVIL) $(OUT) $(PERR)
+
 foo: $(DEFCUM)
 	average-cums.pl $(DEFCUM)
+
+# To make static executables:
+#   Unpack all the tar files from /scratch/mernst/archive into /scratch/mernst/pack-static
+#   setenv CC "gcc -Dstatic="
+#   For each package:
+#     Configure:
+#       * For Mosaic, bash
+#          (Do nothing)
+#       * For RasMol, fvwm, ghostview, xfig
+#          xmkmf -a
+#       * For bc, bison, cvs, emacs, flex, gcc, genscript, gzip, m4, rcs, zephyr, zsh
+#          ./configure
+#       * For gawk
+#          ./configure linux
+#       * For gnuchess
+#          cd src; ./configure
+#       * For gnuplot
+#          cp makefile.unx Makefile
+#          make CC="gcc -Dstatic=" linux
+#       * For gs
+#          ln -s unix-gcc.mak makefile   # might already be done
+#       * For perl
+#          rm -f config.sh; Configure -d
+#          Where "pcp3" appears in /scratch/gjb/packages/perl-5.003/, use "gcc -Dstatic="
+#       * For plan
+#          cd src
+#          Edit Makefile:
+#           * add "-I/homes/gws/gjb/include" to LINUX_C
+#           * For "linux:" target, use MYCC="gcc -Dstatic="
+#          make CC="gcc -Dstatic=" linux
+#       * For remind
+#          cp -p /scratch/gjb/packages/remind-03.00.16/Makefile .
+#       * For workman
+#          cp -p Makefile.linux Makefile
+#     make CC="gcc -Dstatic="
+#     make CC="gcc -Dstatic=" -k
+#     # Sometimes (eg, Mosaic) it seems I want:  make 'CC="gcc -Dstatic="'
+#     Get symbols; ignore any errors, including "Is a directory" and "File format not recognized"
+#       rm -f symbols.gjbmde; find . -name "*.o" -o -perm +u+x | xargs nm | cleanup-nm-output > symbols.gjbmde
+#   Copy the symbols.gjbmde files into the main munged directories and
+#   rerun "make data_analyze", etc.
+
 
 ###########################################################################
 ### Data
@@ -252,10 +303,10 @@ tbl-properties-subset: $(PROP)
 tbl-properties-percents: $(PROP)
 	combine-histogram -p'\)' -s'#.*percentages: total defs = (.*)' -e '^#' $^ > $@
 
-# Be sure to not count lines in c-files-listing that start with #
-# also, be sure that either the c-files-listing links are updated to point
+# Be sure to not count lines in c-files-listing that start with #.
+# Also, be sure that either the c-files-listing links are updated to point
 # to the current files, or that both gjb and mernst are cvs-updated after
-# changes get made to a c-files-listing files
+# changes get made to a c-files-listing files.
 # Fixed up /scratch/gjb/packages using
 # for i in */munged/c-files-listing; ln -s $i ${i%%-*}-c-files-listing
 
@@ -343,7 +394,7 @@ showvars:
 
 copy: $(PAPER_TABLES)
 	perl -pi.bak -e 's/z*<total>/Total/g' $(PAPER_TABLES)
-	cp -p $(PAPER_TABLES) $(PAPER_DIR)
+	cp -p $(PAPER_TABLES) $(PAPER_FIG_DIR)
 
 copycppp: $(PAPER_TABLES)
 	perl -pi.bak -e 's/z*<total>/Total/g' $(PAPER_TABLES)
@@ -357,17 +408,19 @@ fast:	$(SCRIPTSPATH)
 	for i in $(SCRIPTSPATH); do bn=$(FAST_DIR)/`basename $$i`; rm -f $$bn; remove_check_args $$i > $$bn; chmod +x $$bn; chmod -w $$bn; done
 	@echo "Ensure $(FAST_DIR) is first on your path, and rehash if you changed it!"
 
+## This target doesn't actually work; but it is something you can paste into
+## a shell running csh to do the work.
 # Run cpppfull on the includes and packages
 cppp_packages:
-	cd /tmp/mernst/include-cppp
+	cd /scratch/mernst/include-cppp
 	cppp $(CPPP_FLAGS) `find-c`
-	cd /tmp/mernst/pack-cppp
+	cd /scratch/mernst/pack-cppp
 	foreach PACK ($PKG_DIRS)
-	  echo $PACK; cd $PACK; cpppfull `grep -v '^#' c-files-listing`; cd ..
+	  echo $PACK; cd $PACK; cppp $(CPPP_FLAGS) `grep -v '^#' c-files-listing`; cd /scratch/mernst/pack-cppp
 	end
 
 # This tells make not to remove *.state files created en route to making, e.g., a
 # *.stat file
 .PRECIOUS: %.state
 
-.PHONY: all clean showvars text_tables data_analyze data_reports raw copy fast sdepend sdepend_bymacro catnumargs
+.PHONY: all clean totally_clean showvars text_tables data_analyze data_reports raw copy fast sdepend sdepend_bymacro catnumargs
