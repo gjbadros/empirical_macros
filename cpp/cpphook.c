@@ -273,7 +273,6 @@ gjb_call_hooks_expansion(struct cpp_reader *pfile, HOOK_INDEX ih,
   SV *psvFunc = NULL;
   int iarg = 0;
   int iuse = 0;
-  int offset = 0;
   struct cpp_options *opts = CPP_OPTIONS(pfile);
   int cNestedArgExpansions = CNestedArgExpansions(pcei);
 

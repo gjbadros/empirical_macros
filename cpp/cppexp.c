@@ -24,6 +24,8 @@ Written by Per Bothner 1994. */
 
 /* Parse a C expression from text in a string  */
    
+#include <string.h>
+#include <stdlib.h>
 #include "config.h"
 #include "cpplib.h"
 
@@ -223,7 +225,7 @@ parse_number (pfile, start, olen)
     if (largest_digit < digit)
       largest_digit = digit;
     nd = n * base + digit;
-    overflow |= ULONG_MAX_over_base < n | nd < n;
+    overflow |= (ULONG_MAX_over_base < n) | (nd < n);
     n = nd;
   }
 
@@ -279,7 +281,6 @@ cpp_lex (pfile)
 cpp_reader *pfile;
 {
   register int c;
-  register int namelen;
   register struct token *toktab;
   enum cpp_token token;
   struct operation op;
@@ -301,7 +302,7 @@ cpp_reader *pfile;
       return op;
     }
 
-  token = cpp_get_token (pfile);
+  token = cpp_get_token (pfile,0);
   tok_start = pfile->token_buffer + old_written;
   tok_end = CPP_PWRITTEN (pfile);
   pfile->limit = tok_start;

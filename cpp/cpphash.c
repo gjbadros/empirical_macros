@@ -22,6 +22,8 @@ Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  You are forbidden to forbid anyone else to use, share and improve
  what you give them.   Help stamp out software-hoarding!  */
 
+#include <strings.h>
+#include <stdlib.h>
 #include "cpplib.h"
 #include "cpphash.h"
 #include "cpphook.h"

@@ -33,11 +33,9 @@ Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
    commands which led to the current file.  */
 
 void
-cpp_print_containing_files (pfile)
-     cpp_reader *pfile;
+cpp_print_containing_files (cpp_reader *pfile)
 {
   cpp_buffer *ip;
-  int i;
   int first = 1;
 
   /* If stack of files hasn't changed since we last printed
@@ -67,7 +65,7 @@ cpp_print_containing_files (pfile)
 	    fprintf (stderr, ",\n                ");
 	}
 
-      fprintf (stderr, " from %s:%d", ip->nominal_fname, line);
+      fprintf (stderr, " from %s:%ld", ip->nominal_fname, line);
     }
   if (! first)
     fprintf (stderr, ":\n");
@@ -89,11 +87,8 @@ cpp_file_line_for_message (pfile, filename, line, column)
 }
 
 /* IS_ERROR is 1 for error, 0 for warning */
-void cpp_message (pfile, is_error, msg, arg1, arg2, arg3)
-     int is_error;
-     cpp_reader *pfile;
-     char *msg;
-     char *arg1, *arg2, *arg3;
+void cpp_message (cpp_reader *pfile, int is_error, char *msg, 
+		  char *arg1, char *arg2, char *arg3)
 {
   if (is_error)
     pfile->errors++;
@@ -104,8 +99,7 @@ void cpp_message (pfile, is_error, msg, arg1, arg2, arg3)
 }
 
 void
-fatal (str, arg)
-     char *str, *arg;
+fatal (char *str, char *arg)
 {
   fprintf (stderr, "%s: ", progname);
   fprintf (stderr, str, arg);

@@ -22,12 +22,14 @@ Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  You are forbidden to forbid anyone else to use, share and improve
  what you give them.   Help stamp out software-hoarding!  */
 
+#include <stdlib.h>
 #include "config.h"
+#include "cpplib.h"
 
 static void
 memory_full ()
 {
-  fatal ("Memory exhausted.");
+  fatal ("Memory exhausted.",0);
 }
 
 char *
@@ -53,10 +55,8 @@ xrealloc (old, size)
 }
 
 char *
-xcalloc (number, size)
-     unsigned number, size;
+xcalloc (unsigned number, unsigned size)
 {
-  register unsigned total = number * size;
   register char *ptr = (char *) calloc (number, size);
   if (ptr == 0)
     memory_full ();

@@ -79,7 +79,7 @@ cpp_options options;
 void
 fancy_abort ()
 {
-  fatal ("Internal gcc abort.");
+  fatal ("Internal gcc abort.",0);
 }
 
 
@@ -300,7 +300,7 @@ main (int argc, char **argv, char **env)
     for (;;)
       {
       enum cpp_token token;
-      token = cpp_get_token (&parse_in);
+      token = cpp_get_token (&parse_in,0);
       cBytesCppRead += CPP_WRITTEN(&parse_in);
       if (! opts->no_output)
 	{

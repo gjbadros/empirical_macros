@@ -249,7 +249,7 @@ main (int argc, char **argv, char **env)
     for (;;)
       {
       enum cpp_token kind;
-      kind = cpp_get_token (&parse_in);
+      kind = cpp_get_token (&parse_in,0);
       if (! opts->no_output)
 	{
 	fwrite (parse_in.token_buffer, 1, CPP_WRITTEN (&parse_in), stdout);

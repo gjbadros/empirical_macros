@@ -100,7 +100,7 @@ extern void parse_goto_mark PARAMS((struct parse_marker*, cpp_reader*));
 extern void parse_move_mark PARAMS((struct parse_marker*, cpp_reader*));
 
 extern int cpp_handle_options PARAMS ((cpp_reader*, int, char**));
-extern enum cpp_token cpp_get_token PARAMS ((struct parse_marker*));
+extern enum cpp_token cpp_get_token PARAMS ((struct parse_marker*, cpp_expand_info *pcei));
 extern void cpp_skip_hspace PARAMS((cpp_reader*));
 extern enum cpp_token cpp_get_non_space_token PARAMS ((cpp_reader *));
 
@@ -118,6 +118,15 @@ struct import_file {
 
 /* If we have a huge buffer, may need to cache more recent counts */
 #define CPP_LINE_BASE(BUF) ((BUF)->buf + (BUF)->line_base)
+
+typedef struct cpp_expand_info {
+  int argno;
+  int offset;
+  int length;
+  cpp_hashnode *hp;
+  struct cpp_expand_info *pceiPrior;
+} cpp_expand_info;
+
 
 struct cpp_buffer {
   unsigned char *buf;
@@ -651,20 +660,12 @@ struct argdata {
   int stringified_length;
   char newlines;
   char use_count;
-  char iuse;  /* this counts up the uses as an index into dcUses as we are making that
+  int iuse;  /* this counts up the uses as an index into dcUses as we are making that
 		 array during the final expansion of the macro */
   long dchUsesStart[16];  /* beginning offset of each successive use */
   long dchUsesEnd[16];    /* ending offset of each successive use */
 };
 
-
-typedef struct cpp_expand_info {
-  int argno;
-  int offset;
-  int length;
-  cpp_hashnode *hp;
-  struct cpp_expand_info *pceiPrior;
-} cpp_expand_info;
 
 extern void cpp_buf_line_and_col PARAMS((cpp_buffer*, long*, long*));
 extern cpp_buffer* cpp_file_buffer PARAMS((cpp_reader*));
@@ -696,6 +697,14 @@ void cpp_finish (cpp_reader *pfile);
 int parse_name (cpp_reader *pfile, int c);
 
 int IargWithOffset(int ich, int cargs, struct argdata *args);
+void cpp_file_line_for_message (cpp_reader *pfile, char *filename, int line, int column);
+void cpp_print_containing_files (cpp_reader *pfile);
+void fatal (char *str, char *arg);
+int cpp_read_check_assertion (cpp_reader *pfile);
+void skip_rest_of_line (cpp_reader *pfile);
+void cpp_message (cpp_reader *pfile, int is_error, char *msg, 
+		  char *arg1, char *arg2, char *arg3);
+
 
 #ifdef __cplusplus
 }

@@ -37,3 +37,5 @@ static HASHNODE *hashtab[HASHSIZE];
 
 extern HASHNODE* install PARAMS ((U_CHAR*,int,enum node_type, int,char*,int));
 extern void delete_special_macro(HASHNODE *hp);
+void cpp_hash_cleanup (cpp_reader *pfile);
+
