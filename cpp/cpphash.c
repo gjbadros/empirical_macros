@@ -108,9 +108,7 @@ cpp_lookup (cpp_reader *pfile, const U_CHAR *name, int len, int hash)
    If #undef freed the DEFINITION, that would crash.  */
 
 void
-delete_macro (pfile, hp)
-     cpp_reader *pfile;
-     HASHNODE *hp;
+delete_macro (cpp_reader *pfile, HASHNODE *hp)
 {
   if (pfile != NULL)  
     gjb_call_hooks_sz(CPP_OPTIONS(pfile),HI_DELETE_DEF,hp->name);
@@ -148,8 +146,7 @@ delete_macro (pfile, hp)
  * we do not want to call any hooks for that pseudo-undef
  */
 void
-delete_special_macro(hp)
-  HASHNODE *hp;
+delete_special_macro(HASHNODE *hp)
 {
   delete_macro(NULL,hp);
 }
