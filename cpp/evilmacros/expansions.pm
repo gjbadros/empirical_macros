@@ -7,26 +7,27 @@ use pcp3;
 use em_constants;
 use checkargs;
 my %macro_name;
-my %macro_name_to_freevars;
+my %macro_name_to_def_in_filename;
 my %typedefs;
 my %functions;
 my $fParsingMacro = $false;
 my %vars_declared_in_macro = ();
-my $fParseMacroBodies = $true;
-#my $fParseMacroBodies = $false;
 my $state_before_parse_body = 0;
 my $node_before_parse_body = 0;
 my $current_macro_name;
+#my $fDebugParse = $true;
+my $fDebugParse = $false;
 
 sub Startup {
   # Parse debugging (bison's yydebug variable) is on by default,
   # so turn it off
-  # pcp3::SetParseDebugging();
+  if ($fDebugParse) {
+    pcp3::SetParseDebugging();
+  }
   open(VARS,">vars.listing") || die "Cannot open vars.listing: $!";
   open(TYPES,">types.listing") || die "Cannot open types.listing: $!";
   open(EXPAND,">expansions.listing") || die "Cannot open expansions.listing: $!";
   open(TOKEN,">token.listing") || die "Could not open output file: $!";
-  open(FREEVARS,">freevars.listing") || die "Cannot open freevars.listing: $!";
   open(FUNCTIONS,">functions.listing") || die "Cannot open functions.listing: $!";
   print STDERR "STARTUP...\n";
   $| = 1; # Turn on autoflush
@@ -58,7 +59,6 @@ sub Got_token {
 }
 
 sub Exit {
-  output_free_vars_in_macro_defs();
   output_functions_listing();
   my ($retval) = @_;
 }
@@ -67,31 +67,6 @@ sub add_use {
   my ($mname,$fname, $expansion, $s_start, $s_end, $cbb) = @_;
   if ($cbb == 0) {
     print EXPAND "$fname: $mname, $s_start, $s_end\n";
-    my @freevars = @{$macro_name_to_freevars{$mname}};
-#    print STDERR "Checking against ", join(", ",@freevars), "\n";
-    @freevars = grep { ! FMacroDefined($_)
-		       && ! exists $typedefs{$_} } @freevars;
-    my @globals_used = grep { pcp3::FLookupSymbolAt($_,0) } @freevars;
-    my @temps_decld = grep { !pcp3::FLookupSymbol($_) } @freevars;
-    if (scalar(@freevars) > 0) {
-      print EXPAND "#EXPN_FREE_VARS $mname: ", join(", ",@freevars), "\n";
-    }
-    if (scalar(@globals_used) > 0) {
-      print EXPAND "#EXPN_GLOBAL_VARS_USED $mname: ", join(", ",@globals_used), "\n";
-    }
-  }
-}
-
-sub output_free_vars_in_macro_defs {
-  foreach my $mname (keys %macro_name_to_freevars) {
-    my @freevars = @{$macro_name_to_freevars{$mname}};
-    next if $macro_name_to_def_in_filename{$mname} ne pcp3::InFname();
-#    print STDERR "Checking against ", join(", ",@freevars), "\n";
-    @freevars = grep { ! FMacroDefined($_) && ! exists $functions{$_}
-		       && ! exists $typedefs{$_} } @freevars;
-    if (scalar(@freevars) > 0) {
-      print FREEVARS "$mname: ", join(", ", @freevars), "\n";
-    }
   }
 }
 
@@ -155,62 +130,7 @@ sub identifiers_in ( $ )
 
 sub FMacroDefined {
   my ($mname) = @_;
-  return exists $macro_name_to_freevars{$mname};
-}
-
-
-sub FindVarsDefinedInMacroBody {
-  my ($expn) = @_;
-
-  return if (!$fParseMacroBodies);
-
-  foreach my $var (keys %vars_declared_in_macro) {
-    delete $vars_declared_in_macro{$var};
-  }
-  
-  die if $fParsingMacro == $true;
-  
-  my $state_stack = join(",",pcp3::ParseStateStack());
-  print STDERR "Stack before prep: $state_stack\n";
-  pcp3::EnterScope();
-#  pcp3::PushHashTab();  # won't get the macro definition that we're parsing if we do this
-  pcp3::YYPushStackState();
-#  my @stack_ready_for_statement = (0, 31, 73);
-  $state_before_parse_body = pcp3::YYGetState();
-  $node_before_parse_body = pcp3::YYGetNode();
-  pcp3::SetParseStateStack(0,31);
-  pcp3::YYSetState(46);
-  $state_stack = join(",",pcp3::ParseStateStack());
-  print STDERR "Stack before push: $state_stack\n";
-  pcp3::PushBuffer( $expn, -1);
-  print STDERR "Pushing $expn\n";
-  $fParsingMacro = $true;
-
-  # does not need to return anything pop_perl_buffer handles the
-  # "return" since it doesn't really happen until after we've finished
-  # parsing the symbols we just pushed onto the buffer stack
-}
-
-sub FreeVarsFromSimplifiedExpn {
-  my ($simp_expn, $expn) = @_;
-#  my @a = grep { ! exists $typedefs{$_} && 
-#		  ! exists $functions{$_} &&
-#		  ! exists $macro_name_to_freevars{$_} } identifiers_in($simp_expn);
-  my @a = grep { ! FMacroDefined($_) && ! exists $typedefs{$_} &&
-		 ! exists $functions{$_} } identifiers_in($simp_expn);
-  
-  @a = uniquify_array(@a);
-
-  if ($expn =~ /[\{;]/ && (pcp3::Fname() eq pcp3::InFname())) {
-# FIXGJB
-#     if ($expn !~ /\{/) { 
-#       # add braces if there aren't ones already so it's legal to define vars
-#       $expn = "{ " . $expn . " }";
-#     }
-    FindVarsDefinedInMacroBody($expn);
-  }
-
-  return [ @a ];
+  return exists $macro_name_to_def_in_filename{$mname};
 }
 
 
@@ -227,23 +147,19 @@ sub create_def {
 
   $macro_name_to_def_in_filename{$mname} = $fname;
   $current_macro_name = $mname;
-  $macro_name_to_freevars{$mname} = FreeVarsFromSimplifiedExpn($simp_expn,$expn);
 
 }
 
 sub do_undef {
   my ($s_start,$s_end,$mname, $cDeletes) = @_;
-  delete $macro_name_to_freevars{$mname};
 }
 
 
-# pre definitions never have free variables
 sub create_predef {
   my ($mname, $expn, $nargs, $simp_expn, $file, $line, 
       $backward_argnames_string, $def_flags,
       @currpat) = @_;
-
-  $macro_name_to_freevars{$mname} = [];
+  $macro_name_to_def_in_filename{$mname} = "__PREDEF__";
 }
 
 sub cpp_out {
@@ -478,17 +394,6 @@ sub pop_perl_buffer {
   pcp3::YYSetNode($node_before_parse_body);
   print "nbpb: $node_before_parse_body\n";
   $fParsingMacro = $false;
-  if (scalar(keys %vars_declared_in_macro) != 0) {
-    print ": VARS_DECLD for $current_macro_name:", join(", ", keys %vars_declared_in_macro), "\n";
-#    print ": AGAINST ", $current_macro_name, "\n";
-#    print ": freevars was ", join(", ", @{$macro_name_to_freevars{$current_macro_name}}), "\n";
-    my @freevars =  grep { ! exists $vars_declared_in_macro{$_} }
-    			@{$macro_name_to_freevars{$current_macro_name}};
-    $macro_name_to_freevars{$current_macro_name} = \@freevars;
-#    print ": freevars is ", join(", ", @{$macro_name_to_freevars{$current_macro_name}}), "\n";
-  } else {
-    print ": NO VARS_DECLD\n";
-  }
   print ": After ParseStateStack: ", join(",",pcp3::ParseStateStack()), "\n";
   $current_macro_name = "";
 }
@@ -571,29 +476,6 @@ sub do_func_call {
   print "CallFunction: $szName\n";
 }
 
-sub do_typedef {
-  my ($name) = @_;
-  my $offset  = pcp3::CchOffset();
-  my $fname = pcp3::Fname();
-  $typedefs{$name} = $true;
-  print TYPES "Typedef: $fname, $name, $offset\n";
-}
-
-sub do_vardecl {
-  my ($name) = @_;
-  my $offset  = pcp3::CchOffset();
-  my $fname = pcp3::Fname();
-#  print "Var decl\n";
-  if ($fParseMacroBodies && $fParsingMacro) {
-    print VARS "MACRO Vardecl: $fname, $name, $offset\n";
-    $vars_declared_in_macro{$name}++;
-  } else {
-    print VARS "Vardecl: $fname, $name, $offset\n";
-    $vars{$name}++;
-  }
-}
-
-
 # Add the hooks, now
 
 AddHook("STARTUP",\&Startup);
@@ -634,8 +516,8 @@ AddHook("FUNC_PROTO",\&do_func_proto);
 #AddHook("FUNC_CALL",\&do_func_call);
 #AddHook("ANNOTATE",\&annotate);
 #AddHook("POP_BUFFER",\&pop_buffer);
-AddHook("TYPEDEF",\&do_typedef);
-AddHook("VARDECL",\&do_vardecl);
+#AddHook("TYPEDEF",\&do_typedef);
+#AddHook("VARDECL",\&do_vardecl);
 AddHook("POP_PERL_BUFFER",\&pop_perl_buffer);
 
 
