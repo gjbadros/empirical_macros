@@ -78,6 +78,9 @@ data_analyze:
 data_reports:
 	macros-make-data-reports $(ANALYZE_OUTPUT_DIR)
 
+clean_reports:
+	macros-clean-reports
+
 %.state:
 	em_make_state_file $(PKG_DIR) $(ANALYZE_OUTPUT_DIR) $@ $(EXTRA_ANALYZE_FLAGS)
 
