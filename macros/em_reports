@@ -13,7 +13,7 @@
 #   _ni = non-include; for a file, means it was on command line (?)
 #   mi = method of inclusion; why this file is being processed
 
-my $getopts_option_letters = 'ihvtIAau1pTg:d:D:M:S:F:L:C:s:';
+my $getopts_option_letters = 'ihvtIAau1pTg:d:D:M:S:F:L:C:c:s:';
 
 # FIX: remove -D -U -S -F -L -C options.
 
@@ -33,10 +33,11 @@ New options marked with *; options with ':', above, take an argument
   -F [file]  output the function information to a file
   -L [file]  output the file's lines/functions information to a file
   -C [file]  show categorizations to file
+  -c [file]  output cond. compilation directive statistics to file
   -E [file]  send evil macros to file instead of stdout
   -s [file]  the state file to use [\"state\" by default]
 
-(Note: -{D,S,F,C,E,P} options take precedence over the -d option)
+(Note: -{D,S,F,C,c,E,P} options take precedence over the -d option)
 
 e.g.
 
@@ -107,7 +108,7 @@ my $debug_cpp_if_comments = $false;
 ## Command-line processing
 # Are these in any order?
 use vars qw($opt_i $opt_I $opt_h $opt_v $opt_t $opt_d
-	    $opt_D $opt_M $opt_S $opt_F $opt_L $opt_C $opt_p
+	    $opt_D $opt_M $opt_S $opt_F $opt_L $opt_C $opt_c $opt_p
 	    $opt_u $opt_1 $opt_A $opt_a $opt_g $opt_T $opt_s);
 my $fIgnoreIncludes = $false;
 
@@ -138,10 +139,8 @@ use vars qw($getopts_option_letters $c_reserved_type_word_alternatives
     $numeric_binop_regexp $bool_binop_regexp $arb_type_binop_regexp
     $binop_regexp @rg_physical_lines @rg_ncnb_lines @rg_cpp_phys_lines
     @rg_cpp_phys_ncnb_lines @rg_cpp_cmds @rg_category_counts
-    %category_counts_ni %category_counts_c_ni %category_counts_hdr_ni
     @rg_cppcmdcounts $ncnb_physical_lines_ni $cpp_cmds $cpp_cmds_ni
     $cpp_cmds_hdr $cpp_cmds_hdr_ni $cpp_cmds_c $cpp_cmds_c_ni
-    %cppcmdcount %cppcmdcount_ni %cppcmdcount_hdr_ni %cppcmdcount_c_ni
     $symtab_scopes $line $cBuiltinMacros $cMacrosInTables
     %files_function_lines %function_to_locs
     %function_name_to_macros_it_uses $current_file
@@ -166,12 +165,18 @@ use vars qw($getopts_option_letters $c_reserved_type_word_alternatives
     $wf_last_line_no $wf_last_index %inclusion_dependenton
     %inclusion_dependees %inclusion_dependee_lines
     %expansion_dependenton %expansion_dependees
-    %expansion_dependee_lines );
+    %expansion_dependee_lines 
+    @rg_ccd_cat_counts
+);
 
 
 use vars qw(%macros_c_all_uses @freq_use_buckets @freq_def_buckets
 	   @macros_c_number_uses @macros_c_number_defs
 	   $macros_c_most_uses   $macros_c_most_defs);
+
+
+my (%cppcmdcount, %cppcmdcount_ni, %cppcmdcount_hdr_ni, %cppcmdcount_c_ni);
+my (%category_counts_ni, %category_counts_c_ni, %category_counts_hdr_ni);
 
 
 # FIX: these sub-parts might better be broken up into functions
@@ -362,6 +367,18 @@ sub output_stats ()
     # undef $OFS if (defined($OFS));
   }
 
+  # conditional compilation directive statistics
+  if ($opt_c) {
+    select CCDSTATS;
+    my $i;
+    foreach $i (0..$#cond_category_name) {
+      print $cond_category_name[$i], ": ", 
+      sum_array(map {$_->[$i]} @rg_ccd_cat_counts[@ftype_ALL]),
+      "\n";
+    }
+  }
+
+  # macro categories
   if ($opt_C) {
     select CATEG;
     my $name;
@@ -749,6 +766,10 @@ if ($opt_d) {
     open(CATEG,">$dir/${basename}catg") || die "Failed opening $!";
   }
 
+  if (!$opt_c) {
+    open(CCDSTATS,">$dir/${basename}ccd") || die "Failed opening $!";
+  }
+
   open(FREQDEF,">$dir/${basename}freqdef_cum") || die "Failed opening $!";
   open(FREQUSE,">$dir/${basename}frequse_cum") || die "Failed opening $!";
 
@@ -760,18 +781,24 @@ if ($opt_L) { open(FUNCLINES,">$opt_L") || die "Failed opening $opt_L"; }
 if ($opt_D) { open(DEFINES,">$opt_D") || die "Failed opening $opt_D"; }
 if ($opt_M) { open(MACROS,">$opt_M") || die "Failed opening $opt_M"; }
 if ($opt_C) { open(CATEG,">$opt_C") || die "Failed opening $opt_C"; }
+if ($opt_c) { open(CCDSTATS,">$opt_c") || die "Failed opening $opt_c"; }
 if ($opt_I) { $fIgnoreIncludes = $true; }
 if ($opt_t) { $outOFS = "\t"; } # use tab for OFS
 
-# Fix: Explain why these are set unconditionally.
-# Now set these so we'll actually do the output
-# (output_stats uses $opt_X as a guard for printing)
-$opt_S = $true;
-$opt_D = $true;
-$opt_M = $true;
-$opt_F = $true;
-$opt_L = $true;
-$opt_C = $true;
+if ($opt_d) {
+  # Now set these so we'll actually do the output
+  # (output_stats uses $opt_X as a guard for printing)
+  # Note that we didn't want to do this in the above $opt_d
+  # guarded block since then we couldn't override specific files
+  # in the above if conditionals
+  $opt_S = $true;
+  $opt_D = $true;
+  $opt_M = $true;
+  $opt_F = $true;
+  $opt_L = $true;
+  $opt_C = $true;
+  $opt_c = $true;
+}
 
 # Clunky, but faster than editing and saving the file over NFS.
 if ($opt_g)
@@ -786,7 +813,8 @@ if ($opt_g)
       $debug_parse_array_init = $false;
       $debug_peek = $false;
       $debug_getline = $false;
-      $debug_categorize_macro = $false; }
+      $debug_categorize_macro = $false; 
+    }
   elsif ($opt_g == 1) { $fDebugCmdProcessing = $true; }
   elsif ($opt_g == 2) { $fDebugCommentRemoval = $true; }
   elsif ($opt_g == 3) { $debug_scopes = $true; }
