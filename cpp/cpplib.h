@@ -654,6 +654,7 @@ struct if_stack {
 				    has been passed through rescan */
   U_CHAR *control_macro;	/* For #ifndef at start of file,
 				   this is the macro name tested.  */
+  char *szConditionalClause;
   enum node_type type;		/* type of last directive seen in this group */
 };
 typedef struct if_stack IF_STACK_FRAME;
