@@ -6854,8 +6854,8 @@ sub save_variables ( $@ )
     $g =~ s/[\@\%\$]/\*/;
     # DumpxsFd used to cause trouble with closing random open files, discarding
     # buffered output.  It doesn't seem to do that any more, though...
-    my $es = "Data::Dumper->DumpxsFd(fileno OUTSTATE,[\\$v],[\"$g\"]);\n";
-#    my $es = "print OUTSTATE Data::Dumper->Dumpxs([\\$v],[\"$g\"]);\n";
+#    my $es = "Data::Dumper->DumpxsFd(fileno OUTSTATE,[\\$v],[\"$g\"]);\n";
+    my $es = "print OUTSTATE Data::Dumper->Dumpxs([\\$v],[\"$g\"]);\n";
     print STDERR $es if $opt_v;
     eval $es;
     $es = "undef $v;\n";
