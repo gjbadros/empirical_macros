@@ -43,5 +43,6 @@ char *hook_names[] = {
 "ANNOTATE",
 "POP_BUFFER",
 "POP_PERL_BUFFER",
+"FUNC_SPEC",
 };
 
