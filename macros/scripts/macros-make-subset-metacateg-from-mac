@@ -1,6 +1,6 @@
 #!/uns/bin/perl -anw
 BEGIN {
-  my $getopts_option_letters = 'had:';
+  my $getopts_option_letters = 'hamd:';
 
   use Getopt::Std;
   use em_constants;
@@ -12,12 +12,13 @@ BEGIN {
 -h usage message
 -d <num> set the minimum number of defs before outputting a row for that name
 -a print all lines, even ones which do not have the minimum number of defs
+-m Only print data for macros w/ multiple definitions (>1)
 ";
   }
 
   usage() if ($opt_h);
 
-  use vars qw($opt_d $opt_a $opt_h %categoryname $cCategoryNames);
+  use vars qw($opt_d $opt_a $opt_h $opt_m %categoryname $cCategoryNames);
 
   my $i = -1;
 # we need to use $i+0, or else the value pointed to
@@ -76,6 +77,7 @@ use English;
 next if /^[\#%]/;
 next unless $F[9] =~ /FromStdin/;
 next if !defined($F[8]) || $F[8] eq "NoDefinitions";
+next if ($opt_m && $F[1] <= 1); # skip those w/o multiple definitions
  # the categories are not listed for cond comp directive only macros
 #i.e. macros that are used in ccd-s, but not #define-d anywhere
 my @cat = split(/,/,$F[8]);
