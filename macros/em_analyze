@@ -54,7 +54,7 @@ cat c-files-listing | $0 -i -d ~/macros/data/stable:pkgname
 ";
 }
 
-#Complex execution (use zsh):
+#Complex execution (use zsh) [use macros-make-data-analyze script, preferably from makefile]
 #
 # TM=/tmp/$USER/macros/data/stable
 # (assume c-files-listing has find-c output; otherwise, use "find-c")
