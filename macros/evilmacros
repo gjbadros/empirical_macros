@@ -789,7 +789,7 @@ my @rg_cpp_phys_ncnb_lines = (0) x $c_ftype;
 
 my @rg_cpp_cmds = (0) x $c_ftype;
 
-# ${$rg_category_counts[$ft_index]}{"uncategorized"} ==
+# $rg_category_counts[$ft_index]->{"uncategorized"} ==
 # the number of times a macro definition was categorized as uncategorized
 # for files of type $ft_index
 # (much like @rg_cpp_cmds list of hashes)
@@ -1620,7 +1620,7 @@ sub OutputHistogram ($$$;$) {
   my $h;
   foreach $h (sort keys %$hashref) {
     push @headings_list, $h;
-    my $v = $ {$hashref}{$h};
+    my $v = $hashref->{$h};
     if ($divisor == 0) {
       if ($v != 0)
 	{ die "How can divisor be 0 but numerator be $v?"; }
@@ -4618,7 +4618,10 @@ sub categorize_macro_name ($)
 	if ((!defined($type)) || (!defined($mdef_type[$mdef_index])))
 	  { $type = undef; }
 	else
-	  { $type = type_lub($type, $mdef_type[$mdef_index]); } } }
+	  { $type = type_lub($type, $mdef_type[$mdef_index]); } 
+      } 
+  }
+  
 
   if ($debug_categorize_macro)
     { print " => $category",
@@ -4698,124 +4701,128 @@ sub categorize_macro_def ($)
 	 || ($body =~ /,\s*([a-zA-Z_\$][a-zA-Z0-9_\$]*_t)\s*[,\)]/o) # identifier ending with _t
 	 || ($body =~ /\(\s*([a-zA-Z_\$][a-zA-Z0-9_\$]*_t)\s*(,|\)$)/o))
     { $category = $catUSESTYPEARG; }
-  else
-    { my $remaining;
-      reset_parse_vars();
-      ($type, $remaining) = parse_expression($body);
-      # print "type = $type; remaining = $remaining\n";
-      # $type was ($type != $typeFAIL)
-      if ($type && ($remaining =~ /^\s*$/))
-	# Expression
-	# Fix: I'm not sure how correct any of this is.
-	{ if ($type =~ /^category: /)
-	    # Not an expression after all.
-	    { $category = $POSTMATCH; }
-	  elsif ($body =~ /^$constant_exp_re$/)
-	    # This is wrong; it considers (1 << ((x)-1))
-	    # constant because that matches $constant_exp_re.
-	    { $category = $catSOMECONSTANT; }
-	  elsif ($parse_exp_saw_equals)
-	    { $category = $catEXPASSIGN; }
-	  else
-	    { $category = $catEXP; }
-	  # print "category = $categoryname[$category]; found expression $body\n";
-	  # Check whether a macro argument was used as a type.
-	  { my $arg;
-	    foreach $arg (split(/[\(, \t\)]+/, $mdef_args[$index]))
-	      { delete $parsevars{$arg};
-		if (defined($parsetypes{$arg}))
-		  { $category = $catHASTYPEARG;
-		    goto CATEGORIZED; }
-		delete $parsefuns{$arg}; } }
-	  # print "category postargs = $category\n";
-	  # Assume the functions and types are well-defined if not macros
-	  # If they are macros, should check 'em, not just fail.
-	  { my $fun;
-	    foreach $fun (keys %parsefuns)
-	      { if (defined $macros{$fun})
-		  # This is actually fine most of the time; fix later.
-		  { $category = $catMACROFUN;
-		    goto CATEGORIZED; } } }
-	  # print "category postfun = $category\n";
-	  { my $type;
-	    foreach $type (keys %parsetypes)
-	      { if (defined($macros{$type}))
-		  # This may be fine; fix later.
-		  { $category = $catMACROTYPE;
-		    parse_error("Macro as type: $type");
-		    goto CATEGORIZED; } } }
-	  # print "category posttype = $category\n";
-	  # For each free variable, check its type.
-	  { my $var;
-	    foreach $var (keys %mdef_freevars)
-	      { # print "examining free var $var ($mdef_name[$index])\n";
-		if (defined($macros{$var}))
-		  { my $varclass;
-		    my $i;
-		    foreach $i ($macros{$var})
-		      { if ($mdef_category[$i] == $catNOTYET)
-			  { categorize_macro_def($i); }
-			if (!defined($varclass))
-			  { $varclass = $mdef_category[$i]; }
-			elsif ((($mdef_category[$i] == $catLITERAL)
-				|| ($mdef_category[$i] == $catCONSTANT)
-				|| ($mdef_category[$i] == $catSOMECONSTANT))
-			       && (($varclass == $catLITERAL)
-				   || ($varclass == $catCONSTANT)
-				   || ($varclass == $catSOMECONSTANT)))
-			  { $varclass = $catSOMECONSTANT; }
-			elsif ($varclass != $mdef_category[$i])
-			  { $category = $catFAILURE;
-			    goto CATEGORIZED; }
-			else
-			  # fix: not sure what would get us here.
-			  # (Never saw this error message yet...)
-			  { mdie("Huh?"); } }
-		    if (!(($varclass == $catLITERAL)
-			  || ($varclass == $catCONSTANT)
-			  || ($varclass == $catSOMECONSTANT)))
-		      # Is this right?
-		      { $category = $catFAILURE; # should be more specific here
-			goto CATEGORIZED; } }
-		else
+  else {
+    my $remaining;
+    reset_parse_vars();
+    ($type, $remaining) = parse_expression($body);
+    # print "type = $type; remaining = $remaining\n";
+    # $type was ($type != $typeFAIL)
+    if ($type && ($remaining =~ /^\s*$/))
+      # Expression
+      # Fix: I'm not sure how correct any of this is.
+      { if ($type =~ /^category: /)
+	  # Not an expression after all.
+	  { $category = $POSTMATCH; }
+	elsif ($body =~ /^$constant_exp_re$/)
+	  # This is wrong; it considers (1 << ((x)-1))
+	  # constant because that matches $constant_exp_re.
+	  { $category = $catSOMECONSTANT; }
+	elsif ($parse_exp_saw_equals)
+	  { $category = $catEXPASSIGN; }
+	else
+	  { $category = $catEXP; }
+	# print "category = $categoryname[$category]; found expression $body\n";
+	# Check whether a macro argument was used as a type.
+	{ my $arg;
+	  foreach $arg (split(/[\(, \t\)]+/, $mdef_args[$index]))
+	    { delete $parsevars{$arg};
+	      if (defined($parsetypes{$arg}))
+		{ $category = $catHASTYPEARG;
+		  goto CATEGORIZED; }
+	      delete $parsefuns{$arg}; } }
+	# print "category postargs = $category\n";
+	# Assume the functions and types are well-defined if not macros
+	# If they are macros, should check 'em, not just fail.
+	{ my $fun;
+	  foreach $fun (keys %parsefuns)
+	    { if (defined $macros{$fun})
+		# This is actually fine most of the time; fix later.
+		{ $category = $catMACROFUN;
+		  goto CATEGORIZED; } } }
+	# print "category postfun = $category\n";
+	{ my $type;
+	  foreach $type (keys %parsetypes)
+	    { if (defined($macros{$type}))
+		# This may be fine; fix later.
+		{ $category = $catMACROTYPE;
+		  parse_error("Macro as type: $type");
+		  goto CATEGORIZED; } } }
+	# print "category posttype = $category\n";
+	# For each free variable, check its type.
+	{ my $var;
+	  foreach $var (keys %mdef_freevars)
+	    { # print "examining free var $var ($mdef_name[$index])\n";
+	      if (defined($macros{$var}))
+		{ my $varclass;
+		  my $i;
+		  foreach $i ($macros{$var})
+		    { if ($mdef_category[$i] == $catNOTYET)
+			{ categorize_macro_def($i); }
+		      if (!defined($varclass))
+			{ $varclass = $mdef_category[$i]; }
+		      elsif ((($mdef_category[$i] == $catLITERAL)
+			      || ($mdef_category[$i] == $catCONSTANT)
+			      || ($mdef_category[$i] == $catSOMECONSTANT))
+			     && (($varclass == $catLITERAL)
+				 || ($varclass == $catCONSTANT)
+				 || ($varclass == $catSOMECONSTANT)))
+			{ $varclass = $catSOMECONSTANT; }
+		      elsif ($varclass != $mdef_category[$i])
+			{ $category = $catFAILURE;
+			  goto CATEGORIZED; }
+		      else
+			# fix: not sure what would get us here.
+			# (Never saw this error message yet...)
+			{ mdie("Huh?"); } }
+		  if (!(($varclass == $catLITERAL)
+			|| ($varclass == $catCONSTANT)
+			|| ($varclass == $catSOMECONSTANT)))
+		    # Is this right?
+		    { $category = $catFAILURE; # should be more specific here
+		      goto CATEGORIZED; } }
+	      else
 		  # This is a free variable.  Should check whether it is a global
-		  # (which would be OK; a local would be bad).
-		  { $category = $catEXPFREE; # should be more specific here
-		    goto CATEGORIZED; }
-	      } }
-	  # Don't set category here; it was defaulted to $catEXP above.
-	  # print "category postfree = $category\n";
+		# (which would be OK; a local would be bad).
+		{ $category = $catEXPFREE; # should be more specific here
+		  goto CATEGORIZED; }
+	    } 
 	}
-      elsif ($type && ($remaining =~ /^\s*;\s*$/))
-	{
-	  $category = $catSTATEMENT;
-	}
-      # Perhaps check against type_re here; but that should have already
-      # been caught, right?  And here the check would catch far too much.
-      else
-	# Should do some evilness processing here, to justify the failed
-	# categorization.
-	{ # Not an expression, apparently
-	  $category = $catFAILURE;
-	  $type = "";
-	  my ($evil_flags,$failure_type,$extended_category) = check_macro_body($body);
-	  $category = harder_category($category,$extended_category);
-	}
-    }
-
+	# Don't set category here; it was defaulted to $catEXP above.
+	# print "category postfree = $category\n";
+      }
+    elsif ($type && ($remaining =~ /^\s*;\s*$/))
+      {
+	$category = $catSTATEMENT;
+      }
+    # Perhaps check against type_re here; but that should have already
+    # been caught, right?  And here the check would catch far too much.
+    else
+      # Should do some evilness processing here, to justify the failed
+      # categorization.
+      { # Not an expression, apparently
+	$category = $catFAILURE;
+	$type = "";
+	my ($evil_flags,$failure_type,$extended_category) = check_macro_body($body);
+	$category = harder_category($category,$extended_category);
+      }
+  }
+	     
 CATEGORIZED:
+{ #HACKINDENT
   $mdef_category[$index] = $category;
   $mdef_type[$index] = $type;
   # track our histogram of categories
-  update_categories_for($category);
-
+  update_categories_for($category,$mdef_file[$index]);
+  #print STDERR "$mdef_name[$index] in $mdef_file[$index], type ", compute_ftype_index($mdef_file[$index]), "\n";
+  
   if ($debug_categorize_macro)
     { print "categorize_macro_def ($index: $mdef_name[$index]): $categoryname[$category]",
           (defined($type) ? "(" . type_name($type) . ")" : ""),
           ": $body\n"; }
 }
+}
 
-
+	     
 # Return true for a macro that takes a single arg and either returns it or
 # returns only open and close parens, which can be used to construct either
 # a K&R or ANSI function declaration by passing in a parenthesized list as
@@ -5351,6 +5358,8 @@ sub compute_ftype_index ($) {
   die "compute_ftype_index can't determine an index for an inclusion method"
     if !exists $InclusionMethod_to_Index{$file_inclusion_method{$filename}};
 
+#  print STDERR "CFI: $offset,", $InclusionMethod_to_Index{$file_inclusion_method{$filename}}, "\n";
+
   return $offset + $InclusionMethod_to_Index{$file_inclusion_method{$filename}};
 }
 
@@ -5366,7 +5375,8 @@ sub file_was_included ($) {
 # Tell if the current filename looks like a header file
 sub file_is_header ($) {
   my ($filename) = check_args(1, @_);
-  if ($current_file =~ /.[hH].?.?$/) { return $true; }
+  if ($filename =~ /.[hH].?.?$/) { return $true; }
+#  print STDERR "FIH: failed for \"$filename\"\n";
   return $false;
 }
 
@@ -5399,12 +5409,10 @@ sub initialize_lists_of_hashes () {
   my $j;
   foreach $i (0..$c_ftype-1) {
     foreach $j (keys %cppcmdcount) {
-# FIX: gjb thinks these are same
-#      $rg_cppcmdcounts[$i]->{$j} = 0;
-      $ {$rg_cppcmdcounts[$i]}{$j} = 0;
+      $rg_cppcmdcounts[$i]->{$j} = 0;
     }
     foreach $j (@categoryname) {
-      $ {$rg_category_counts[$i]}{$j} = 0;
+      $rg_category_counts[$i]->{$j} = 0;
     }
   }
 }
@@ -5765,26 +5773,29 @@ sub update_cpp_directive_counts ($) {
     print STDERR "Warning: Uncounted %OTHER% directive: $cpp_cmd for $current_ftype_index\n";
     $cpp_cmd = "%OTHER%";
   }
-  $ {$rg_cppcmdcounts[$current_ftype_index]}{$cpp_cmd}++;
+  $rg_cppcmdcounts[$current_ftype_index]->{$cpp_cmd}++;
 
   $rg_cpp_cmds[$current_ftype_index]++;
   #print STDERR "GOTCPP: $cpp_cmd, for $current_ftype_index, so have $rg_cpp_cmds[$current_ftype_index]\n";
 }
 
-sub update_categories_for ($) {
-  my ($catnumber) = check_args(1, @_);
+sub update_categories_for ($$) {
+  # second argument is the filename that we're updating the category
+  # for; we use it to compute the ftype_index that is used to index
+  # into rg_category_counts
+  my ($catnumber,$forfile) = check_args(2, @_);
   my $category = $categoryname[$catnumber];
-
-  #FIXPERL: emacs cperl mode requires the space between $ and { below
-  #to correctly not parse the { as an open block
+  my $ftype_index = compute_ftype_index($forfile);
 
   # This code avoids warnings about using uninitialized values
   no strict 'refs';  #FIX: Must I do this?
-  if (!defined($ {$rg_category_counts[$current_ftype_index]}{$category})) {
-    $ {$rg_category_counts[$current_ftype_index]}{$category} = 0;
+  if (!defined($rg_category_counts[$current_ftype_index]->{$category})) {
+    $rg_category_counts[$ftype_index]->{$category} = 0;
   }
-  $ {$rg_category_counts[$current_ftype_index]}{$category}++;
+  $rg_category_counts[$ftype_index]->{$category}++;
 
+#  print STDERR "CAT: $category got incremented -- now is ",
+#  $rg_category_counts[$current_ftype_index]->{$category}, "\n";
   if ($debug_categorize_macro)
     { print STDERR "CAT: $category got incremented -- now is ",
         $ {$rg_category_counts[$current_ftype_index]}{$category}, "\n"; }
@@ -5800,11 +5811,11 @@ sub sum_parallel_hashes ($@) {
   my $key;
   foreach $hashref (@array_of_hash_refs) {
     foreach $key (keys %{$hashref}) {
-      if (!defined($ {$dest_hashref}{$key})) {
+      if (!defined($dest_hashref->{$key})) {
 	# print STDERR "UNDEF: $key\n";
-	$ {$dest_hashref}{$key} = 0;
+	$dest_hashref->{$key} = 0;
       }
-      $ {$dest_hashref}{$key} += $ {$hashref}{$key};
+      $dest_hashref->{$key} += $hashref->{$key};
     }
   }
   return;
