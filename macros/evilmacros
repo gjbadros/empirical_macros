@@ -421,6 +421,8 @@ $incomment = $false;		# in /* */ style comment
 $instring = $false;
 $commaop = $true;		# whether commas should be operators or not
 				# (they shouldn't in arglists, initializers)
+$macrodefs_found = $false;
+
 # Shouldn't be in a character constant across lines.
 # $incharconst = 0;
 ## Arrays
@@ -443,11 +445,17 @@ $getline_nocomment = $false;
 $getline_simplify = $false;
 @getline_ungotlines = ();
 
+@dependenton = ();
+
 
 
 ###########################################################################
 ### Testing
 ###
+
+# { my $argdecls = "int argc;char **argv;{";
+#   if ($argdecls =~ /^\s*$typedeclarator\s*([,;])/)
+#     { print "$1|$3|$7|$9|$'\n"; } }
 
 # print "<<" . parse_expression ("(uch)get_byte()") . "\n";
 # print "<<" . parse_expression ("get_byte()") . "\n";
@@ -500,12 +508,29 @@ $getline_simplify = $false;
 # testcategorizeMacro("((ulg)(SH(p)) | ((ulg)(SH((p)+2)) << 16))");
 # testcategorizeMacro("malloc((size_t)(items)*(size_t)(size))");
 # $foo = "x"; $foo =~ /x/; print defined($'), defined($'), defined($'), "\n";
+# print ("" eq "\n"), "\n";
 # exit;
 
-# { my $argdecls = "int argc;char **argv;{";
-#   if ($argdecls =~ /^\s*$typedeclarator\s*([,;])/)
-#     { print "$1|$3|$7|$9|$'\n"; } }
-# exit;
+
+
+###########################################################################
+### Use strict
+###
+
+use vars qw( $fShowCategorization $fDebugCmdProcessing %cppcmdcount $index $file
+	   @dependenton $line $identregexp $cpp_cmd $cpp_cmds %macros @mname @margs @mbody
+	   @mdependenton @mfile $lines $h $mline $cObsoleted $cDanger $cEvil $cIllegal
+	   @categoryname $typespecifier $typedeclarator $symtab_scopes $instring);
+$fDebugCmdProcessing = 0;
+$fDebugCommentRemoval = 0;
+
+# Use strict requires that all globals are either fully qualified with
+# the package name (e.g. $main::$true) or are declared in a use vars qw( ... ) decl'n
+# Turning "use strict" on would involve adding all globals to above,
+#    or making them lexical vars.  Changing the scoping of a variable can
+#    lead to hard to find bugs, so gjb is not doing this now.
+# use strict;
+# use English;
 
 
 
@@ -513,27 +538,13 @@ $getline_simplify = $false;
 ### Main loop
 ###
 
-# I would like ot move this to the end of the file, so that we can
+# I would like to move this to the end of the file, so that we can
 # introduce constants and variables near where they are used, especially
 # those that are only used by one or two routines to save state or control
 # behavior.
 
 use Getopt::Std;
 use vars qw( $opt_i $opt_h $opt_v $opt_D $opt_S $opt_c $opt_e);
-use vars qw( $fShowCategorization $fDebugCmdProcessing %cppcmdcount $index $file
-	   @dependenton $line $identregexp $cpp_cmd $cpp_cmds %macros @mname @margs @mbody
-	   @mdependenton @mfile $lines $h $mline $cObsoleted $cDanger $cEvil $cIllegal 
-	   @categoryname $typespecifier $typedeclarator $symtab_scopes $instring);
-$fDebugCmdProcessing = 0;
-$fDebugCommentRemoval = 0;
-
-# Use strict requires that all globals are either fully qualified with
-# the package name (e.g. $main::$true) or are declared in a use vars qw( ... ) decl'n
-# Turning "use strict" on would involve adding all globals to above, 
-#    or making them lexical vars.  Changing the scoping of a variable can
-#    lead to hard to find bugs, so gjb is not doing this now.
-# use strict;
-# use English;
 
 getopts('ihvD:S:c:e:');
 usage() if ($opt_h);
@@ -557,12 +568,9 @@ if ($opt_c) { open(CATEG,">$opt_c") || die "Failed opening $opt_c"; }
 
 $fDebugCmdProcessing && print "@ARGV";
 
-if (0)
-{ test_typedecl_regexp();
-  exit(); }
+# test_typedecl_regexp(); exit();
 
-
-find_preprocessor_commands();
+find_macro_definitions();	# also counts other preprocessor usage
 
 # Print number of definitions for each macro
 # for $name (keys %macros)
@@ -602,67 +610,53 @@ exit();
 ###
 
 ### Read files, save info about macros
-sub find_preprocessor_commands
+sub find_macro_definitions
 {
-
+  if ($macrodefs_found)
+    { die "Called find_macro_definitions, but macro definitions already found?"; }
   foreach $file (@ARGV)
     { if ($opt_v)
 	{ print STDERR $file . "\n"; }
       open(INPUT,$file) or next; # skip to next file if open fails
       # Commented out to quiet compiler
       # $files{$file} = 1;
-      # Could use undef instead...
-      @dependenton = ();
+      if (@dependenton > 0)
+	{ die "In \#if at beginning of file: @dependenton"; }
       while ($line = getline())
 	{
-	  # [^ \t] instead of \w picks up too much: includes trailing newline
-	  if ($line =~ m/^\#\s*$identregexp\s*/o) {
-	    $cpp_cmd = $1;
-	    $line = $';
-	    chop($line);	# remove trailing newline
-	    # print "#$cpp_cmd $line\n";
-	    $cppcmdcount{$cpp_cmd}++;
-	    $cpp_cmds++;
-	    if ($cpp_cmd eq "if")
-	      { push(@dependenton, $line); }
-	    if ($cpp_cmd eq "ifdef")
-	      { push(@dependenton, "defined($line)"); }
-	    if ($cpp_cmd eq "ifndef")
-	      { push(@dependenton, "!defined($line)"); }
-	    elsif ($cpp_cmd eq "endif")
-	      { pop(@dependenton); }
-	    elsif ($cpp_cmd eq "else")
-	      { my $last = pop(@dependenton);
-		push(@dependenton, "!($last)"); }
-	    elsif ($cpp_cmd eq "elif")
-	      { my $last = pop(@dependenton);
-		push(@dependenton, "(!($last)) && ($line)"); }
-	    elsif ($cpp_cmd eq "define")
-	      { my ($name, $args, $body) = macroparse($line);
-		if (!defined($args)) { $args = ""; }
-		# print "parsed: |$name|$args|$body|\n";
-		my ($thisnum) = $cppcmdcount{$cpp_cmd}-1;
-		($macros{$name}[0])++;
-		$macros{$name}[$macros{$name}[0]] = $thisnum;
-		# print "def number $macros{$name}[0]:";
-		# for ($i = 1; $i <= $macros{$name}[0]; $i++)
-		#   { print " $macros{$name}[$i]"; }
-		# print "\n";
-		$mname[$thisnum] = $name;
-		$margs[$thisnum] = $args;
-		$mbody[$thisnum] = $body;
-		$mdependenton[$thisnum] = @dependenton;
-		$mfile[$thisnum] = $file;
-		$mline[$thisnum] = $.;
-	      }
-	  }
+	  # Amazingly enough, all the work is done by getline, which
+	  # calls process_macro_definition.
 	}
-      # Not needed if use a more sophisticated test for default value
-      #   continue {
-      #     $lastline = $line;
-      #   }
+      if (@dependenton > 0)
+	{ die "Still in \#if at end of file: @dependenton"; }
       close(INPUT);
     }
+  $macrodefs_found = $true;
+}
+
+# Given a macro definition (everything after "#define", with no leading,
+# trailing space), enter it into the appropriate global arrays
+sub process_macro_definition
+{
+  my ($def) = @_;
+  # print "process_macro_definition <<$def>>\n";
+  my ($name, $args, $body) = macroparse($def);
+
+  if (!defined($args)) { $args = ""; }
+  # print "parsed: |$name|$args|$body|\n";
+  my ($thisnum) = $cppcmdcount{"define"}-1;
+  ($macros{$name}[0])++;
+  $macros{$name}[$macros{$name}[0]] = $thisnum;
+  # print "def number $macros{$name}[0]:";
+  # for ($i = 1; $i <= $macros{$name}[0]; $i++)
+  #   { print " $macros{$name}[$i]"; }
+  # print "\n";
+  $mname[$thisnum] = $name;
+  $margs[$thisnum] = $args;
+  $mbody[$thisnum] = $body;
+  $mdependenton[$thisnum] = @dependenton;
+  $mfile[$thisnum] = $file;
+  $mline[$thisnum] = $.;
 }
 
 
@@ -746,8 +740,8 @@ sub test_typedecl_regexp
       open(INPUT,$file) or next; # skip to next file if open fails
       # Commented out to quiet compiler
       # $files{$file} = 1;
-      # Could use undef instead...
-      @dependenton = ();
+      if (@dependenton > 0)
+	{ die "In \#if at beginning of file: @dependenton"; }
       while ($line = getline())
 	{ if ($line =~ /^$typespecifier/o)
 	    { print "ts: <<$&>> $line"; }
@@ -756,6 +750,8 @@ sub test_typedecl_regexp
 	  if ($line =~ /^$typedeclarator\s*[,=;\(]/o)
 	    { print "td+: $line"; }
 	}
+      if (@dependenton > 0)
+	{ die "Still in \#if at end of file: @dependenton"; }
       close(INPUT);
     }
 }
@@ -780,8 +776,8 @@ sub test_typedecl_regexp
 #   and not in string or comment.
 # Result ends with newline.
 sub getline
-{ if (not (($instring == 0) && ($incomment == 0)))
-    { die "Bad instring $instring or incomment $incomment\n"; }
+{ if ($instring || $incomment)
+    { die "Bad instring $instring or incomment $incomment"; }
   if (@getline_ungotlines > 0)
     { print "popping getline_ungotlines\n";
       return pop(@getline_ungotlines); }
@@ -790,6 +786,7 @@ sub getline
   if (not ($result = <INPUT>))
     { return $result; }
   $lines++;
+
   $result = updateinvars($result);
   # perhaps check for $mname and mention it in message if it's set
   while ($incomment || $instring || ($result =~ m/\\$/))
@@ -841,8 +838,18 @@ sub getline
 	      $instring = 0; } }
     }
 
+  if ($result =~ /^\#/)
+    { # Preprocessor line
+      getline_handle_preprocessor_line($result);
+      # Return empty line
+      return "\n"; }
+
+  if ($result eq "")
+    { die "empty getline result"; }
+  # print "getline returning <<$result>>\n"; # $result ends in newline
   $result;
 }
+
 
 sub ungetline
 {
@@ -856,7 +863,6 @@ sub peekline
   ungetline($result);
   return $result;
 }
-
 
 # updateinvars exists for the purposes of getline, but may be called by others,
 #	particularly to remove comments or simplify string/character literals.
@@ -875,7 +881,6 @@ sub updateinvars
     { $result = $remaining; }
 
   # print "updateinvars ($computeresult) $remaining"; # $remaining ends w/newline
-
   while ($remaining)
     { if ($incomment)
 	{ if ($remaining =~ /\*\//)
@@ -891,11 +896,13 @@ sub updateinvars
 	{ # print "in string, processing $remaining";
 	  if ($remaining =~ m/$nonescdquote/o)
 	    # Found a non-escaped double quote
-	    { if ($computeresult)
+	    { # print "non-escaped double quote: $result|$remaining|$`|$&|$'\n";
+	      if ($computeresult)
 		{ if ($getline_simplify)
-		    { $result = $result . "\""; }
+		    { $result .= "\""; }
 		  else
-		    { $result = $result . $` . $&; } }
+		    { $result .= $` . $&; } }
+	      # print "post-nonescdquote: $result|$remaining\n";
 	      $remaining = $';
 	      $instring = 0; }
 	  else
@@ -931,7 +938,8 @@ sub updateinvars
 		  else
 		    { $remaining = $postmatch; } } }
 	  elsif ($match eq "\"")
-	    { $result .= $match;
+	    { if ($computeresult)
+		{ $result .= $match; }
 	      $remaining = $';
 	      $instring = 1; }
 	  elsif ($match eq "//")
@@ -1005,16 +1013,113 @@ sub remove_comments
 # }
 
 
-# Rather than use simplify_line, call $updateinvars with $getline_simplify
-# and $getline_nocomment set; see remove_comments, for example.
-# # Stopgap version
-# sub simplify_line
-# { my ($line) = @_;
-#   if ($line =~ /^\#/)
-#     { return "\n"; }
-#   else
-#     { return remove_comments($line); }
-# }
+sub getline_handle_preprocessor_line
+{
+  my ($line) = @_;
+  if ($line =~ /^\#\s*$/)
+    { # null preprocessor command; do nothing
+    }
+  # Maybe also check for (0 === 1), or macro that
+  # always expands to 0; but that is probably overkill.
+  elsif ($line =~ /^\#\s*ifdef\s+(0|\(0\))\s*$/)
+    { discard_to_endif(); }
+  elsif ($line =~ m/^\#\s*$identregexp\s*/o)
+    { # Found a real preprocessor command
+      my $cpp_cmd = $1;
+      $line = $';
+      $line =~ s/\s+$//;	# remove trailing whitespace
+      getline_handle_preprocessor_command($cpp_cmd, $line); }
+  else
+    { die "Strange preprocessor line $line"; } }
+
+# This is a catchall for everything that has to be done to a preprocessor line.
+# It's a bit gross to do it this way, but it seems most expedient.
+# Always do: set @dependenton
+# Sometimes do:
+#   if !$macrodefs_found, then in first pass, so
+#      for each use of the preprocessor, set $cppcmdcount
+#      for each #define, call process_macro_definition
+# Control the action via the following variables: ...
+sub getline_handle_preprocessor_command
+{
+  # $cpp_cmd and $cpp_cmd_arg contain no leading or trailing space.
+  my ($cpp_cmd, $cpp_cmd_arg) = @_;
+  # print "getline_handle_preprocessor_command <<$cpp_cmd>> <<$cpp_cmd_arg>>\n";
+
+  if (!$macrodefs_found)
+    { # Perhaps keep a list of each use, with line numbers (could help when
+      # determining if it is a preventMI).
+      $cppcmdcount{$cpp_cmd}++;
+      $cpp_cmds++;
+    }
+
+  if ($cpp_cmd eq "if")
+    { push(@dependenton, $cpp_cmd_arg);
+      # print "if $. $cpp_cmd_arg; now dependent on @dependenton\n";
+    }
+  elsif ($cpp_cmd eq "ifdef")
+    { push(@dependenton, "defined($cpp_cmd_arg)");
+      # print "ifdef $. $cpp_cmd_arg; now dependent on @dependenton\n";
+    }
+  elsif ($cpp_cmd eq "ifndef")
+    { push(@dependenton, "!defined($cpp_cmd_arg)");
+      # print "ifndef $. $cpp_cmd_arg; now dependent on @dependenton\n";
+    }
+  elsif ($cpp_cmd eq "endif")
+    { if (@dependenton == 0)
+	{ die "improperly nested \#endif"; }
+      # print "endif $. $dependenton[$#dependenton]; ";
+      pop(@dependenton);
+      # print "now dependent on @dependenton.\n";
+    }
+  elsif ($cpp_cmd eq "else")
+    { if (@dependenton == 0)
+	{ die "improperly nested \#else"; }
+      my $last = pop(@dependenton);
+      push(@dependenton, "!($last)"); }
+  elsif ($cpp_cmd eq "elif")
+    { if (@dependenton == 0)
+	{ die "improperly nested \#elif"; }
+      my $last = pop(@dependenton);
+      push(@dependenton, "(!($last)) && ($cpp_cmd_arg)"); }
+  elsif ($cpp_cmd eq "define")
+    { if (!$macrodefs_found)
+	{ process_macro_definition($cpp_cmd_arg); }
+    }
+  elsif ($cpp_cmd eq "include")
+    { # handle #include
+    }
+  elsif ($cpp_cmd eq "undef")
+    { # handle #undef
+    }
+  else
+    { # Some other cpp command
+      print "unhandled cpp command \#$cpp_cmd $cpp_cmd_arg\n";
+    }
+}
+
+
+# Read and discard lines until we find the matching #endif
+# No return value.
+sub discard_to_endif
+{ my $if0depth = 1;
+  my $line;
+  while ($if0depth > 0)
+    { if (not ($line = <INPUT>))
+	{ die "File ends in \#ifdef 0"; }
+      $lines++;
+      # I'll trust that no comment or string contains anything that
+      # looks like a preprocessor command.  Strictly speaking, I should
+      # use getline and/or updateinvars, because anything in an #ifdef
+      # is supposed to be a sequence of valid tokens, but #ifdef 0 often
+      # contains non-syntactic constructs.  (Maybe eventually use
+      # getline/updateinvars but permit and ignore errors.)
+      # This duplicates part of find_preprocessor_commands.  Oh, well.
+      if ($line =~ m/^\#\s*if(n?def)\b/o)
+	{ $if0depth++; }
+      elsif ($line =~ m/^\#\s*endif\b/o)
+	{ $if0depth--; } }
+}
 
 
 
@@ -1046,13 +1151,14 @@ sub appendlines
 # Return an array of three elements: name, args, def.
 # None have leading or trailing whitespace
 sub macroparse
-{ if ($#_ != 0) { die "Wrong number of arguments to macrobody."; }
+{ if (@_ != 1) { die "Wrong number of arguments to macrobody."; }
+  my ($line) = @_;
   # print "macroparse $_[0]\n";
   # Match zero or more, not one or more, spaces before definition.
   # (Perhaps warn if zero are matched.)
-  my @result = ($_[0] =~ m/^(\w+)(\([^\)]*\))?\s*(.*)\s*$/);
+  my @result = ($line =~ m/^(\w+)(\([^\)]*\))?\s*(.*)\s*$/);
   if ($#result != 2)		# ($# == 2) => 3 elements
-    { die "Problem parsing macro $_[0]\n"; }
+    { die "Problem parsing macro `$line'\n"; }
   @result;
 }
 
@@ -1300,7 +1406,11 @@ sub parse_function_decl_args
       while (!($remaining =~ /^\s*[,\)]/))
 	{ my ($thisargtype, $stillremaining) = parse_exp_nocommaop($remaining, "ignore types");
 	  if ($stillremaining eq $remaining)
-	    { die "Didn't find arg decl in $remaining\n"; }
+	    { print "defined macros:";
+	      for $macro (sort keys %macros)
+		{ print " ", $macro; }
+	      print "\n";
+	      die "Didn't find arg decl in $remaining"; }
 	  if (!$thisargtype)
 	    { die "Parse failed; shouldn't get to here.\n";
 	      # The parse failed; this wasn't a function declaration after all
@@ -1664,8 +1774,8 @@ sub get_macro_call_types
       open(INPUT,$file) or next; # skip to next file if open fails
       # Commented out to quiet compiler
       # $files{$file} = 1;
-      # # Could use undef instead...
-      # @dependenton = ();
+      if (@dependenton > 0)
+	{ die "In \#if at beginning of file: @dependenton"; }
       # Perhaps I should use a variant of getline that insists that parens
       # are balanced, too; that might let me more reasonably cope with
       # breaks across lines.
@@ -1674,10 +1784,15 @@ sub get_macro_call_types
       my $line;
       while ($line = getline())
 	{
-	  print "line $.: $line\n";
-	  # Actually, need to cope with preprocessor...
-	  if ((!($line =~ /^\s*$/)) && (!($line =~ m/^\#/)))
+	  print "line $.: $line"; # no newline, since $line contains one
+	  if ($line =~ /^\s*$/)
+	    { # empty line; nothing to do
+	    }
+	  elsif ($line =~ m/^\#/o)
+	    { die "getline shouldn't return preprocessor lines: $line"; }
+	  else
 	    { # not empty or a preprocessor line
+	      # print "not empty or a preprocessor line $line"; # $line has newline
 	      chop($line);	# remove trailing newline
 	      # In a scope, must be indented or: close brace, comment, label
 	      if (($symtab_scopes != 0)
@@ -1710,12 +1825,11 @@ PROCESSLINE:
 		{ # Function definition split over multiple lines
 		  $line .= " " . getline();
 		  goto PROCESSLINE; }
-	      elsif ($foo)
-# 		(($line =~ /^\s*$typedeclarator\s*([,=;\(])/o)
-# 		     && ($1 ne "return") # "return foo;"
-# 		     && ($1 ne "else") # "else if (...)"
-# 		     # fail if the function is actually a macro
-# 		     && (!(($9 eq "(") && $macros{$6})))
+	      elsif (($line =~ /^\s*$typedeclarator\s*([,=;\(])/o)
+ 		     && ($1 ne "return") # "return foo;"
+ 		     && ($1 ne "else") # "else if (...)"
+ 		     # fail if the function is actually a macro
+ 		     && (!(($9 eq "(") && $macros{$6})))
 		{
 		  # print "matched typedeclarator <$1><$2><$3><$4><$5><$6><$7><$8><$9>\n";
 		  my $basetype = $1;
@@ -1729,8 +1843,12 @@ PROCESSLINE:
 		  my $nextchar = $9;
 		  if (!(defined($nextchar))) { die "undefined nextchar"; }
 		  my $remaining = $';
-		  if (($symtab_scopes == 0) && ($line =~ /^\s/))
-		    { die "Indented line at top level: $line\n"; }
+		  if (($line =~ /^\s/)
+		      && ($symtab_scopes == 0)
+		      # accept indented declaration/definition (except
+		      # function def) in a #if at top scope
+		      && ((@dependenton == 0) || ($nextchar eq "\(")))
+		    { die "Indented line at top level ($symtab_scopes, @dependenton, '$nextchar'): $line\n"; }
 		  # print "found type '$basetype$pointerdecls$arraydecls' identifier '$identifier' nextchar '$nextchar' remaining '$remaining' on line $.\n";
 		  # If no semicolon, then the definition must span lines.
 		  if (($nextchar ne ";") && ($nextchar ne "("))
@@ -1952,6 +2070,8 @@ ATCOMMA:
 	  # done with this line; get another
 	}
       # done with this file; read another
+      if (@dependenton > 0)
+	{ die "Still in \#if at end of file: @dependenton"; }
       close(INPUT);
     }
 }
