@@ -26,7 +26,7 @@
 
 
 # FIX: I want to use '-$' like cpp does, not '-l'; how to do this?
-my $getopts_option_letters = 'ihvtIAau1pTlg:d:E:P:n:';
+my $getopts_option_letters = 'ihvtIAau1pTlg:d:E:P:n:F:';
 
 # Remove the asterisks below when the options are known to the users.
 sub usage () {
@@ -54,6 +54,8 @@ New options marked with *; options with ':', above, take an argument
   -p  send parse errors to stdout even if also sending to file
 * -n [directory]  also prepend \"directory\" to elements of include path
 	This permits use of customized library header files.
+* -F [directory] Use the fast version of modules in [directory]
+     (this just puts the directory ahead of the other dirs in @INC for Perl)
 
 (Note: -{E,P} options take precedence over the -d option)
 
@@ -752,7 +754,7 @@ my $debug_ccd_categories = $false;
 ## Command-line processing
 # Are these in any order?
 use vars qw($opt_i $opt_I $opt_h $opt_v $opt_t $opt_d $opt_l
-	    $opt_E $opt_P $opt_p $opt_n
+	    $opt_E $opt_P $opt_p $opt_n $opt_F
 	    $opt_u $opt_1 $opt_A $opt_a $opt_g $opt_T);
 my $fIgnoreIncludes = $false;
 
@@ -6312,6 +6314,10 @@ usage() if ($opt_h);
 
 #SaveMacroAnalysisState("/tmp/gjb/macros");
 #exit 0;
+
+if ($opt_F) {
+  unshift(@INC,$opt_F);
+}
 
 if ($opt_i) {
   while (<STDIN>) {
