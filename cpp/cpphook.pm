@@ -379,6 +379,7 @@ sub expand_macro {
   print " : MEH = ", join("<-",@MEH),"\n";
   chomp $raw_call;
   print " : was \"$mname$raw_call\" with $cargs args, length = ", $call_length, "\n";
+  print ": ParseStateStack: ", join(",",cpp::ParseStateStack()), "\n";
   my $state_stack = join(",",cpp::ParseStateStack());
   print MACEXP_STACKS "$mname: $state_stack\n";
   my $iarg = 0;
@@ -460,6 +461,9 @@ sub do_if {
 sub do_elif {
   my ($s_start,$s_end,$already_did_clause, $conditional, $skipped, $value) = @_;
   print CPP "do_elif on $conditional ($skipped) evals to $value; $already_did_clause\n";
+  if ($value == 0) {
+    handle_unincluded_block($s_branch_start,$s_branch_end,$skipped);
+  }
 }
 
 sub handle_unincluded_block {
@@ -467,6 +471,11 @@ sub handle_unincluded_block {
   my $fname = cpp::Fname();
   print TPSOURCE "#$fname:(put-face-property-if-none $s_branch_start $s_branch_end \'font-lock-reference-face)\n";
   print TPSOURCE "#$fname:(add-text-property $s_branch_start $s_branch_end \'doc \"Skipped due to $kind $conditional\")\n";
+  my $old_skipped = $skipped;
+  $skipped =~ s/^\s*\#\s*include .*$//mg;
+  if ($skipped ne $old_skipped) {
+    print STDERR "Removed some #include-s from speculative branch\n";
+  }
   print STDERR "Pushing skipped branch\n";
   print STDERR ": ParseStateStack: ", join(",",cpp::ParseStateStack()), "\n";
   cpp::YYPushStackState();
@@ -586,6 +595,7 @@ sub Got_token {
   print TOKEN ": History: ",join("<-",@history),"\n";
   print TOKEN ": From $mname\n";
   print TOKEN ": Argno = $argno\n";
+  print STDERR ": ParseStateStack: ", join(",",cpp::ParseStateStack()), "\n";
   if ($raw =~ m/^[\w\$]+$/) {
     print TOKEN ": lookup: ", cpp::FLookupSymbol($raw)? "Found symbol" : "Not found", "\n";
   }
