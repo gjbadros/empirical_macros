@@ -315,6 +315,7 @@ sub construct_function_type($@)
 # FIX: this is completely wrong.
 sub construct_array_type($;$)
 { my ($elt_type, $size) = check_args_range(1, 2, @_);
+  # ignore $size
   return $elt_type;
 }
 
@@ -476,7 +477,7 @@ my @rg_cppcmdcounts;
 #
 ## Not-include file version of the above
 #my $physical_lines_ni = 0;	# as they appear to tools
-my $ncnb_physical_lines_ni = 0;	# non-comment, non-blank lines
+#my $ncnb_physical_lines_ni = 0;	# non-comment, non-blank lines
 #my $cpp_physical_lines_ni = 0;	# cpp physical lines
 #my $cpp_physical_ncnb_lines_ni = 0; # cpp physical lines
 
@@ -485,12 +486,12 @@ my $ncnb_physical_lines_ni = 0;	# non-comment, non-blank lines
 # from the rg_XXX variables, above.
 # See compute_global_cpp_sums
 
-my $cpp_cmds;			# total preprocessor commands
-my $cpp_cmds_ni;		# total preprocessor commands
-my $cpp_cmds_hdr;
-my $cpp_cmds_hdr_ni;
-my $cpp_cmds_c;
-my $cpp_cmds_c_ni;
+# my $cpp_cmds;			# total preprocessor commands
+# my $cpp_cmds_ni;		# total preprocessor commands
+# my $cpp_cmds_hdr;
+# my $cpp_cmds_hdr_ni;
+# my $cpp_cmds_c;
+# my $cpp_cmds_c_ni;
 
 # Initialize cppcmdcount{"define"} to avoid uninitialized values
 # when processing the macros (in case there were no macros).
@@ -5089,14 +5090,14 @@ sub categorize_macro_def ( $ )
 	{ $category = $catRESERVED_WORD; }
       elsif ($body =~ /^$reserved_type_word_re$/)
 	{ $category = $catPARTIAL_TYPE; }
-      elsif (exists($macros{$body}))
-	{ categorize_macro_name($body);
-	  $category = $mncategory{$body};
-	  $type = $mntype{$body}; }
       elsif (exists($functions{$body}))
 	{ $category = $catFUNCTION_NAME; }
       elsif (exists($typedefs{$body}))
 	{ $category = $catTYPE; }
+      elsif (exists($macros{$body}))
+	{ categorize_macro_name($body);
+	  $category = $mncategory{$body};
+	  $type = $mntype{$body}; }
       else
 	{ $category = $catSYMBOL_UNKNOWN; } }
   elsif (($body =~ /^(-\w[a-zA-Z0-9_.,\/]*([= ][a-zA-Z0-9_.,\/]*)?\s*)+$/)
@@ -5806,7 +5807,7 @@ sub analyze_for_macro_use ( $ ) {
   my $macro_uses_index = $i_usage_code;
   my $cpp_defining_macro_name;
   # FIXGJB: this might be better to do:
-  # if ( $line =~ s/^\s*\#\s*// ) { 
+  # if ( $line =~ s/^\s*\#\s*// ) {
   # (and drop the following substitution)
   # because some cpp-s permit leading whitespace
   if (substr($line,0,1) eq "#") {
@@ -5824,7 +5825,7 @@ sub analyze_for_macro_use ( $ ) {
     elsif ($line =~ /^(if(n?def)?|elif)?\b/)
       { my $restofline = $POSTMATCH;
 	print STDERR "Got $line\n";
-	if ($line =~ /^ifndef\s+($identifier_re)\s*$/ || 
+	if ($line =~ /^ifndef\s+($identifier_re)\s*$/ ||
 	    $line =~ /^if\s+!\s*defined\s*\(\s*($identifier_re)\s*\)\s*$/) {
 	  my $macro_not_defined = $1;
 	  my $simplified_line = peek_fulltoken_line(1);
@@ -6591,28 +6592,33 @@ sub test_regexp ( $$;$ )
 	. (defined($regexp_pretty) ? $regexp_pretty : "regexp '$regexp'") . "\n"; }
 }
 
+sub anchor ( $ )
+{ my ($regexp) = check_args(1, @_);
+  return '^' . $regexp . "\$";
+}
+
 sub test_declarator_re ( $ )
 {
   my ($string) = check_args(1, @_);
-  test_regexp($string, '^' . $declarator_re . '$', "declarator_re");
+  test_regexp($string, anchor($declarator_re), "declarator_re");
 }
 
 sub test_type_declarator_re ( $ )
 {
   my ($string) = check_args(1, @_);
-  test_regexp($string, '^' . $type_declarator_re . '$', "type_declarator_re");
+  test_regexp($string, anchor($type_declarator_re), "type_declarator_re");
 }
 
 sub test_type_declarator_re_plus ( $ )
 {
   my ($string) = check_args(1, @_);
-  test_regexp($string, '^\s*' . $type_declarator_re . '\s*([,=;\(])$', "type_declarator_re plus");
+  test_regexp($string, anchor('\s*' . $type_declarator_re . '\s*([,=;\(])'), "type_declarator_re plus");
 }
 
 sub test_type_declarator_arglist_re ( $ )
 {
   my ($string) = check_args(1, @_);
-  test_regexp($string, '^' . $type_declarator_arglist_re . '$', "type_declarator_arglist_re");
+  test_regexp($string, anchor($type_declarator_arglist_re), "type_declarator_arglist_re");
 }
 
 sub test_typedecl_regexps ( )
@@ -7147,6 +7153,28 @@ print STDERR "Categorizing $cMacrosInTables macros\n";
       $current_macro_line_number = $mdef_line[$i];
       categorize_macro_def($i);	# also gets properties (currently, discards)
     }
+
+  # If anything was originally categorized as in_process, try again:
+  #  erase the macro name's category, and try again for the parts.
+  for my $mname (keys %macros)
+    # Not sure why I'm using mntype instead of mncategory; I do so elsewhere.
+    { if (defined($mntype{$mname}) && ($mncategory{$mname} == $catIN_PROCESS))
+	{ delete $mntype{$mname};
+	  delete $mncategory{$mname}; } }
+  # Maybe should undef all these before trying again.
+  # Or maybe should try in the reverse order.
+  for (my $i = 0; $i < $cMacrosInTables; $i++)
+    { if ($mdef_category[$i] == $catIN_PROCESS)
+	{ undef $mdef_category[$i];
+	  undef $mdef_type[$i];
+	  categorize_macro_def($i); } }
+  # If a name is STILL in_process, give it one more try (probably fruitless)
+  for my $mname (keys %macros)
+    # Not sure why I'm using mntype instead of mncategory; I do so elsewhere.
+    { if (defined($mntype{$mname}) && ($mncategory{$mname} == $catIN_PROCESS))
+	{ delete $mntype{$mname};
+	  delete $mncategory{$mname}; } }
+
   for my $mname (keys %macros)
     { categorize_macro_name($mname); }
 }
