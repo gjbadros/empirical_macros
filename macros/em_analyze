@@ -704,7 +704,7 @@ my $cMacrosInTables = 0;
 my @mdef_name;
 my @mdef_formals;
 my @mdef_body;			# with comments; for user output
-my @mdef_body_noc;		# no comments; for processing (does contain unsimplified strings and character literals)
+# my @mdef_body_noc;		# no comments; for processing (does contain unsimplified strings and character literals)
 my @mdef_body_simple;		# no comments; strings and chars are simplified
 my @mdef_fileno;
 my @mdef_line;
@@ -869,7 +869,7 @@ sub process_macro_definition ( $$$$ )
   $mdef_name[$this_macro_index] = $name;
   $mdef_formals[$this_macro_index] = $args;
   $mdef_body[$this_macro_index] = $body;
-  $mdef_body_noc[$this_macro_index] = $body_noc;
+  # $mdef_body_noc[$this_macro_index] = $body_noc;
   $mdef_body_simple[$this_macro_index] = $body_simple;
 
   # We track both the physical lines in a macro definition
@@ -2290,8 +2290,9 @@ sub cpp_handle_include ( $$ )
   if ($include_arg !~ /^$cpp_include_arg_re$/ &&
       (!defined($macros{$include_arg}) ||
        # index -1 means "last element of array"
-       !defined($mdef_body_noc[$macros{$include_arg}[-1]]) ||
-       $mdef_body_noc[$macros{$include_arg}[-1]] !~ /^$cpp_include_arg_re$/)) {
+       !defined($mdef_body[$macros{$include_arg}[-1]]) ||
+       # can't use simplified body, as strings have been simplified away in it
+       cline_remove_comments($mdef_body[$macros{$include_arg}[-1]]) !~ /^$cpp_include_arg_re$/)) {
     # Didn't match "foo.h" or <bar.h>, or a macro whose last definition
     # expands to something in quotes or brockets
     parse_error("Bad argument to #include: $unsimple_arg\n");
@@ -6290,7 +6291,7 @@ sub test_categorize_macro_def ( $$$ )
   if (is_number($category))
     { $category = $categoryname[$category]; }
   $mdef_body[1000] = $body;
-  $mdef_body_noc[1000] = $body;
+  # $mdef_body_noc[1000] = $body;
   $mdef_body_simple[1000] = $body;
   $mdef_name[1000] = "dummy";
   $mdef_formals[1000] = "(arg)";
@@ -6804,7 +6805,7 @@ sub SaveMacroAnalysisState ( $ )
     $| = 0; select(STDOUT); }
 
   # Try to save some space, to avoid running out of memory in Data::Dumper
-  undef @mdef_body_noc;
+  # undef @mdef_body_noc;
   undef @mdef_body_simple;
 
   undef %macros_used_in_functions;  #FIXGJB: We probably want this info,

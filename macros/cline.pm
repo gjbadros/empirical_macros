@@ -6,7 +6,7 @@ require Exporter;
 @ISA = qw(Exporter);
 @EXPORT = qw(get_spliced_cline get_spliced_cline_maybe_ungot get_fulltoken_cline
 	     peek_fulltoken_cline
-	     cline_simplify
+	     cline_simplify cline_remove_comments
 	     cline_resetinvars cline_ungot_string cline_ungot_size cline_ungot_phys_lines
 	     $cline_simplify_strings $debug_cline);
 use checkargs;
@@ -29,6 +29,7 @@ cline -- Read physical, logical, or full-token lines from C program files
   cline_ungot_size()
   cline_ungot_phys_lines()
   cline_simplify(line)
+  cline_remove_comments(line)
   $cline_simplify_strings
   $debug_cline
 
@@ -287,6 +288,35 @@ sub cline_simplify ( $ )
   return $result;
 }
 
+# Special-purpose variant of cline_updateinvars that removes comments,
+# does not simplify strings.  Ignores warnings.
+sub cline_remove_comments ( $ )
+{
+  my ($arg) = check_args(1, @_);
+
+  local $cline_incomment = $false;
+  local $cline_instring = $false;
+  local $cline_simplify_strings = $false;
+
+  if ($debug_cline) { print "cline_remove_comments <= '$arg'\n"; }
+
+  my $result;
+  ($result, undef, undef) = cline_updateinvars($arg);
+  # Not sure if eliminating space is the right thing; but if mdef_body_simple
+  # isn't stored in state file, it must be done here or elsewhere.
+  $result =~ s/^\s+//;
+  $result =~ s/\s+$//;
+  $result =~ s/\n/ /;
+  if ($cline_incomment)
+    { croak "argument ends in comment: $arg"; }
+  if ($cline_instring)
+    { croak "argument ends in string: $arg"; }
+
+  if ($debug_cline) { print "cline_remove_comments => '$result'\n"; }
+
+  return $result;
+}
+
 
 ###########################################################################
 ### Copied from em_analyze
@@ -453,7 +483,7 @@ sub get_spliced_cline_maybe_ungot ($;$)
 #  * The string results end with newline.
 # If calls to peek_fulltoken_line have been made, those strings are returned.
 # To simplify an arbitrary string, use cline_simplify.
-# 
+#
 # Constructing simplified values are a bit wasteful on the first pass, when we
 # only care about macro definitions; special-case that?
 sub get_fulltoken_cline ($;$)
