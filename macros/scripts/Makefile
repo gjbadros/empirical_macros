@@ -46,6 +46,8 @@ LINT := $(addsuffix .lint,$(PKGS))
 PROP := $(addsuffix .prop,$(PKGS))
 MAC  := $(addsuffix .mac,$(PKGS))
 CCD  := $(addsuffix .ccd,$(PKGS))
+DEPEND  := $(addsuffix .depend,$(PKGS))
+SDEPEND  := $(addsuffix .sdepend,$(PKGS))
 USECUM  := $(addsuffix .frequse_cum,$(PKGS))
 DEFCUM  := $(addsuffix .freqdef_cum,$(PKGS))
 CATUSECUM  := cat-*.frequse_cum
@@ -62,7 +64,10 @@ TEXT_TABLES :=	tbl-package-sizes \
 		tbl-ccd-categories \
 		tbl-lint-warnings \
 		tbl-properties-subset \
-		tbl-properties-percents
+		tbl-properties-percents \
+		tbl-inclusion-dependences-by-line \
+		tbl-expansion-dependences-by-line \
+		tbl-any-dependences-by-line
 
 RAW_TABLES := tbl-directives-hist tbl-directives-breakdown \
 		tbl-def-categories tbl-subset-categories
@@ -181,6 +186,21 @@ package_num_files:
 	cd $(PKG_DIR); \
 	wc -l */c-files-listing | awk -F/ '{print $$1}' | awk -F- '{print $$1}' | awk '{print $$2 "\t" $$1}' > $(ANALYZE_OUTPUT_DIR)/$@
 
+
+tbl-inclusion-dependences-by-line: $(SDEPEND)
+	macros-make-dependences-by-line Inclusion $^ > $@
+
+tbl-any-dependences-by-line: $(SDEPEND)
+	macros-make-dependences-by-line Any $^ > $@
+
+tbl-expansion-dependences-by-line: $(SDEPEND)
+	macros-make-dependences-by-line Expansion $^ > $@
+
+%.sdepend: %.depend
+	awk '/======================================================================/,/^  thislinewontmatchanything  $$/' < $< > $@
+
+sdepend: $(SDEPEND)
+
 ###########################################################################
 ### Etc.
 ###
@@ -221,4 +241,4 @@ fast:	$(SCRIPTSPATH)
 # *.stat file
 .PRECIOUS: %.state
 
-.PHONY: all clean showvars text_tables data_analyze data_reports raw copy fast
+.PHONY: all clean showvars text_tables data_analyze data_reports raw copy fast sdepend
