@@ -1,3 +1,8 @@
 #!/uns/bin/zsh
-awk '/^#LINESNI#/ { nextln = 1; next} nextln==1 {lines = $2; nextln = 0; next} /^DIRECTIVES_NI:/ {$1 = ""; $2 = ""; printf lines " " FILENAME " " $0 "\n"}' "$@" | sed 's/1\?\.stat //'
+
+# This computes directive use for all lines.
+# To get only header lines, use DIRECTIVES_HNI.
+# To get only non-header (ie, code) lines, use DIRECTIVES_CNI.
+
+awk '/^#LINESNI#/ { nextln = 1; next} nextln==1 {ncnb_lines = $2; nextln = 0; next} /^DIRECTIVES_NI:/ {$1 = ""; $2 = ""; printf ncnb_lines " " FILENAME " " $0 "\n"}' "$@" | sed 's/1\?\.stat //'
 
