@@ -4,6 +4,8 @@ BEGIN {
 # we need to use $i+0, or else the value pointed to
 # by the first handful keeps getting incremented, and
 # we get uncategorized => 21, or whatever
+# The postincrement returns a temporary which gets
+# stored as the value in the hash
 
 # FIX: this hash must be kept in sync with the table
 # headings in latexify-mark-table
