@@ -2,9 +2,16 @@ CCCP=cccp
 BISON = bison
 CC=gcc
 
+GCC_CFLAGS=$(INTERNAL_CFLAGS) $(X_CFLAGS) $(T_CFLAGS) $(CFLAGS) -I./include
+# This is the variable actually used when we compile.
+ALL_CFLAGS = $(INTERNAL_CFLAGS) $(X_CFLAGS) $(T_CFLAGS) $(CFLAGS) $(XCFLAGS)
+
 # Directory where sources are, from where we are.
 srcdir = .
-INCLUDES = -I. -I$(srcdir) -I$(srcdir)/config
+PERLARCHDIR = /uns/lib//perl5.004/arch
+
+INCLUDES = -I. -I$(srcdir) -I$(srcdir)/config -I$(PERLARCHDIR)/CORE
+
 
 # Common prefix for installation directories.
 # NOTE: This directory must exist when you start installation.
@@ -186,7 +193,20 @@ HOST_ALLOCA=$(ALLOCA)
 HOST_MALLOC=$(MALLOC)
 HOST_OBSTACK=$(OBSTACK)
 
+
+# Output of "perl -M"ExtUtils::Embed" -e ccopts -e ldopts" running on uni --gjb
+PERLLIBS = -rdynamic  -L/usr/local/lib /uns/lib/perl5.004/arch/auto/DynaLoader/DynaLoader.a -L/uns/lib/perl5.004/arch/CORE -lperl -lgdbm -ldb -lm -lc
+
+
 # Making the preprocessor
+cppmain: cppmain.o cpplib.o cpphash.o cppalloc.o cpperror.o cppexp.o \
+  version.o $(LIBDEPS)
+	$(CC) $(ALL_CFLAGS) $(LDFLAGS) -o $@ cppmain.o cpplib.o cpphash.o \
+	  cppalloc.o cpperror.o cppexp.o version.o $(LIBS) $(PERLLIBS)
+
+tags:
+	etags cppmain.[ch] cpplib.[ch] cpphash.[ch] cppalloc.[ch] cpperror.[ch] cppexp.[ch] version.c pcp.h tm.h 
+
 cpp: $(CCCP)
 	-rm -f cpp$(exeext)
 	ln $(CCCP)$(exeext) cpp$(exeext) > /dev/null 2>&1 \
@@ -194,12 +214,18 @@ cpp: $(CCCP)
 cccp: cccp.o cexp.o version.o $(LIBDEPS)
 	$(CC) $(ALL_CFLAGS) $(LDFLAGS) -o $@ cccp.o cexp.o \
 	  version.o $(LIBS)
-cexp.o: $(srcdir)/cexp.c $(CONFIG_H)
+cexp.o: $(srcdir)/cexp.c $(CONFIG_H) cpphook.h
 	$(CC) $(ALL_CFLAGS) $(ALL_CPPFLAGS) $(INCLUDES) -c $(srcdir)/cexp.c
 $(srcdir)/cexp.c: $(srcdir)/cexp.y
 	cd $(srcdir); $(BISON) -o cexp.c cexp.y
 
-cccp.o: cccp.c $(CONFIG_H) pcp.h version.c config.status
+# Always use -I$(srcdir)/config when compiling.
+.c.o:
+	$(CC) -c $(ALL_CFLAGS) $(ALL_CPPFLAGS) $(INCLUDES) $<
+
+cppmain.o: cppmain.c cpphook.h
+
+cccp.o: cccp.c $(CONFIG_H) pcp.h version.c config.status cpphook.h
 # The reason we use $(libdir)/g++-include rather than using libsubdir
 # is for compatibility with the current version of libg++.
 	$(CC) $(ALL_CFLAGS) $(ALL_CPPFLAGS) $(INCLUDES) \
@@ -210,12 +236,7 @@ cccp.o: cccp.c $(CONFIG_H) pcp.h version.c config.status
 	  -DTOOL_INCLUDE_DIR=\"$(tooldir)/include\" \
 	  -c `echo $(srcdir)/cccp.c | sed 's,^\./,,'`
 
-cppmain: cppmain.o cpplib.o cpphash.o cppalloc.o cpperror.o cppexp.o \
-  version.o $(LIBDEPS)
-	$(CC) $(ALL_CFLAGS) $(LDFLAGS) -o $@ cppmain.o cpplib.o cpphash.o \
-	  cppalloc.o cpperror.o cppexp.o version.o $(LIBS)
-
-cpplib.o: cpplib.c $(CONFIG_H) cpplib.h cpphash.h config.status
+cpplib.o: cpplib.c $(CONFIG_H) cpplib.h cpphash.h config.status cpphook.h
 	$(CC) $(ALL_CFLAGS) $(ALL_CPPFLAGS) $(INCLUDES) \
 	  -DGCC_INCLUDE_DIR=\"$(libsubdir)/include\" \
 	  -DGPLUSPLUS_INCLUDE_DIR=\"$(gxx_include_dir)\" \

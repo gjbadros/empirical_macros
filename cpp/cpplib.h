@@ -20,6 +20,10 @@ Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  You are forbidden to forbid anyone else to use, share and improve
  what you give them.   Help stamp out software-hoarding!  */
 
+
+#include "cpphook.h"
+
+
 #include <sys/types.h>
 #include <sys/stat.h>
 
