@@ -6,6 +6,8 @@
 # make some changes (e.g. to the first several settings).  If so
 # be sure to point COMMON_DIR to your scripts directory!
 
+USER_PREFIX = /homes/gws/gjb/macros
+
 # Directories
 PKG_DIR := /tmp/gjb/packages
 ANALYZE_OUTPUT_DIR := /tmp/gjb/data
@@ -16,7 +18,9 @@ COMMON_DIR := $(shell dirname $$(ls -l Makefile | awk '{print $$NF}'))
 EXTRA_ANALYZE_FLAGS := "-v"
 #EXTRA_ANALYZE_FLAGS := -g14
 
-PAPER_DIR := /homes/gws/gjb/macros/papers
+PAPER_DIR := $(USER_PREFIX)/papers
+PAPER_CPPP_DIR := $(USER_PREFIX)/papers/cppp
+PAPER_ORIG_DIR := $(USER_PREFIX)/papers/orig
 
 PKGS := $(shell zsh -c "echo $(PKG_DIR)/*(/:t) | sed -e 's/-[^ ]*//g'")
 
@@ -168,5 +172,13 @@ showvars:
 copy: $(PAPER_TABLES)
 	perl -pi.bak -e 's/z*<total>/Total/g' $(PAPER_TABLES)
 	cp $(PAPER_TABLES) $(PAPER_DIR)
+
+copycppp: $(PAPER_TABLES)
+	perl -pi.bak -e 's/z*<total>/Total/g' $(PAPER_TABLES)
+	cp $(PAPER_TABLES) $(PAPER_CPPP_DIR)
+
+copyorig: $(PAPER_TABLES)
+	perl -pi.bak -e 's/z*<total>/Total/g' $(PAPER_TABLES)
+	cp $(PAPER_TABLES) $(PAPER_ORIG_DIR)
 
 .PHONY: all clean showvars text_tables data_analyze data_reports raw copy
