@@ -267,16 +267,23 @@ sub done_include_file {
 sub Got_token {
   my ($token,$sz) = @_;
   my @history = cpp::MacroExpansionHistory();
+  my $argno = cpp::ArgOf();
   print  "TOKEN: $sz;", substr($token,4),", FExpandingMacros = ",cpp::FExpandingMacros(),
    ", CchOffset = ", cpp::CchOffset(), "; CbytesOutput = ", cpp::CbytesOutput(),";", join("<-",@history),"\n";
-  print ": ArgOf = ", cpp::ArgOf(), "\n";
+  print ": ArgOf = ", $argno, "\n";
 
   my $end = cpp::CbytesOutput()+1;
   my $start = $end-length($sz);
   if ($#history >= 0) {
-    print TP "#out:(put-face-property-if-none $start $end \'bold)\n";
-    print TP "#out:(put-mouse-face-property-if-none $start $end \'secondary-selection)\n";
-    print TP "#out:(add-text-property $start $end \'doc \"Expansion from " , (join("<-",@history)),"\")\n";
+    print TP "#out:(put-face-property-if-none $start $end \'italic)\n";
+    print TP "#out:(put-mouse-face-property-if-none $start $end \'highlight)\n";
+    if ($argno < 0) {
+      print TP "#out:(add-text-property $start $end \'doc \"Expansion from " , (join("<-",@history)),"\")\n";
+    } elsif ($argno == 0) {
+      print TP "#out:(add-text-property $start $end \'doc \"Expansion from body of " , (join("<-",@history)),"\")\n";
+    } else {
+      print TP "#out:(add-text-property $start $end \'doc \"Expansion from argument $argno of " , (join("<-",@history)),"\")\n";
+    }
   }
 }
 
