@@ -17,6 +17,8 @@
 \def\numlinesalmost{1.4 million}
 % \def\numlinesncnbexact{1 million} % 995033 as of 28 Jan 1999
 
+\def\nummacrodefs{27228}        % as of 28 Jan 1999
+
 \newcommand{\pkg}[1]{\textsf{#1}}
 \newcommand{\file}[1]{\texttt{#1}}
 \newcommand{\ppd}[1]{\texttt{\##1}}
@@ -668,12 +670,10 @@ The ten definition categories follow.
   \emergencystretch=2em
 
 %%% These figures come from:  macros-make-categories-tbl-from-stat.pl -bt *.stat
-%% Updated 1/31/99.
+%% Computed 2/1/99
 
-
-
-%% mcat_NULL: 3642
-%%   100%  null_define (3642)
+%% mcat_NULL: 1816
+%%   100%  null_define (1816)
 % @mcat_NULL = qw( catNULL_DEFINE );
 \item[Null define]  The {\tt \#define} directive gives only an
   identifier name but no macro body, as in {\tt \#define
@@ -683,13 +683,13 @@ they often represent optional syntax.  For
 instance, macro {\tt private} may expand either to {\tt static} or to
 nothing, depending on whether a debugging mode is set.
 
-%% mcat_CONSTANT: 25201
+%% mcat_CONSTANT: 11062
 %%   0.00%  constant (0)
-%%   96%  literal (24223)
-%%   3.9%  some_constant (978)
+%%   96%  literal (10602)
+%%   4.2%  some_constant (460)
 % @mcat_CONSTANT = qw( catCONSTANT catLITERAL catSOME_CONSTANT );
-\item[Constant] The macro body is either a literal (97\% of this category)
-  or an operator applied to constant values (3\% of this category).  For
+\item[Constant] The macro body is either a literal (96\% of this category)
+  or an operator applied to constant values (4\% of this category).  For
   instance, {\tt \#define \verb|ARG_MAX| 131072}, and {\tt \#define
   ETCHOSTS "/etc/hosts"} define literals, while {\tt \#define
 \verb|RE_DUP_MAX| ((1<<15)-1)} and {\tt \#define \verb|RED_COLS| (1~<<~\verb|RED_BITS|)} (where \verb|RED_BITS| is a constant, possibly a literal)
@@ -700,8 +700,8 @@ values.
 
 % {\tt \#define NULL 0}
 
-%% mcat_NONCONSTANT_EXPRESSION: 19436
-%%   100%  expression (19436)
+%% mcat_NONCONSTANT_EXPRESSION: 8633
+%%   100%  expression (8633)
 % @mcat_NONCONSTANT_EXPRESSION = qw( catEXP );
 \item[Expression]  The macro body is an expression, as in {\tt \#define
   sigmask(x) (1 << ((x)-1))} or {\tt \#define mtime mailfiles[i]->\verb|mod_time|}.
@@ -713,13 +713,13 @@ case for expression macros without arguments, most of which are classified
 as constants, above) or might have a different value at each use (the usual
 case for expression macros with arguments).
 
-%% mcat_STATEMENT: 2661
-%%   37%  statement (989)
-%%   49%  semicolonless_statement (1298)
-%%   2.1%  partial_statement (56)
-%%   5.3%  statements (142)
-%%   6.5%  semicolonless_statements (174)
-%%   0.075%  partial_statements (2)
+%% mcat_STATEMENT: 1325
+%%   37%  statement (493)
+%%   49%  semicolonless_statement (646)
+%%   2.1%  partial_statement (28)
+%%   5.4%  statements (71)
+%%   6.5%  semicolonless_statements (86)
+%%   0.075%  partial_statements (1)
 % @mcat_STATEMENT = qw( catSTATEMENT catSTATEMENT_SANS_SEMI catPARTIAL_STATEMENT
 %                        catSTATEMENTS catSTATEMENTS_SANS_SEMI catPARTIAL_STATEMENTS );
 % These are not great examples (not from actual code); but so be it, as the
@@ -735,28 +735,28 @@ case for expression macros with arguments).
   should not be followed by a semicolon (see Section~\ref{sec:lint}).
     
   To reduce the number of categories in our presentation, this statement
-  category aggregates single statements (comprising 47\% of the category),
-  statements missing their final semicolon (45\% of the category, as in
+  category aggregates single statements (comprising 37\% of the category),
+  statements missing their final semicolon (49\% of the category, as in
   {\tt \#define QUIT if (\verb|interrupt_state|)
-  \verb|throw_to_top_level|()}), multiple statements (3.0\%), multiple
-statements where the last one lacks its semicolon (3.5\%), and partial
-statements (less than 2\% of the statement category, as in {\tt \#define
+  \verb|throw_to_top_level|()}), multiple statements (5.4\%), multiple
+statements where the last one lacks its semicolon (6.5\%), and partial
+statements (2.2\% of the statement category, as in {\tt \#define
 ASSERT(p) if (!(p)) botch(\verb|__STRING|(p)); else}).
 
-%% mcat_TYPE: 1109
-%%   55%  type (615)
+%% mcat_TYPE: 548
+%%   55%  type (301)
 %%   0.00%  partial_type (0)
-%%   2.3%  declaration (26)
-%%   42%  semicolonless_declaration (468)
+%%   2.4%  declaration (13)
+%%   43%  semicolonless_declaration (234)
 % @mcat_TYPE = qw( catTYPE catPARTIAL_TYPE catDECLARATION catDECLARATION_SANS_SEMI);
 % #my @mcat_DECLARATION = qw( catDECLARATION catDECLARATION_SANS_SEMI );
 % #folded DECLARATION into the above, TYPE
 % The DECLARATION ones are quite rare.
 \item[Type] 
-  These macros expand to a type or partial type (for example, a storage
-  class such as {\tt static})
-  or expand to a declaration (possibly missing its terminating semicolon).
-  Examples include
+  These macros expand to a type or partial type (55\% of the category; for
+  example, a storage class such as {\tt static}) or expand to a declaration
+  (2.4\% of the category) or a declaration missing its terminating
+  semicolon (43\% of the category).  Examples include
 \begin{verbatim}
     #define __ptr_t void *
     #define __INLINE extern inline
@@ -769,38 +769,38 @@ ASSERT(p) if (!(p)) botch(\verb|__STRING|(p)); else}).
   replace the first example above.
 
 
-%% mcat_SYNTAX: 243
-%%   37%  mismatched_entities (89)
-%%   63%  punctuation (154)
+%% mcat_SYNTAX: 120
+%%   37%  mismatched_entities (44)
+%%   63%  punctuation (76)
 % This includes ( catUNBALANCED catPUNCTUATION )
-\item[Syntactic]  The macro body is either punctuation (82\% of this
+\item[Syntactic]  The macro body is either punctuation (63\% of this
   category; for example, {\tt \#define AND ;}) or contains unbalanced
-  parentheses, braces, or brackets.  The latter are often used to create a
-  block and perform actions that must occur at its beginning and end, as
-  for \verb|BEGIN_GC_PROTECT| and \verb|END_GC_PROTECT|.
-  Macros in this category are inexpressible as abstractions directly in the C
-  programming language---they depend on the preprocessor's manipulation of uninterpreted
-  token streams.  These macros result in a change to the parser's state
-  that could not be effected by a symbol alone;  see also 
-  Section~\ref{sec:extra-linguistic}.  We call these macros
-  ``syntactic'' because they hide syntax in the view of unprocessed
+  parentheses, braces, or brackets (37\% of this category).  The latter are
+  often used to create a block and perform actions that must occur at its
+  beginning and end, as for \verb|BEGIN_GC_PROTECT| and
+  \verb|END_GC_PROTECT|.  Macros in this category are inexpressible as
+  abstractions directly in the C programming language---they depend on the
+  preprocessor's manipulation of uninterpreted token streams.  These macros
+  result in a change to the parser's state that could not be effected by a
+  symbol alone; see also Section~\ref{sec:extra-linguistic}.  We call these
+  macros ``syntactic'' because they hide syntax in the view of unprocessed
   code (e.g., Emacs's C indentation will not know that text following a
   macro that expands to a open brace should be indented further).
 
-%% mcat_SYMBOL: 775
-%%   6.1%  reserved_word (47)
-%%   94%  function_name (728)
+%% mcat_SYMBOL: 358
+%%   5.3%  reserved_word (19)
+%%   95%  function_name (339)
 % @mcat_SYMBOL = qw( catRESERVED_WORD catFUNCTION_NAME catSYMBOLS);
 \item[Symbol]
   The macro body is a single identifier that is either a function name
-  (98\% of this category) or a reserved word (2\%, mostly uses of
-  variable names such as {\tt new} which are reserved words in another
-  C dialect).  A macro body that is a macro name inherits that macro's
-  classification rather than appearing here.
+  (95\% of this category) or a reserved word (5\%, 65\% of which are uses
+  of variable names such as {\tt true} or {\tt delete} which are reserved
+  words in another C dialect).  A macro body that is a macro name inherits
+  that macro's classification rather than appearing here.
 
 
-%% mcat_SYMBOL_UNKNOWN: 4217
-%%   100%  unknown_symbol (4217)
+%% mcat_SYMBOL_UNKNOWN: 1798
+%%   100%  unknown_symbol (1798)
 % @mcat_SYMBOL_UNKNOWN = qw( catSYMBOL_UNKNOWN );
 \item[Unknown symbol]
   The macro expands to a single symbol that is not defined in the package
@@ -817,16 +817,17 @@ ASSERT(p) if (!(p)) botch(\verb|__STRING|(p)); else}).
   definitions.
 
 
-%% mcat_NON_C_CODE: 41
-%%   100%  command_line_arguments (41)
+%% mcat_NON_C_CODE: 20
+%%   100%  command_line_arguments (20)
 %%   0.00%  assembly_code (0)
 % @mcat_NON_C_CODE = qw( catCOMMAND_LINE catASSEMBLY_CODE );
 \item[Not C code]\label{page:not-c-code}
   The predominant use of such macros is for filenames and operating system
-  command lines (together, 90\% of this category) and assembly code (the
-  remaining 10\%).  The assembly code component includes only macros whose
-  expansion is assembly code, not all expressions and statements that
-  contain snippets of assembly code.
+  command lines and for assembly code.  The assembly code component
+  includes only macros whose expansion is assembly code, not all
+  expressions and statements that contain snippets of assembly code;
+  however, such macros appeared only in system libraries, not in any of our
+  packages, and so does not contribute to this category in our statistics.
   
   Our tool processes only C source code, not Makefiles or other non-C
   files, but sometimes a header file is used both for code files and for
@@ -837,30 +838,32 @@ ASSERT(p) if (!(p)) botch(\verb|__STRING|(p)); else}).
     not C, so it is good style to avoid such uses.  In practice, such uses
     have forced many C preprocessors to relax their assumptions about their
     input.}  It is those files which contribute macros expanding to
-  filenames or command lines.  Such macros are very infrequently expanded
+  filenames or command lines.  \comment{Are they now never expanded in
+  source code files?}Such macros are very infrequently expanded
   in source code files; the few expansions in figure~\ref{fig:freq-use-cat}
-  result \comment{be specific}mostly from the assembly code component of this category.
+  result from \comment{what do they result from?}.
   
-  Our heuristics misclassify some macro bodies that should be placed in
-  this category: the body of {\tt \#define \verb|SYSDEP_CFLAGS| -43 -w} is
-  a valid C expression and is so classified.  (The ``expression and not C
-  code'' line at 0.14\% in Figure~\ref{fig:subset-categories} gives an
-  estimate of the prevalence of such classification errors.)
+%   \comment{Maybe no more such misclassifications.}
+%   Our heuristics misclassify some macro bodies that should be placed in
+%   this category: the body of {\tt \#define \verb|SYSDEP_CFLAGS| -43 -w} is
+%   a valid C expression and is so classified.  (The ``expression and not C
+%   code'' line at 0.14\% in Figure~\ref{fig:subset-categories} gives an
+%   estimate of the prevalence of such classification errors.)
 
-%% mcat_FAILURE: 1046
+%% mcat_FAILURE: 502
 %%   0.00%  uncategorized (0)
-%%   2.6%  being_categorized (27)
-%%   9.5%  never_defined (99)
-%%   83%  failed_categorization (864)
-%%   2.3%  multiply_categorized (24)
-%%   3.1%  symbols (32)
+%%   1.2%  being_categorized (6)
+%%   9.8%  never_defined (49)
+%%   84%  failed_categorization (420)
+%%   2.2%  multiply_categorized (11)
+%%   3.2%  symbols (16)
 % @mcat_FAILURE = qw( catNOT_YET catIN_PROCESS catNO_DEF catFAILURE catMULTIPLE );
 \item[Other]
   This category contains all macros not otherwise classified; it represents
-  less than 2\% of the 46462 definitions, and 8 of the {\numpackages}
-  packages have no such macros.  No one variety of macro stands out among
-  these classfication failures, so a more complete categorization is
-  unlikely to affect our conclusions.
+  1.8\% of the {\nummacrodefs} definitions, and 8 of the {\numpackages}
+  packages have no such macros.  We examined each such macro, and no one
+  variety stands out among these classfication failures, so a more complete
+  categorization is unlikely to affect our conclusions.
   
   Some failures resulted from limitations of our parser, which does not
   handle pasting, C++, or some non-portable C extensions.  Handling of
