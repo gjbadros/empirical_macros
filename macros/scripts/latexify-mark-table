@@ -54,7 +54,7 @@ while (<>) {
   $out = join("&", @m);
   $out =~ s/\*/\\black/g;
 
-  if (100*$count/$sum >= 0.1) {
+  if (100*$count/$sum >= 0.05) {
     if ($pct == 0) {
       print "$count &"; 
     } else {
