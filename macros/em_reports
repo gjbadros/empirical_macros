@@ -18,7 +18,7 @@ my $getopts_option_letters = 'ihvtIAau1pTg:d:D:M:S:F:L:C:P:c:s:';
 # FIX: remove -D -U -S -F -L -C options.
 
 # Usage: something like this
-# for i in ../*.state; do NM=${i:t:r}; em_reports -s $i -d .:$NM > $NM.repout 2> $NM.reperr; done 
+# for i in ../*.state; do NM=${i:t:r}; em_reports -s $i -d .:$NM > $NM.repout 2> $NM.reperr; done
 
 # Remove the asterisks below when the options are known to the users.
 
@@ -429,41 +429,60 @@ sub output_stats ()
 	  else
 	    { print "  no def; used on $macros_used_by_cpp{$macro_name}\n"; }
 	  if (scalar(keys %{$inclusion_dependenton{$macro_name}}) > 0)
-	    { print "  i_depon: ", join(' ',keys %{$inclusion_dependenton{$macro_name}}), "\n"; }
+	    { print "  i_depon: ", join(' ',sort keys %{$inclusion_dependenton{$macro_name}}), "\n"; }
 	  if (scalar(keys %{$inclusion_dependees{$macro_name}}) > 0)
-	    { print "  i_depee: ", join(' ',keys %{$inclusion_dependees{$macro_name}}), "\n"; }
+	    { print "  i_depee: ", join(' ',sort keys %{$inclusion_dependees{$macro_name}}), "\n"; }
 	  if ($inclusion_dependee_lines{$macro_name} > 0)
 	    { print "  i_depee_lines: ", $inclusion_dependee_lines{$macro_name}, "\n"; }
 	  if (scalar(keys %{$expansion_dependenton{$macro_name}}) > 0)
-	    { print "  e_depon: ", join(' ',keys %{$expansion_dependenton{$macro_name}}), "\n"; }
+	    { print "  e_depon: ", join(' ',sort keys %{$expansion_dependenton{$macro_name}}), "\n"; }
 	  if (scalar(keys %{$expansion_dependees{$macro_name}}) > 0)
-	    { print "  e_depee: ", join(' ',keys %{$expansion_dependees{$macro_name}}), "\n"; }
+	    { print "  e_depee: ", join(' ',sort keys %{$expansion_dependees{$macro_name}}), "\n"; }
 	  if ($expansion_dependee_lines{$macro_name} > 0)
 	    { print "  e_depee_lines: ", $expansion_dependee_lines{$macro_name}, "\n"; }
 	  if ($either_dependee_lines{$macro_name} > 0)
 	    { print "  tot_depee_lines: ", $either_dependee_lines{$macro_name}, "\n"; } }
 
-      print "\n\nDEFS BY LINES PRODUCT";
       my %defs_lines = ();
-      for my $macro_name (keys %macros)
-	{ my $num_defs = scalar(@{$macros{$macro_name}});
-	  my $dep_lines = $either_dependee_lines{$macro_name};
-	  $defs_lines{$macro_name} =
-	    ($num_defs == 0) ? $dep_lines : $num_defs * $dep_lines; }
-      my $prev_product = -1;
-      for my $macro_name (sort { ($defs_lines{$b} <=> $defs_lines{$a})
-				|| (scalar(@{$macros{$b}}) <=> scalar(@{$macros{$a}})) }
-			  (keys %macros))
-	{ my $this_product = $defs_lines{$macro_name};
-	  ## Print one line per product
-	  #  if ($this_product == $prev_product)
-	  #	{ print ", ", $macro_name; }
-	  #  else
-	  #	{ print "\n", $this_product, "\t", $macro_name;
-	  #	  $prev_product = $this_product; }
-	  # Print one line per macro name
-	  print "\n$this_product\t$macro_name\t = ", scalar(@{$macros{$macro_name}}), " * ($inclusion_dependee_lines{$macro_name} + $expansion_dependee_lines{$macro_name})";
-	}
+      my %mndefs = ();;
+      my %mndistinct_defs = ();
+      { my $total_product = 0;
+	for my $macro_name (keys %macros)
+	  { my $num_defs = scalar(@{$macros{$macro_name}});
+	    $mndefs{$macro_name} = $num_defs;
+	    my $num_distinct_defs;
+	    if ($num_defs < 2)
+	      { $num_distinct_defs = 1; }
+	    else
+	      { my %def_hash;
+		for my $i (@{$macros{$macro_name}})
+		  { my $body_noc_nospace = $mdef_body_noc[$i];
+		    $body_noc_nospace =~ s/\s+//g;
+		    $def_hash{$body_noc_nospace} = $true; }
+		$num_distinct_defs = scalar(keys %def_hash); }
+	    $mndistinct_defs{$macro_name} = $num_distinct_defs;
+	    my $dep_lines = $either_dependee_lines{$macro_name};
+	    my $this_product = $num_distinct_defs * $dep_lines;
+	    $defs_lines{$macro_name} = $this_product;
+	    $total_product += $this_product; }
+	print "\n\nDEFS BY LINES PRODUCT: $total_product\n"; }
+      print "  product = distinct_defs [defs] * (inclusion_dependees + expansion_dependees)";
+
+      { my $prev_product = -1;
+	for my $macro_name (sort { ($defs_lines{$b} <=> $defs_lines{$a})
+				     || (scalar(@{$macros{$b}}) <=> scalar(@{$macros{$a}})) }
+			    (keys %macros))
+	  # At this point we are at the end, not beginning, of an output line
+	  { my $this_product = $defs_lines{$macro_name};
+	    ## Print one line per product
+	    #  if ($this_product == $prev_product)
+	    #	{ print ", ", $macro_name; }
+	    #  else
+	    #	{ print "\n", $this_product, "\t", $macro_name;
+	    #	  $prev_product = $this_product; }
+	    # Print one line per macro name
+	    print "\n$this_product\t$macro_name\t= $mndistinct_defs{$macro_name} [$mndefs{$macro_name}] * ($inclusion_dependee_lines{$macro_name} + $expansion_dependee_lines{$macro_name})";
+	  } }
       print "\n";
     }
 
@@ -559,6 +578,8 @@ sub InclusionMethodsForMacroName ($) {
 
 sub OutputHistogram ($$$;$) {
   my ($heading,$hashref,$divisor,$fPrintHeading) = check_args_range(3,4,@_);
+  if (!defined($fPrintHeading))
+    { $fPrintHeading = $false; }
   my @headings_list = ();
   my @values_list = ();
   foreach my $h (sort keys %$hashref) {
@@ -566,7 +587,7 @@ sub OutputHistogram ($$$;$) {
     my $v = $hashref->{$h};
     if ($divisor == 0) {
       if ($v != 0)
-	{ croak "How can divisor be 0 but numerator be $v?"; }
+	{ croak "How can divisor be 0 but numerator be $v for $h?"; }
       push @values_list, $v;
     } elsif ($divisor == 1) {
       # This case feels gratuitous
@@ -575,7 +596,8 @@ sub OutputHistogram ($$$;$) {
       push @values_list, sprintf "%2.2f",pct2($v,$divisor);
     }
   }
-  if (defined($fPrintHeading)) { print "#${heading}#: ", join($OFS,@headings_list) . "\n"; }
+  if ($fPrintHeading)
+    { print "#${heading}#: ", join($OFS,@headings_list) . "\n"; }
   print "$heading: ", join($OFS,@values_list) . "\n";
 }
 
@@ -695,7 +717,7 @@ sub OutputCountsHistogramRaw ($$@) {
 
 sub OutputCountsHistogramCum ($$@) {
   my ($low,$high,@counts) = @_;
-  my $total = $counts[$#counts];
+  my $total = (scalar(@counts) == 0) ? 0 : $counts[$#counts];
   print "Total", $total, "\n";
   for (my $i = $low; $i <= $high; $i++) {
     print $i, defined($counts[$i])? $counts[$i] : 0 , "\n";
@@ -781,7 +803,7 @@ sub ReadMacroAnalysisState {
   my ($file) = check_args(1,@_);
   local $WARNING = 0;
   no strict;
-  open(INPUTSTATE,"<$file") or die "Couldn't open $file: $!";
+  open(INPUTSTATE,"<$file") or die "Couldn't open state file $file: $!";
   $INPUT_RECORD_SEPARATOR = ");\n"; #FIX: this separator could blow up
   my $in;
   while (defined($in = <INPUTSTATE>))
@@ -807,17 +829,16 @@ getopts($getopts_option_letters);
 
 usage() if ($opt_h);
 
-my $statename = "state";
-if ($opt_s) {
-  $statename = $opt_s;
-} else {
-  print STDERR
-    "The -s <file.state> option is required for em_reports.  Use em_analyze.\n";
-  exit -1;
-}
+my $statename = ($opt_s || "state");
+
+# Do a quick test early, to avoid blowing away old output files if state
+# file can't be opened.
+open(INPUTSTATE,"<$statename") or die "Couldn't open state file $statename: $!";
+close(INPUTSTATE);
 
 # using a default directory-- only open the files that
 # aren't explicitly given
+if (!$opt_d) { $opt_d = '.'; }
 if ($opt_d) {
   my ($dir,$basename) = split /:/,$opt_d;
 
