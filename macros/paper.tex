@@ -1,7 +1,10 @@
 % $Id$
 % macros-paper.tex
 % FIX: Switch to LaTeX2e, not 209
-\documentstyle[11pt,epsf]{article}
+\documentclass[11pt]{article}
+% epsfig was epsf above, and uses of \epsfig{file=dir.eps} below were
+% {\epsfxsize 7in\epsfbox{dir.eps}}.
+\usepackage{epsfig}
 
 \marginparwidth 0pt
 \oddsidemargin  0pt
@@ -13,19 +16,26 @@
 \textwidth   6.5 in
 \textheight  8.5 in
 
+\def\floatpagefraction{.8}      % default .5
+\def\textfraction{.2}           % what is the default?
+\def\topfraction{.75}           % what is the default?
+
+
 \begin{document}
-\bibliographystyle{plain}
+% \bibliographystyle{plain}
+\bibliographystyle{alpha}
 
-\title{An Empirical Analysis of the Use of the C Preprocessor}
+\title{An Empirical Analysis of C Preprocessor Use}
 
-\author{Michael Ernst\thanks{Email 
-addresses: {\tt \{mernst, gjb, notkin\}@cs.washington.edu}.  Contact author:
-mernst@cs.washington.edu.}
-\and Greg J. Badros\thanks{Supported by a National Science Foundation
+\author{Michael Ernst%
+  \thanks{Email addresses: \{{\tt mernst},{\tt gjb},{\tt notkin}\}{\tt @cs.washington.edu}}
+  \and Greg J. Badros%
+  \thanks{Supported by a National Science Foundation
     Graduate Fellowship. Any opinions, findings, conclusions, or
     recommendations expressed in this publication are those of the
     author, and do not necessarily reflect the views of the National
-    Science Foundation.} \and David Notkin}
+    Science Foundation.}
+  \and David Notkin}
 
 \date{Department of Computer
 Science and Engineering\\
@@ -44,9 +54,9 @@ Seattle, WA  98195-2350  USA\\
   both the tools (compilers, debuggers, call graph extractors, etc.)\ 
   built to engineer C programs and also the ease of translating to other
   languages such as C++.  In this paper we analyze over 20 packages
-  comprising just over one million lines of publicly available C code,
+  comprising over one million lines of publicly available C code,
   determining the ways in which the preprocessor is used in practice.
-  We developed a framework for analyzing preprocessor usage, using it to
+  We developed a framework for analyzing preprocessor usage and used it to
   extract information about the percentage of preprocessor directives in
   C programs, the frequency of use of defined macros, the relationship
   between C functions and their use of macros, and the macros that are
@@ -64,9 +74,11 @@ Seattle, WA  98195-2350  USA\\
 \section{Introduction}
 
 The C programming language~\cite{ansi} is intimately connected to its macro
-preprocessor, Cpp~\cite[Ch.3]{Harbison91}.  Preprocessor facilities such as
+preprocessor, Cpp~\cite[Ch.3]{Harbison91}.  In a sense C is not a complete
+programming language without the preprocessor, which supplies essential 
+facilities such as
 file inclusion, defining constants and macros, and conditional compilation
-are present in essentially every C program.   
+which are present in essentially every C program.   
 While the preprocessor can be used in simple or well-structured ways to
 improve portability, performance, or readability, it also lends itself to 
 arbitrary source code manipulations that complicate understanding of the
@@ -83,12 +95,13 @@ problem to programmers, maintainers, people porting code, and tool
 builders~\cite[p.~424]{Stroustrup-DesignEvolution}.
 \end{quote}
 
-Tools may ignore macro definitions altogether, accept only post-processed
+Tools have three options for coping with Cpp.  They may ignore preprocessor
+directives (including macro definitions) altogether, accept only post-processed
 code (perhaps by running Cpp on their input), or attempt to emulate the
 preprocessor.
 
 Ignoring preprocessor directives is an option for approximate tools
-(that is, those that are based on lexical or approximate parsing
+(such as those based on lexical or approximate parsing
 techniques), but accurate information about function extents, scope
 nesting, declared variables and functions, and so forth requires
 addressing the preprocessor.
@@ -98,7 +111,7 @@ implement, but then the tool's input differs from what the
 programmer sees.  Even when line number mappings are maintained, other
 information is lost in the mapping back to the original source code.
 For instance, source-level debuggers have no symbolic names or types
-for constants introduced via \verb|#define|.  As another example, Siff
+for constants introduced via {\tt \#define}.  As another example, Siff
 and Reps describe a technique that uses type inferencing to produce
 C++ function templates from C; however, the input is ``a C program
 component that $\ldots$ has been preprocessed so that all include
@@ -147,7 +160,7 @@ preprocessor directives.  This is exactly what Stroustrup suggests:
   belongs~\cite[p.~426]{Stroustrup-DesignEvolution}.
 \end{quote}
 C++ contains features---such as constant variables, inline functions,
-templates, and reference arguments---that obviate many uses of Cpp.  Thus,
+templates, and reference parameters---that obviate many uses of Cpp.  Thus,
 translation to C++
 is another path for partial elimination of Cpp.  
 
@@ -157,14 +170,12 @@ is another path for partial elimination of Cpp.
 %code~\cite{OCallahan-icse97}.
 
 As a step toward such preprocessor elimination, we empirically analyzed
-preprocessor usage in 24 C packages comprising over one million lines of
-code.  Figure~\ref{fig:packages} lists the packages and their sizes.
-For each package we also report the physical line count---the
-number of lines (or newline characters) in the file---and the non-comment,
-non-blank (NCNB) line count, which disregards lines consisting of only
-comments or whitespace.  The remainder of the analysis uses only the NCNB
-length, since that focuses more clearly on the essential source text of a
-package.
+preprocessor usage in 24 C packages comprising just over one million lines
+of code.  Figure~\ref{fig:packages} lists the packages and their sizes in
+terms of physical lines (or newline characters) and non-comment, non-blank
+(NCNB) lines, which disregards lines consisting of only comments or
+whitespace.  The remainder of the analysis uses only the NCNB length, which
+more accurately reflects the amount of source code in a package.
 
 \begin{figure}
 \centering
@@ -172,7 +183,8 @@ package.
   \setlength{\tabcolsep}{.25em}
   \input{package_and_sizes-tbl.tex}
 }
-\caption{Analyzed Packages and Sizes\label{fig:packages}}
+\caption{Analyzed packages and their sizes}
+\label{fig:packages}
 \end{figure}
 
 The analysis is intended to build a better understanding of how the
@@ -181,7 +193,7 @@ conversion tool with two attractive properties: it will take as input C
 programs complete with preprocessor directives, and it will map
 many---preferably most---uses of directives into C++ language
 features.\footnote{It is not practical to eliminate all uses of Cpp.  For
-  example, C++ currently provides no replacement for the \verb+\#include+
+  example, C++ currently provides no replacement for the {\tt \#include}
   directive.} Our framework for analyzing preprocessor usage provides a
 basis for the development of such a conversion tool.
 
@@ -189,17 +201,18 @@ basis for the development of such a conversion tool.
 
 \item We computed the percentage of original C source code lines that
 were preprocessor directives, including a breakdown of the frequency
-of specific directives such as \verb+#define+ (see
+of specific directives such as {\tt \#define} (see
 Section~\ref{sec:directives}). It was not unusual to find C programs 
 in which over 10\% of the total lines were preprocessor directives, and 
-three of the 24 packages had directives as over 20\% of their lines.
+over 20\% of the lines were directives in
+three of the 24 packages.
 
 \item We computed how often each macro was defined and expanded (see
 Section~\ref{sec:usage}).  In general we found that identifiers are in
-general \verb+#define+d relatively few times (almost always there were
+general {\tt \#define}d relatively few times (almost always there were
 five or fewer definitions for over 90\% of the macro identifiers).  We
-also found that many packages have a significant number of
-macros that are never expanded.  
+also found that many packages have a significant number of macros that are
+never expanded, even disregarding system and library header files.
 
 
 \item We categorized macro definitions according to their expansions;
@@ -208,9 +221,12 @@ symbol, which defined literals, etc.~(see
 Section~\ref{sec:categorization}).  We were particularly interested in
 determining the frequency of use of macros that are difficult to convert to
 other language features, such as those that string together characters
-(as opposed to manipulating lexemes or syntactic units).  We found a
-very small number (under one third of a percent of all macro
-definitions) of macros of this type.
+(as opposed to manipulating lexemes or syntactic units) and those that
+expand to partial syntactic units (for instance, unbalanced braces or
+partial declarations).
+We found a
+small number of such macros (less than one third of a percent of all macro
+definitions and less than five percent, respectively).
 \end{itemize}
 
 Overall, our analysis confirms that the C preprocessor is used in
@@ -238,17 +254,18 @@ of C++ constructs.
 %gjb thinks this is more for the next paper-- we don't need to get into
 %it here]
 
-\section{Related Work}\label{sec:related}
+\section{Related Work}
+\label{sec:related}
 
-We could find no empirical study of the use of the C preprocessor nor
+We could find no other empirical study of the use of the C preprocessor nor
 any other macro processor.  However, a number of other efforts provide
 guidance on how to use C macros effectively, provide tools for
 checking macro usage for given programs, etc.
 
 Carroll and Ellis state that ``almost all uses of macros can be
-eliminated from C++ libraries''~\cite[p.146]{Carroll95}. 
+eliminated from C++ libraries''~\cite[p.~146]{Carroll95}. 
 They list eight categories of macro usage and explain how to convert
-these types of constructs into C++ mechanisms.  They do not
+them into C++ mechanisms.  They do not
 discuss automatic conversion, but  focus on instructing the
 software engineer on better ways to do Cpp-like things.
 
@@ -266,19 +283,18 @@ problems and discovers other idiosyncratic uses.
 
 A number of tools check whether specific C programs
 satisfy particular constraints.  The lint program checker, distributed
-with most Unix systems, checks for uses of C that are likely to be
-problematic.  The implementation of lint is complicated by the fact
+with most Unix systems, checks for potentially problematic uses of C\@.
+The implementation of lint is complicated by the fact
 that it tries to replicate significant functions of both the C
-compiler and also the preprocessor.
+compiler and the preprocessor.
 
-LCLint, a recently developed tool
-at MIT, handles many of the checks that lint does; furthermore, LCLint
-allows the programmer to add annotations that then permit additional
-checks to be performed~\cite{Evans-pldi96,Evans-fse94}.
-Examples of checks that LCLint can optionally perform on function-like
+LCLint performs many of lint's checks and also
+allows the programmer to add annotations which enable additional
+checks~\cite{Evans-pldi96,Evans-fse94}.
+LCLint's  optionally checks  on function-like
 macros---that is, those which take arguments---include checking for
 macro arguments on the left hand side of assignments, checking for statements
-playing the role of expressions, checking for consistent return types, etc.
+playing the role of expressions, and checking for consistent return types.
 %\begin{quote}
 %$\ldots$ a parameter to a macro may not be used as the left hand side
 %of an assignment expression $\ldots$, a macro definition must be
@@ -307,15 +323,16 @@ Krone and Snelting use mathematical foundations analysis to determine the
 conditional compilation structure of code~\cite{Krone94}.  They determine,
 for each line, which preprocessor macros it depends upon, and display that
 information in a lattice.  They do not determine how macros depend upon one
-another directly, only by their nesting in \verb|#if|, and the information
+another directly, only by their nesting in {\tt \#if}, and the information
 conveyed is about the program as a whole.
 
 
-\section{Occurrence of Preprocessor Directives}\label{sec:directives}
+\section{Occurrence of Preprocessor Directives}
+\label{sec:directives}
 
 The first question we asked was simple: how often do
 preprocessor directives appear in C programs?
-Figure~\ref{fig:directives} shows the data for the packages we
+Figure~\ref{fig:directives_per_ncnb} shows the data for the packages we
 analyzed.  Each group of bars in the figure represents the percentage of
 NCNB lines attributed to the specified category of directives, with each
 individual bar showing the percentage for a specific package (the NCNB
@@ -328,17 +345,20 @@ compilation directives are grouped together, as are ``other'' directives.
 %shows the total percentage of lines in the package that represent
 %preprocessor directives.  The rows below the topmost one show the
 %percentage of lines in the package attributed to a subset of
-%preprocessor directives: (a) \verb+#undef+ is the next row down, (b)
-%\verb+#include+ is the next row down, (c) \verb+#define+ is the next
-%row down, (d) the conditional compilation directives (\verb+#ifdef+,
-%\verb+#ifndef+, \verb+#if+, \verb+#endif+, \verb+#else+, and
-%\verb+#elif+) are combined into a single group shown in the next row,
+%preprocessor directives: (a) {\tt #undef} is the next row down, (b)
+%{\tt \#include} is the next row down, (c) {\tt \#define} is the next
+%row down, (d) the conditional compilation directives ({\tt \#ifdef},
+%{\tt \#ifndef}, {\tt \#if}, {\tt \#endif}, {\tt \#else}, and
+%{\tt \#elif}) are combined into a single group shown in the next row,
 %and (e) any other directives in the bottom row. 
 
 \begin{figure}
-\epsfxsize 7in
-\centerline{\epsfbox{dir.eps}}
-\caption{Percentages of Directives\label{fig:directives}}
+\centerline{\epsfig{file=dir.eps}}
+\caption{Preprocessor directives as a fraction of non-comment,
+  non-blank (NCNB) lines.  Each package's total NCNB line count appears
+  in the legend.  In 3 packages, over 20\% of all NCNB lines were
+  preprocessor directives.}
+\label{fig:directives_per_ncnb}
 \end{figure}
 
 Perhaps the most surprising information here is the percentage of the
@@ -347,27 +367,33 @@ by about a factor of five across packages.  About one third of the
 packages have directives for over 10\% of their lines, and about one
 out of eight exceed 20\%.  On average, conditional compilation
 directives account for just under half (47.4\%) of the total
-directives in all packages, \verb+#define+s account for another
-29.5\%, \verb+#include+s account for 18.9\%, and the other directives
+directives in all packages, {\tt \#define}s account for another
+29.5\%, {\tt \#include}s account for 18.9\%, and the other directives
 are in the noise.
-The percentage of \verb+#define+s varies by a factor of 14
-across the packages, \verb+#include+s by a factor of 25, and
+The percentage of {\tt \#define}s varies by a factor of 14
+across the packages, {\tt \#include}s by a factor of 25, and
 conditional compilation directives by a factor of about 16.
 
 Figure~\ref{fig:total_directives} shows the percentage of the total
 directive count attributed to each category of directives.  One
 noticeable outlying point is the ``other'' directives of the flex
 package; this is accounted for by its aggressive use of the
-\verb+#line+ directive.  Flex is also unusual in its very low
-percentage (0.04\%) of \verb+#include+s.
+{\tt \#line} directive; the {\tt \#line} directive accounts for most of the
+``other'' directives for groff and gawk as well.  Flex is also unusual in
+its very low percentage (0.4\% of NCNB lines) of {\tt \#include}s; zsh and 
+rcs share this characteristic, with percentages of 0.4\% and 0.3\%
+respectively.  The percentages of {\#include} with respect to total
+preprocessor directives (shown in Figure~\ref{fig:total_directives}) is
+about 4\% for flex and rcs and about 6\% for zsh.
 
 \begin{figure}
-\epsfxsize 7in
-\centerline{\epsfbox{dir2.eps}}
-\caption{Percentages of Total Directives\label{fig:total_directives}}
+\centerline{\epsfig{file=dir2.eps}}
+\caption{Type of directive as a fraction of total directives.}
+\label{fig:total_directives}
 \end{figure}
 
-\section{Frequency of Defined Macro Usage}\label{sec:usage}
+\section{Frequency of Defined Macro Usage}
+\label{sec:usage}
 
 The second question we asked was: where and how often are macros
 defined and used in practice?  
@@ -376,8 +402,8 @@ defined and used in practice?
 %determined:
 %\begin{itemize}\itemsep 0pt \parskip 0pt
 %
-%\item How many times it was \verb+#define+d.
-%\item How many times it was \verb+#undef+ed.
+%\item How many times it was {\tt \#define}d.
+%\item How many times it was {\tt \#undef}ed.
 %\item How many arguments (if any) it takes.
 %\item How many times (and where) it was mentioned in C source code.
 %\item How many times (and where) it was mentioned in other
@@ -390,24 +416,38 @@ defined and used in practice?
 %[FIX: gjb: I'd also like to see info about how often define-d to the same
 %expansion, or not, etc.]
 
+\begin{figure}
+{\small
+  \setlength{\tabcolsep}{.25em}
+  \input{freq_of_def-tbl.tex}%
+}
+\caption{Number of definitions per Cpp identifier.  The numbers in the
+  table represent the percentage of identifiers which are defined a given
+  number of times or fewer.  For example, bison contains 4 or fewer
+  definitions for 91.51\% of all Cpp macros it defines, and no
+  macro is defined 5, 6, 7, 8, or more than 9 times.}
+\label{fig:define_count}
+\end{figure}
+
 Figure~\ref{fig:define_count} shows a histogram with cumulative
-percentages of the number of times each identifier is \verb+define+d
+percentages of the number of times each identifier is {\tt define}d
 in each of the packages.  The leftmost column lists the number of
-times an identifier is \verb+define+d, with the one through nine counts
+times an identifier is {\tt define}d, with the one through nine counts
 listed explicitly and all counts ten or greater collapsed into a
 single bin.  
-For example, looking at the \verb+Python+ package, 94.18\% of
-the identifiers were \verb+#define+d six or fewer times.  
+For example, in the python package, 94.18\% of
+the identifiers were {\tt \#define}d five or fewer times.  
 
-Going out to five or fewer separate \verb+#define+s per symbol covers
+Going out to five or fewer separate {\tt \#define}s per symbol covers
 over 90\% of the symbols for all but four packages: CVS is nearly
 90\%, gawk and glib are about 80\%, and remind is under 50\%.  One
 factor in the gawk and glib packages is that they are both highly
-portable and also quite dependent on system libraries.  The
-surprisingly low cumulative percentage for remind is due to its used
-of macro definitions to distinguish among 12 different natural
-languages; the cumulative percentage rises to nearly 100\% at 12
-definitions per symbol for remind.  
+portable and also quite dependent on system libraries.  Remind uses macro
+definitions to provide localization support for ten different natural
+languages (and multiple character sets for some of them), accounting for
+the surprisingly large number of macros with many definitions.  The
+cumulative percentage rises to nearly 100\% at 12 definitions per symbol
+for remind.
 
 That there is a fairly limited use of multiple definitions of symbols
 allows us to more reasonably bound the analysis needed to determine
@@ -416,9 +456,13 @@ the interactions among the definitions for a given symbol.
 \begin{figure}
 {\small
   \setlength{\tabcolsep}{.25em}
-  \input{freq_of_def-tbl.tex}%
+  \input{freq_of_use-tbl.tex}%
 }
-\caption{Cumulative Definition Percentage\label{fig:define_count}}
+\caption{Number of expansions per Cpp macro.  The numbers in the
+  table represent the percentage of identifiers which are expanded a given
+  number of times or fewer.  For example, fvwm expands 49.85\% of its
+  macros two or fewer times.}
+\label{fig:use_count}
 \end{figure}
 
 Figure~\ref{fig:use_count} is structured as the previous figure, but it
@@ -426,10 +470,11 @@ represents the number of times that a defined name is expanded in
 either C code or preprocessor directives.  For instance, in the bc
 package, 74.58\% of the macros were expanded eight or fewer times.
 
-One of the more noticeable points about these data are that almost all
-packages have a significant number of defined macros that are never
-expanded.\footnote{Note that, here, we are considering only macros that are
-  defined within the package.} Most packages are in the 3-10\% range, while gnuplot
+It is notable that most packages contain a significant number of defined
+macros that are never expanded.  (Figure~\ref{fig:use_count} reports only
+on macros defined in a package, not those defined in system or library
+header files, inclusion of which pushes the unused percentage well above 50\%.)
+Most packages are in the 3-10\% range, while gnuplot
 reaches nearly 40\%.  Although it's difficult to fully account for the
 larger numbers, contributing factors include a lot of cut-and-paste
 and a lack of attention to implementations for specific platforms in
@@ -437,11 +482,13 @@ some packages.  Again with respect to bounding analysis, covering
 macros with 10 or fewer uses covers approximately 75-80\% of the cases.
 
 \begin{figure}
-{\small
-  \setlength{\tabcolsep}{.25em}
-  \input{freq_of_use-tbl.tex}%
-}
-\caption{Cumulative Percentage of Macro Expansions\label{fig:use_count}}
+\centerline{\epsfig{file=usage.eps}}
+%{\small
+%  \setlength{\tabcolsep}{.25em}
+%  \input{where_uses-tbl.tex}%
+%}
+\caption{Where Macro Uses Occur}
+\label{fig:define_usage}
 \end{figure}
 
 Figure~\ref{fig:define_usage} shows the percentage of defined macros
@@ -451,18 +498,9 @@ expand as many as 40\% of the defined macros.  The dominant usage was
 in C code only; these uses don't, therefore, have any affect on
 conditional compilation (for example).  
 
-\begin{figure}
-\epsfxsize 7in
-\centerline{\epsfbox{usage.eps}}
-%{\small
-%  \setlength{\tabcolsep}{.25em}
-%  \input{where_uses-tbl.tex}%
-%}
-\caption{Where Macro Uses Occur\label{fig:define_usage}}
-\end{figure}
 
-
-\section{Categorization}\label{sec:categorization}
+\section{Categorization}
+\label{sec:categorization}
 
 The third question we asked was: in what ways are the macros used in
 practice?  In contrast to the earlier analyses, this requires an
@@ -481,24 +519,25 @@ ones omitted for reasons of space):
   \sloppy
   \emergencystretch=2em
 
-\item[Null define]  The \verb+#define+ gives only an
+\item[Null define]  The {\tt \#define} gives only an
 identifier name.  Such macros appear most frequently in Cpp directives
-(such as \verb|#ifdef|), but may also appear in code.  For instance,
-macro \verb|private| may expand either to \verb|static| or to nothing,
-depending on whether a debugging mode is set, or macro \verb|then| might
-expand to nothing for programmers who like \verb|else| to be offset by
-\verb|then|.\footnote{Recall that we are empirically studying the way
-in which macros are used rather than assessing the ``goodness'' of any
+(such as {\tt \#ifdef}), but may also appear in code.  For instance,
+macro {\tt private} may expand either to {\tt static} or to nothing,
+depending on whether a debugging mode is set, or macro {\tt then} might
+expand to nothing for programmers who like {\tt else} to be offset by
+{\tt then}.\footnote{Recall that we are empirically studying the way
+in which macros are used rather than assessing the desirability of any
 particular usage style.}  Macros with null definitions are often used as boolean
 variables by the preprocessor.
 
 \item[Literal] The macro is defined to be a specific constant value;
-  for instance, \verb|#define NULL 0| or \verb|#define ETCHOSTS
-  "/etc/hosts"|.  Such macros act like \verb|const| variables, albeit
+  for instance, {\tt \#define NULL 0} or 
+  {\tt \#define ETCHOSTS "/etc/hosts"}.  Such macros act like {\tt const}
+  variables, albeit 
   without type information, debugging information in the symbol table,
   and so forth.  Macros with constant expression bodies, such as
-  \verb|#define RE_DUP_MAX ((1<<15)-1)|, are included, but not macros
-  with arguments that are literals or constants, so this number
+  \verb|#define| \verb|RE_DUP_MAX| \verb|((1<<15)-1)|, are included, but
+  not macros referencing other literal or constant macros, so this number
   underestimates the number of macros with constant values.
 
 \item[Expression]  The macro body is an expression.  This expression
@@ -522,50 +561,50 @@ variables by the preprocessor.
 \item[Statement]  The macro body is a statement.  Such macros can be
   confusing to use, because programmers are inclined to add a semicolon
   after a call to such a macro, which can cause problems such as 
-  mis-parsing of nested \verb|if| statements.  The
+  mis-parsing of nested {\tt if} statements.  The
   well-known \verb|do {|\ldots\verb|} while (0)| partial statement trick
   solves this problem.  To our surprise, we found very few uses of that
   construct, but many instances of a macro that expanded to a statement
   like \verb|{|\ldots\verb|}| in which a call to the macro was immediately
   followed by a semicolon.
 
-\item[Stringization and pasting]  The macro body contains \verb|#| or
-  \verb|##|, which treat the macro argument not as a token but as a
-  string.  No language mechanism could replace such macros.  Our
+\item[Stringization and pasting]  The macro body contains {\tt \#} or
+  {\tt \#\#}, which treat the macro argument not as a token but as a
+  string.  No existing language mechanism can replace such macros.  Our
   implementation separates these categories, but we combine them to
   simplify our figures.
 
 \item[Other syntactic macros]  Like stringization and pasting, these
   macros make essential use of the unique features of the preprocessor.
   Our framework separately categorizes a number of such macros, including
-  those that expand to a reserved word (such as \verb|#define private
-  static|, mentioned above), those which expand to a delimiter such as
-  \verb|,| or \verb|;|, and those with mismatched parentheses, brackets, or
+  those that expand to a reserved word (such as {\tt \#define private
+  static}, mentioned above), those which expand to a delimiter such as
+  {\tt ,} or {\tt ;}, and those with mismatched parentheses, brackets, or
   braces.  (The latter are often used to create a block and perform actions
   that must occur at its beginning and end, such as \verb|BEGIN_GCPRO| and
   \verb|END_GCPRO|.)
 
 \item[Classification failure]  Frequent reasons that our
 classification heuristics failed
-  include multiple adjacent tokens
-  (\verb|#define EXFUN(name, proto) name proto|,
-  \verb|#define DO_OP(OP,a,b) ((a) OP (b))|) and illegal identifier
-  names (\verb|#define FAT$C_VFC 3| for VMS compilation), tokens
-  (\verb|#define| \verb|LIB_PATH| \verb|/usr/ucblib|), and constants (\verb|1ULL| for
-  \verb|unsigned long long|).  Of the fewer than 1000 classification
+  include multiple adjacent identifiers
+  ({\tt \#define EXFUN(name, proto) name proto},
+  {\tt \#define \verb|DO_OP|(OP,a,b) (a OP b)}) and illegal identifier
+  names ({\tt \#define \verb|FAT$C_VFC| 3} for VMS compilation), tokens
+  ({\tt \#define \verb|LIB_PATH| /usr/ucblib}), and constants ({\tt 1ULL} for
+  {\tt unsigned long long}).  Of the fewer than 1000 classification
   failures in the 24 packages, over half appeared in gnuplot; gnuplot, cvs,
-  and grof accounted for over 75\% of the failures, many of which could be
-  eliminated by relaxing the parsing rules.  Only five packages had no
+  and groff accounted for over 75\% of the failures, many of which could be
+  eliminated by slightly relaxing the parsing rules.  Only five packages had no
   macro classification failures at all.
 
 
-% \item {\em Constants\/}, where the \verb+#define+ gives only an
+% \item {\em Constants\/}, where the {\tt \#define} gives only an
 % identifier name and a value.
 % 
-% \item {\em Null defines\/}, where the \verb+#define+ gives only an
+% \item {\em Null defines\/}, where the {\tt \#define} gives only an
 % identifier name.
 % 
-% \item {\em Functions\/}, where the \verb+#define+ has one or more
+% \item {\em Functions\/}, where the {\tt \#define} has one or more
 % parameters.  The functions are broken down into several sub-categories:
 % \begin{itemize}
 % 
@@ -595,8 +634,8 @@ classification heuristics failed
 
 Figure~\ref{fig:categorization} shows the percentage of macros that
 fit into these categories for each package.  The null define and
-literal categories together account for just under 60\% of the total
-macro definitions; usefully converting these into C++ constructs
+literal categories together account for nearly 60\% of all
+macro definitions; converting these into C++ constructs
 should be simple.  The extremely small percentage (0.33\%) of
 ``essential'' macros---those such as stringization and pasting that
 have no simple mapping into any programming language---is encouraging;
@@ -612,7 +651,8 @@ be easy to handle in a conversion process.
   \setlength{\tabcolsep}{.25em}
   \input{categories-tbl.tex}%
 }
-\caption{Percentage Categorization of Macros\label{fig:categorization}}
+\caption{Categorization of macro definition bodies; each row sums to 100\%.}
+\label{fig:categorization}
 \end{figure}
 
 
@@ -631,7 +671,8 @@ be easy to handle in a conversion process.
 %[FIX: Should this also include Mike's manual breakdown into categories
 %for gzip.  --not tonight!]
 
-\section{Conclusion}\label{sec:discussion}
+\section{Conclusion}
+\label{sec:discussion}
 
 Even with significant expertise in using C, C++, and the Cpp macro
 preprocessor, these data showed us a far broader and diverse use of
@@ -643,11 +684,11 @@ of the source to a syntactic analysis of the source.  For example, we
 now properly parse virtually all declarations in every package.  We're
 pursuing even more analysis, pushing into semantics.  For instance, we
 can now determine which identifiers are free variables within a
-defined macro.  We are also close to being able to infer the types of
-the bodies of defined macros, one of several steps necessary before we
+defined macro.  We are also close to inferring the types of
+macro bodies, one of several steps necessary before we
 can attempt to build a converter from C to C++.  Once we can usefully
 convert C to C++, eliminating most macro usages (except for
-\verb+#include+s), this would not only programmers to shift to C++ and
+{\tt \#include}s), this would not only programmers to shift to C++ and
 its constructs more easily, but even more importantly, it would
 greatly simplify the development of source-level debuggers, call graph
 extractors, and other programming support tools.
@@ -657,8 +698,7 @@ extractors, and other programming support tools.
 %
 %[FIX: Harsh macro examples?]
 
-%\section{Conclusion}\label{sec:conclusion}
-
-\small \bibliography{evil}
+% Not really right:  Don't want the ``References'' section head to be small.
+{\small \bibliography{evil}}
 
 \end{document}
