@@ -164,7 +164,7 @@ showvars:
 	echo $(COMMON_DIR)
 
 
-copy:
+copy: $(PAPER_TABLES)
 	perl -pi.bak -e 's/<total>/Total/g' $(PAPER_TABLES)
 	cp $(PAPER_TABLES) $(PAPER_DIR)
 
