@@ -440,7 +440,7 @@ XS(XS_cpp_PushBuffer)
 	if ((len = strlen(szBuf)) != length) {
 	    warn("PushBuffer cannot handle strings with embedded NULLs\n");
 	}
-	cpp_push_buffer(&parse_in,szBuf,len);
+	cpp_push_buffer(&parse_in,szBuf,len,1 /* FROM PERL */);
 	PUTBACK;
 	return;
 #line 324 "backcalls.xs"
