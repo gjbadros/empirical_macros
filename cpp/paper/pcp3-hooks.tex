@@ -1,0 +1,56 @@
+\hook{STARTUP}{} Called immediately after the perl parser is initialized.
+\hook{STARTPARSE}{} Called just before the bison parser is started (i.e., before yyparse()).
+\hook{EXIT}{\$return\_\-exit\_\-code} Called just before the system exit() call.
+\hook{HANDLE\_\-DIRECTIVE}{\$directive\_\-name} Called exactly once for each directive.  \$directive\_\-name is
+% the directive as it appeared in the source code with the leading \# removed.
+\hook{DO\_\-DEFINE}{\$s\_\-start,\$s\_\-end,\$name\_\-args\_\-body} Called exactly once for each \#define. 
+% Arguments give the source code character offsets of the line and the 
+% unprocessed rest of the line including the name of the macro, its arguments
+% and its definition.
+\hook{PRE\_\-DO\_\-UNDEF}{\$s\_\-start,\$s\_\-end,\$mname} Called exactly once for each \#undef.
+% Arguments give the source code character offsets of the line and the
+% name of the macro being undefined.  This hook is called just before
+% the macro is undefined, so its definition still exists 
+% in the preprocessor's state.
+\hook{DO\_\-UNDEF}{\$s\_\-start,\$s\_\-end,\$mname} Called exactly once for each \#undef.
+% Arguments give the source code character offsets of the line and the
+% name of the macro being undefined.  This hook is called immediately after
+% the macro is undefined.
+\hook{DO\_\-INCLUDE}{\$filename\_\-given, \$filename\_\-resolved, \$flags} Called exactly once for each \#include,
+% \#include\_\-next, or \#import directive.  \$filename\_\-given is the name of the
+% file to be included as written in the source.  \$filename\_\-resolved is the
+% fully qualified path name of the file to be read.  \$flags is a bitmap
+% with three relevant masks:  \$ANGLE\_\-BRACKETS, for whether the filename appeared
+% in angle brackets signifying a system include file; \$SKIP\_\-DIRS, for whether this
+% is an \#include\_\-next directive; and \$IMPORTING, for whether this is an \#import
+% directive.
+\hook{DO\_\-IF}{\$conditional, \$skipped, \$value} Called exactly once for each \#if
+% (not \#ifdef or \#ifndef) directive.  Arguments .... FIXGJB
+\hook{DO\_\-XIFDEF}{}
+\hook{DO\_\-IFDEF}{}
+\hook{DO\_\-IFNDEF}{}
+\hook{DO\_\-ELSE}{}
+\hook{DO\_\-ELIF}{}
+\hook{DO\_\-ENDIF}{}
+\hook{CREATE\_\-PREDEF}{}
+\hook{CREATE\_\-DEF}{}
+\hook{DELETE\_\-DEF}{}
+\hook{SPECIAL\_\-SYMBOL}{}
+\hook{EXPAND\_\-MACRO}{}
+\hook{MACARG\_\-EXP}{}
+\hook{MACRO\_\-CLEANUP}{}
+\hook{IFDEF\_\-MACRO}{}
+\hook{COMMENT}{}
+\hook{STRING\_\-CONSTANT}{}
+\hook{CPP\_\-ERROR}{}
+\hook{CPP\_\-WARN}{}
+\hook{CPP\_\-PEDWARN}{}
+\hook{CPP\_\-OUT}{}
+\hook{ADD\_\-IMPORT}{}
+\hook{INCLUDE\_\-FILE}{}
+\hook{DONE\_\-INCLUDE\_\-FILE}{}
+\hook{TOKEN}{}
+\hook{FUNCTION}{}
+\hook{FUNC\_\-CALL}{}
+\hook{ANNOTATE}{}
+\hook{POP\_\-BUFFER}{}
