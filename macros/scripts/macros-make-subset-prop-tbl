@@ -42,8 +42,8 @@ print '
 %\usepackage{graphics}
 %\newcommand{\black}{\ensuremath{\blacksquare}}
 \newcommand{\black}{\vrule height5.5pt depth0.5pt width6pt}
-{\small
-\addtolength{\columnsep}{-.5\columnsep}
+{\footnotesize
+\addtolength{\tabcolsep}{-.6\columnsep}
 % The *{n}{c|} below creates n duplicate columns of that type (centered, here)
 \begin{tabular}{|r|*{', scalar(@prop_names), '}{c|}}\hline
 \rotatebox{90}{\parbox{1in}{';
@@ -72,7 +72,7 @@ print "\n\\\\ \\hline\n";
     { if ($line !~ /^(\d+)\s+\(\d+\.\d+%\)\s*([\w,]+)$/)
 	{ die "Malformed line in $filename: $line"; }
       if ($2 ne "NONE")
-	{ print two_significant_digits(100*$1/$total), "\\% ";
+	{ print two_significant_digits(100*$1/$total), "\\% ($1)";
 
 	  my @this_prop_names = split(/,/, $2);
 	  for my $prop_name (@this_prop_names)
