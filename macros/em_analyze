@@ -13,14 +13,14 @@
 #   _ni = non-include; for a file, means it was on command line (?)
 #   mi = method of inclusion; why this file is being processed
 
+# Should set $PERLLIB variable, not $PERLINC, as $PERLLIB has
+# this stuff done by default in newer (5.003, maybe earlier) versions
 # Can't use "use", as it is executed upon parsing even if in guard.
 BEGIN { if (defined $ENV{"PERLINC"})
 	  { unshift(@INC, split(/[ :]+/, $ENV{"PERLINC"})); } }
 
 # FIX: I want to use '-$' like cpp does, not '-l'; how to do this?
 my $getopts_option_letters = 'ihvtIAau1pTlg:d:E:P:';
-
-# FIX: remove -D -U -S -F -L -C options.
 
 # Remove the asterisks below when the options are known to the users.
 
@@ -52,28 +52,30 @@ New options marked with *; options with ':', above, take an argument
 
 e.g.
 
-find-c | evilmacros -iv -d ~/macros/data/stable
+find-c | $0 -iv -d ~/macros/data/stable:pkgname
+
+ or
+
+cat c-files-listing | $0 -i -d ~/macros/data/stable:pkgname
 ";
 }
 
-# Invoke like this:   evilmacros `find-c`
-# or like this:  find-c | evilmacros -i
-
-#Complex execution (use zsh):    (how do I set $TM in zsh?)
+#Complex execution (use zsh):
 #
-# for i in *(/); do echo $i; pushd $i; find-c | evilmacros -i -d $TM:${i%%-*} >$TM/${i%%-*}.out 2> $TM/${i%%-*}.err; popd; done
+# TM=/tmp/$USER/macros/data/stable
+# (assume c-files-listing has find-c output)
+# for i in *(/); do echo $i; pushd $i; cat c-files-listing | em_analyze -i -d $TM:${i%%-*} >$TM/${i%%-*}.out 2> $TM/${i%%-*}.err; popd; done
 #
 # For a second run for first-run failures:
-# for i in *(/); do if [[ ! -s $TM/${i%%-*}.stat ]]; then echo $i; pushd $i; find-c | evilmacros -i -d $TM2:${i%%-*}1 >$TM2/${i%%-*}.out 2>$TM2/${i%%-*}.err ; popd; fi; done
+# for i in *(/); do if [[ ! -s $TM/${i%%-*}.state ]]; then echo $i; pushd $i; cat c-files-listing | em_analyze -i -d $TM2:${i%%-*}1 >$TM2/${i%%-*}.out 2>$TM2/${i%%-*}.err ; popd; fi; done
 #
 #
-# ext=all; p=~/505/data; for i in *(/); do pushd $i; find-c | nice evilmacros -i -D$p/$i.def.$ext -e$p/$i.em.$ext -c$p/$i.cat.$ext -S$p/$i.stat.$ext > $p/$i.out.$ext 2> $p/$i.err.$ext; popd; done
 # alias find-c='find . \( -name UNUSED -o -name CVS -o -name SCCS -o -name RCS \) -prune -o \( -name "*.[chCH]" -o -name "*.[cC][cC]" -o -name "*.[cC][pP][pP]" \) -print'
-# ext=all; p=/tmp/mernst/data; for i in *(/); do pushd $i; find-c | nice /homes/rivers/mernst/research/notkin/macros/evilmacros-961223 -i -D$p/$i.def.$ext -e$p/$i.em.$ext -c$p/$i.cat.$ext -S$p/$i.stat.$ext > $p/$i.out.$ext 2> $p/$i.err.$ext; popd; done
-# Bad idea: it's best to operate on an entire project, so you know all the
+# (Note that c-files-listing can cache this output for each package -- then
+#  it doesn't rebuild the list each time)
+# It's best to operate on an entire project, so you know all the
 # functions, macros, etc.
-# evilmacros -d ../ -v getopt.c
-# evilmacros -v -d ../../:reg /usr/include/stdlib.h
+
 ## Other interesting options: -A -T -g 6
 # find-c | evilmacros -v -p -d ../../:evilout -i
 
@@ -735,7 +737,7 @@ my %macros_used_in_functions = (); # hashes macro names to list of
 				# than once in that function.
 
 # Also want to have summary info true about all definitions...
-# FIX: This data structure of parallel arrays needs to be improved
+# FIX: This data structure of parallel arrays could be improved
 my @mdef_name;
 my @mdef_args;
 my @mdef_body;			# with comments; for user output

@@ -13,12 +13,13 @@
 #   _ni = non-include; for a file, means it was on command line (?)
 #   mi = method of inclusion; why this file is being processed
 
+# Should set $PERLLIB variable, not $PERLINC, as $PERLLIB has
+# this stuff done by default in newer (5.003, maybe earlier) versions
 # Can't use "use", as it is executed upon parsing even if in guard.
 BEGIN { if (defined $ENV{"PERLINC"})
 	  { unshift(@INC, split(/[ :]+/, $ENV{"PERLINC"})); } }
 
-# FIX: I want to use '-$' like cpp does, not '-l'; how to do this?
-my $getopts_option_letters = 'ihvtIAau1pTlg:d:D:M:S:F:L:C:s:';
+my $getopts_option_letters = 'ihvtIAau1pTg:d:D:M:S:F:L:C:s:';
 
 # FIX: remove -D -U -S -F -L -C options.
 
@@ -28,8 +29,6 @@ sub usage () {
   die "@_\nUsage: $0 [-$getopts_option_letters]
 New options marked with *; options with ':', above, take an argument
   -t  use [TAB] as the OFS for the statistics files (not space)
-* -l  forbid the use of `\$' in identifiers, per ANSI standard
-	This is a lowercase L, not a numeral 1.
 * -g [num]  set the num'th debugging option to true  {ought to be able to name}
 	-g 0 turns off all debugging flags.
 * -d [directory:basename]  use standard filenames under the given directory
@@ -113,7 +112,7 @@ my $debug_cpp_if_comments = $false;
 
 ## Command-line processing
 # Are these in any order?
-use vars qw($opt_i $opt_I $opt_h $opt_v $opt_t $opt_d $opt_l
+use vars qw($opt_i $opt_I $opt_h $opt_v $opt_t $opt_d
 	    $opt_D $opt_M $opt_S $opt_F $opt_L $opt_C $opt_p
 	    $opt_u $opt_1 $opt_A $opt_a $opt_g $opt_T $opt_s);
 my $fIgnoreIncludes = $false;
@@ -132,7 +131,6 @@ use vars qw(%macros_c_all_uses @freq_use_buckets @freq_def_buckets
 
 
 # FIX: these sub-parts might better be broken up into functions
-# FIX: use "select" instead of print FILEHANDLE repeatedly
 sub output_stats ()
 {
   check_args(0, @_);
