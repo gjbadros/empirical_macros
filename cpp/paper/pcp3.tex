@@ -41,11 +41,13 @@
 \newcommand{\program}[1]{{\small \texttt{#1}}}
 \newcommand{\syscall}[1]{{\textsf{#1}}}
 \newcommand{\sectionref}[1]{section \ref{#1}, on page \pageref{#1}}
+\newcommand{\appendixref}[1]{appendix \ref{#1}, on page \pageref{#1}}
 \newcommand{\ie}{i.e.,}
 \newcommand{\eg}{e.g.,}
 \newcommand{\etc}{etc}  % trailing ".\ " needed at use; this just for
                         % italicizing optionally
 \newcommand{\figref}[1]{Figure~\ref{#1}}
+\setlength{\fboxsep}{.1in}
 
 \title{\pcp{}: A \C{} Front End for \\ Preprocessor Analysis and Transformation}
 \author{Greg J. Badros%
@@ -164,11 +166,11 @@ readable \texttt{(\_IO\_FILE*)(\&\_IO\_stderr\_)},\footnote{This is the
 \texttt{assert} degenerate into sequences of symbols which are nonsense
 to a human programmer.
 
-Unlike syntax-based macros~\cite{Weise93} which operate at the parser
-level, \Cpp{} provides macros and conditional inclusion mechanisms which
-operate at the lexical level.  The \C{} preprocessor also includes
-``stringization'' and pasting operators which manipulate symbols
-directly, altering their ultimate interpretation by a parser.  
+%Unlike syntax-based macros~\cite{Weise93} which operate at the parser
+%level, \Cpp{} provides macros and conditional inclusion mechanisms which
+%operate at the lexical level.  The \C{} preprocessor also includes
+%``stringization'' and pasting operators which manipulate symbols
+%directly, altering their ultimate interpretation by a parser.  
 
 \subsection{What this means for software tools}
 
@@ -177,26 +179,26 @@ cannot be parsed directly.  Only after preprocessing is a correct \C{}
 program in a syntactically usable form. Because of the relative ease in
 parsing preprocessed code, the majority of software engineering tools
 operate on exactly that view of the source, losing information by
-disregarding the preprocessor directives.  Source-level debuggers and
-tools such as ASTLOG~\cite{Crew97}, TXL~\cite{TXL}, and countless
-others, either run \Cpp{} as the first stage in their analysis, or use
-representations derived from a compiler operating on the preprocessed
-code.  Though the parser or abstract-syntax-tree based approach these
-tools apply results in information that is precise for the input they
-consider, their usefulness for human-targeted program understanding is
-diminished due to changes in the source artifact resulting from
-preprocessing.\footnote{In contrast, this approach is exactly right for
-  the compiler which has little need of preserving high level
-  abstractions in generating object code.  However, in the presence of
-  incorrect source code, the compiler itself is a program-understanding
-  tool and preprocessing hinders its ability to accurately describe the
-  problem.  The \ppd{line} directive is used to keep some rudimentary
-  (but far too course) mapping to the original source to permit more
-  reasonable errors and warnings.}  Additionally, parsing requires a
-syntactically correct program and all header files to exist---these
-constraints are not realistic during many software maintenance
-activities (\eg{} porting, switching compilers, \etc.\ Another
-significant disadvantage of preprocessing is that it eliminates
+disregarding the preprocessor directives.  Various tools including
+source-level debuggers, ASTLOG~\cite{Crew97}, TXL~\cite{TXL}, and
+countless others, either run \Cpp{} as the first stage in their
+analysis, or use representations derived from a compiler operating on
+the preprocessed code.  Though the parser or abstract-syntax-tree based
+approach these tools apply results in information that is precise for
+the input they consider, their usefulness for human-targeted program
+understanding is diminished due to changes in the source artifact
+resulting from preprocessing.\footnote{In contrast, this approach is
+  exactly right for the compiler which has little need of preserving
+  high level abstractions in generating object code.  However, in the
+  presence of incorrect source code, the compiler itself is a
+  program-understanding tool and preprocessing hinders its ability to
+  accurately describe the problem.  The \ppd{line} directive is used to
+  keep some rudimentary (but far too coarse) mapping to the original
+  source to permit more reasonable errors and warnings.}  Additionally,
+parsing requires a syntactically correct program and all header files to
+exist---these constraints are not realistic during many software
+maintenance activities (\eg{} porting, switching compilers, \etc.\ 
+Another significant disadvantage of preprocessing is that it eliminates
 conditional compilation artifacts that are essential to the portability
 and versatility of the source code (see~\cite{Krone94}).  Preprocessing
 forces tools to limit their analysis to a single configuration of the
@@ -210,7 +212,7 @@ cannot use a straightforward parser or construct an accurate abstract
 syntax tree because the source is not syntactically-correct \C{} code.
 Lexical tools (\eg{} \texttt{etags}, LLSME~\cite{Murphy95}, and
 \texttt{font-lock-mode} for \texttt{Emacs}) and approximate parsers
-(\eg{} \texttt{a*} and \texttt{Genoa}~\cite{Griswold96},
+(\eg{} \texttt{a*} and \texttt{Genoa}~\cite{Devanbu92},
 \texttt{LCLint}~\cite{LCLint}, \etc.) use this approach.  In general,
 this leads to greater speed (especially for the lexical approach) and
 improved robustness to syntax errors and language variants (approximate
@@ -268,17 +270,18 @@ shortcomings, and some areas for possible future work.
 \section{How pervasive and perverse is preprocessor use?}
 \label{sec:feasibility}
 Many \Cpp{} constructs clearly have analogues in newer language
-features.  For example, \ppd{define}s of simple numeric and string
-constants can often be replaced with enumeration declarations or static
-constant variable declarations (both newer features of ANSI \C{}, not
-just of \CPP{}).  Some function-like \ppd{define}s of pseudo-inline
-functions can correspond to \CPP{}'s real \texttt{inline} functions
-(perhaps made generic through use of a template).  An optimizing
-compiler performing trivial dead code elimination can effect the same
-result as a conditional compilation directive guarding debug-only code
-(e.g., replacing a syntactically correct block enclosed by
-\texttt{\ppd{ifndef} NDEBUG} and \ppd{endif} pair with an \texttt{if}
-statement).
+features.  Carrol and Ellis list several preprocessor uses and explain
+what \CPP{} features could be used instead~\cite{Carroll95}. For
+example, \ppd{define}s of simple numeric and string constants can often
+be replaced with enumeration declarations or static constant variable
+declarations (both newer features of ANSI \C{}, not just of \CPP{}).
+Some function-like \ppd{define}s of pseudo-inline functions can
+correspond to \CPP{}'s real \texttt{inline} functions (perhaps made
+generic through use of a template).  An optimizing compiler performing
+trivial dead code elimination can effect the same result as a
+conditional compilation directive guarding debug-only code (e.g.,
+replacing a syntactically correct block enclosed by \texttt{\ppd{ifndef}
+  NDEBUG} and \ppd{endif} pair with an \texttt{if} statement).
 
 Over the last year, several colleagues and the author have investigated
 how the \C{} preprocessor is used in a sample of 30 freely available
@@ -306,7 +309,7 @@ frequently and can cause a parse problem or a lexical mismatch at each
 function prototype.  The declaration no longer appears to be a function
 prototype to tools operating on unprocessed source code.  As this is a
 common case, tools can try to hack around the problem in a
-package-dependent way (\eg{} the macro isn't always called \texttt{\_\_P}).
+package-dependent way (\eg{} the macro is not always called \texttt{\_\_P}).
 
 %% Emacs font-lock-mode actually gets it wrong
 
@@ -400,9 +403,8 @@ simple expansions.  While 90\% of all macro names are expanded twenty or
 fewer times, only 55\% of the syntactic macros have that few uses.  In
 fact, 15\% of them have 160 or more uses, each of which could cause
 problems for a software tool operating on unprocessed source and not
-expanding macros.\footnote{As previously mentioned, some of these are
-  well-understood idioms that tools would be wise to handle specially,
-  though some do not.}
+expanding macros.\footnote{As previously mentioned, some of these reflect
+  well-understood idioms that tools would be wise to handle specially.}
 
 %% Types of questions the analysis must support answering
 The tool used to analyze the packages approximates a parse of the
@@ -414,8 +416,8 @@ else in the source.  Such assumptions are wholly inappropriate
 % PCP^3
 \section{The \pcp{} Infrastructure}
 \label{sec:pcp3}
-\pcp{} is built from three software components: a \textsf{P}arser, a \textsf{C}
-\textsf{p}re\textsf{p}rocessor, and a \textsf{P}erl action
+\pcp{} is built from three software components: a \textbf{\textsf{P}}arser, a \textbf{\textsf{C}}
+\textbf{\textsf{p}}re\textbf{\textsf{p}}rocessor, and a \textbf{\textsf{P}}erl action
 language.\footnote{Hence its name, \pcppp{}, shortened to \pcp{}.}
 These subsystems interact through well-defined interfaces, and together
 result in a powerful, expressive, flexible, and accurate framework for
@@ -506,7 +508,7 @@ The \Perl{} interface of \pcp{} is composed of two parts:
       preprocessor directives, the creation of a macro definition, the
       expansion (\ie{} use) of a macro name, and the parsing of a
       variable declaration.  There are forty hooks presently
-      specified in \pcp{}. See \sectionref{sec:hooks} for details.
+      specified in \pcp{}. See \appendixref{sec:hooks} for details.
 \item Subroutine ``backcalls'' written in \C{} (actually,
       \texttt{PerlXS} the dialect of \C{} used for \Perl{} extensions)
       that the \Perl{} hooks are free to call to access pre-specified
@@ -515,7 +517,7 @@ The \Perl{} interface of \pcp{} is composed of two parts:
       the name of the currently-processed file, inserting arbitrary code
       for the preprocessor to parse, and instructing the parser to enter
       a new scope.  There are twenty-six backcalls presently permitted
-      by \pcp{}.  See \sectionref{sec:backcalls} for details.
+      by \pcp{}.  See \appendixref{sec:backcalls} for details.
 \end{itemize}
 
 \noindent The \Perl{} subroutine hooks are written in a user-specifiable script
@@ -529,13 +531,14 @@ option which turns off its parser and the calls to related hooks
 (parsing-related backcalls are permitted but generally do nothing).  As
 a convenience, \pcp{} also provides \Perl{} module containing various
 useful (but optional) utility functions (\eg{} the \texttt{AddHook}
-subroutine which manipulates the distinguished global variable that
-\pcp{} consults to call the appropriate subroutine hooks for various
-events).
+subroutine which manipulates the distinguished global hash dictionary
+that \pcp{} consults to call the appropriate subroutine hooks for
+various events).
 
-The implementation of the main \pcp{} program and the ``glue'' connecting
-the components totals about 1,500 lines of \C{} code.  Much of this code
-deals with passing arguments between \C{} and \Perl{}.
+The implementation of the main \pcp{} program, the backcalls, and the
+``glue'' connecting the components totals about 1,800 lines of \C{}
+code.  About 60\% of this code deals directly with passing arguments
+between \C{} and \Perl{}.
 
 \subsection{Macro expansion mappings}
 To support useful interactions between the parser and preprocessor, it
@@ -556,16 +559,16 @@ expansion takes place as follows:\footnote{This description is necessarily
   infrequently used features~\cite{EmpCpp}.}
 
 \begin{enumerate}
-\item The macro definition is checked to see which arguments it uses.
-\item Those arguments that are used in the expansion are expanded if and
-      only if they contain macros.  They are expanded completely (\ie{}
-      macros in their expansions are expanded), and the text of the
-      expansion is saved.  Identical arguments are expanded
-      independently; for example \texttt{FOO(BAR,BAR)} will expand
-      \texttt{BAR} twice if the expansion of \texttt{FOO} uses both of
-      its arguments.  They are expanded in the order that they are used
-      in the body of the expansion (not from first formal argument to
-      last).
+\item The macro definition's body is checked to see which arguments it uses.
+\item Those actual arguments that are used in the definition body are
+      expanded if and only if they contain macros.  They are expanded
+      completely (\ie{} macros in their expansions are expanded), and
+      the text of the expansion is saved.  Identical arguments are
+      expanded independently; for example \texttt{FOO(BAR,BAR)} will
+      expand \texttt{BAR} twice if the expansion of \texttt{FOO} uses
+      both of its arguments.  They are expanded in the order that they
+      are used in the body of the expansion (not from first formal
+      argument to last).
 \item The body of the top level macro is copied left to right; arguments
       are replaced with the text from their expansions.  Macro names
       previously expanded are ``escaped'' (using a prefix of the
@@ -578,14 +581,15 @@ expansion takes place as follows:\footnote{This description is necessarily
 \noindent The \texttt{EXPAND\_MACRO} hook is called for each macro name as it is
 expanded.  The parameters to the hook include the exact location of the
 start and end of the macro invocation in the source code.\footnote{Or,
-  if the invocation does not directly appear in the source, the location
-  given points to an offset within the macro which resulted in the
-  expansion.}  Other parameters describe the ``nesting'' of the
-expansion, and a backcall \texttt{Macro\-Expansion\-History()} describes the
-current history of expansions.  The nesting of an expansion is the trail
-through arguments of other macros that led to this expansion, while the
-history expansion is a list of macros that were expanded en route to
-this macro being expanded.
+  if the invocation does not directly appear in the source (\ie{} the
+  macro appears in the expansion of another macro), the location is an
+  offset within the prior macro's expansion.}  Other parameters
+describe the ``nesting'' of the expansion, and a backcall
+\texttt{Macro\-Expansion\-History()} describes the current history of
+expansions.  The nesting of an expansion is the trail through arguments
+of other macros that led to this expansion, while the history expansion
+is a list of macros that were expanded en route to this macro being
+expanded.
 
 \begin{figure}[p]
   \begin{center}
@@ -613,7 +617,7 @@ this macro being expanded.
     \caption{Another view of an example macro expansion and the hooks
     that are called.  Red dotted lines are the nestings of macro
     expansions as the algorithm recurses.  Blue lines are
-    \texttt{EXPAND\_MACRO} actions on the underline macro invocation,
+    \texttt{EXPAND\_MACRO} actions on the underlined macro invocation,
     green lines are \texttt{MACRO\_CLEANUP}.}
     \label{fig:text-expn}
   \end{center}
@@ -680,9 +684,11 @@ Annotating text makes more sense than annotating the abstract syntax
 tree for several reasons.  First, \Cpp{} operates at a textual level.
 As we have seen, the unprocessed source code cannot necessarily be
 viewed as an ordinary abstract syntax tree.  Even if a generalized tree
-could be used, no available environment provides adequate means of
-interacting with the large, complicated trees that inevitably result
-from realistic packages.  Additionally, text permits using Emacs as the
+could be constructed, no available environment provides adequate means
+of interacting with the large, complicated trees that inevitably result
+from realistic packages.~\footnote{The intentional programming group at
+  Microsoft Research is actively investigating this
+  area~\cite{MSIPPersonal}.}  Additionally, text permits using Emacs as the
 target interaction environment. This allows software engineers to
 augment Emacs's other powerful source code understanding tools (\eg{}
 \texttt{font-lock-mode}, \texttt{etags}, \texttt{OOBrowser}, \etc{}.)
@@ -693,7 +699,35 @@ with their own annotations supplied by \pcp{} analyses.
 
 \subsection{Interactions among components}
 
+% PushBuffer
 
+% ParseStateStack
+%% lets you know where you're at (in a array size specifier, is a decl
+%% allowable here?)
+% SetParseStateStack
+
+% YYPopAndRestoreStackState
+% YYPushStackState
+% YYSwapStackState
+% YYPushDupTopStackState
+% YYFCompareTopStackState
+
+% Permits using the parser to parse individual pieces of code you're
+% interested in
+
+\subsection{Performance}
+
+Although no tuning has been done yet, \pcp{} exhibits excellent
+performance comparable to an optimizing compiler.  For \texttt{gcc} to
+compile and optimize the 5,000 lines of the \texttt{bc} package (an
+arbitrary precision arithmetic language interpreter) required 38 seconds
+on the author's Pentium Pro 200 Linux machine. Running \pcp{} with its
+test script consisting of 600 lines of hooks for virtually every action
+used only 40 seconds of real time.  With the action code turned off, the
+running time was reduced by a factor of 4.  Using the \texttt{--noparse}
+option hardly reduced the running time without action code at all; when
+just executing the infrastructure, a system call trace reveals that \pcp{}
+is I/O bound.
 
 \section{Automating replacement of \ppd{define}s with constants}
 \label{sec:xform}
@@ -741,7 +775,7 @@ have the nice feature of syntactic safety, guaranteeing that macros can
 not introduce syntax errors. Crew also created \texttt{ASTLOG}, a
 \textsf{Prolog}-inspired language for examining abstract syntax trees.
 Again, he largely ignores the preprocessor, instead assuming a parse
-tree as the target representation.
+tree as the initial representation.
 
 Stroustrup explains that making the preprocessor redundant was a design
 goal of \CPP{}.\footnote{Stroustrup also discusses differences between
@@ -760,9 +794,18 @@ constructs as a crutch instead of exploiting \CPP{} language features.
 They do not directly address converting existing use of \Cpp{} in legacy
 code.  Reiss and Davis casually mention a research project that helps
 the user restructure programs by ``translat[ing] an existing \C{}
-program into \CPP{}''~\cite[p.~2]{Reiss90}, but little else exists about
-any such project.\footnote{Personal inquiries also led to no pointers
-  from Reiss or Davis.}
+program into \CPP{}''~\cite[p.~2]{Reiss90}, but nothing further is
+mentioned about the project.\footnote{Personal inquiries of that paper's
+  authors also led to no pointers.}
+
+Davis provides a thorough review of the issues involved in translating
+\CPP{} language constructs to Java.  He ignores the preprocessor and its
+contribution to \CPP{} source code artifacts~\cite{Davis97}.  Laffra's
+\texttt{C2J} and Tilevich's derived \texttt{C2J++} claim to convert \C{} and
+\CPP{} to Java code.  Their approach is a combination of lexical and
+parser-based, and is focussed only on reducing the tedious editing when
+porting an application to Java.  They use \Cpp{} to preprocess, and
+claim to only convert about 85\% of the code correctly.
 
 Krone and Snelting analyze conditional compilation directives in the
 context of a lattice-theoretic framework for inferring configuration
@@ -786,6 +829,8 @@ depend on and relate to each other~\cite{Krone94}.
 %** parser debugging, teaching
 %** multi-version reasoning
 
+%* Convert to Java
+%* C++ parser; C++ code still uses preprocessor too much
 
 \appendix
 \newpage
