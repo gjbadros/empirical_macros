@@ -81,9 +81,7 @@ sub actuals_array ($)
 	  $this_arg = ""; }
       elsif (($MATCH eq "\(") || ($MATCH eq "\{"))
 	{ $this_arg .= $pre . $MATCH;
-	  my $close_index = (($MATCH eq "\(")
-			     ? find_close_paren($remaining)
-			     : find_close_brace($remaining));
+	  my $close_index = find_close_delimiter($MATCH, $remaining);
 	  if ($close_index eq $false)
 	    { mdie("No match for $MATCH found in $remaining"); }
 	  $this_arg .= substr($remaining, 0, $close_index+1);

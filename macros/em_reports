@@ -777,8 +777,7 @@ sub output_stats ()
 			   (($body =~ /^($identifier_re\s*)?\(/o)
 			    # For testing
 			    # && (print STDERR "match = $MATCH, close = \n")
-			    && (($body =~ /^(__extension__\s*)?\(\s*\{/) # hack: don't call find_close_paren if braces inside, as it will complain
-				|| (find_close_paren($body, length($MATCH)) == length($body)-1)))
+			    && (find_close_delimiter('(', $body, length($MATCH)) == length($body)-1))
 			   # identifier or number
 			   || ($body =~ /^\w+$/)
 			   # string

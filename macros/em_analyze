@@ -1496,11 +1496,11 @@ sub find_close_paren_read ($;$)
 { my ($exp, $pos) = check_args_range(1, 2, @_);
   if (!defined($pos))
     { $pos = 0; }
-  my $index = find_close_paren($exp, $pos);
+  my $index = find_close_delimiter('\(', $exp, $pos);
   while ($index eq $false)
     { my $nextline = get_fulltoken_line($true);
       $exp .= $nextline;
-      $index = find_close_paren($exp, $pos); }
+      $index = find_close_delimiter('(', $exp, $pos); }
   return ($index, $exp);
 }
 
@@ -1508,13 +1508,13 @@ sub find_close_brace_read ($;$)
 { my ($exp, $pos) = check_args_range(1, 2, @_);
   if (!defined($pos))
     { $pos = 0; }
-  my $index = find_close_brace($exp, $pos);
+  my $index = find_close_delimiter('{', $exp, $pos);
   # print "find_close_brace_read ($pos) <= $exp\n";
   while ($index eq $false)
     { my $nextline = get_fulltoken_line($true);
       # print "find_close_brace_read ($pos) adding '$nextline' to '$exp'.\n";
       $exp .= $nextline;
-      $index = find_close_brace($exp, $pos); }
+      $index = find_close_delimiter('{', $exp, $pos); }
   # print "find_close_brace_read ($pos) => $index + $exp\n";
   return ($index, $exp);
 }
@@ -3143,7 +3143,7 @@ sub parse_statement ($)
 
   elsif ($body =~ /^\{/)
     { # quite weak test, but good enough for me.
-      my $close_pos = find_close_brace($body, 1);
+      my $close_pos = find_close_delimiter('{', $body, 1);
       if ($debug_parse_statement)
 	{ print "close_pos = $close_pos in $body\n"; }
       if (!$close_pos)
@@ -4018,7 +4018,7 @@ sub find_function_declarations ($)
 # 		  { next; }
 # 		@formals = formals_array($formals); }
 # 
-# 	      my $close_pos = find_close_paren($args, 1);
+# 	      my $close_pos = find_close_delimiter('(', $args, 1);
 # 	      if (!$close_pos)
 # 		{ print "couldn't find close paren for macro invocation $declarator $args";
 # 		  next; }
@@ -4118,7 +4118,7 @@ sub simple_macro_substitute_2 ($)
 
   my @formals = formals_array($mdef_formals[$mdef_index]);
 
-  my $close_pos = find_close_paren($args, 1);
+  my $close_pos = find_close_delimiter('(', $args, 1);
   if (!$close_pos)
     { parse_error("couldn't find close paren for macro invocation $name $args\n");
       return $text; }

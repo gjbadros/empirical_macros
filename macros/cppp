@@ -230,7 +230,7 @@ sub evaluate_conditional ($)
   while ($exp =~ /\b\w+\s*\(/)
     { my $preexp = $PREMATCH . "UNKNOWNMACRO";
       my $post = $POSTMATCH;
-      my $close_paren_pos = find_close_paren($post);
+      my $close_paren_pos = find_close_delimiter('(', $post);
       if (!$close_paren_pos)
 	{ print "File: $current_file\n";
 	  die "No close paren found to match function call in $exp"; }
