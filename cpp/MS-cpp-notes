@@ -1,0 +1,132 @@
+Meeting notes from 7/9/97 mtg w/ Charles Simonyi, Sridhar Ramamoorthy, and Peter Youtz
+
+constant
+  e.g. #define FOO 5
+       #define FOO "bar"
+
+rename
+  e.g. #define foo bar
+
+procedure
+  e.g. #define CALLEM(x) do { foo(x); bar(x,5); } while 0
+
+takes_statement
+  e.g. #define FOREVER for (;;)
+
+init
+  --Occurs in an initialization list, incl. prototype things  
+
+type
+  e.g. #define P(int) int *
+
+annotation
+  e.g. #define const
+       #define volatile 
+
+token_like
+  -- basically throwing up arms and always expanding this kind
+  e.g. #define START_THE_BLOCK begin_graphics(); {
+
+
+Note that these classifications are motivated by what the parser would
+need to know to be able to handle the pre-preprocessor source
+properly.  These classifications were used in the original version of
+their code importer as pragmas that the engineer had to annotate the
+source with before it could be imported. e.g., lines of the form
+
+#pragma MACRO_NAME_TYPE(FOO,constant)
+#pragma MACRO_NAME_TYPE(CALLEM,procedure)
+...etc.
+
+are put at the top of files with macro definitions.  This approach was
+abandoned in favor of expanded everything unconditionally after a
+transformation phase to replace conditional compilation directives with
+parse-able stylized declarations.  e.g., if the original source is:
+
+-------------------
+#if foo && bar
+  int a;
+#else
+  bool a;
+#endif
+#define ABS(x) ((x>0)?(x):(-x))
+printf("%d",ABS(-9));
+-------------------
+
+my understanding is that they first convert to something like this:
+
+-------------------
+int _pp_marker_if = foo && bar
+  int a;
+int _pp_marker_else
+  bool a;
+int _pp_marker_endif
+#define ABS(x) ((x>0)?(x):(-(x)))
+printf("%d",ABS(-9));
+-------------------
+
+And then something akin to a modified cpp runs on this, parsing the
+output with each token containing annotations something like this
+(annotations marked with %'s, whitespace added for readability):
+
+-------------------
+int _pp_marker_if = foo && bar % FromSource
+  int a;             % FromSource
+int _pp_marker_else  % FromSource
+  bool a;            % FromSource
+int _pp_marker_endif % FromSource
+
+printf("%d",% FromSource
+((     % FromMacroBody(ABS)
+-9     % FromMacroArg(ABS,1)
+>0)?(  % FromMacroBody(ABS)
+-9     % FromMacroArg(ABS,1)
+):(-(  % FromMacroBody(ABS)
+-9     % FromMacroArg(ABS,1)
+)))    % FromMacroBody(ABS)
+-------------------
+
+These annotations are propagated into the AST.
+
+Finally, enzymes (tree transformations) run over the ASTs and attempt to
+discover and recover the intentions. e.g., replacing
+_pp_marker_... sequences with a conditional compilation node like:
+
+DECL(a,IF(FOO&&BAR,int,bool)) ;;; note how this is turned inside out
+
+and recognizing the various expansions of a given macro name, and
+possibly creating implicit extra parameters to the macro invokation to
+abstract the difference in the expansions of bodies of macros (i.e., not
+already parameters).
+
+A similar sort of annotation seems to work for allowing #include-s to
+get processed, but annotating all those new tokens (hopefully
+space-efficiently) with the path of include directives that made them a
+part of the current "compilation" (really, parse) unit.
+
+Note, of course, that the parser must accept declarations virtually
+anywhere (possibly just a simplified C++ parser would do [of course they
+are interested in handling C++, so they are likely already using a C++
+parser anyway]), and particularly hairy used of conditional compilation
+directives still seem to cause problems, e.g.
+
+printf("%d", 5 +
+#ifdef FOO
+9);
+#else
+6);
+#endif
+
+But these are probably rare (NOTE: we should look at ccd *bodies*,
+perhaps, and see how manageable those are, perhaps).  In these cases,
+they simply include one path based on your -D settings, and include the
+other path as a comment annotation.
+
+Also, the parser cannot worry about most semantic errors;  semantics
+checking has to be done on the AST after restoring
+cond-comp-directives.
+
+This clearly requires that you have a nearly compilable program (e.g.,
+no missing header files, proper paths, predefined (via -D) options,
+etc.).
+
