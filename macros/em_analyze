@@ -1120,6 +1120,12 @@ my %expansion_dependee_lines = ();
 # Count each line (which can be both incl and exp dependent on a symbol) once.
 my %either_dependee_lines = ();
 
+# Each of these counts how many lines depend on a specific number of macros.
+my @incl_dependence_count = ();
+my @exp_dependence_count = ();
+my @either_dependence_count = ();
+
+
 # An element is on the worklist if its dependence information has changed
 # but macros dependent on it haven't been updated.
 my @dependence_worklist = ();
@@ -1209,7 +1215,7 @@ sub add_expansion_dependence ($$)
 }
 
 
-# This runs before pass 2, so that it can quickly determine computele
+# This runs before pass 2, so that it can quickly determine complete
 # transitive dependences given direct dependences.
 sub compute_transitive_macro_dependences ()
 { check_args(0, @_);
@@ -4903,31 +4909,32 @@ sub get_macro_properties ($)
 	{ $result |= $propUSES_MACRO_AS_TYPE; } }
 
   ## Free variables: new implementation.
-  { my %vars;
-    foreach my $var (identifiers_in($body))
-      { $vars{$var} = $true; }
-    foreach my $arg (formals_array($mdef_formals[$index]))
-      { delete $vars{$arg}; }
-    foreach my $var (keys %vars)
-      { if (exists($macros{$var})
-	    || exists($macros_used_by_cpp{$var})
-	    || exists($functions{$var})
-	    || exists($typedefs{$var})
-	    || ($var =~ /^$reserved_word_re$/)
-	    || ($body =~ /(\.|->|\bstruct|\bunion)\s*$var\b/)
-	    || ($body =~ /\b$var\s*\*\s*\)/)
-	    || ($body =~ /\b$var\s*\(/))
-	  { delete $vars{$var}; } }
-    if (scalar(keys %vars) > 0)
-      { my $body_remaining = $body;
-	while ($body_remaining =~ /\{/)
-	  { my ($post_decls, $warnings, %name_types) = parse_declarations($POSTMATCH);
-	    $body_remaining = $post_decls;
-	    for my $local_var (keys %name_types)
-	      { delete $vars{$local_var};
-		for my $var (keys %vars)
-		  { if ($name_types{$local_var} =~ /\b$var\b/) # no /o
-		      { delete $vars{$var}; } } } } }
+  { my %vars = ();
+    if ($body !~ /^$identifier_re$/o) # if body is a symbol, never report free vars
+      { foreach my $var (identifiers_in($body))
+	  { $vars{$var} = $true; }
+	foreach my $arg (formals_array($mdef_formals[$index]))
+	  { delete $vars{$arg}; }
+	foreach my $var (keys %vars)
+	  { if (exists($macros{$var})
+		|| exists($macros_used_by_cpp{$var})
+		|| exists($functions{$var})
+		|| exists($typedefs{$var})
+		|| ($var =~ /^$reserved_word_re$/)
+		|| ($body =~ /(\.|->|\bstruct|\bunion)\s*$var\b/)
+		|| ($body =~ /\b$var\s*\*\s*\)/)
+		|| ($body =~ /\b$var\s*\(/))
+	      { delete $vars{$var}; } }
+	if (scalar(keys %vars) > 0)
+	  { my $body_remaining = $body;
+	    while ($body_remaining =~ /\{/)
+	      { my ($post_decls, $warnings, %name_types) = parse_declarations($POSTMATCH);
+		$body_remaining = $post_decls;
+		for my $local_var (keys %name_types)
+		  { delete $vars{$local_var};
+		    for my $var (keys %vars)
+		      { if ($name_types{$local_var} =~ /\b$var\b/) # no /o
+			  { delete $vars{$var}; } } } } } }
 
     $mdef_free_vars[$index] = join(",", keys %vars);
     if ($mdef_free_vars[$index])
@@ -5528,13 +5535,19 @@ sub analyze_for_macro_use ($) {
 
   # Now %incl_deps and %exp_deps are set for this line; for each such
   # controller, increment its global count.
+  my %either_deps = ();
   foreach my $incl_dep (keys %incl_deps)
     { $inclusion_dependee_lines{$incl_dep}++;
-      $either_dependee_lines{$incl_dep}++; }
+      $either_deps{$incl_dep} = $true; }
   foreach my $exp_dep (keys %exp_deps)
     { $expansion_dependee_lines{$exp_dep}++;
-      if (!exists($incl_deps{$exp_dep}))
-	{ $either_dependee_lines{$exp_dep}++; } }
+      $either_deps{$exp_dep} = $true; }
+  foreach my $either_dep (keys %either_deps)
+    { $either_dependee_lines{$either_dep}++; }
+
+  $incl_dependence_count[scalar(keys %incl_deps)]++;
+  $exp_dependence_count[scalar(keys %exp_deps)]++;
+  $either_dependence_count[scalar(keys %either_deps)]++;
 }
 
 # Note that "words" include literal numbers, etc.
@@ -6247,6 +6260,8 @@ sub SaveMacroAnalysisState
     %inclusion_dependenton %inclusion_dependees %inclusion_dependee_lines
     %expansion_dependenton %expansion_dependees %expansion_dependee_lines
     %either_dependee_lines
+    @incl_dependence_count @exp_dependence_count @either_dependence_count
+
     %macros_used_by_cpp %functions %typedefs
 		     );
 
