@@ -6,6 +6,8 @@
 \def\numpackages{27}
 \def\numlines{1.2 million}
 
+\newcommand{\pkg}[1]{\textsf{#1}}
+
 % the "fullpage" package does almost the same thing
 % as the below lines-- it doesn't make things quite as
 % tall or wide, but is generally what I use
@@ -232,7 +234,7 @@ preprocessor directives.  This is exactly what Stroustrup suggests:
 \end{quote}
 C++ contains features\,---\,such as constant variables, inline functions,
 templates, and reference parameters\,---\,that obviate many uses of Cpp.
-Thus, translation to C++ is another path for partial elimination of Cpp.
+Thus, translation to C++ is a path for partial elimination of Cpp.
 This study indicates the
 feasibility\,---\,and our framework for analyzing preprocessor usage
 provides a basis for the development\,---\,of an automatic translator with
@@ -247,7 +249,7 @@ effects on parser or program state, so that even tools that do no Cpp
 analysis can operate correctly on such programs.)
 
 Another niche already filled by our tool is that of a ``macro lint''
-program which warns of potentially dangerous uses of Cpp.
+program which warns of potentially dangerous (or non-standard) uses of Cpp.
 
 %O'Callahan and Jackson also use type
 %inference, although for program understanding rather than translation;
@@ -280,8 +282,8 @@ call {\tt \#define}d functions and editors that support viewing one
 particular configuration of the code.
 
 Our long-term goal is not to take these useful features away from
-programmers, but to reduce Cpp use, making programs easier for both humans
-and tools to understand.
+programmers, but to reduce Cpp use, making programs easier for humans to
+understand and tools to analyze.
 
 
 \subsection{Outline}
@@ -312,7 +314,7 @@ those that expand to partial syntactic units such as unbalanced
 braces or partial declarations (half of one percent), and others not 
 directly expressible in the programming language (about four percent).
 
-Section\~ref{sec:conclusion} discusses the relevance of the research,
+Section~\ref{sec:conclusion} discusses the relevance of the research,
 suggests more techniques for mitigating the negative impact of Cpp on
 program understanding, and discusses avenues for future work, while
 section~\ref{sec:related} discusses related work.
@@ -370,19 +372,20 @@ The definedness of a macro is often used as a boolean value.  However, our
 study shows that {\tt \#undef} is rarely used to set such macros to
 ``false''$\!$.  Most uses of {\tt \#undef} immediately precede a definition of
 the just-undefined macro, to avoid preprocessor warnings about incompatible
-macro redefinitions.  (About 90\% of glibc's {\tt \#undef}s are used this
+macro redefinitions.  (About 90\% of \pkg{glibc}'s {\tt \#undef}s are used this
 way, and 216 of the 614 {\tt \#undef}s appear in a single file which
 consists of a long series of {\tt \#undef}s followed by a single {\tt
 \#include}.)
 
-Every use of {\tt \#line} (in bash, cvs, flex, fvwm, gawk, groff, and perl)
-appears in lex or yacc output that enables packages build on systems
-lacking lex, yacc, or their equivalents.  For instance, flex uses itself to
-parse its input, but also includes an already-processed version of its
-input specification (that is, C code corresponding to a {\tt .l} file) for
+Every use of {\tt \#line} (in \pkg{bash}, cvs, \pkg{flex}, \pkg{fvwm},
+\pkg{gawk}, \pkg{groff}, and \pkg{perl}) appears in lex or yacc output
+that enables packages build on systems lacking lex, yacc, or their
+equivalents.  For instance, \pkg{flex} uses itself to parse its input,
+but also includes an already-processed version of its input
+specification (that is, C code corresponding to a {\tt .l} file) for
 bootstrapping.
 
-The only significant user of ``other'' directives is the g77 package, which
+The only significant user of ``other'' directives is the \pkg{g77} package, which
 contains 154 uses of {\tt \#error} (representing 1.5\% of all preprocessor
 directives and 0.16\% of all lines) to check for incompatible preprocessor
 flags.
@@ -390,36 +393,38 @@ flags.
 
 \subsection{Packages with heavy preprocessor use}
 
-Four packages\,---\,gzip, glibc, remind, and bash\,---\,deserve special
+Four packages\,---\,\pkg{gzip}, \pkg{glibc}, \pkg{remind}, and \pkg{bash}\,---\,deserve special
 attention for their heavy preprocessor usage.  The first three have
 preprocessor directives as 21--23\% of their lines.
 
-gzip {\tt \#define}s disproportionately many macros as literals used as
+\pkg{gzip} {\tt \#define}s disproportionately many macros as literals used as
 arguments to system calls, enumerated values, directory components, and
 more.  These macros act like {\tt const} variables and are evidence of good
-programming style.  gzip also contains many conditional compilation
+programming style.  \pkg{gzip} also contains many conditional compilation
 directives, since low-level file operations (such as setting creation time
 and access control bits, accessing directories, and so forth) are done
-differently on different systems; gzip is a highly portable program.
+differently on different systems; \pkg{gzip} is a highly portable program.
 
-glibc's heavy preprocessor use is largely accounted for by {\tt \#include}
-directives.  Its files average just 42 NCNB lines each, and most contain
-several {\tt \#include} directives.  Of the 1684 files, 182 are header
-files consisting of a single {\tt \#include} line, relieving glibc users of
-the need to know in which directory a service really resides.
+\pkg{glibc}'s heavy preprocessor use is largely accounted for by {\tt
+  \#include} directives.  Its files' average length is just 42 NCNB
+lines, and most contain several {\tt \#include} directives.  Of the
+1684 files, 182 are header files consisting of a single {\tt \#include}
+line, relieving \pkg{glibc} users of the need to know in which directory
+a header file actually really resides.
 
-remind supports speakers of many different languages by using {\tt
+\pkg{remind} supports speakers of many different languages by using {\tt
 \#define}d constants for basically all user output.  It also contains
 disproportionately many conditional compilation directives; over half of
 these test the definedness of \verb|HAVE_PROTO|, in order to provide both
 K\&R and ANSI prototypes.
 
-Like gzip, bash is portable across a large variety of systems, but bash
-uses even more operating system services.  Ninety-seven percent of bash's
-conditional compilation directives test the definedness of a macro whose
-presence or absence is a boolean flag indicating what features the current
-system supports.  The presence or absence of a feature requires different
-(or sometimes additional) system calls or other code.
+Like \pkg{gzip}, \pkg{bash} is portable across a large variety of
+systems, but \pkg{bash} uses even more operating system services.
+Ninety-seven percent of \pkg{bash}'s conditional compilation directives
+test the definedness of a macro whose presence or absence is a boolean
+flag indicating whether the current system supports a specific feature.
+The presence or absence of a feature requires different (or sometimes
+additional) system calls or other code.
 
 
 \section{Frequency of macro definition and usage}
@@ -453,20 +458,20 @@ system supports.  The presence or absence of a feature requires different
 % }
 % \caption{Number of definitions per Cpp identifier.  The numbers in the
 %   table represent the percentage of identifiers which are defined a given
-%   number of times or fewer.  For example, bison contains 4 or fewer
+%   number of times or fewer.  For example, \pkg{bison} contains 4 or fewer
 %   definitions for 91.51\% of all Cpp macros it defines, and no
 %   macro is defined 5, 6, 7, 8, or more than 9 times.}
 % \label{fig:define_count}
 % \end{figure}
 
 \begin{figure}
-\centerline{\epsfig{file=def-frequency.eps,height=7.5in}}
+\centerline{\epsfig{file=def-frequency.eps,height=7.2in}}
 \caption{Number of definitions per Cpp identifier, graphed as
   the percentage of identifiers that are defined a given number of times
   or fewer.  Overall, 96\% of macros were defined three or
   fewer times; the other 4\% of macros had four or more distinct
   definitions ({\tt \#define} directives).  The outlier, for which 10\% of
-  macros are defined more than eight times, is the remind
+  macros are defined more than eight times, is the \pkg{remind}
   package, which uses macros for all user output.}
 \label{fig:freq-def}
 \end{figure}
@@ -478,16 +483,16 @@ take effect in a single configuration (say, because they appear in
 different branches of a Cpp conditional).
 
 This graph shows a great deal of variation.  For example, all macros
-defined by bc have only one or two different expansions, but more than 10\%
-of macros defined by remind expand to more than eight different texts.
+defined by \pkg{bc} have only one or two different expansions, but more than 10\%
+of macros defined by \pkg{remind} expand to more than eight different texts.
 
 In all but four packages, at least 93\% of all macros are defined three or
-fewer times.  For bash, glibc, and dejagnu, such macros account for 90\%,
+fewer times.  For \pkg{bash}, \pkg{glibc}, and \pkg{dejagnu}, such macros account for 90\%,
 largely because these packages are highly portable and also quite dependent
-on system libraries.  The remind program uses macro definitions to provide
+on system libraries.  The \pkg{remind} program uses macro definitions to provide
 localization support for ten different natural languages (and multiple
 character sets for some of them), accounting for its surprisingly large
-number of macros with many definitions.  All of remind's macros are defined
+number of macros with many definitions.  All of \pkg{remind}'s macros are defined
 14 or fewer times, but 16 macros in the {\numpackages} packages are defined
 more than 16 times, including three with more than 30 distinct definitions.
 
@@ -504,7 +509,7 @@ tend to be compatible, as shown in section~\ref{sec:categorization}.
 \centerline{\epsfig{file=use-frequency.eps,height=7.5in}}
 \caption{Number of expansions per Cpp macro.  The numbers in the
   table represent the percentage of identifiers which are expanded a given
-  number of times or fewer.  For example, g77 expands 65\% of its
+  number of times or fewer.  For example, \pkg{g77} expands 65\% of its
   macros two or fewer times.}
 \label{fig:freq-use}
 \end{figure}
@@ -519,20 +524,19 @@ macros that are never expanded\,---\,on average, over 13\%.
 (Figure~\ref{fig:freq-use} reports only on macros defined in a package, not
 those defined in system or library header files, inclusion of which would
 push the unused percentage well above 50\%.)  Most packages are in the
-4-12\% range, while gnuplot exceeds 40\%.  Although it's difficult to fully
+4-12\% range, while \pkg{gnuplot} exceeds 40\%.  Although it's difficult to fully
 account for the larger numbers, contributing factors include a lot of
 cut-and-paste and a lack of attention to implementations for specific
-platforms in some packages.  Again with respect to bounding analysis,
-covering macros with 10 or fewer uses covers approximately 85\% of the
-cases.
+platforms in some packages.  Macros with 10 or fewer uses cover
+approximately 85\% of the cases.
 
 The tail of this distribution is quite long, indicating that some macros
-are used very heavily.  Ninety-nine percent of macros expanded 147 or fewer
+are used very heavily.  Ninety-nine percent of macros are expanded 147 or fewer
 times, 99.5\% of macros are expanded 273 or fewer times, 99.9\% are
-expanded 882 or fewer times, and python uses {\tt NULL} (which python
+expanded 882 or fewer times, and \pkg{python} uses {\tt NULL} (which \pkg{python}
 itself defines) 4233 times.  Figure~\ref{fig:freq-use} weights each macro
 equally rather than weighting each macro use equally, which would weight
-python's {\tt NULL} 4233 times more heavily than a macro used only once
+\pkg{python}'s {\tt NULL} 4233 times more heavily than a macro used only once
 (and infinitely more than a macro never used at all).  Only macros defined
 in a package, and uses in that package, are counted; system macros and uses
 are excluded.
@@ -551,13 +555,13 @@ are excluded.
 \end{figure}
 
 Figure~\ref{fig:where-used} breaks down macro usage according to whether
-the macro invocation occurs in C code, in Cpp code (which is further broken
-down into conditional tests and definition bodies), in both, or in neither
-(i.e., no uses).  
+the macro invocation occurs in Cpp directives (which is further broken
+down into conditional tests and definition bodies), in other C code, in
+both, or in neither (i.e., no uses).
 
 No package expanded all of its defined macros; two expanded fewer than 70\%
 of the defined macros.  The dominant usage was in C code only; these uses
-don't, therefore, have any affect on conditional compilation (for example).
+do not, therefore, have any affect on conditional compilation (for example).
 
 In general, packages use macros either to direct conditional compilation or
 to produce code, but not for both purposes; this separation of concerns
@@ -574,7 +578,7 @@ listed above).
 \label{sec:categorization}
 
 This section examines the purposes of macros and how they are intended to
-be used, which requires heuristic categorization of macro bodies.  A
+be used, which requires heuristic categorization of macro definition bodies.  A
 straightforward refinement that we are pursuing examines macro uses to aid
 this categorization.  (For example, a macro used where a type should appear
 can be inferred to expand to a type; a macro used before a function body is
@@ -582,8 +586,8 @@ probably expanding to a declarator.)
 
 In addition to classifying each macro as taking arguments or not, our tool
 identifies the following specific categories (and a number of more
-rarely-used ones omitted for reasons of space;
-figure~\ref{fig:subset-categories} contains a fuller list).  The examples
+rarely-used ones omitted for brevity;
+figure~\ref{fig:subset-categories} contains a more complete list).  The examples
 are chosen for clarity and brevity from the packages studied.
 
 \begin{description}
@@ -596,7 +600,9 @@ are chosen for clarity and brevity from the packages studied.
 directives (such as {\tt \#ifdef}), where they are used as boolean
 variables by the preprocessor, but may also appear in code.  For instance,
 macro {\tt private} may expand either to {\tt static} or to nothing,
-depending on whether a debugging mode is set.
+depending on whether a debugging mode is set.  The definition which
+causes it to expand to nothing is categorized as a null define (the
+other is categorized as ``other syntactic macro'';  see below).
 
 \item[Constant] The macro is defined to be either a literal or an operator
   applied to constant values.  For instance, {\tt \#define NULL 0}, {\tt \#define
@@ -615,17 +621,18 @@ arguments).
 
 One tenth of expression macros in our study use assignment operators, which
 have potentially unexpected results.  A macro argument that is assigned to
-is like a pass-by-reference function argument and need only be noted in the
+is similar to a pass-by-reference function argument and need only be noted in the
 macro's documentation.  A macro that assigns a global variable also
-presents no difficulties in understanding or translation into a C function.
+presents no difficulties in understanding or translation into a C++
+inline function.
 Assignment to a local variable that is free in the macro body, however,
 demands that such a variable exist wherever the macro is invoked, and
 assigns to different variables at different invocations.\footnote{By
   contrast, LCLint considers assignment to a macro argument dangerous but
   does not appear to check for assignments to local
   variables.~\cite{Evans:LCLint}} Such a macro implements a restricted form
-of dynamic scoping by capturing the version of a variable at the point of
-macro invocation.
+of dynamic scoping by capturing the instance of a variable visible at
+the point of macro invocation.
 
 % Computed ``10\% use assignment'' from CATEGORIES_NI lines of *.stat files.
 
@@ -671,7 +678,7 @@ types are not first-class in C, they may not be passed to functions or
 returned as results; additionally, these macros may produce or use only
 part of a type (such as a storage class).  As a result, these macros may be
 tricky to understand, and cannot be eliminated via straightforward
-translation.
+translation (though C++ templates may provide some hope).
 
 \item[Recursive]  The ISO C standard permits macros to be recursively
   defined (the preprocessor performs only one level of expansion), as in
@@ -680,12 +687,12 @@ translation.
 
 \item[Classification failure]  Multiple adjacent identifiers\,---\,as in
   {\tt \#define EXFUN(name, proto) name proto} and {\tt \#define
-  \verb|DO_OP|(OP,a,b) (a OP b)}\,---\,caused most failures of our
+  \verb|DO_OP|(OP,a,b) (a OP b)}\,---\,caused many failures of our
 classification heuristics.  Of the 1025 classification failures in the
-{\numpackages} packages, 496 were caused by a single definition in gnuplot,
-{\tt \#define CUR \verb|cur_term->type.|}, and uses of that macro, as in
+{\numpackages} packages, 496 were caused by a single definition in \pkg{gnuplot},
+{\tt \#define CUR \verb|cur_term->type.|} (period is part of expansion), and uses of that macro, as in
 {\tt \#define \verb|acs_plus| CUR Strings[408]}.  Four
-packages\,---\,bison, gnuchess, remind, and workman\,---\,had no macro
+packages\,---\,\pkg{bison}, \pkg{gnuchess}, \pkg{remind}, and \pkg{workman}\,---\,had no macro
 classification failures.  These packages contain 93, 297, 932, and 58 macro
 definitions, respectively.
 
@@ -694,12 +701,12 @@ definitions, respectively.
 %   ({\tt \#define \verb|LIB_PATH| /usr/ucblib}), and constants ({\tt 1ULL} for
 %   {\tt unsigned long long})
 
-%   gnuplot
+%   \pkg{gnuplot}
 %   contains only 13 other failures, ghostscript has 130, and no other
 %   package stands out with many.
 
-% half appeared in gnuplot;
-% gnuplot, cvs, and groff accounted for over 75\% of the failures, many of
+% half appeared in \pkg{gnuplot};
+% \pkg{gnuplot}, cvs, and \pkg{groff} accounted for over 75\% of the failures, many of
 % which could be eliminated by slightly relaxing the parsing rules.
 \end{description}
 
@@ -710,7 +717,8 @@ expressions\,---\,mostly constants; further analysis of the conditional
 compilation structure (in the style of Krone and Snelting~\cite{Krone94})
 and of the macros with free variables (essentially achieving dynamic
 scoping) is needed to see which of the roughly 33\% of expression macros
-should be easy to handle in a conversion process.  The 7\% that are null
+should be easy to convert to C++ language features such as constants or
+enumerated values.  The 7\% that are null
 defines, should also be easy to understand and/or translate.  Another 5\%
 are statements, most of which are straightforward (complications include
 scoping and semicolon swallowing).  That only 0.2\% of macros exploit
@@ -853,7 +861,13 @@ language proper; this would also eliminate the need for Cpp constructs that
 prevent multiple inclusion of header files.  Likewise, compilers that do a
 good job of constant-folding and dead code elimination can encourage
 programmers to use language constructs rather than relying on the
-guarantees of an extra-linguistic tool like Cpp.
+guarantees of an extra-linguistic tool like Cpp.\footnote{Interestingly,
+  the issue seems to not be whether compilers do the appropriate
+  optimizations, but whether programmers have confidence that the
+  optimizations will be performed;  if unsure, programmers will continue
+  to resort to Cpp, since certainly a compiler cannot generate
+  code for source that it does not ever even see (because Cpp has already stripped
+  it away).}
 
 Cpp constructs meant for specific purposes could be replaced by a
 special-purpose syntax for those frequently-occurring cases.  For instance,
@@ -875,7 +889,7 @@ Common Lisp and Scheme, and their descendants~\cite{WeiseC93} take this
 approach.)  An extreme example would be to provide a full-fledged
 reflection capability.  Such an approach is highly general, powerful, and
 and theoretically clean; it circumvents many of the limitations of Cpp.
-However, this approach does {\em not} lead to more understandable programs
+However, this approach does \emph{not} lead to more understandable programs
 and may result in just the opposite.  As difficult as it may be to
 determine what output a macroless program produces, it can be just as
 difficult simply to determine the text of a program which uses such macros.
