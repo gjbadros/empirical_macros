@@ -1,2 +1,2 @@
-ALL rsh forbidden zwrite gjb notkin
+ALL rsh forbidden zwrite gjb
 ALL mail -s "CVS checkin" gjb mernst notkin
