@@ -50,7 +50,7 @@
 #      system.
 
 
-require 5.000;
+require 5.003;  # uses prototypes
 use strict;
 use Carp;
 use English;
