@@ -150,60 +150,60 @@ sub category_lub
 # These regexps are intended not to include any leading or trailing space
 
 # FIX: this regexp is lame-- L,x,U needed for 0x80 << 1LU
-my $constantexpregexp = '[-LxU0-9() \t<>+=*|&%!]+';	# note this matches whitespace
+my $re_constant_exp = '[-LxU0-9() \t<>+=*|&%!]+';	# note this matches whitespace
 
 # Types and declarations/definitions.
-my $typespecifier = '\b\w+\b(\s+\b\w+\b)*'; # 1 group
-my $typeregexp = '(' . $typespecifier . '(\s*(\*|\[\s*\]))*)'; # 4 groups
-my $identregexp = '\b([a-zA-Z_]\w*)\b';
-# Use $typedeclarator instead.
-# $typeidentregexp = $typeregexp . '\s*' . $identregexp;
+my $type_specifier_re = '\b\w+\b(\s+\b\w+\b)*'; # 1 group
+my $type_re = '(' . $type_specifier_re . '(\s*(\*|\[\s*\]))*)'; # 4 groups
+my $identifier_re = '\b([a-zA-Z_]\w*)\b';
+# Use $type_declarator_re instead.
+# $type_identifier_re = $type_re . '\s*' . $identifier_re;
 
 # Declarators are actually rather more complicated than this:  see H&S p. 85.
-my $typequalifier = '\b(const|volatile)\b';
-my $pointerdeclaratorprefix = '\*(\s*' . $typequalifier . ')*'; # 2 groups
-my $arraydeclaratorsuffix = '\[(' . $constantexpregexp . ')?\]';
-# $functiondeclaratorsuffix = ...;
-# declaratorsuffix = $arraydeclaratorsuffix plus $functiondeclaratorsuffix
-# 6 groups: $1 = pointerdeclarators, $4 = identifier, $5 = arraydeclarators
-my $declarator = '(' . $pointerdeclaratorprefix . '\s*)*'
-  . $identregexp
-  . '(\s*' . $arraydeclaratorsuffix . ')*';
-# Use this in preference to $typeidentregexp
-# 8 groups: $1 = typespecifier, $3 = pointerdeclarators, $6 = identifier, $7 = arraydeclarators
-my $typedeclarator = '(' . $typespecifier . ')\s*' . $declarator;
+my $type_qualifier_re = '\b(const|volatile)\b';
+my $pointer_declarator_prefix_re = '\*(\s*' . $type_qualifier_re . ')*'; # 2 groups
+my $array_declarator_suffix_re = '\[(' . $constant_exp_re . ')?\]';
+# $function_declarator_suffix_re = ...;
+# declaratorsuffix = $array_declarator_suffix_re plus $function_declarator_suffix_re
+# 6 groups: $1 = pointer declarators, $4 = identifier, $5 = array declarators
+my $declarator_re = '(' . $pointer_declarator_prefix_re . '\s*)*'
+  . $identifier_re
+  . '(\s*' . $array_declarator_suffix_re . ')*';
+# Use this in preference to $type_identifier_re
+# 8 groups: $1 = type specifier, $3 = pointer declarators, $6 = identifier, $7 = array declarators
+my $type_declarator_re = '(' . $type_specifier_re . ')\s*' . $declarator_re;
 
-# # This isn't going to work, because of looping.  Break it somehow.
-# $simpledeclarator = $identregexp;
-# $arraydeclarator = $directdeclarator . '\s*\[(' . $constantexpregexp . ')?\]';
-# $typequalifier = '\b(const|volatile)\b';
-# $directdeclarator = '(' . $arraydeclarator . '|' . $simpledeclarator . ')';
-# $pointerdeclarator = '\*(\s*' . $typequalifier . ')*\s*' . $directdeclarator;
-# $declarator = '(' . $pointerdeclarator . '|' . $directdeclarator . ')';
+# # This isn't going to work, because of looping.  Break the loop somehow.
+# $simple_declarator_re = $identifier_re;
+# $arraydeclarator = $directdeclarator . '\s*\[(' . $constant_exp_re . ')?\]';
+# $type_qualifier_re = '\b(const|volatile)\b';
+# $direct_declarator_re = '(' . $arraydeclarator . '|' . $simple_declarator_re . ')';
+# $pointer_declarator_re = '\*(\s*' . $type_qualifier_re . ')*\s*' . $direct_declarator_re;
+# $declarator_re = '(' . $pointer_declarator_re . '|' . $direct_declarator_re . ')';
 # type plus identifier:  $1 = type, $5 = identifier
 
 # Numeric literals
 # floating-point number (two variants): $1 = exponent, $2 = suffix (fFlL)
-my $floatlitwhole = '[-+]?\d+\.\d*([eE][-+]?\d+)?([fFlL]?)'; # decimal 2.
-my $floatlitfrac = '[-+]?\d*\.\d+([eE][-+]?\d+)?([fFlL]?)'; # fraction .2
+my $float_literal_whole_re = '[-+]?\d+\.\d*([eE][-+]?\d+)?([fFlL]?)'; # decimal 2.
+my $float_literal_frac_re = '[-+]?\d*\.\d+([eE][-+]?\d+)?([fFlL]?)'; # fraction .2
 # integer regexp: $1 = number, $2 = suffix (uUlL)
-my $hexlitregexp = '(0x[0-9a-fA-F]+)([uUlL]?[uUlL]?)';
-my $decoctlitregexp = '(\d+)([uUlL]?[uUlL]?)';
+my $hex_literal_re = '(0x[0-9a-fA-F]+)([uUlL]?[uUlL]?)';
+my $dec_oct_literal_re = '(\d+)([uUlL]?[uUlL]?)';
 
 # Character and string literals
-my $charlitcontents = '(\\\\?.|\\\\[0-7][0-7][0-7])'; # contents of char literal
-my $charlit = "L?'" . $charlitcontents . "'"; # character literal
-my $nonescdquote = '(^|[^\\\\])(\\\\\\\\)*\"'; # non-escaped double quote
-# PROBLEM:  .* matches too much skips over intervening quotes; .*? is non-greedy
-my $stringlitregexp = 'L?\"(|.*?[^\\\\])(\\\\\\\\)*\"'; # string literal
+my $char_literal_contents_re = '(\\\\?.|\\\\[0-7][0-7][0-7])';
+my $char_literal_re = "L?'" . $char_literal_contents_re . "'";
+my $non_escaped_double_quote_re = '(^|[^\\\\])(\\\\\\\\)*\"';
+# non-greedy '.*?' because '.*' matches too much, skips over intervening quotes
+my $string_literal_re = 'L?\"(|.*?[^\\\\])(\\\\\\\\)*\"'; # string literal
 
 # Does not handle enum, struct, union, and function types
-my $numerictypeword = '\b(short|signed|unsigned|long|int|char|float|double)\b';
-my $numerictype = $numerictypeword . '(\s+' . $numerictypeword . ')*';
-my $nonnumerictype = '\b(void)\b';
-my $builtintype = "($numerictype|$nonnumerictype)";
-my $typesuffix = '(\s*(\*|\[\d*\]))*'; # note contains leading whitespace
-my $fullbuiltintype = $builtintype . $typesuffix;
+my $numeric_type_word_re = '\b(short|signed|unsigned|long|int|char|float|double)\b';
+my $numeric_type_re = $numeric_type_word_re . '(\s+' . $numeric_type_word_re . ')*';
+my $non_numeric_type_re = '\b(void)\b';
+my $builtin_type_base_re = "($numeric_type_re|$non_numeric_type_re)";
+my $type_suffix_re = '(\s*(\*|\[\d*\]))*'; # note contains leading whitespace
+my $builtin_type_re = $builtin_type_base_re . $type_suffix_re;
 
 
 ###########################################################################
@@ -624,11 +624,11 @@ sub test_typedecl_regexp
       if (@dependenton > 0)
 	{ die "In \#if at beginning of file: @dependenton"; }
       while ($line = getline())
-	{ if ($line =~ /^$typespecifier/o)
+	{ if ($line =~ /^$type_specifier_re/o)
 	    { print "ts: <<$&>> $line"; }
-	  if ($line =~ /^$typedeclarator/o)
+	  if ($line =~ /^$type_declarator_re/o)
 	    { print "td: <<$&>> $line"; }
-	  if ($line =~ /^$typedeclarator\s*[,=;\(]/o)
+	  if ($line =~ /^$type_declarator_re\s*[,=;\(]/o)
 	    { print "td+: $line"; }
 	}
       if (@dependenton > 0)
@@ -853,7 +853,7 @@ sub updateinvars
 	      return $result; } }
       elsif ($instring)
 	{ # print "in string, processing $remaining";
-	  if ($remaining =~ m/$nonescdquote/o)
+	  if ($remaining =~ m/$non_escaped_double_quote_re/o)
 	    # Found a non-escaped double quote
 	    { # print "non-escaped double quote: $result|$remaining|$`|$&|$'\n";
 	      if ($computeresult)
@@ -877,7 +877,7 @@ sub updateinvars
 	  if ($computeresult)
 	    { $result .= $`; }
 	  if ($match eq "\'")
-	    { if ($postmatch =~ m/^$charlitcontents\'/o)
+	    { if ($postmatch =~ m/^$char_literal_contents_re\'/o)
 		{ if ($computeresult)
 		    { if ($getline_simplify)
 			{ $result .= "'a'"; }
@@ -957,12 +957,12 @@ sub remove_comments
 #       if ($match eq $token)
 # 	{ return $true; }
 #       elsif ($match eq "\"")
-# 	{ if ($line =~ /$nonescdquote/o)
+# 	{ if ($line =~ /$non_escaped_double_quote_re/o)
 # 	    { $line = $'; }
 # 	  else
 # 	    { die "Didn't find end of string literal $line.\n"; } }
 #       elsif ($match eq "'")
-# 	{ if ($line =~ /$charlitcontents\'/o)
+# 	{ if ($line =~ /$char_literal_contents_re\'/o)
 # 	    { $line = $'; }
 # 	  else
 # 	    { die "Didn't find end of character literal $line.\n"; } }
@@ -982,7 +982,7 @@ sub getline_handle_preprocessor_line
   # always expands to 0; but that is probably overkill.
   elsif ($line =~ /^\#\s*ifdef\s+(0|\(0\))\s*$/)
     { discard_to_endif(); }
-  elsif ($line =~ m/^\#\s*$identregexp\s*/o)
+  elsif ($line =~ m/^\#\s*$identifier_re\s*/o)
     { # Found a real preprocessor command
       my $cpp_cmd = $1;
       $line = $';
@@ -1109,6 +1109,9 @@ sub discard_to_endif
 #      don't want to fill up array with big containers (so throttle it at
 #	   just a few lines, for that's most likely to have biggest benefit
 #	   anyway
+
+sub then_part
+
 
 sub check_for_braceunbalanced_if
 { my @line;
@@ -1272,7 +1275,7 @@ sub parse_exp
   # First, cope with open parens
 
   # Cast
-  if ($exp =~ /^\s*\(\s*($fullbuiltintype)\s*\)/)
+  if ($exp =~ /^\s*\(\s*($builtin_type_re)\s*\)/)
     { # print "Found cast $1\n";
       my ($casttype) = $1;
       my ($type, $remaining) = parse_exp($');
@@ -1281,9 +1284,9 @@ sub parse_exp
       if (!is_number($casttypenum))
 	{ $parsetypes{$casttypenum} = $true; }
       return parse_exp_follower($casttypenum, $remaining); }
-  # ($exp =~ /^\s*\(\(\s*$typeregexp\s*\)\s*(.*)\)/ && FIsNumConst($3))
+  # ($exp =~ /^\s*\(\(\s*$type_re\s*\)\s*(.*)\)/ && FIsNumConst($3))
   # Type in parens followed by (what looks like) paren, number, or identifier
-  if ($exp =~ /^\s*\(\s*$typeregexp\s*\)\s*([0-9a-z\(])/)
+  if ($exp =~ /^\s*\(\s*$type_re\s*\)\s*([0-9a-z\(])/)
     { my ($casttype) = $1;
       $parsetypes{$casttype} = $true;
       # print "Found cast $1 $5\n";
@@ -1310,7 +1313,7 @@ sub parse_exp
     { my $sizeoftype = $1;
       $sizeoftype =~ s/\s+$//;
       my $remaining = $';
-      if (!($sizeoftype =~ /^$typeregexp$/o))
+      if (!($sizeoftype =~ /^$type_re$/o))
 	{ die "sizeof($sizeoftype) doesn't look like a type.\n"; }
       return parse_exp_follower(type_to_num($sizeoftype),$remaining); }
 
@@ -1318,7 +1321,7 @@ sub parse_exp
   $exp =~ s/^\s+//;		# remove leading space
 
   # Literal string
-  if ($exp =~ /^$stringlitregexp/)
+  if ($exp =~ /^$string_literal_re/)
     # String contains no non-escaped double-quote
     # Should look for a following string, to concatenate the two.
     # Perhaps special-case:  look for symbol (which is macro with typeSTRING)
@@ -1326,13 +1329,13 @@ sub parse_exp
     { return ($typeSTRING, $'); }
 
   # Literal character
-  if ($exp =~ /^$charlit/o)
+  if ($exp =~ /^$char_literal_re/o)
     { return parse_exp_follower($typeCHAR, $'); }
 
   # Literal floating-point
   # This precedes integer because an integer matches the first part of a float
-  if (($exp =~ /^$floatlitwhole/o)
-      || ($exp =~ /^$floatlitfrac/o))
+  if (($exp =~ /^$float_literal_whole_re/o)
+      || ($exp =~ /^$float_literal_frac_re/o))
     { my ($type) = $typeDOUBLE;
       if (($2 eq "f") || ($2 eq "F"))
 	{ $type = $typeFLOAT; }
@@ -1343,9 +1346,9 @@ sub parse_exp
   # Literal integer (octal)
   # Don't need leading [-+]? because they are always unary operators, never
   # part of the literal itself.
-  if (($exp =~ /^$hexlitregexp/o)  # hex (regexp failed with \d for 0-9)
+  if (($exp =~ /^$hex_literal_re/o)  # hex (regexp failed with \d for 0-9)
       # hex precedes octal/decimal because the "0" looks like a leading integer
-      || ($exp =~ /^$decoctlitregexp/o)) # octal or decimal
+      || ($exp =~ /^$dec_oct_literal_re/o)) # octal or decimal
     { # print "Found integer $1\n";
       my ($remaining) = $';
       my ($type) = infer_int_type($1);
@@ -1358,7 +1361,7 @@ sub parse_exp
       return parse_exp_follower($type,$remaining); }
 
   # Variable
-  elsif ($exp =~ /^$identregexp/o)
+  elsif ($exp =~ /^$identifier_re/o)
     { my ($var) = $1;
       my ($remaining) = $';
       categorizeMacroName($var);
@@ -1475,10 +1478,10 @@ sub parse_function_decl_args
       if ($thisdecl =~ /^\s*$/)
 	{ die "Didn't find a function decl arg in $remaining\n"; }
       # print "parsing function arg declarator $thisdecl\n";
-      if ($thisdecl =~ /^$identregexp$/o)
+      if ($thisdecl =~ /^$identifier_re$/o)
 	{ push(@argnames, $thisdecl);
 	  push(@argtypes, $typeUNSPECIFIED); }
-      elsif ($thisdecl =~ /^$typedeclarator$/o)
+      elsif ($thisdecl =~ /^$type_declarator_re$/o)
 	{ my $typespec = $1;
 	  my $ptrdecls = $3;
 	  my $identifier = $6;
@@ -1513,7 +1516,7 @@ sub parse_KandR_function_arg_decls
   %argnametype = ();
   while (!($argdecls =~ /^\s*\{/))
     { # print "parsing K&R function arg decls $argdecls\n";
-      if (!($argdecls =~ /^\s*$typedeclarator\s*([,;])/))
+      if (!($argdecls =~ /^\s*$type_declarator_re\s*([,;])/))
 	{ die "Couldn't parse K&R-style type declarator $argdecls\n"; }
       my $typespec = $1;
       if (!(defined($typespec))) { die "undefined typespec for $argdecls"; }
@@ -1528,7 +1531,7 @@ sub parse_KandR_function_arg_decls
       $argdecls = $';
       $argnametype{$identifier} = $typespec . $ptrdecls . $arraydecls;
       while ($nextchar eq ",")
-	{ if (!($argdecls =~ /^\s*$declarator\s*([,;])/))
+	{ if (!($argdecls =~ /^\s*$declarator_re\s*([,;])/))
 	    { die "Couldn't parse declarator following comma after '$typespec $ptrdecls $identifier $arraydecls $nextchar': $argdecls\n"; }
 	  $ptrdecls = $1;
 	  if (!(defined($ptrdecls))) { $ptrdecls = ""; }
@@ -1690,7 +1693,7 @@ GOTLINE:
 	      chop($line);	# remove trailing newline
 	      # In a scope, must be indented or: close brace, comment, label
 	      if (($symtab_scopes != 0)
-		  && (!($line =~ m/^(\s|\}|\/[\/\*]|$identregexp\s*:)/o)))
+		  && (!($line =~ m/^(\s|\}|\/[\/\*]|$identifier_re\s*:)/o)))
 		# Perhaps permit labels to be non-indented.
 		{ die "Non-indented line $line at bracedepth $symtab_scopes."; }
 
@@ -1714,13 +1717,13 @@ PROCESSLINE:
 		{		# process typedefs
 		  print "typedef line $.\n";
 		}
-	      elsif (($line =~ /^$typespecifier\s*$/o)
+	      elsif (($line =~ /^$type_specifier_re\s*$/o)
 		     # this call to peekline ignores the @dependenton argument
-		     && (peekline() =~ /^$declarator\s*\(/o))
+		     && (peekline() =~ /^$declarator_re\s*\(/o))
 		{		# Function definition split over multiple lines
 		  $line .= " " . getline();
 		  goto PROCESSLINE; }
-	      elsif (($line =~ /^\s*$typedeclarator\s*([,=;\(])/o)
+	      elsif (($line =~ /^\s*$type_declarator_re\s*([,=;\(])/o)
  		     && ($1 ne "return") # "return foo;"
  		     && ($1 ne "else") # "else if (...)"
  		     # fail if the function is actually a macro
@@ -1809,7 +1812,7 @@ PROCESSLINE:
 			    }
 			  else
 			    {	# K&R-style definition
-			      if (!($remaining =~ /^\s*$typedeclarator\s*([,;])/))
+			      if (!($remaining =~ /^\s*$type_declarator_re\s*([,;])/))
 				{ die "Didn't find first type+declarator in K&R-style $remaining\n"; }
 			      { my $argtype;
 				for $argtype (@argtypes)
@@ -1884,7 +1887,7 @@ PROCESSVARDEF:
 		      elsif ($nextchar eq ",")
 			{
 ATCOMMA:
-			  if ($remaining =~ /^\s*$declarator\s*([,=;])/o)
+			  if ($remaining =~ /^\s*$declarator_re\s*([,=;])/o)
 			    { symtab_add($identifier, $fulltype);
 			      $identifier = $4;
 			      if (!(defined($identifier))) { die "undefined identifier"; }
@@ -1896,7 +1899,7 @@ ATCOMMA:
 			      if (!(defined($nextchar))) { die "undefined nextchar"; }
 			      $remaining = $';
 			      goto PROCESSVARDEF; }
-			  elsif ($remaining =~ /^\s*$typedeclarator\s*([,\)])/o)
+			  elsif ($remaining =~ /^\s*$type_declarator_re\s*([,\)])/o)
 			    {	# We're in the middle of a function declarator
 			      # Skip to next brace or semicolon
 			      $remaining = $';
@@ -1932,7 +1935,7 @@ ATCOMMA:
 		      else
 			{ die "Bad nextchar $nextchar.\n"; } }
 		}
-	      # Line didn't match $typedeclarator
+	      # Line didn't match $type_declarator_re
 	      # Parse it looking for:
 	      #  * open and close braces to keep track of scopes
 	      #  * strings and chars so we can skip over them
@@ -1953,7 +1956,7 @@ ATCOMMA:
 		  elsif ($match eq ";")
 		    { goto PROCESSLINE; }
 		  elsif ($match eq "(")
-		    { if ($` =~ /$identregexp\s*$/o)
+		    { if ($` =~ /$identifier_re\s*$/o)
 			{	# found something that looks like a function call
 			  # process it
 			}
@@ -1963,12 +1966,12 @@ ATCOMMA:
 			}
 		    }
 		  elsif ($match eq "\"")
-		    { if ($line =~ /$nonescdquote/o)
+		    { if ($line =~ /$non_escaped_double_quote_re/o)
 			{ $line = $'; }
 		      else
 			{ die "Didn't find end of string literal $line.\n"; } }
 		  elsif ($match eq "'")
-		    { if ($line =~ /$charlitcontents\'/o)
+		    { if ($line =~ /$char_literal_contents_re\'/o)
 			{ $line = $'; }
 		      else
 			{ die "Didn't find end of character literal $line.\n"; } }
@@ -2405,7 +2408,7 @@ sub checkmacrobody
 		{ $result |= $DANGER;
 		  print EVIL "$currentfile:$.: dangerous: $popped matched by $match in $mname:\n    $_[0]\n"; } } }
       elsif ($match eq "\"")
-        { if ($body =~ m/$nonescdquote/o)
+        { if ($body =~ m/$non_escaped_double_quote_re/o)
             # Empty string OK only if that is the entire body.
             { if ($false	# turn off the test for now
 		  && ((length($`) + length($1) + length($2)) == 0)
@@ -2424,7 +2427,7 @@ sub checkmacrobody
               chop($char);	# remove trailing '
 	      # Perhaps don't bother with this test; getline already checked
 	      # for illegal character constants.
-	      if (! ($char =~ m/$charlitcontents/o))
+	      if (! ($char =~ m/$char_literal_contents_re/o))
 	        { $result |= $ILLEGAL;
 		  print EVIL "$currentfile:$.: illegal: bad character constant $char in $mname:\n    $_[0]\n"; }
     	       }
@@ -2495,7 +2498,7 @@ sub checkmacrobody
 # This comes before the main loop so we can avoid executing it (the main loop).
 
 # { my $argdecls = "int argc;char **argv;{";
-#   if ($argdecls =~ /^\s*$typedeclarator\s*([,;])/)
+#   if ($argdecls =~ /^\s*$type_declarator_re\s*([,;])/)
 #     { print "$1|$3|$7|$9|$'\n"; } }
 
 # print "<<" . parse_expression ("(uch)get_byte()") . "\n";
@@ -2616,8 +2619,6 @@ print "Processing " . $cppcmdcount{"define"} . " macros\n";
       categorizeMacro($index);
     } }
 
-# 	  
-# 
 # 	  # Nothing to check if this is just making the macro defined w/o a body.
 # 	  if (defined($mdef) && ($flags = checkmacrobody($mdef)) != 0) {
 # 	    $cEvil++ if $flags & $EVIL;
