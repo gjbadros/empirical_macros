@@ -1,0 +1,52 @@
+1: (2 wide?)
+Title
+("An Empirical Analysis of C Preprocessor Use")
+
+2: (2 wide?)
+Authors
+("Michael Ernst, Greg J. Badros*, and David Notkin+")
+* NSF
++ Email addresses
+
+3: Overview of Motivation (approaches, too?)
+* Cpp complicates program artifacts because it is unstructured
+* Tools then must deal with complexity somehow
+  + Ignore the preprocessor
+  + Accept only post-processed code
+     -- Most common approach but has big problems (see next figure)
+  + Embed the preprocessor's functionality
+* Need to understand better how people use cpp
+
+4: Code Before and After Cpp (what compiler sees, what sde sees)
+Wat you see is not what the compiler gets!
+
+
+5: Our framework overview 
+* 6400 line perl script
+* runs over entire packages
+* looks at preprocessor directives,
+* macro definitions and uses
+
+6: The packages we analyzed: package_and_sizes-tbl.tex
+
+
+7: directives-per-line figure
+? Maybe just give this in package_and_sizes-tbl.tex
+
+8: directives-breakdown figure
+
+
+9: freq of definitions
+
+
+10: freq of use
+
+
+11: where used
+
+
+12: categories-tbl.tex
+
+
+13: subset-categories-tbl.tex
+
