@@ -4505,7 +4505,7 @@ do_if (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *limit)
   cchOffsetBranchStart = CchOffset_internal(pfile) + 2;
   conditional_skip (pfile, value == 0, T_IF, NULL_PTR,szConditionalClause);
   gjb_call_hooks_i_i_szl_szl_i_i(CPP_OPTIONS(pfile),HI_DO_IF,cchOffsetStart,cchOffsetEnd,
-                                 pchStartExpr,pchRealEnd-pchStartExpr-1,
+                                 pchStartExpr,pchRealEnd-pchStartExpr,
                                  pchEndExpr,CPP_BUFFER(pfile)->cur-pchEndExpr-1,
                                  value,cchOffsetBranchStart);
   return 0;
