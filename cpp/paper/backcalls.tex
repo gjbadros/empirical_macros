@@ -103,6 +103,14 @@ the meta stack.
 \backcall{\$fStacksEqual}{YYFCompareTopStackState}{}
 Return TRUE iff the top of the meta stack of state stacks is
 identical to the current state stack. Return FALSE otherwise.
+\backcall{\$state\_\-num}{YYGetState}{}
+Return the current state of the parser.
+\backcall{\$state\_\-num}{YYGetNode}{}
+Return the current state of the parser.
+\backcall{}{YYSetState}{\$state\_\-number}
+Set the current state of the parser to \$state\_\-number
+\backcall{\$state\_\-num}{YYGetNode}{}
+Return the current state of the parser.
 \backcall{\$fDefined}{FLookupSymbol}{\$symbol\_\-id}
 Return TRUE iff \$symbol\_\-id is found in the current scope.
 Return FALSE otherwise.

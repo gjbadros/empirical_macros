@@ -1,24 +1,24 @@
-*** gram.tab.c	Mon Oct  6 18:38:00 1997
---- mygram.tab.c	Sun Sep 28 13:38:57 1997
+*** gram.tab.c.orig	Thu Apr 16 15:02:31 1998
+--- gram.tab.c	Thu Apr 16 16:38:41 1998
 ***************
-*** 177,183 ****
+*** 182,188 ****
   /* Cause the `yydebug' variable to be defined.  */
   #define YYDEBUG 1
   
 ! /*  int  yydebug = 1;  */
   
   /* ###################################################### */
-  #line 168 "gram.y"
---- 177,183 ----
+  #line 173 "gram.y"
+--- 182,188 ----
   /* Cause the `yydebug' variable to be defined.  */
   #define YYDEBUG 1
   
 !   int  yydebug = 0;  
   
   /* ###################################################### */
-  #line 168 "gram.y"
+  #line 173 "gram.y"
 ***************
-*** 1053,1086 ****
+*** 1058,1095 ****
   #define YYPARSE_PARAM_DECL
   #endif /* not YYPARSE_PARAM */
   
@@ -26,7 +26,7 @@
   yyparse(YYPARSE_PARAM_ARG)
        YYPARSE_PARAM_DECL
   {
-    register int yystate;
+-   register int yystate;
     register int yyn;
 -   register short *yyssp;
 -   register YYSTYPE *yyvsp;
@@ -53,7 +53,11 @@
   
   #ifdef YYPURE
     int yychar;
---- 1053,1088 ----
+-   YYSTYPE yylval;
+    int yynerrs;
+  #ifdef YYLSP_NEEDED
+    YYLTYPE yylloc;
+--- 1058,1100 ----
   #define YYPARSE_PARAM_DECL
   #endif /* not YYPARSE_PARAM */
   
@@ -65,12 +69,16 @@
 + YYSTYPE *yyls, *yylsp;
 + #endif
 + int yystacksize;
++ int yystate;
++ 
++ #ifdef YYPURE
++   YYSTYPE yylval;
++ #endif
 + 
   int
   yyparse(YYPARSE_PARAM_ARG)
        YYPARSE_PARAM_DECL
   {
-    register int yystate;
     register int yyn;
     int yyerrstatus;	/*  number of tokens to shift before error messages enabled */
     int yychar1 = 0;		/*  lookahead token as an internal (translated) token number */
@@ -90,9 +98,12 @@
   
   #ifdef YYPURE
     int yychar;
+    int yynerrs;
+  #ifdef YYLSP_NEEDED
+    YYLTYPE yylloc;
 ***************
-*** 1102,1107 ****
---- 1104,1112 ----
+*** 1107,1112 ****
+--- 1112,1120 ----
       fprintf(stderr, "Starting parse\n");
   #endif
   
@@ -103,8 +114,8 @@
     yyerrstatus = 0;
     yynerrs = 0;
 ***************
-*** 1116,1121 ****
---- 1121,1127 ----
+*** 1121,1126 ****
+--- 1129,1135 ----
     yyvsp = yyvs;
   #ifdef YYLSP_NEEDED
     yylsp = yyls;
