@@ -6,6 +6,8 @@ use em_util;
 # Don't bother to be subtle:  just use brute force.
 # Inputs are tbl-properties-percents and tbl-properties-subset
 
+my $print_percentage = 1;
+
 my $total;
 my @prop_names;
 my %prop_nums;
@@ -28,6 +30,7 @@ my %prop_name_pretty = (
   while (defined($line = <INPUT>))
     { if ($line !~ /^(\d+)\s+\(\d+\.\d+%\)\s*(\w+)$/)
 	{ die "Malformed line in $filename: $line"; }
+      # $1 = absolute number; $2 = name
       if ($1)
 	{ push @prop_names, $2;
 	  $prop_nums{$2} = $1; }
@@ -43,11 +46,19 @@ print '
 \addtolength{\columnsep}{-.5\columnsep}
 % The *{n}{c|} below creates n duplicate columns of that type (centered, here)
 \begin{tabular}{|r|*{', scalar(@prop_names), '}{c|}}\hline
-\rotatebox{90}{\parbox{1in}{Percentage of~ \\\\ ', $total, ' macro \\\\ definitions}~}';
+\rotatebox{90}{\parbox{1in}{';
+if ($print_percentage)
+{ print 'Percentage of~ \\\\ ', $total, ' macro \\\\ definitions'; }
+else
+{ print 'Number of macro \\\\ definitions \\\\ (', $total, ' total)'; }
+print '}~}';
 for my $prop_name (@prop_names)
-  { print " &\n\\rotatebox{90}{$prop_name_pretty{$prop_name}~(",
-       two_significant_digits(100*$prop_nums{$prop_name}/$total),
-       "\\%)~}"; }
+  { print " &\n\\rotatebox{90}{$prop_name_pretty{$prop_name}~(";
+    if ($print_percentage)
+      { print two_significant_digits(100*$prop_nums{$prop_name}/$total), "\\%"; }
+    else
+      { print $prop_nums{$prop_name}; }
+    print ")~}"; }
 print "\n\\\\ \\hline\n";
 
 
@@ -66,7 +77,8 @@ print "\n\\\\ \\hline\n";
 	  my @this_prop_names = split(/,/, $2);
 	  for my $prop_name (@this_prop_names)
 	    { if (!grep(/^$prop_name$/, @prop_names))
-		{ die "Bad property name $prop_name in $line"; } }
+		{ die "Bad property name $prop_name in $line\nshould be in"
+		    . join(" ", @prop_names); } }
 	  for my $prop_name (@prop_names)
 	    { if (grep(/^$prop_name$/, @this_prop_names))
 		{ print "&\\black"; }
