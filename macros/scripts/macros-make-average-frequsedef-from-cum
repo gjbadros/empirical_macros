@@ -1,0 +1,89 @@
+#!/uns/bin/perl -w
+#$Id$
+# Typical usage:  macros-make-average-frequsedef-from-cum *.frequse_cum
+# or from the Makefile.
+use English;
+use File::Basename;
+use Carp;
+use em_constants;
+use em_util;
+$fDebug = 0;
+
+my $script_name = basename($0);
+
+if ($#ARGV == -1) {
+  usage();
+}
+
+@files = @ARGV;
+
+sub usage {
+  print STDERR "Usage: $script_name <*.freq{use,def,ddf}_cum files>\n";
+  exit -1;
+}
+
+$OFS = "\t";
+my %counts = ();
+my %totals = ();
+
+# print "meta_category_numbers: @meta_category_numbers\n";
+# { for my $key (keys %meta_category_number)
+#     { print "$key, $meta_category_number{$key}\n"; } }
+# print "meta_category_number: %meta_category_number\n";
+
+for my $i (0..$#meta_category_numbers)
+{ my $catnum = $meta_category_numbers[$i];
+  my $catname = $categoryname[$catnum];
+  $counts{$catname} = 0;
+  $totals{$catname} = 0; }
+
+my $file;
+foreach $file (@files)
+{
+  print STDERR "Reading $file...\n" if $fDebug;
+  open(IN,"<$file") or die "Can't open $file: $!";
+  my $cat;
+  my $line;
+  my $running_count;
+  while (defined($line = <IN>))
+    { # print "line: $line";
+      if ($line =~ /^\#?Category: (.*)\n?$/)
+	{ $cat = $categoryname[$meta_category_number{$1}];
+	  # print "category: $1, $meta_category_number{$1}, $cat\n";
+	  $running_count = 0; }
+      elsif ((! defined($cat)) || ($line =~ /^Total/) || ($line =~ /^$/))
+	# do nothing
+	{ }
+      elsif ($line =~ /^([0-9]+)\t([0-9]+)\t$/)
+	{ my $weight = $1;
+	  my $new_running_count = $2;
+	  # print "got <$weight> <$new_running_count> from $line";
+	  my $this_count = $new_running_count - $running_count;
+	  if ($this_count < 0)
+	    { die "Huh?  previous running count: $running_count; new running count = $new_running_count; this count = $this_count; weight = $weight"; }
+	  # print "previous running count: $running_count; running count = $2; this count = $this_count; weight = $weight\n";
+	  $running_count = $new_running_count;
+	  $counts{$cat} += $this_count;
+	  $totals{$cat} += $this_count * $weight; }
+      else
+	{ die "Huh?"; } }
+
+  close(IN);
+}
+
+my $complete_count = 0;
+my $complete_total = 0;
+for my $i (0..$#meta_category_numbers)
+{ my $catnum = $meta_category_numbers[$i];
+  my $catname = $categoryname[$catnum];
+  my $printname = $meta_category_printnames[$i];
+  my $total = $totals{$catname};
+  my $count = $counts{$catname};
+  $complete_count += $count;
+  $complete_total += $total;
+  # print "$i,$catnum,$catname,$printname,$total,$count\n";
+  if (($count == 0) && ($total == 0))
+    { $count = 1; }
+  print "$printname", two_significant_digits($total/$count), "\n";
+}
+print "Total", two_significant_digits($complete_total/$complete_count), "\n";
