@@ -23,7 +23,7 @@ my $getopts_option_letters = 'ihvtIAau1pTg:d:D:M:S:F:L:C:P:c:s:';
 
 # Remove the asterisks below when the options are known to the users.
 
-sub usage () {
+sub usage ( ) {
   die "@_\nUsage: $0 [-$getopts_option_letters]
 New options marked with *; options with ':', above, take an argument
   -t  use [TAB] as the OFS for the statistics files (not space)
@@ -133,63 +133,8 @@ my $fIgnoreIncludes = $false;
 ### Print output statistics
 ###
 
-# FIXGJB: why does this include variables not imported from elsewhere, like
-# $type_specifier_re?
-use vars qw($getopts_option_letters $c_reserved_type_word_alternatives
-    $c_reserved_nontype_word_alternatives
-    $c_plus_plus_reserved_type_word_alternatives
-    $c_plus_plus_reserved_nontype_word_alternatives
-    $reserved_type_word_re $reserved_nontype_word_re $reserved_word_re
-    $constant_exp_re $constant_or_upcase_exp_re
-    $float_literal_whole_re $float_literal_frac_re
-    $float_literal_exp_re $float_literal_noexp_re $hex_literal_re
-    $dec_oct_literal_re $number_literal_re $char_literal_contents_re
-    $char_literal_re $non_escaped_double_quote_re $string_literal_re
-    $identifier_no_dollar_re $identifier_re $type_specifier_re
-    $type_special $type_re_special_1 $type_re_special_2
-    $type_re_special $type_suffix_re $type_re $type_qualifier_re
-    $pointer_declarator_prefix_re $pointer_declarator_prefixes_re
-    $array_declarator_suffix_re $array_declarator_suffixes_re
-    $declarator_unparenthesized_re $declarator_parenthesized_re
-    $declarator_re $type_declarator_re $simple_arglist_re
-    $type_declarator_arglist_re $numeric_type_word_re $numeric_type_re
-    $non_numeric_type_re $builtin_type_base_re $builtin_type_re
-    $numeric_binop_regexp $bool_binop_regexp $arb_type_binop_regexp
-    $binop_regexp @rg_physical_lines @rg_ncnb_lines @rg_cpp_phys_lines
-    @rg_cpp_phys_ncnb_lines @rg_cpp_cmds @rg_category_counts
-    @rg_cppcmdcounts $ncnb_physical_lines_ni $cpp_cmds $cpp_cmds_ni
-    $cpp_cmds_hdr $cpp_cmds_hdr_ni $cpp_cmds_c $cpp_cmds_c_ni
-    $symtab_scopes $line $cBuiltinMacros $cMacrosInTables
-    %files_function_lines %function_to_locs
-    %function_name_to_macros_it_uses $current_file
-    $current_ftype_index $current_function
-    $current_function_start_line $current_macro_line_number @files
-    %file_inclusion_method @files_included $outOFS %macros
-    %macros_c_undefs %macros_uses %macros_file_line_uses
-    %macros_used_in_functions @mdef_name @mdef_formals @mdef_body
-    @mdef_file @mdef_line @mdef_physical_lines
-    @mdef_physical_ncnb_lines @mdef_freefuns
-    @mdef_dependenton @mdef_direct_expansion_uses @mdef_type
-    @mdef_category @mdef_properties @mdef_free_vars
-    @mdef_evilness %mntype %mncategory %fun_decl_arg_macros
-    %semi_fun_decl_arg_macros %void_macros $fDebugCmdProcessing
-    $fDebugCommentRemoval $debug_scopes $debug_type_match
-    $debug_parse_function $debug_parse_expression $debug_parse_statement
-    $debug_merge_branches $debug_parse_array_init $debug_peek
-    $debug_getline $debug_categorize_macro $debug_cpp_if_comments
-    $fIgnoreIncludes @getline_ungot_raw_lines
-    @getline_ungot_simple_lines @dependenton $incomment $instring
-    %parsevars %parsefuns %parsetypes $parse_exp_saw_equals
-    @symtab_identifiers @symtab_types $scopemarker $wf_last_filename
-    $wf_last_line_no $wf_last_index
-    %inclusion_dependenton %inclusion_dependees %inclusion_dependee_lines
-    %expansion_dependenton %expansion_dependees %expansion_dependee_lines
-    %either_dependee_lines
-    @incl_dependence_count @exp_dependence_count @either_dependence_count
-    @mdef_direct_inclusion_dependenton
-    @rg_ccd_cat_counts
-    %macros_used_by_cpp %functions %typedefs
-);
+use vars @state_file_vars;
+
 # Computed from the above, but not in state file.
 my @mdef_body_simple;
 
@@ -206,9 +151,8 @@ my (%category_counts_ni, %category_counts_c_ni, %category_counts_hdr_ni);
 
 
 # FIX: these sub-parts might better be broken up into functions
-sub output_stats ()
-{
-  check_args(0, @_);
+sub output_statistics ( )
+{ check_args(0, @_);
 
   local $OFS = (defined($outOFS) ? $outOFS : " ");
   #   if (defined($outOFS)) {
@@ -218,6 +162,34 @@ sub output_stats ()
   #   }
   # Use ".", not ",", here, because $OFS has been set!
   # print "OFS: " . (defined($OFS) ? "'$OFS'" : "undef") . ", outOFS: " . (defined($outOFS) ? "'$outOFS'" : "undef") . "\n";
+
+  if ($opt_v) { STDOUT->autoflush(1); }
+
+  if ($opt_S) { output_stats(); }
+  # -M = dump the macro stats
+  if ($opt_M) { output_macros(); }
+  if ($opt_D) { output_defines(); }
+  # -F = dump the function information
+  if ($opt_F) { output_functions(); }
+  if ($opt_L) { output_funclines(); }
+  # conditional compilation directive statistics
+  if ($opt_c) { output_ccdstats(); }
+  # macro categories
+  if ($opt_C) { output_macro_categ(); }
+  if ($opt_p) { output_properties(); }
+  if ($opt_P) { output_dependences(); }
+  if ($opt_l) { output_lint(); }
+  output_frequse();
+  output_freqdef();
+
+  if ($opt_v) { print STDOUT "done\n"; }
+}
+
+# Dump statistics on frequencies of directives
+sub output_stats ( )
+{ check_args(0, @_);
+  if ($opt_v) { print STDOUT "stats..."; }
+  select STATS;
 
   my $physical_lines = sum_array(@rg_physical_lines);
   my $ncnb_physical_lines = sum_array(@rg_ncnb_lines);
@@ -251,265 +223,266 @@ sub output_stats ()
   my $cpp_physical_ncnb_lines_c_ni =
     sum_array(@rg_cpp_phys_ncnb_lines[@ftype_NONHEADER_NOT_INCLUDED]);
 
-  if ($opt_v) { STDOUT->autoflush(1); }
 
-  if ($opt_S) {
-    my ($h, $v);
-    # Dump statistics on frequencies of directives
-    if ($opt_v) { print STDOUT "stats..."; }
-    select STATS;
+  print "#LINES#: physical ncnb_phys cpp_phys cpp_phys_ncnb\n";
+  print "$physical_lines $ncnb_physical_lines $cpp_physical_lines $cpp_physical_ncnb_lines\n";
+  print "#LINESNI#: physical ncnb_phys cpp_phys cpp_phys_ncnb\n";
+  print "$physical_lines_ni $ncnb_physical_lines_ni $cpp_physical_lines_ni $cpp_physical_ncnb_lines_ni\n";
 
-    print "#LINES#: physical ncnb_phys cpp_phys cpp_phys_ncnb\n";
-    print "$physical_lines $ncnb_physical_lines $cpp_physical_lines $cpp_physical_ncnb_lines\n";
-    print "#LINESNI#: physical ncnb_phys cpp_phys cpp_phys_ncnb\n";
-    print "$physical_lines_ni $ncnb_physical_lines_ni $cpp_physical_lines_ni $cpp_physical_ncnb_lines_ni\n";
+  print "\n";
 
-    print "\n";
+  OutputHistogram("DIRECTIVES_ALL",\%cppcmdcount,1,$true);
 
-    OutputHistogram("DIRECTIVES_ALL",\%cppcmdcount,1,$true);
+  OutputHistogram("DIRECTIVES_NI",\%cppcmdcount_ni,1);
+  OutputHistogram("DIRECTIVES_NI%NCNB",\%cppcmdcount_ni,$ncnb_physical_lines_ni);
+  OutputHistogram("DIRECTIVES_NI%PHYS",\%cppcmdcount_ni,$physical_lines_ni);
 
-    OutputHistogram("DIRECTIVES_NI",\%cppcmdcount_ni,1);
-    OutputHistogram("DIRECTIVES_NI%NCNB",\%cppcmdcount_ni,$ncnb_physical_lines_ni);
-    OutputHistogram("DIRECTIVES_NI%PHYS",\%cppcmdcount_ni,$physical_lines_ni);
+  OutputHistogram("DIRECTIVES_HNI",\%cppcmdcount_hdr_ni,1);
+  OutputHistogram("DIRECTIVES_HNI%NCNB",\%cppcmdcount_hdr_ni,$ncnb_physical_lines_hdr_ni);
+  OutputHistogram("DIRECTIVES_HNI%PHYS",\%cppcmdcount_hdr_ni,$physical_lines_hdr_ni);
 
-    OutputHistogram("DIRECTIVES_HNI",\%cppcmdcount_hdr_ni,1);
-    OutputHistogram("DIRECTIVES_HNI%NCNB",\%cppcmdcount_hdr_ni,$ncnb_physical_lines_hdr_ni);
-    OutputHistogram("DIRECTIVES_HNI%PHYS",\%cppcmdcount_hdr_ni,$physical_lines_hdr_ni);
+  OutputHistogram("DIRECTIVES_CNI",\%cppcmdcount_c_ni,1);
+  OutputHistogram("DIRECTIVES_CNI%NCNB",\%cppcmdcount_c_ni,$ncnb_physical_lines_c_ni);
+  OutputHistogram("DIRECTIVES_CNI%PHYS",\%cppcmdcount_c_ni,$physical_lines_c_ni);
 
-    OutputHistogram("DIRECTIVES_CNI",\%cppcmdcount_c_ni,1);
-    OutputHistogram("DIRECTIVES_CNI%NCNB",\%cppcmdcount_c_ni,$ncnb_physical_lines_c_ni);
-    OutputHistogram("DIRECTIVES_CNI%PHYS",\%cppcmdcount_c_ni,$physical_lines_c_ni);
-
-    print "\n";
+  print "\n";
 
 
-    OutputHistogram("CATEGORIES_NI",\%category_counts_ni,1,$true);
-    OutputHistogram("CATEGORIES_HNI",\%category_counts_hdr_ni,1);
-    OutputHistogram("CATEGORIES_CNI",\%category_counts_c_ni,1);
+  OutputHistogram("CATEGORIES_NI",\%category_counts_ni,1,$true);
+  OutputHistogram("CATEGORIES_HNI",\%category_counts_hdr_ni,1);
+  OutputHistogram("CATEGORIES_CNI",\%category_counts_c_ni,1);
 
-    print "\n";
+  print "\n";
 
 #    OutputHistogram("FAILED_CATEG",\%failed_categorization_type_count,1,$true);
 #    print "\n";
-  }
+}
 
-  # -M = dump the macro stats
-  if ($opt_M) {
-    if ($opt_v) { print STDOUT "macros..."; }
-    select MACROS;
-    print "#MACROS#: name cDefs cUndefs cCodeUses cMacroUses cCondUses cTotalUses HowUsed Categories InclusionMethods\n"; # (%functionsThatUseIt)  [removed since not used in paper & no longer exported]
-    foreach my $name (sort keys %macros) {
-      #print STDERR "MNAME=$name, @{$macros{$name}}\n";
-      #my $i = $macros{$name}[1];  #Should this now be 0?
-      #die "i not defined for $name" if (!defined($i));
 
-      #next if ($mdef_file[$i] eq $built_in_fake_file);
+sub output_macros ( )
+{ check_args(0, @_);
+  if ($opt_v) { print STDOUT "macros..."; }
+  select MACROS;
+  print "#MACROS#: name cDefs cUndefs cCodeUses cMacroUses cCondUses cTotalUses HowUsed Categories InclusionMethods\n"; # (%functionsThatUseIt)  [removed since not used in paper & no longer exported]
+  foreach my $name (sort keys %macros) {
+    #print STDERR "MNAME=$name, @{$macros{$name}}\n";
+    #my $i = $macros{$name}[1];  #Should this now be 0?
+    #die "i not defined for $name" if (!defined($i));
 
-      die if (!defined($macros_uses{$name}));
-      die if (!defined($macros_c_undefs{$name}));
-# FIXGJB: we don't use macros_used_in_functions in paper, so I removed it
-# from the *.state exported variables list --gjb
-#      die if (!defined($macros_used_in_functions{$name}));
+    #next if ($mdef_file[$i] eq $built_in_fake_file);
 
-      # FIXPERL: cperl mode doesn't count , as a statement continuer
-      # in a print
+    die if (!defined($macros_uses{$name}));
+    die if (!defined($macros_c_undefs{$name}));
+  # FIXGJB: we don't use macros_used_in_functions in paper, so I removed it
+  # from the *.state exported variables list --gjb
+  #      die if (!defined($macros_used_in_functions{$name}));
 
-      my $cCodeUses = $macros_uses{$name}[$i_usage_code];
-      my $cMacroUses = $macros_uses{$name}[$i_usage_macro];
-      my $cCondUses = $macros_uses{$name}[$i_usage_cond];
-      my $cTotalUses = $cCodeUses + $cMacroUses + $cCondUses;
+    # FIXPERL: cperl mode doesn't count , as a statement continuer
+    # in a print
 
-      print "$name", $#{$macros{$name}}+1, $macros_c_undefs{$name},
-      $cCodeUses, $cMacroUses, $cCondUses, $cTotalUses,
-      how_used_from_code_cpp_uses($cCodeUses, $cMacroUses, $cCondUses),
-      # These next two will be blank for things not defined, but only
-      # used in cond. comp. directives
-      join(",",CategoriesForMacroName($name)),
-      join(",",InclusionMethodsForMacroName($name)), "\n";
+    my $cCodeUses = $macros_uses{$name}[$i_usage_code];
+    my $cMacroUses = $macros_uses{$name}[$i_usage_macro];
+    my $cCondUses = $macros_uses{$name}[$i_usage_cond];
+    my $cTotalUses = $cCodeUses + $cMacroUses + $cCondUses;
+
+    print "$name", $#{$macros{$name}}+1, $macros_c_undefs{$name},
+    $cCodeUses, $cMacroUses, $cCondUses, $cTotalUses,
+    how_used_from_code_cpp_uses($cCodeUses, $cMacroUses, $cCondUses),
+    # These next two will be blank for things not defined, but only
+    # used in cond. comp. directives
+    join(",",CategoriesForMacroName($name)),
+    join(",",InclusionMethodsForMacroName($name)), "\n";
 # FIXGJB: we don't use macros_used_in_functions in paper, so I removed it
 # from the *.state exported variables list --gjb
 #      "\n%" . join("\n%",@{$macros_used_in_functions{$name}}),
 #      "\n";
-    }
   }
+}
 
-  if ($opt_D) {
-    if ($opt_v) { print STDOUT "defines..."; }
-    select DEFINES;
+
+sub output_defines ( )
+{ check_args(0, @_);
+  if ($opt_v) { print STDOUT "defines..."; }
+  select DEFINES;
 # don't want extra lines-- harder for postprocessing tools
 #    print  "\n";
-    print "#DEFINITIONS#: name iDef inclusion_method filename line args plines p_ncnb_lines categorization (%macrosUsedInExpansion)\n";
-    foreach my $name (sort keys %macros) {
-      # Could also print number of times it's defined.
-      for (my $iDef = 0; $iDef <= $#{$macros{$name}}; $iDef++ ) {
-	my $i = $macros{$name}[$iDef];
-	if ($mdef_file[$i] ne $built_in_fake_file) {
-	  # print STDERR "NAME=$name,", join(", ",@{$macros{$name}}),"\n";
-	  # Used to output $i third here, but it's irrelevant.
-	  print "$name", $iDef+1, $file_inclusion_method{$mdef_file[$i]},
-	  $mdef_file[$i], $mdef_line[$i], count_macro_args($mdef_formals[$i]),
-	  $mdef_physical_lines[$i], $mdef_physical_ncnb_lines[$i],
-	  $categoryname[$mdef_category[$i]],
-	  # FIX: add type name back in when we get that working
-	  #$type_name_array[$mdef_type[$i]],
-	  "\n%" . join("\n%",@{$mdef_direct_expansion_uses[$i]}), "\n";
-	}
+  print "#DEFINITIONS#: name iDef inclusion_method filename line args plines p_ncnb_lines categorization (%macrosUsedInExpansion)\n";
+  foreach my $name (sort keys %macros) {
+    # Could also print number of times it's defined.
+    for (my $iDef = 0; $iDef <= $#{$macros{$name}}; $iDef++ ) {
+      my $i = $macros{$name}[$iDef];
+      if ($mdef_file[$i] ne $built_in_fake_file) {
+	# print STDERR "NAME=$name,", join(", ",@{$macros{$name}}),"\n";
+	# Used to output $i third here, but it's irrelevant.
+	print "$name", $iDef+1, $file_inclusion_method{$mdef_file[$i]},
+	$mdef_file[$i], $mdef_line[$i], count_macro_args($mdef_formals[$i]),
+	$mdef_physical_lines[$i], $mdef_physical_ncnb_lines[$i],
+	$categoryname[$mdef_category[$i]],
+	# FIX: add type name back in when we get that working
+	#$type_name_array[$mdef_type[$i]],
+	"\n%" . join("\n%",@{$mdef_direct_expansion_uses[$i]}), "\n";
       }
     }
   }
+}
 
-  # -F = dump the function information
-  # Want a histogram of this info?  try something like:
-  # awk '$0 !~ /^[%#]/ {print $2}' < gzip.func | sort -n | uniq -c
-  if ($opt_F) {
-    if ($opt_v) { print STDOUT "functions..."; }
-    select FUNCTIONS;
-    print "#functionId cMacroExpansions (%the macros)\n";
-    foreach my $function_name_id (sort keys %function_name_to_macros_it_uses) {
-      print $function_name_id,scalar(@{$function_name_to_macros_it_uses{$function_name_id}}),"\n%",
-      join(",",@{$function_name_to_macros_it_uses{$function_name_id}}), "\n";
-    }
+# Want a histogram of this info?  try something like:
+# awk '$0 !~ /^[%#]/ {print $2}' < gzip.func | sort -n | uniq -c
+sub output_functions ( )
+{ check_args(0, @_);
+  if ($opt_v) { print STDOUT "functions..."; }
+  select FUNCTIONS;
+  print "#functionId cMacroExpansions (%the macros)\n";
+  foreach my $function_name_id (sort keys %function_name_to_macros_it_uses) {
+    print $function_name_id,scalar(@{$function_name_to_macros_it_uses{$function_name_id}}),"\n%",
+    join(",",@{$function_name_to_macros_it_uses{$function_name_id}}), "\n";
   }
+}
 
-  if ($opt_L) {
-    if ($opt_v) { print STDOUT "funclines..."; }
-    select FUNCLINES;
-    foreach my $filename (sort keys %files_function_lines) {
-      print "file: $filename\n", join("\n ",@{$files_function_lines{$filename}}), "\n";
-    }
-    foreach my $function (sort keys %function_to_locs) {
-      print "function: $function ";
-      my @infos = @{$function_to_locs{$function}};
-      if ($#infos == 0)
-	{ print join(', ',@{$infos[0]}); }
-      else {
-	# avoid extra semicolon at end of line
-	my @one_file_results = (); # each elt describes one file
-	foreach my $info (@infos) {
-	  # Don't really need semicolon at end of last entry
-	  push(@one_file_results, join(', ',@$info));
-	}
-	print join('; ',@one_file_results);
+
+sub output_funclines ( )
+{ check_args(0, @_);
+  if ($opt_v) { print STDOUT "funclines..."; }
+  select FUNCLINES;
+  foreach my $filename (sort keys %files_function_lines) {
+    print "file: $filename\n", join("\n ",@{$files_function_lines{$filename}}), "\n";
+  }
+  foreach my $function (sort keys %function_to_locs) {
+    print "function: $function ";
+    my @infos = @{$function_to_locs{$function}};
+    if ($#infos == 0)
+      { print join(', ',@{$infos[0]}); }
+    else {
+      # avoid extra semicolon at end of line
+      my @one_file_results = (); # each elt describes one file
+      foreach my $info (@infos) {
+	# Don't really need semicolon at end of last entry
+	push(@one_file_results, join(', ',@$info));
       }
-      print "\n";
-    }
-
-    # Use "local" instead; it seems to work.
-    # FIXPERL: Why does this give me an unitialized variable warning?
-    # undef $OFS if (defined($OFS));
-  }
-
-  # conditional compilation directive statistics
-  # output them as two rows, one with "# cat1 cat2 .... catn"
-  # the second with the results
-  if ($opt_c) {
-    if ($opt_v) { print STDOUT "ccdstats..."; }
-    select CCDSTATS;
-    print "#$OFS";
-    foreach my $cname (@cond_category_name) {
-      print $cname . $OFS;
-    }
-    print "\n";
-    foreach my $i (0..$#cond_category_name) {
-      print sum_array(map {$_->[$i]} @rg_ccd_cat_counts[@ftype_ALL]) . $OFS;
+      print join('; ',@one_file_results);
     }
     print "\n";
   }
 
-  # macro categories
-  if ($opt_C) {
-    if ($opt_v) { print STDOUT "categ..."; }
-    select CATEG;
-    foreach my $name (sort keys %macros) {
-      for (my $iDef = 0 ; $iDef <= $#{$macros{$name}}; $iDef++ ) {
-	my $index = $macros{$name}[$iDef];
-	my $category = $mdef_category[$index];
-	my $type = $mdef_type[$index];
-	if (!defined($mdef_file[$index])) {
-	  print STDERR "mdef_file[$index] not defined\n"
+  # Use "local" instead; it seems to work.
+  # FIXPERL: Why does this give me an unitialized variable warning?
+  # undef $OFS if (defined($OFS));
+}
+
+# output them as two rows, one with "# cat1 cat2 .... catn"
+# the second with the results
+sub output_ccdstats ( )
+{ check_args(0, @_);
+  if ($opt_v) { print STDOUT "ccdstats..."; }
+  select CCDSTATS;
+  print "#$OFS";
+  foreach my $cname (@cond_category_name) {
+    print $cname . $OFS;
+  }
+  print "\n";
+  foreach my $i (0..$#cond_category_name) {
+    print sum_array(map {$_->[$i]} @rg_ccd_cat_counts[@ftype_ALL]) . $OFS;
+  }
+  print "\n";
+}
+
+sub output_macro_categ ( )
+{ check_args(0, @_);
+  if ($opt_v) { print STDOUT "categ..."; }
+  select CATEG;
+  foreach my $name (sort keys %macros) {
+    for (my $iDef = 0 ; $iDef <= $#{$macros{$name}}; $iDef++ ) {
+      my $index = $macros{$name}[$iDef];
+      my $category = $mdef_category[$index];
+      my $type = $mdef_type[$index];
+      if (!defined($mdef_file[$index])) {
+	print STDERR "mdef_file[$index] not defined\n"
 	}
-	if (!defined($mdef_line[$index])) {
-	  print STDERR "mdef_line[$index] not defined\n"
+      if (!defined($mdef_line[$index])) {
+	print STDERR "mdef_line[$index] not defined\n"
 	}
-	if (!defined($categoryname[$category])) {
-	  print STDERR "categoryname[$category] not defined\n";
-	}
-	print "$mdef_file[$index]:$mdef_line[$index]: "
-	  . ($mdef_formals[$index] ? "function, " : "") . $categoryname[$category];
-	if (($category == $catEXP)
-	    || ($category == $catLITERAL)
-	    || ($category == $catCONSTANT)
-	    || ($category == $catSOME_CONSTANT))
-	  { # These dots used to be commas, but those turn into tabs with -t option
-	    print "(" . (defined($type) ? type_name($type) : "UNDEFINED_TYPE") . ")"; }
-	elsif ($category == $catFAILURE)
-	  { print "($mdef_properties[$index])"; }
-	print ": $mdef_name[$index]$mdef_formals[$index] $mdef_body[$index]\n";
+      if (!defined($categoryname[$category])) {
+	print STDERR "categoryname[$category] not defined\n";
       }
+      print "$mdef_file[$index]:$mdef_line[$index]: "
+	. ($mdef_formals[$index] ? "function, " : "") . $categoryname[$category];
+      if (($category == $catEXP)
+	  || ($category == $catLITERAL)
+	  || ($category == $catCONSTANT)
+	  || ($category == $catSOME_CONSTANT))
+	{ # These dots used to be commas, but those turn into tabs with -t option
+	  print "(" . (defined($type) ? type_name($type) : "UNDEFINED_TYPE") . ")"; }
+      elsif ($category == $catFAILURE)
+	{ print "($mdef_properties[$index])"; }
+      print ": $mdef_name[$index]$mdef_formals[$index] $mdef_body[$index]\n";
     }
   }
+}
 
-  if ($opt_p)
-    { if ($opt_v) { print STDOUT "properties..."; }
-      select PROP;
-      my $cMacrosInTables = $#mdef_properties + 1;
-      my $cMacrosInPackage = 0;
-      my $i = 0;
-      my @mdef_properties_in_package = ();
-      while ($i < $cMacrosInTables) {
-	($i++ and next) if ($file_inclusion_method{$mdef_file[$i]} ne "FromStdin");
-	push @mdef_properties_in_package, $mdef_properties[$i];
+sub output_properties ( )
+{ check_args(0, @_);
+  if ($opt_v) { print STDOUT "properties..."; }
+  select PROP;
+  my $cMacrosInTables = $#mdef_properties + 1;
+  my $cMacrosInPackage = 0;
+  my $i = 0;
+  my @mdef_properties_in_package = ();
+  while ($i < $cMacrosInTables) {
+    ($i++ and next) if ($file_inclusion_method{$mdef_file[$i]} ne "FromStdin");
+    push @mdef_properties_in_package, $mdef_properties[$i];
 #DBG	print STDERR "Adding $mdef_properties[$i]\n";
-	$i++;
-      }
-      $cMacrosInPackage = $#mdef_properties_in_package + 1;
-      print "#Macro definition property histogram: total defs = $cMacrosInPackage\n";
-      my %prop_histogram = HistogramNumericFromList(@mdef_properties_in_package);
-      foreach my $prop (sort {$prop_histogram{$b} <=> $prop_histogram{$a}}
-			keys %prop_histogram) {
-	print "$prop_histogram{$prop} ", string_from_prop($prop) . "\n";
-      }
-      print "#Macro definition property percentages: total defs = $cMacrosInPackage\n";
-      $i = 0;
-      my $cASSIGN = 0;
-      my $cFREE_VAR = 0;
-      my $cINVOKES_MACRO = 0;
-      my $cPASSES_TYPE_AS_ARG = 0;
-      my $cUSES_MACRO_AS_TYPE = 0;
-      my $cUSES_ARG_AS_TYPE = 0;
-      my $cASSEMBLY_CODE = 0;
-      my $cPASTING = 0;
-      my $cSTRINGIZE = 0;
-      while ($i < $cMacrosInTables) {
+    $i++;
+  }
+  $cMacrosInPackage = $#mdef_properties_in_package + 1;
+  print "#Macro definition property histogram: total defs = $cMacrosInPackage\n";
+  my %prop_histogram = HistogramNumericFromList(@mdef_properties_in_package);
+  foreach my $prop (sort {$prop_histogram{$b} <=> $prop_histogram{$a}}
+		    keys %prop_histogram) {
+    print "$prop_histogram{$prop} ", string_from_prop($prop) . "\n";
+  }
+  print "#Macro definition property percentages: total defs = $cMacrosInPackage\n";
+  $i = 0;
+  my $cASSIGN = 0;
+  my $cFREE_VAR = 0;
+  my $cINVOKES_MACRO = 0;
+  my $cPASSES_TYPE_AS_ARG = 0;
+  my $cUSES_MACRO_AS_TYPE = 0;
+  my $cUSES_ARG_AS_TYPE = 0;
+  my $cASSEMBLY_CODE = 0;
+  my $cPASTING = 0;
+  my $cSTRINGIZE = 0;
+  while ($i < $cMacrosInTables) {
 #	next if MacroNotDefinedInsidePackage($name);  This is wrong -- it would check if
 #        any of the macro name's defs occur outside the package and would end up
 #        outputting information for any definition which is defined somewhere inside
 #        the package, even those definitions from outside the package
-	($i++ and next) if ($file_inclusion_method{$mdef_file[$i]} ne "FromStdin");
-	$cASSIGN++ if ($mdef_properties[$i] & $propASSIGN);
-	$cFREE_VAR++ if ($mdef_properties[$i] & $propFREE_VAR);
-	$cINVOKES_MACRO++ if ($mdef_properties[$i] & $propINVOKES_MACRO);
-	$cPASSES_TYPE_AS_ARG++ if ($mdef_properties[$i] & $propPASSES_TYPE_AS_ARG);
-	$cUSES_MACRO_AS_TYPE++ if ($mdef_properties[$i] & $propUSES_MACRO_AS_TYPE);
-	$cUSES_ARG_AS_TYPE++ if ($mdef_properties[$i] & $propUSES_ARG_AS_TYPE);
-	$cASSEMBLY_CODE++ if ($mdef_properties[$i] & $propASSEMBLY_CODE);
-	$cPASTING++ if ($mdef_properties[$i] & $propPASTING);
-	$cSTRINGIZE++ if ($mdef_properties[$i] & $propSTRINGIZE);
-	$i++;
-      }
-      prop_line_for('assign',$cASSIGN,$cMacrosInTables);
-      prop_line_for('free_var',$cFREE_VAR,$cMacrosInTables);
-      prop_line_for('invokes_macro',$cINVOKES_MACRO,$cMacrosInTables);
-      prop_line_for('passes_type_as_arg',$cPASSES_TYPE_AS_ARG,$cMacrosInTables);
-      prop_line_for('uses_macro_as_type',$cUSES_MACRO_AS_TYPE,$cMacrosInTables);
-      prop_line_for('uses_arg_as_type',$cUSES_ARG_AS_TYPE,$cMacrosInTables);
-      prop_line_for('assembly_code',$cASSEMBLY_CODE,$cMacrosInTables);
-      prop_line_for('pasting',$cPASTING,$cMacrosInTables);
-      prop_line_for('stringize',$cSTRINGIZE,$cMacrosInTables);
-    }
+    ($i++ and next) if ($file_inclusion_method{$mdef_file[$i]} ne "FromStdin");
+    $cASSIGN++ if ($mdef_properties[$i] & $propASSIGN);
+    $cFREE_VAR++ if ($mdef_properties[$i] & $propFREE_VAR);
+    $cINVOKES_MACRO++ if ($mdef_properties[$i] & $propINVOKES_MACRO);
+    $cPASSES_TYPE_AS_ARG++ if ($mdef_properties[$i] & $propPASSES_TYPE_AS_ARG);
+    $cUSES_MACRO_AS_TYPE++ if ($mdef_properties[$i] & $propUSES_MACRO_AS_TYPE);
+    $cUSES_ARG_AS_TYPE++ if ($mdef_properties[$i] & $propUSES_ARG_AS_TYPE);
+    $cASSEMBLY_CODE++ if ($mdef_properties[$i] & $propASSEMBLY_CODE);
+    $cPASTING++ if ($mdef_properties[$i] & $propPASTING);
+    $cSTRINGIZE++ if ($mdef_properties[$i] & $propSTRINGIZE);
+    $i++;
+  }
+  prop_line_for('assign',$cASSIGN,$cMacrosInTables);
+  prop_line_for('free_var',$cFREE_VAR,$cMacrosInTables);
+  prop_line_for('invokes_macro',$cINVOKES_MACRO,$cMacrosInTables);
+  prop_line_for('passes_type_as_arg',$cPASSES_TYPE_AS_ARG,$cMacrosInTables);
+  prop_line_for('uses_macro_as_type',$cUSES_MACRO_AS_TYPE,$cMacrosInTables);
+  prop_line_for('uses_arg_as_type',$cUSES_ARG_AS_TYPE,$cMacrosInTables);
+  prop_line_for('assembly_code',$cASSEMBLY_CODE,$cMacrosInTables);
+  prop_line_for('pasting',$cPASTING,$cMacrosInTables);
+  prop_line_for('stringize',$cSTRINGIZE,$cMacrosInTables);
+}
 
-  if ($opt_P)
-    { if ($opt_v) { print STDOUT "depend..."; }
+
+sub output_dependences ( )
+{ check_args(0, @_);
+  if ($opt_v) { print STDOUT "depend..."; }
       select DEPEND;
       # print "===========================================================================\n";
       print "Macro dependence info\n";
@@ -521,19 +494,25 @@ sub output_stats ()
 		  print "           exp_dep: @{$mdef_direct_expansion_uses[$i]}\n"; } }
 	  else
 	    { print "  no def; used on $macros_used_by_cpp{$macro_name}\n"; }
-	  if (scalar(keys %{$inclusion_dependenton{$macro_name}}) > 0)
-	    { print "  i_depon: ", join(' ',sort keys %{$inclusion_dependenton{$macro_name}}), "\n"; }
-	  if (scalar(keys %{$inclusion_dependees{$macro_name}}) > 0)
-	    { print "  i_depee: ", join(' ',sort keys %{$inclusion_dependees{$macro_name}}), "\n"; }
-	  if ($inclusion_dependee_lines{$macro_name} > 0)
+	  if (scalar(keys %{$macro_inclusion_dependenton{$macro_name}}) > 0)
+	    { print "  i_depon: ", join(' ',sort keys %{$macro_inclusion_dependenton{$macro_name}}), "\n"; }
+	  if (scalar(keys %{$macro_inclusion_dependees{$macro_name}}) > 0)
+	    { print "  i_depee: ", join(' ',sort keys %{$macro_inclusion_dependees{$macro_name}}), "\n"; }
+	  if (!exists($inclusion_dependee_lines{$macro_name}))
+	    { $inclusion_dependee_lines{$macro_name} = 0; }
+	  elsif ($inclusion_dependee_lines{$macro_name} > 0)
 	    { print "  i_depee_lines: ", $inclusion_dependee_lines{$macro_name}, "\n"; }
-	  if (scalar(keys %{$expansion_dependenton{$macro_name}}) > 0)
-	    { print "  e_depon: ", join(' ',sort keys %{$expansion_dependenton{$macro_name}}), "\n"; }
-	  if (scalar(keys %{$expansion_dependees{$macro_name}}) > 0)
-	    { print "  e_depee: ", join(' ',sort keys %{$expansion_dependees{$macro_name}}), "\n"; }
-	  if ($expansion_dependee_lines{$macro_name} > 0)
+	  if (scalar(keys %{$macro_expansion_dependenton{$macro_name}}) > 0)
+	    { print "  e_depon: ", join(' ',sort keys %{$macro_expansion_dependenton{$macro_name}}), "\n"; }
+	  if (scalar(keys %{$macro_expansion_dependees{$macro_name}}) > 0)
+	    { print "  e_depee: ", join(' ',sort keys %{$macro_expansion_dependees{$macro_name}}), "\n"; }
+	  if (!exists($expansion_dependee_lines{$macro_name}))
+	    { $expansion_dependee_lines{$macro_name} = 0; }
+	  elsif ($expansion_dependee_lines{$macro_name} > 0)
 	    { print "  e_depee_lines: ", $expansion_dependee_lines{$macro_name}, "\n"; }
-	  if ($either_dependee_lines{$macro_name} > 0)
+	  if (!exists($either_dependee_lines{$macro_name}))
+	    { $either_dependee_lines{$macro_name} = 0; }
+	  elsif ($either_dependee_lines{$macro_name} > 0)
 	    { print "  tot_depee_lines: ", $either_dependee_lines{$macro_name}, "\n"; } }
 
       my %defs_lines = ();
@@ -603,6 +582,9 @@ sub output_stats ()
 			  : 0) . "\n"; }
     }
 
+
+sub output_lint ( )
+{ check_args(0, @_);
   # Produce a version with info pre-digested for easier graphing.
 
   # Total number of warnings
@@ -624,269 +606,260 @@ sub output_stats ()
   # # For each warning, number of formal uses with that warning.
 
 
-  if ($opt_l)
-    { if ($opt_v) { print STDOUT "lint..."; }
-      select LINT;
-      my $old_ofs = $OFS;
-      $OFS = "\n    ";
+  if ($opt_v) { print STDOUT "lint..."; }
+  select LINT;
+  my $old_ofs = $OFS;
+  $OFS = "\n    ";
 
-      my $num_macro_defs = 0;
-      # The different possible warnings:
-      # Per macro
-      my $warn_null_with_args = 0;
-      my $warn_newline = 0;
-      my $warn_unparen_body = 0;
-      my $warn_semicolon_swallowing = 0; # split into multiple_statements and full_statement?
-      my $warn_free_var = 0;
-      ## Don't bother to do these per total number of formals or per total
-      ## number of formal uses; for now, just per number of macro defs.
-      # Per formal
-      my $warn_formal_bad_name = 0;
-      my $warn_formal_multiple_uses = 0;
-      # Per formal use
-      my $warn_formal_use_adjacent = 0;
-      my $warn_formal_use_unparen = 0;
-      my $warn_formal_use_side_effect = 0;
+  my $num_macro_defs = 0;
+  my $num_macros = 0;
+  # The different possible warnings:
+  # Per macro name
+  my $warn_different_arity = 0;
+  # Per macro definition
+  my $warn_null_with_args = 0;
+  my $warn_newline = 0;
+  my $warn_unparen_body = 0;
+  my $warn_semicolon_swallowing = 0; # split into multiple_statements and full_statement?
+  my $warn_free_var = 0;
+  ## Don't bother to do these per total number of formals or per total
+  ## number of formal uses; for now, just per number of macro defs.
+  # Per formal
+  my $warn_formal_bad_name = 0;
+  my $warn_formal_multiple_uses = 0;
+  # Per formal use
+  my $warn_formal_use_adjacent = 0;
+  my $warn_formal_use_unparen = 0;
+  my $warn_formal_use_side_effect = 0;
 
-      for my $macro_name (sort keys %macros)
-	{ for my $i (@{$macros{$macro_name}})
-	    { if ($file_inclusion_method{$mdef_file[$i]} ne "FromInclude<>")
-		{ $num_macro_defs++;
-		  my @complaints = ();
-		  my $body = $mdef_body_simple[$i];
-		  my $args = $mdef_formals[$i];
-		  my $category = $mdef_category[$i];
-		  my $category_is_expression
-		    = (($category == $catEXP)
-		       || ($category == $catLITERAL)
-		       || ($category == $catCONSTANT)
-		       || ($category == $catSOME_CONSTANT));
-		  my $category_is_statement
-		    = (($category == $catSTATEMENT)
-		       || ($category == $catSTATEMENT_SANS_SEMI)
-		       || ($category == $catPARTIAL_STATEMENT)
-		       || ($category == $catSTATEMENTS)
-		       || ($category == $catSTATEMENTS_SANS_SEMI)
-		       || ($category == $catPARTIAL_STATEMENTS));
-		  my $properties = $mdef_properties[$i];
+  for my $macro_name (sort keys %macros)
+    { $num_macros++;
+      if (scalar(@{$macros{$macro_name}}) > 1)
+	{ my @args_lengths = map { my $args = $mdef_formals[$_];
+				   $args ? scalar(formals_array($args)) : 0 }
+	                         @{$macros{$macro_name}};
+	  if (scalar(grep { $_ != $args_lengths[0] } @args_lengths) != 0)
+	    { $warn_different_arity++;
+	      print LINT "macro $macro_name: inconsistent arity @args_lengths\n";
+	    } }
+      for my $i (@{$macros{$macro_name}})
+	{ if ($file_inclusion_method{$mdef_file[$i]} ne "FromInclude<>")
+	    { $num_macro_defs++;
+	      my @complaints = ();
+	      my $body = $mdef_body_simple[$i];
+	      my $args = $mdef_formals[$i];
+	      my $category = $mdef_category[$i];
+	      my $category_is_expression
+		= (($category == $catEXP)
+		   || ($category == $catLITERAL)
+		   || ($category == $catCONSTANT)
+		   || ($category == $catSOME_CONSTANT));
+	      my $category_is_statement
+		= (($category == $catSTATEMENT)
+		   || ($category == $catSTATEMENT_SANS_SEMI)
+		   || ($category == $catPARTIAL_STATEMENT)
+		   || ($category == $catSTATEMENTS)
+		   || ($category == $catSTATEMENTS_SANS_SEMI)
+		   || ($category == $catPARTIAL_STATEMENTS));
+	      my $properties = $mdef_properties[$i];
 
-		  my $this_warn_formal_non_identifier = $false;
-		  my $this_warn_formal_reserved_word = $false;
-		  my $this_warn_formal_multiple_uses = $false;
-		  my $this_warn_formal_use_adjacent = $false;
-		  my $this_warn_formal_use_unparen = $false;
-		  my $this_warn_formal_use_side_effect = $false;
+	      my $this_warn_formal_non_identifier = $false;
+	      my $this_warn_formal_reserved_word = $false;
+	      my $this_warn_formal_multiple_uses = $false;
+	      my $this_warn_formal_use_adjacent = $false;
+	      my $this_warn_formal_use_unparen = $false;
+	      my $this_warn_formal_use_side_effect = $false;
 
-		  # Check formals
-		  if ($args)
-		    { my @args = formals_array($args);
-		      # Check for formals but no body -- "#define foo(bar)"
-		      # might have been intended as "#define foo (bar)".
-		      # Suppress if body contains an empty comment.
-		      if ((!$body) && !($mdef_body[$i] =~ /\/\*\s*\*\/$/))
-			{ if (((scalar(@args) == 1) && ($args[0] eq $macro_name))
-			      || ($args !~ /\(\s*$identifier_re\s*(,\s*$identifier_re\s*)*\s*\)/))
-			    { push(@complaints,
-				   "missing space between macro name and parenthesized body (empty comment suppresses)");
-			      $warn_null_with_args++; }
-			  elsif ((scalar(@args) == 1) && ($macro_name !~ /^DEBUG_/))
-			    # Suppress warning if multiple arguments or debugging macro
-			    { push(@complaints,
-				   "possible missing space between macro name and parenthesized body (empty comment suppresses)");
-			      $warn_null_with_args++; } }
+	      # Check formals
+	      if ($args)
+		{ my @args = formals_array($args);
+		  # Check for formals but no body -- "#define foo(bar)"
+		  # might have been intended as "#define foo (bar)".
+		  # Suppress if body contains an empty comment.
+		  if ((!$body) && !($mdef_body[$i] =~ /\/\*\s*\*\/$/))
+		    { if (((scalar(@args) == 1) && ($args[0] eq $macro_name))
+			  || ($args !~ /\(\s*$identifier_re\s*(,\s*$identifier_re\s*)*\s*\)/))
+			{ push(@complaints,
+			       "missing space between macro name and parenthesized body (empty comment suppresses)");
+			  $warn_null_with_args++; }
+		      elsif ((scalar(@args) == 1) && ($macro_name !~ /^DEBUG_/))
+			# Suppress warning if multiple arguments or debugging macro
+			{ push(@complaints,
+			       "possible missing space between macro name and parenthesized body (empty comment suppresses)");
+			  $warn_null_with_args++; } }
 
-		      # Check uses of each formal
-		      for my $arg (@args)
-			{ my @formal_complaints = ();
-			  if (($arg !~ /^$identifier_re(\.\.\.)?$/o)
-			      && ($arg ne "..."))
-			    { push(@formal_complaints, "not an identifier");
-			      $this_warn_formal_non_identifier = $true; }
-			  elsif ($arg =~ /^$reserved_word_re$/o)
-			    { push(@formal_complaints, "name is reserved word");
-			      $this_warn_formal_reserved_word = $true; }
-			  # Add spaces to make sure that there's a first and last part
-			  my @parts = split(/\b\Q$arg\E\b/, " $body ");
-			  for my $i (0..$#parts)
-			    { $parts[$i] =~ s/^\s+//;
-			      $parts[$i] =~ s/\s+$//; }
+		  # Check uses of each formal
+		  for my $arg (@args)
+		    { my @formal_complaints = ();
+		      if (($arg !~ /^$identifier_re(\.\.\.)?$/o)
+			  && ($arg ne "..."))
+			{ push(@formal_complaints, "not an identifier");
+			  $this_warn_formal_non_identifier = $true; }
+		      elsif ($arg =~ /^$reserved_word_re$/o)
+			{ push(@formal_complaints, "name is reserved word");
+			  $this_warn_formal_reserved_word = $true; }
+		      # Add spaces to make sure that there's a first and last part
+		      my @parts = split(/\b\Q$arg\E\b/, " $body ");
+		      for my $i (0..$#parts)
+			{ $parts[$i] =~ s/^\s+//;
+			  $parts[$i] =~ s/\s+$//; }
 
-			  my @unparen_uses = ();
-			  my @sideeff_uses = ();
-			  my $is_selector = $false;
-			  for my $i (1..$#parts)
-			    { my $pre = $parts[$i-1];
-			      my $post = $parts[$i];
-			      # if ($macro_name eq "__isctype") { print STDOUT "pre = $pre\nmatch = " . ($pre =~ /[\?:,\)]$/) . "  " . ($pre !~ /\($/) . "  " . ($post !~ /^\)/) . "  " . ($arg ne $body) . "\n" ; }
-			      if (($i < $#parts) && (!$post))
-				{ push(@formal_complaints,
-				       "adjacent uses \#$i and \#" . $i+1);
-				  $this_warn_formal_use_adjacent = $true; }
+		      my @unparen_uses = ();
+		      my @sideeff_uses = ();
+		      my $is_selector = $false;
+		      for my $i (1..$#parts)
+			{ my $pre = $parts[$i-1];
+			  my $post = $parts[$i];
+			  # if ($macro_name eq "__isctype") { print STDOUT "pre = $pre\nmatch = " . ($pre =~ /[\?:,\)]$/) . "  " . ($pre !~ /\($/) . "  " . ($post !~ /^\)/) . "  " . ($arg ne $body) . "\n" ; }
+			  if (($i < $#parts) && (!$post))
+			    { push(@formal_complaints,
+				   "adjacent uses \#$i and \#" . $i+1);
+			      $this_warn_formal_use_adjacent = $true; }
 
-			      if (!$is_selector && ($pre =~ /$selector_regexp$/o))
-				{ $is_selector = $true; }
+			  if (!$is_selector && ($pre =~ /$selector_regexp$/o))
+			    { $is_selector = $true; }
 
-			      # Maybe only do this test if body is an expression (nah).
-			      if (# only (unparenthesized) names follow selectors
-				  (!$is_selector)
-				  && (($pre !~ /\($/) || ($post !~ /^\)/))
-				  # Don't complain if arg is whole body --
-				  # probably a syntactic macro.
-				  && ($arg ne $body)
-				  # A better test than category == 'expression'
-				  # is whether this use is adjacent to an operator.
-				  # && $category_is_expression
-				  && (($pre =~ /$binop_regexp$/o)
-				      || ($pre =~ /$prefix_unop_regexp$/o)
-				      #  for ? : and , and casting
-				      || ($pre =~ /[\?:,\)]$/)
-				      || ($post =~ /^$binop_regexp/o)
-				      || ($post =~ /^$postfix_unop_regexp/o)
-				      || ($post =~ /^$selector_regexp/o)
-				      # no comma: it's lowest precedence and left-associative
-				      || ($post =~ /^[\?:]/o) #  for ? :
-				      )
+			  # Maybe only do this test if body is an expression (nah).
+			  if (# only (unparenthesized) names follow selectors
+			      (!$is_selector)
+			      && (($pre !~ /\($/) || ($post !~ /^\)/))
+			      # Don't complain if arg is whole body --
+			      # probably a syntactic macro.
+			      && ($arg ne $body)
+			      # A better test than category == 'expression'
+			      # is whether this use is adjacent to an operator.
+			      # && $category_is_expression
+			      && (($pre =~ /$binop_regexp$/o)
+				  || ($pre =~ /$prefix_unop_regexp$/o)
+				  #  for ? : and , and casting
+				  || ($pre =~ /[\?:,\)]$/)
+				  || ($post =~ /^$binop_regexp/o)
+				  || ($post =~ /^$postfix_unop_regexp/o)
+				  || ($post =~ /^$selector_regexp/o)
+				  # no comma: it's lowest precedence and left-associative
+				  || ($post =~ /^[\?:]/o) #  for ? :
 				  )
-				{ push(@unparen_uses, $i); }
-			      if (($pre =~ /(--|\+\+)$/)
-				  || ($post =~ /^(--|\+\+)/)
-				  || ($post =~ /^([-+*\/%&^\|]|<<|>>)?=[^=]/))
-				{ push(@sideeff_uses, $i); }
-			    }
-			  if (!$is_selector && (scalar(@unparen_uses) > 0))
-			    { if (scalar(@unparen_uses) == 1)
-				{ push(@formal_complaints,
-				       "unparenthesized use \#$unparen_uses[0]"); }
-			      elsif (scalar(@unparen_uses) > 1)
-				{ push(@formal_complaints,
-				       "unparenthesized uses \#"
-				       . join(",#", @unparen_uses)); }
-			      $this_warn_formal_use_unparen = $true; }
-			  if (scalar(@sideeff_uses) > 0)
-			    { my $prefix = ($is_selector
-					    ? "structure side-effected through "
-					    : "side-effected ");
-			      if (scalar(@sideeff_uses) == 1)
-				{ push(@formal_complaints,
-				       $prefix . "use \#$sideeff_uses[0]"); }
-			      elsif (scalar(@sideeff_uses) > 1)
-				{ push(@formal_complaints,
-				       $prefix . "uses \#"
-				       . join(",#", @sideeff_uses)); }
-			     $this_warn_formal_use_side_effect = $true; }
-			  if ((!$is_selector) && (scalar(@parts) > 2))
-			    { # Make this complaint first (except that "not an identifier" ought to precede it)
-			      unshift(@formal_complaints, "multiple uses");
-			      $this_warn_formal_multiple_uses = $true;
-			    }
-			  if (scalar(@formal_complaints) > 0)
-			    { push(@complaints,
-				   "formal $arg: " . join("; ", @formal_complaints)); }
-			} }
-
-		  if ($this_warn_formal_non_identifier || $this_warn_formal_reserved_word)
-		    { $warn_formal_bad_name++; }
-		  if ( $this_warn_formal_multiple_uses)
-		    { $warn_formal_multiple_uses++; }
-		  if ($this_warn_formal_use_adjacent)
-		    { $warn_formal_use_adjacent++; }
-		  if ($this_warn_formal_use_unparen)
-		    { $warn_formal_use_unparen++; }
-		  if ($this_warn_formal_use_side_effect)
-		    { $warn_formal_use_side_effect++; }
-
-		  # Check body
-		  if ($body =~ /\n/)
-		    { die "$mdef_file[$i]:$mdef_line[$i]: newline in $macro_name (def #$i): '$body'"; }
-		      if ($mdef_body[$i] =~ /\n/)
+			      )
+			    { push(@unparen_uses, $i); }
+			  if (($pre =~ /(--|\+\+)$/)
+			      || ($post =~ /^(--|\+\+)/)
+			      || ($post =~ /^([-+*\/%&^\|]|<<|>>)?=[^=]/))
+			    { push(@sideeff_uses, $i); }
+			}
+		      if (!$is_selector && (scalar(@unparen_uses) > 0))
+			{ if (scalar(@unparen_uses) == 1)
+			    { push(@formal_complaints,
+				   "unparenthesized use \#$unparen_uses[0]"); }
+			  elsif (scalar(@unparen_uses) > 1)
+			    { push(@formal_complaints,
+				   "unparenthesized uses \#"
+				   . join(",#", @unparen_uses)); }
+			  $this_warn_formal_use_unparen = $true; }
+		      if (scalar(@sideeff_uses) > 0)
+			{ my $prefix = ($is_selector
+					? "structure side-effected through "
+					: "side-effected ");
+			  if (scalar(@sideeff_uses) == 1)
+			    { push(@formal_complaints,
+				   $prefix . "use \#$sideeff_uses[0]"); }
+			  elsif (scalar(@sideeff_uses) > 1)
+			    { push(@formal_complaints,
+				   $prefix . "uses \#"
+				   . join(",#", @sideeff_uses)); }
+			  $this_warn_formal_use_side_effect = $true; }
+		      if ((!$is_selector) && (scalar(@parts) > 2))
+			{ # Make this complaint first (except that "not an identifier" ought to precede it)
+			  unshift(@formal_complaints, "multiple uses");
+			  $this_warn_formal_multiple_uses = $true;
+			}
+		      if (scalar(@formal_complaints) > 0)
 			{ push(@complaints,
-			       "multi-line comment or string");
-			  $warn_newline++; }
-		  if ($category_is_expression && ($category != $catLITERAL))
-		    { # Don't demand parentheses around a single identifier,
-		      # number, or string, or around a function call (which has
-		      # high precedence).
-		      if (!	# complain if not one of the following:
-			  (# parenthesized, or function call
-			   (($body =~ /^($identifier_re\s*)?\(/o)
-			    # For testing
-			    # && (print STDERR "match = $MATCH, close = \n")
-			    && (find_close_delimiter('(', $body, length($MATCH)) == length($body)-1))
-			   # identifier or number
-			   || ($body =~ /^\w+$/)
-			   # string
-			   || ($body =~ /^$string_literal_re$/o)
-			   # character
-			   || ($body =~ /^$char_literal_re$/o)))
-			{ push(@complaints,
-			       "macro body should be enclosed in parentheses"
-			       # If it has args and assignment, maybe it's really a semicolonless statement.
-			       . (($args && ($properties & $propASSIGN)) ? " (if used as expression)" : ""));
-			  $warn_unparen_body++; } }
-		  if ($category_is_statement)
-		    { if (($category == $catSTATEMENTS)
-			  || ($category == $catSTATEMENTS_SANS_SEMI))
-			{ push(@complaints,
-			       "multiple statements: enclose in \"do ... while (0)\"");
-			  $warn_semicolon_swallowing++; }
-		      elsif (($category == $catSTATEMENT)
-			     || ($category == $catSTATEMENTS))
-			{ push(@complaints,
-			       "semicolon-swallowing problem: enclose statement in \"do ... while (0)\"");
-			  $warn_semicolon_swallowing++; } }
+			       "formal $arg: " . join("; ", @formal_complaints)); }
+		    } }
 
-		  if ($properties & $propFREE_VAR)
-		    { my $free_vars = $mdef_free_vars[$i];
-		      if (!$free_vars)
-			{ die "properties includes propFREE_VAR, but none listed $macro_name, def \#$i = $body"; }
-		      push(@complaints, "free variable"
-			   . (($free_vars =~ /,/) ? "s " : " ")
-			   . $free_vars);
-		      $warn_free_var++; }
+	      if ($this_warn_formal_non_identifier || $this_warn_formal_reserved_word)
+		{ $warn_formal_bad_name++; }
+	      if ( $this_warn_formal_multiple_uses)
+		{ $warn_formal_multiple_uses++; }
+	      if ($this_warn_formal_use_adjacent)
+		{ $warn_formal_use_adjacent++; }
+	      if ($this_warn_formal_use_unparen)
+		{ $warn_formal_use_unparen++; }
+	      if ($this_warn_formal_use_side_effect)
+		{ $warn_formal_use_side_effect++; }
 
-		  if (scalar(@complaints) > 0)
-		    { print LINT "$mdef_file[$i]:$mdef_line[$i]:\n        #define $macro_name$args $mdef_body[$i]", @complaints;
-			# Separate print statement so we don't get $OFS before it
-			print LINT "\n"; }
-		} } }
-      # Note that $num_macro_defs != $cMacrosInTables because we omit FromInclude<>
-      print "\n\n";
-      print "Total macro definitions not in libraries: $num_macro_defs\n";
-      if ($num_macro_defs > 0)
-	{ print "$warn_null_with_args ("
-	    . sprintf("%2.2f",percent2($warn_null_with_args,$num_macro_defs))
-	      . "%) Null body with args\n";
-	  print "$warn_newline ("
-	    . sprintf("%2.2f",percent2($warn_newline,$num_macro_defs))
-	      . "%) contains newline\n";
-	  print "$warn_unparen_body ("
-	    . sprintf("%2.2f",percent2($warn_unparen_body,$num_macro_defs))
-	      . "%) unparenthesized body\n";
-	  print "$warn_semicolon_swallowing ("
-	    . sprintf("%2.2f",percent2($warn_semicolon_swallowing,$num_macro_defs))
-	      . "%) swallows semicolon\n";
-	  print "$warn_free_var ("
-	    . sprintf("%2.2f",percent2($warn_free_var,$num_macro_defs))
-	      . "%) free variables\n";
-	  print "$warn_formal_bad_name ("
-	    . sprintf("%2.2f",percent2($warn_formal_bad_name,$num_macro_defs))
-	      . "%) bad formal name\n";
-	  print "$warn_formal_multiple_uses ("
-	    . sprintf("%2.2f",percent2($warn_formal_multiple_uses,$num_macro_defs))
-	      . "%) multiple formal uses\n";
-	  print "$warn_formal_use_adjacent ("
-	    . sprintf("%2.2f",percent2($warn_formal_use_adjacent,$num_macro_defs))
-	      . "%) adjacent formal uses\n";
-	  print "$warn_formal_use_unparen ("
-	    . sprintf("%2.2f",percent2($warn_formal_use_unparen,$num_macro_defs))
-	      . "%) unparenthesized formal uses\n";
-	  print "$warn_formal_use_side_effect ("
-	    . sprintf("%2.2f",percent2($warn_formal_use_side_effect,$num_macro_defs))
-	      . "%) side-effected formal\n"; }
+	      # Check body
+	      if ($body =~ /\n/)
+		{ die "$mdef_file[$i]:$mdef_line[$i]: newline in $macro_name (def #$i): '$body'"; }
+		  if ($mdef_body[$i] =~ /\n/)
+		    { push(@complaints,
+			   "multi-line comment or string");
+		      $warn_newline++; }
+	      if ($category_is_expression && ($category != $catLITERAL))
+		{ # Don't demand parentheses around a single identifier,
+		  # number, or string, or around a function call (which has
+		  # high precedence).
+		  if (!		# complain if not one of the following:
+		      ( # parenthesized, or function call
+		       (($body =~ /^($identifier_re\s*)?([\(\{])/o)
+			# For testing
+			# && (print STDERR "match = $MATCH, close = \n")
+			&& (find_close_delimiter($2, $body, length($MATCH)) == length($body)-1))
+		       # identifier or number
+		       || ($body =~ /^\w+$/)
+		       # string
+		       || ($body =~ /^$string_literal_re$/o)
+		       # character
+		       || ($body =~ /^$char_literal_re$/o)))
+		    { push(@complaints,
+			   "macro body should be enclosed in parentheses"
+			   # If it has args and assignment, maybe it's really a semicolonless statement.
+			   . (($args && ($properties & $propASSIGN)) ? " (if used as expression)" : ""));
+		      $warn_unparen_body++; } }
+	      if ($category_is_statement)
+		{ if (($category == $catSTATEMENTS)
+		      || ($category == $catSTATEMENTS_SANS_SEMI))
+		    { push(@complaints,
+			   "multiple statements: enclose in \"do ... while (0)\"");
+		      $warn_semicolon_swallowing++; }
+		  elsif (($category == $catSTATEMENT)
+			 || ($category == $catSTATEMENTS))
+		    { push(@complaints,
+			   "semicolon-swallowing problem: enclose statement in \"do ... while (0)\"");
+		      $warn_semicolon_swallowing++; } }
 
-      $OFS = $old_ofs;
-    } # end of if $opt_l (lint)
+	      if ($properties & $propFREE_VAR)
+		{ my $free_vars = $mdef_free_vars[$i];
+		  if (!$free_vars)
+		    { die "properties includes propFREE_VAR, but none listed $macro_name, def \#$i = $body"; }
+		  push(@complaints, "free variable"
+		       . (($free_vars =~ /,/) ? "s " : " ")
+		       . $free_vars);
+		  $warn_free_var++; }
 
+	      if (scalar(@complaints) > 0)
+		{ print LINT "$mdef_file[$i]:$mdef_line[$i]:\n        #define $macro_name$args $mdef_body[$i]", @complaints;
+		    # Separate print statement so we don't get $OFS before it
+		    print LINT "\n"; }
+	    } } }
+
+  # Note that $num_macro_defs != $cMacrosInTables because we omit FromInclude<>
+  if ($num_macro_defs > 0)
+    { print_lint_summary($warn_different_arity, $warn_null_with_args,
+			 $warn_newline, $warn_unparen_body,
+			 $warn_semicolon_swallowing, $warn_free_var,
+			 $warn_formal_bad_name, $warn_formal_multiple_uses,
+			 $warn_formal_use_adjacent,
+			 $warn_formal_use_unparen,
+			 $warn_formal_use_side_effect,
+			 $num_macros, $num_macro_defs); }
+
+  $OFS = $old_ofs;
+}
+
+
+sub output_frequse ( )
+{ check_args(0, @_);
   if ($opt_v) { print STDOUT "frequse..."; }
   compute_freq_use_info();
   select(FREQUSE);
@@ -898,7 +871,11 @@ sub output_stats ()
     OutputCountsHistogramCum(0,$macros_c_most_uses_for[$cat],
 			     make_cum_array(@{$macros_c_number_uses_for[$cat]}));
   }
+}
 
+
+sub output_freqdef ( )
+{ check_args(0, @_);
   if ($opt_v) { print STDOUT "freqdef..."; }
   compute_freq_def_info();
   select(FREQDEF);
@@ -910,9 +887,11 @@ sub output_stats ()
     OutputCountsHistogramCum(1,$macros_c_most_defs_for[$cat],
 			     make_cum_array(@{$macros_c_number_defs_for[$cat]}));
   }
-
-  if ($opt_v) { print STDOUT "done\n"; }
 }
+
+
+###########################################################################
+
 
 # Use to print out the PROP file's output
 sub prop_line_for {
@@ -920,7 +899,7 @@ sub prop_line_for {
   printf "%d${OFS}(%2.2f%%)${OFS}%s\n", $value, 100*$value/$total,$label;
 }
 
-sub HistogramNumericFromList (@) {
+sub HistogramNumericFromList ( @ ) {
   my %histogram = ();
   foreach my $item (@_) {
     local $WARNING = 0;
@@ -932,7 +911,7 @@ sub HistogramNumericFromList (@) {
 # Returns a categorization string describing how the macro was used
 # (one of eight (was four)); in alphabetical order:
 #   Code CodeCond CodeMacro CodeMacroCond Cond Macro MacroCond NoUses
-sub how_used_from_code_cpp_uses ($$$) {
+sub how_used_from_code_cpp_uses ( $$$ ) {
   my ($cCodeUses, $cMacroUses, $cCondUses) = check_args(3,@_);
   my $result = "";
   $result .= "Code" if ($cCodeUses > 0);
@@ -945,7 +924,7 @@ sub how_used_from_code_cpp_uses ($$$) {
 
 # Return a sorted version of the list
 # passed in, with duplicates removed
-sub UniquifyAndSortList (@) {
+sub UniquifyAndSortList ( @ ) {
   my (@list) = check_args_at_least(0, @_);
   if (!wantarray) {
     die "UniquifyAndSortList should return to an array context.";
@@ -959,7 +938,7 @@ sub UniquifyAndSortList (@) {
 
 # Returns a list of the categories for the various definitions
 # of the macro with a given name
-sub CategoriesForMacroName ($) {
+sub CategoriesForMacroName ( $ ) {
   my ($name) = check_args(1,@_);
   my @list = ();
   if ($#{$macros{$name}} < 0) {
@@ -978,7 +957,7 @@ sub CategoriesForMacroName ($) {
 
 # Returns a list of the inclusion methods of the various
 # files in which the macro with a given name is defined
-sub InclusionMethodsForMacroName ($) {
+sub InclusionMethodsForMacroName ( $ ) {
   my ($name) = check_args(1,@_);
   my @list = ();
   if ($#{$macros{$name}} < 0) {
@@ -1026,17 +1005,18 @@ sub OutputHistogram ($$$;$) {
 
 # compute $cpp_cmds, $cpp_cmds_ni
 # %cppcmpdcount, %cppcmdcount_ni
-sub compute_global_cpp_sums () {
+sub compute_global_cpp_sums ( ) {
   check_args(0, @_);
 
-  $cpp_cmds = sum_array(@rg_cpp_cmds[@ftype_ALL]);
-  $cpp_cmds_ni = sum_array(@rg_cpp_cmds[@ftype_NOT_INCLUDED]);
-
-  $cpp_cmds_c = sum_array(@rg_cpp_cmds[@ftype_CODE]);
-  $cpp_cmds_c_ni = sum_array(@rg_cpp_cmds[@ftype_NONHEADER_NOT_INCLUDED]);
-
-  $cpp_cmds_hdr = sum_array(@rg_cpp_cmds[@ftype_HEAD]);
-  $cpp_cmds_hdr_ni = sum_array(@rg_cpp_cmds[@ftype_HEADER_NOT_INCLUDED]);
+  ## FIXGJB: these don't seem to be used
+  #   $cpp_cmds = sum_array(@rg_cpp_cmds[@ftype_ALL]);
+  #   $cpp_cmds_ni = sum_array(@rg_cpp_cmds[@ftype_NOT_INCLUDED]);
+  # 
+  #   $cpp_cmds_c = sum_array(@rg_cpp_cmds[@ftype_CODE]);
+  #   $cpp_cmds_c_ni = sum_array(@rg_cpp_cmds[@ftype_NONHEADER_NOT_INCLUDED]);
+  # 
+  #   $cpp_cmds_hdr = sum_array(@rg_cpp_cmds[@ftype_HEAD]);
+  #   $cpp_cmds_hdr_ni = sum_array(@rg_cpp_cmds[@ftype_HEADER_NOT_INCLUDED]);
 
   sum_parallel_hashes(\%cppcmdcount,@rg_cppcmdcounts[@ftype_ALL]);
   sum_parallel_hashes(\%cppcmdcount_ni,@rg_cppcmdcounts[@ftype_NOT_INCLUDED]);
@@ -1054,7 +1034,7 @@ sub compute_global_cpp_sums () {
 
 # Return false if any of the definitions of the macro name
 # occur inside the package
-sub MacroNotDefinedInsidePackage ($) { # returns bool
+sub MacroNotDefinedInsidePackage ( $ ) { # returns bool
   my ($name) = check_args(1,@_);
   for (my $iDef = 0 ; $iDef <= $#{$macros{$name}}; $iDef++ ) {
     my $index = $macros{$name}[$iDef];
@@ -1069,7 +1049,7 @@ sub MacroNotDefinedInsidePackage ($) { # returns bool
 }
 
 
-sub compute_freq_use_info () {
+sub compute_freq_use_info ( ) {
   check_args(0, @_);
   $macros_c_most_uses = 0;
   # sum of slice @{$macros_uses{$name}}[@i_usage_all] is the total no. uses for macro
@@ -1099,7 +1079,7 @@ sub compute_freq_use_info () {
   }
 }
 
-sub compute_freq_def_info () {
+sub compute_freq_def_info ( ) {
   check_args(0, @_);
   $macros_c_most_defs = 0;
   # $#{$macros{$name}} is the number of macro definitions of $name
@@ -1129,7 +1109,7 @@ sub compute_freq_def_info () {
   }
 }
 
-sub OutputCountsHistogramRaw ($$@) {
+sub OutputCountsHistogramRaw ( $$@ ) {
   my ($low,$high,@counts) = @_;
   my $total = sum_array(@counts);
   print "Total", $total, "\n";
@@ -1138,7 +1118,7 @@ sub OutputCountsHistogramRaw ($$@) {
   }
 }
 
-sub OutputCountsHistogramCum ($$@) {
+sub OutputCountsHistogramCum ( $$@ ) {
   my ($low,$high,@counts) = @_;
   my $total = (scalar(@counts) == 0) ? 0 : $counts[$#counts];
   print "Total", $total, "\n";
@@ -1270,7 +1250,7 @@ if ($opt_t) { $outOFS = "\t"; } # use tab for OFS
 
 if ($opt_d) {
   # Now set these so we'll actually do the output
-  # (output_stats uses $opt_X as a guard for printing)
+  # (output_statistics uses $opt_X as a guard for printing)
   # Note that we didn't want to do this in the above $opt_d
   # guarded block since then we couldn't override specific files
   # in the above if conditionals
@@ -1332,7 +1312,7 @@ ReadMacroAnalysisState($statename);
 #print STDERR "Computing various global statistics...\n";
 compute_global_cpp_sums();
 
-output_stats();
+output_statistics();
 
 #print STDERR "Included files:", join("\n",@files_included), "\n";
 

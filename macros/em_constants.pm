@@ -4,6 +4,8 @@ package em_constants;
 require 5.000;
 require Exporter;
 use checkargs;
+# DO NOT "use em_util", as em_util uses this
+# use strict;
 
 @ISA = qw(Exporter);
 # Initially used below line to generate the @EXPORT line
@@ -17,7 +19,6 @@ use checkargs;
  $catSTATEMENTS $catSTATEMENTS_SANS_SEMI $catPARTIAL_STATEMENTS
  $catTYPE $catPARTIAL_TYPE $catDECLARATION $catDECLARATION_SANS_SEMI
  $catRESERVED_WORD $catFUNCTION_NAME $catSYMBOL_UNKNOWN $catSYMBOLS
- $catRECURSIVE
  $catUNBALANCED $catPUNCTUATION $catCOMMAND_LINE $catASSEMBLY_CODE
  $catMULTIPLE $catFAILURE $catLast @categoryname
 
@@ -27,7 +28,7 @@ use checkargs;
 
  $propNONE $propASSIGN $propFREE_VAR $propINVOKES_MACRO
  $propPASSES_TYPE_AS_ARG $propUSES_MACRO_AS_TYPE $propUSES_ARG_AS_TYPE
- $propASSEMBLY_CODE $propPASTING $propSTRINGIZE
+ $propASSEMBLY_CODE $propPASTING $propSTRINGIZE $propSELF_REFERENTIAL
 
  $typeFAIL $typeBOOL $typeCHAR $typeUCHAR $typeSCHAR $typeSHORT
  $typeUSHORT $typeINT $typeUINT $typeLONG $typeULONG
@@ -76,6 +77,8 @@ use checkargs;
  $cpp_include_arg_re
 
  &string_from_prop &prop_contains
+
+ @state_file_vars
 );
 #End of @EXPORT
 
@@ -155,25 +158,22 @@ $catSYMBOL_UNKNOWN = 20;	# symbol (not function, macro, or reserved word)
 $catSYMBOLS = 21;		# multiple space-separated symbols: #def P(x,y) x y
 				# (it might actually be a declaration_sans_semi)
 
-$catRECURSIVE = 22;		# not sure there are enough of these to justify;
-				# currently all but about 5 are misclassifications
-
 ## Fragments
-$catUNBALANCED = 23;		# unbalanced parentheses; was $catMISMATCH;
+$catUNBALANCED = 22;		# unbalanced parentheses; was $catMISMATCH;
 				#   includes {), so perhaps that was better,
 				#   but "mismatch" isn't as evocative
-$catPUNCTUATION = 24;		# expands to just punctuation token(s); was $catSYNTAX
+$catPUNCTUATION = 23;		# expands to just punctuation token(s); was $catSYNTAX
 
 ## Not C code:
-$catCOMMAND_LINE = 25;		# Command-line arguments
-$catASSEMBLY_CODE = 26;
+$catCOMMAND_LINE = 24;		# Command-line arguments
+$catASSEMBLY_CODE = 25;
 
-$catMULTIPLE = 27;		# a def gets this if it expands to a
+$catMULTIPLE = 26;		# a def gets this if it expands to a
                                 # macro with this category
 
-$catFAILURE = 28;		# other sorts of failure (for example...?)
+$catFAILURE = 27;		# other sorts of failure (for example...?)
 
-$catLast = 28;			# same as last one
+$catLast = 27;			# same as last one
 
 @categoryname = (
 		 'uncategorized', 'being_categorized', 'never_defined',
@@ -185,7 +185,6 @@ $catLast = 28;			# same as last one
 		 'declaration', 'semicolonless_declaration',
 		 'reserved_word', 'function_name', 'unknown_symbol',
 		 'symbols',
-		 'recursive',
 		 'mismatched_entities',
 		 'punctuation',
 		 'command_line_arguments', 'assembly_code',
@@ -197,22 +196,21 @@ if ((not defined($categoryname[$catLast]))
 { die "categoryname and catLast out of synch! '$categoryname[$catLast]' '$categoryname[$catLast+1]'"; }
 
 #### Meta Categories (for the paper, used by
-#### macros-make-categories-tbl-from-stat.pl) 
+#### macros-make-categories-tbl-from-stat.pl)
 #### These @mcat_XXX lists tell which $catXXXX indices are combined
 ####   for the given meta categories.  Use:
 ####   map { $categoryname[$mcat_FAILURE[$_]] } @mcat_FAILURE
-@mcat_FAILURE = qw( catNOT_YET catIN_PROCESS catNO_DEF catFAILURE 
+@mcat_FAILURE = qw( catNOT_YET catIN_PROCESS catNO_DEF catFAILURE
 		       catMULTIPLE );
 @mcat_NULL = qw( catNULL_DEFINE );
 @mcat_LITERAL = qw( catCONSTANT catLITERAL catSOME_CONSTANT );
 @mcat_NONLITERAL_EXPRESSION = qw( catEXP );
-@mcat_STATEMENT = qw( catSTATEMENT catSTATEMENT_SANS_SEMI catPARTIAL_STATEMENT 
+@mcat_STATEMENT = qw( catSTATEMENT catSTATEMENT_SANS_SEMI catPARTIAL_STATEMENT
 			 catSTATEMENTS catSTATEMENTS_SANS_SEMI catPARTIAL_STATEMENTS );
 @mcat_TYPE = qw( catTYPE catPARTIAL_TYPE catDECLARATION catDECLARATION_SANS_SEMI);
 #my @mcat_DECLARATION = qw( catDECLARATION catDECLARATION_SANS_SEMI );
 #folded DECLARATION into the above, TYPE
 @mcat_SYNTAX = qw( catUNBALANCED catPUNCTUATION );
-@mcat_RECURSIVE = qw( catRECURSIVE );
 @mcat_NON_C_CODE = qw( catCOMMAND_LINE catASSEMBLY_CODE );
 @mcat_SYMBOL_UNKNOWN = qw( catSYMBOL_UNKNOWN );
 @mcat_OTHER = qw( catRESERVED_WORD catFUNCTION_NAME catSYMBOLS);
@@ -230,10 +228,11 @@ $propUSES_ARG_AS_TYPE = 32;	# a macro argument was used as a type
 $propASSEMBLY_CODE = 64;	# contains in-line assembly code
 $propPASTING   = 128;
 $propSTRINGIZE = 256;
+$propSELF_REFERENTIAL = 512;
 
 # return a comma separated sequence of properties from a bit-mapped
 # property value; e.g. 6 (=2+4) returns "free_var,invokes_macro"
-sub string_from_prop ($) {
+sub string_from_prop ( $ ) {
   my ($prop) = check_args(1, @_);
   # NOTE: This must be kept in sync w/ the above $propXXXX vars
   # FIXGJB: the above should be generated from a global-scope list like
@@ -241,7 +240,7 @@ sub string_from_prop ($) {
   my @props = qw( assign free_var invokes_macro
 		  passes_type_as_arg uses_macro_as_type
 		  uses_arg_as_type assymbly_code
-		  pasting stringize );
+		  pasting stringize self_referential );
   if ($prop == 0) { return "NONE"; }
   my $index = 0;  # the offset into the list of properties above
   my @lprop = (); # the list of properties to create as a string and return
@@ -255,7 +254,7 @@ sub string_from_prop ($) {
   return join(",",@lprop);
 }
 
-sub prop_contains ($$)
+sub prop_contains ( $$ )
 { my ($prop, $bit) = check_args(2, @_);
   return ($prop & $bit); }
 
@@ -512,6 +511,9 @@ $char_literal_re = "L?'" . $char_literal_contents_re . "'";
 $non_escaped_double_quote_re = '(^|[^\\\\])(\\\\\\\\)*\"';
 # non-greedy '.*?' because '.*' matches too much, skips over intervening quotes
 $string_literal_re = 'L?\"(|.*?[^\\\\])(\\\\\\\\)*\"'; # string literal
+## I'm getting errors when I use this, so avoid it.
+# # Changed to value suggested in _Mastering Regular Expressions_
+# $string_literal_re = 'L?\"([^"\\]|\\[\000-\377])*\"'; # string literal
 
 ### Types
 
@@ -596,6 +598,44 @@ $selector_regexp = '(?:\.|->)';
 # Cpp operators
 # Two groups: first for angled include, second for quoted include
 $cpp_include_arg_re = '(?:<(.*)>|\"(.*)\")';
+
+###########################################################################
+### State file
+###
+
+# "export" these vars through the state file to em_reports
+# NOTE: be very careful to not have duplicates in this list, since
+# we undefine them as they are printed out (the second occurrence
+# that is output will be empty, and that will be the one that
+# em_reports will try to use)
+@state_file_vars = qw(
+    %macros %macros_c_undefs %macros_uses
+    @mdef_name @mdef_formals @mdef_body
+    @mdef_file @mdef_line @mdef_physical_lines
+    @mdef_physical_ncnb_lines @mdef_freefuns
+    @mdef_direct_inclusion_dependenton @mdef_direct_expansion_uses
+    @mdef_type @mdef_category @mdef_properties @mdef_free_vars
+    @mdef_evilness
+    %mntype %mncategory
+    @rg_cppcmdcounts @rg_category_counts
+    @rg_physical_lines @rg_ncnb_lines
+    @rg_cpp_phys_lines @rg_cpp_phys_ncnb_lines
+    @rg_cpp_cmds @rg_ccd_cat_counts
+    %file_inclusion_method %function_name_to_macros_it_uses
+    %files_function_lines %function_to_locs
+    %macro_inclusion_dependenton %macro_inclusion_dependees %inclusion_dependee_lines
+    %macro_expansion_dependenton %macro_expansion_dependees %expansion_dependee_lines
+    %either_dependee_lines
+    %file_includers %file_includees
+    %file_direct_inclusion_dependentons
+    %file_direct_inclusion_dependent_macros %file_inclusion_dependent_macros
+    %file_included_by
+
+    @incl_dependence_count @exp_dependence_count @either_dependence_count
+
+    %macros_used_by_cpp %functions %typedefs
+		     );
+
 
 1; #Successful import
 __END__

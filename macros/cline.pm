@@ -75,7 +75,7 @@ use vars qw($cline_incomment $cline_instring);
 $cline_incomment = $false;		# in /* */ style comment
 $cline_instring = $false;
 
-sub cline_resetinvars ()
+sub cline_resetinvars ( )
 {
   check_args(0, @_);
   $cline_instring = $false;
@@ -88,7 +88,7 @@ my @cline_ungot_phys_lines = ();
 my @cline_ungot_ncnb_lines = ();
 my @cline_ungot_warnings = ();	# a list of references to lists of strings
 
-sub cline_check_ungot_sizes ()
+sub cline_check_ungot_sizes ( )
 { check_args(0, @_);
   if ((@cline_ungot_raw_lines != @cline_ungot_simple_lines)
       || (@cline_ungot_raw_lines != @cline_ungot_phys_lines)
@@ -102,19 +102,19 @@ sub cline_check_ungot_sizes ()
 	     scalar(@cline_ungot_warnings)); }
 }
 
-sub cline_ungot_string ()
+sub cline_ungot_string ( )
 { check_args(0, @_);
   "ungot raw: ".  join("  >>", @cline_ungot_raw_lines)
     . "ungot simple: " . join("  >>", @cline_ungot_simple_lines);
 }
 
-sub cline_ungot_size ()
+sub cline_ungot_size ( )
 { check_args(0, @_);
   cline_check_ungot_sizes();
   scalar(@cline_ungot_raw_lines);
 }
 
-sub cline_ungot_phys_lines ()
+sub cline_ungot_phys_lines ( )
 { check_args(0, @_);
   my $result = 0;
   { foreach my $phys (@cline_ungot_phys_lines)
@@ -150,7 +150,7 @@ $cline_simplify_strings = $false;
 #  * The simple result contains no comments, and its strings and character
 #    constants are simplified if $cline_simplify_strings (which see) is true.
 # I hope that always simplifying isn't terribly inefficient...
-sub cline_updateinvars ($)
+sub cline_updateinvars ( $ )
 {
   my ($remaining) = check_args(1, @_);
   my $result = "";
@@ -260,7 +260,7 @@ sub cline_updateinvars ($)
 
 # Special-purpose variant of cline_updateinvars that removes comments,
 # simplifies strings.  Ignores warnings.
-sub cline_simplify ($)
+sub cline_simplify ( $ )
 {
   my ($arg) = check_args(1, @_);
 
@@ -294,7 +294,7 @@ sub cline_simplify ($)
 # This pretties things up but changes contents of line-spanning strings,
 # so don't call it if ARG1 ends inside a string.
 # NOTE: this sub is also in em_analyze
-sub append_lines ($$)
+sub append_lines ( $$ )
 {
   my ($arg1, $arg2) = check_args(2, @_);
   $arg1 =~ s/[ \t\n]+$//;
@@ -305,7 +305,7 @@ sub append_lines ($$)
 }
 
 # Add newline to end of string; return string unchanged if it already has one.
-sub add_newline ($)
+sub add_newline ( $ )
 { my ($string) = check_args(1, @_);
   if ($string =~ m/\n$/)
     { return $string; }
@@ -543,7 +543,7 @@ sub get_fulltoken_cline ($;$)
 #  * The string results end in newline.
 # The second argument is the number of lines ahead of the current one to peek:
 # 1 gives the next line, 2 the line after that, etc.
-sub peek_fulltoken_cline ($$)
+sub peek_fulltoken_cline ( $$ )
 {
   my ($filehandle, $arg) = check_args(2, @_);
   if ($arg < 1)

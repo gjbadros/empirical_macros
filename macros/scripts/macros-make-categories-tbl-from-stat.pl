@@ -16,9 +16,9 @@ BEGIN {
 -h  to display this help
 ";
   }
-  
+
   use vars qw ($opt_h $opt_t $opt_p %column_name_to_colno $fInitializedHeadings $nolatex $usepct $totLine $fFoundLine);
-  
+
 
 
   $nolatex = 0;
@@ -31,11 +31,11 @@ BEGIN {
 
   use Getopt::Std;
   getopts($getopts_option_letters);
-  
+
   if ($opt_h) { usage(); }
   if ($opt_t) { $nolatex = 1; }
   if ($opt_p) { $usepct = 1; }
-  
+
 #   my $foo = "catFUNCTION_NAME";
 #   no strict;
 #   print $$foo, "\n";
@@ -43,26 +43,26 @@ BEGIN {
 
 #  print $categoryname[19], "\n";
 #  exit 0;
-  
-  if ($usepct) { 
+
+  if ($usepct) {
     $FORMAT="%2.3f";
 #DBG    print STDERR "Using percents\n";
   }
-  if ($nolatex) { 
-    $OFS="\t"; 
+  if ($nolatex) {
+    $OFS="\t";
   } else {
     $OFS = " & ";
     $ORS="\\\\\\hline\n";
-    print "\\begin{tabular}{|l|c|c|c|c|c|c|c|c|}\\hline\n"; 
+    print "\\begin{tabular}{|l|c|c|c|c|c|c|c|c|}\\hline\n";
   }
   print " ",       "Null",   " ",        " ",          " ",        "",         "Type",   " ",        "Not",    " ",     "Unknown",	"Failed";
   print "Package", "Define", "Literal", "Expression", "Statement", "Syntactic","related","Recursive","C code", "Other", "symbol",	"classification";
 
-  my ($cNull, $cLit, $cExp, $cStm, $cSyntax, $cType, 
+  my ($cNull, $cLit, $cExp, $cStm, $cSyntax, $cType,
       $cRecursive, $cNonC, $cOther, $cFail, @rest) = 0 x 40;
-  my ($sNull, $sLit, $sExp, $sStm, $sSyntax, $sType, 
+  my ($sNull, $sLit, $sExp, $sStm, $sSyntax, $sType,
       $sRecursive, $sNonC, $sOther, $sFail, @rest2) = 0 x 40;
-  
+
 }
 
 
@@ -71,16 +71,16 @@ if (/^CATEGORIES_NI:/) {
   $fFoundLine = 1;
   $cNull = sum_meta_category(@mcat_NULL); $sNull += $cNull;
   $cLit = sum_meta_category(@mcat_LITERAL); $sLit += $cLit;
-  $cExp = sum_meta_category(@mcat_NONLITERAL_EXPRESSION); $sExp += $cExp; 
-  $cStm = sum_meta_category(@mcat_STATEMENT); $sStm += $cStm; 
-  $cSyntax = sum_meta_category(@mcat_SYNTAX); $sSyntax += $cSyntax; 
-  $cType = sum_meta_category(@mcat_TYPE); $sType += $cType; 
-  $cRecursive = sum_meta_category(@mcat_RECURSIVE); $sRecursive += $cRecursive; 
+  $cExp = sum_meta_category(@mcat_NONLITERAL_EXPRESSION); $sExp += $cExp;
+  $cStm = sum_meta_category(@mcat_STATEMENT); $sStm += $cStm;
+  $cSyntax = sum_meta_category(@mcat_SYNTAX); $sSyntax += $cSyntax;
+  $cType = sum_meta_category(@mcat_TYPE); $sType += $cType;
+  $cRecursive = sum_meta_category(@mcat_RECURSIVE); $sRecursive += $cRecursive;
   $cNonC = sum_meta_category(@mcat_NON_C_CODE); $sNonC += $cNonC;
   $cOther = sum_meta_category(@mcat_OTHER); $sOther += $cOther;
   $cSymUknown = sum_meta_category(@mcat_SYMBOL_UNKNOWN); $sSymUnknown += $cSymUknown;
   $cFail = sum_meta_category(@mcat_FAILURE); $sFail += $cFail;
-  $totLine = $cNull + $cLit + $cExp + $cStm + $cSyntax + 
+  $totLine = $cNull + $cLit + $cExp + $cStm + $cSyntax +
     $cType + $cRecursive + $cNonC + $cSymUknown + $cFail + $cOther;
 
   my $filename = $ARGV;
@@ -106,23 +106,23 @@ if (/^CATEGORIES_NI:/) {
 }
 
 END {
-  if (!$nolatex) { print "\\hline\n" }; 
+  if (!$nolatex) { print "\\hline\n" };
   if ($fFoundLine) {
-    $totLine = $sNull + $sLit + $sExp + $sStm + $sSyntax + $sType + $sRecursive + 
+    $totLine = $sNull + $sLit + $sExp + $sStm + $sSyntax + $sType + $sRecursive +
       $sNonC + $sFail + $sOther;
-    print "Total", map {sprintf $FORMAT, $_ } ( pct($sNull), pct($sLit), pct($sExp), pct($sStm), pct($sSyntax), pct($sType), 
+    print "Total", map {sprintf $FORMAT, $_ } ( pct($sNull), pct($sLit), pct($sExp), pct($sStm), pct($sSyntax), pct($sType),
       pct($sRecursive), pct($sNonC), pct($sOther), pct($sSymUnknown), pct($sFail) );
-    print "Total-raw", map {sprintf "%2.0f", $_} ($sNull, $sLit, $sExp, $sStm, $sSyntax, $sType, 
+    print "Total-raw", map {sprintf "%2.0f", $_} ($sNull, $sLit, $sExp, $sStm, $sSyntax, $sType,
       $sRecursive, $sNonC, $sOther, $sSymUnknown, $sFail );
   }
-  $ORS=""; 
-  if (!$nolatex) {print "\\end{tabular}\n"; } 
+  $ORS="";
+  if (!$nolatex) {print "\\end{tabular}\n"; }
 }
 
 ########### Utility subroutines
 
 # pct2(x) returns a percentage (not a fraction) which corresponds to arg1/arg2.
-sub pct2 ($$) {
+sub pct2 ( $$ ) {
   my ($x,$w) = @_;
   if ($w <= 0) {
     if ($x > 0) {
@@ -138,7 +138,7 @@ sub pct2 ($$) {
 }
 
 # pct(x) returns a percentage using totline as the divisor
-sub pct ($) {
+sub pct ( $ ) {
   my ($x) = @_;
   return pct2($x,$totLine);
 }

@@ -21,7 +21,7 @@ require 5.000;
 my $getopts_option_letters = 'h';
 use vars qw($opt_h);
 
-sub usage () {
+sub usage ( ) {
   die "@_
 Usage: $0 [-$getopts_option_letters]
 -h     Help. Display this usage information
@@ -44,7 +44,7 @@ __END__
 
 partial-expand.pl -- Evaluate #if(def) conditionals and output the version of code constrained by given #defined macros
 
-=head1 SYNOPSIS 
+=head1 SYNOPSIS
 
 =head1 DESCRIPTION
 

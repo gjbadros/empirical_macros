@@ -4,11 +4,18 @@
 # Invoke like: lint-summarize *.lint
 
 use em_util;
+use em_constants;
 
-if (/^Total macro definitions not in libraries: ([0-9]+)$/)
-  { $defs += $1;
-    $defs_files++; }
-elsif (/^([0-9]+) \([0-9]+\.[0-9]+%\) Null body with args$/)
+if (/^Excluding libraries, (\d+) macros defined (\d+) times in (\d+) packages$/)
+  { die "found \"in packages\": $_"; }
+elsif (/^Excluding libraries, (\d+) macros defined (\d+) times$/)
+  { $macros += $1;
+    $defs += $2;
+    $packages++; }
+elsif (/^([0-9]+) \([0-9]+\.[0-9]+%\) inconsistent arity$/)
+  { $different_arity += $1;
+    $different_arity_files++; }
+elsif (/^([0-9]+) \([0-9]+\.[0-9]+%\) null body with args$/)
   { $null_body += $1;
     $null_body_files++; }
 elsif (/^([0-9]+) \([0-9]+\.[0-9]+%\) contains newline$/)
@@ -41,7 +48,8 @@ elsif (/^([0-9]+) \([0-9]+\.[0-9]+%\) side-effected formal$/)
 
 END
 {
-  if (($defs_files != $null_body_files)
+  if (($defs_files != $different_arity_files)
+      || ($defs_files != $null_body_files)
       || ($defs_files != $newline_body_files)
       || ($defs_files != $unparen_body_files)
       || ($defs_files != $swallow_semi_files)
@@ -53,37 +61,9 @@ END
       || ($defs_files != $formal_modified_files))
     { die "Inconsistent number of files with info: '$defs_files' '$null_body_files' '$newline_body_files' '$unparen_body_files' '$swallow_semi_files' '$free_var_files' '$formal_name_files' '$formal_mult_use_files' '$formal_adjacent_use_files' '$formal_unparen_use_files' '$formal_modified_files'"; }
 
-  # Lifted from em_reports
-  print "\n\n";
-  print "Total macro definitions not in libraries: $defs in $defs_files packages\n";
-  print "$null_body\t("
-    . sprintf("%2.2f",percent2($null_body,$defs))
-      . "%) Null body with args\n";
-  print "$newline_body\t("
-    . sprintf("%2.2f",percent2($newline_body,$defs))
-      . "%) contains newline\n";
-  print "$unparen_body\t("
-    . sprintf("%2.2f",percent2($unparen_body,$defs))
-      . "%) unparenthesized body\n";
-  print "$swallow_semi\t("
-    . sprintf("%2.2f",percent2($swallow_semi,$defs))
-      . "%) swallows semicolon\n";
-  print "$free_var\t("
-    . sprintf("%2.2f",percent2($free_var,$defs))
-      . "%) free variables\n";
-  print "$formal_name\t("
-    . sprintf("%2.2f",percent2($formal_name,$defs))
-      . "%) bad formal name\n";
-  print "$formal_mult_use\t("
-    . sprintf("%2.2f",percent2($formal_mult_use,$defs))
-      . "%) multiple formal uses\n";
-  print "$formal_adjacent_use\t("
-    . sprintf("%2.2f",percent2($formal_adjacent_use,$defs))
-      . "%) adjacent formal uses\n";
-  print "$formal_unparen_use\t("
-    . sprintf("%2.2f",percent2($formal_unparen_use,$defs))
-      . "%) unparenthesized formal uses\n";
-  print "$formal_modified\t("
-    . sprintf("%2.2f",percent2($formal_modified,$defs))
-      . "%) side-effected formal\n";
+  print_lint_summary($different_arity, $null_body, $newline_body,
+		     $unparen_body, $swallow_semi, $free_var, $formal_name,
+		     $formal_mult_use, $formal_adjacent_use,
+		     $formal_unparen_use, $formal_modified,
+		     $macros, $defs, $packages);
 }

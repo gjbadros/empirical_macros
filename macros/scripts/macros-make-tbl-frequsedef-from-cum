@@ -111,7 +111,7 @@ print "\n";
 
 
 # pct2(x) returns a percentage (not a fraction) which corresponds to arg1/arg2.
-sub pct2 ($$) {
+sub pct2 ( $$ ) {
   my ($x,$w) = @_;
   if ($w <= 0) {
     if ($x > 0) {

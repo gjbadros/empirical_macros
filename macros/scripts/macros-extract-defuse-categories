@@ -29,7 +29,7 @@ $prg = basename("$0");
 my $true = (0 == 0);
 my $false = (1 == 0);
 
-sub usage () {
+sub usage ( ) {
   die "@_
 Usage: $prg [-$getopts_option_letters] <files>
 -h     Help. Display this usage information
@@ -89,7 +89,7 @@ while (<>) {
 #    print STDERR "On file: $current_file\n";
     if ($current_file =~ /\.frequse_cum$/) {
       $type = "use";
-    } else { 
+    } else {
       $type = "def";
     }
   }
@@ -119,10 +119,10 @@ print STDERR "DEFINITIONS:\n";
 do_categories("def",$def_limit,@def_files);
 
 sub do_categories($$@) {
-  my $type = shift;
+  my $use_or_def = shift;
   my $limit = shift;
   my @files = @_;
-  
+
   foreach my $category_list_ref (@categories) {
     my $category = @{$category_list_ref}[0];
     print STDERR "Handling $category...\n";
@@ -157,7 +157,7 @@ sub do_categories($$@) {
       }
     }
     close(OUT);
-    open(OUT,">cat-${category}.freq${type}_cum");
+    open(OUT,">cat-${category}.freq${use_or_def}_cum");
     select OUT;
     $OFS="\t";
     print "Total", "$sum_of_line[$length]\n";
@@ -175,10 +175,10 @@ __END__
 macros-extract-defuse-categories -- separate the various categories
 from a freq{def,use} file into files based on names of the categories
 
-=head1 SYNOPSIS 
+=head1 SYNOPSIS
 
 Takes *.freq{use,def}_cum files from em_reports and creates a table of
-the frequencies of uses and definitions per category 
+the frequencies of uses and definitions per category
 (as opposed to the former version which was per use)
 
 =head1 DESCRIPTION

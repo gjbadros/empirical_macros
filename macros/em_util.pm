@@ -4,26 +4,27 @@ require 5.002;
 require Exporter;
 @ISA = qw(Exporter);
 @EXPORT = qw( is_number type_name count_macro_args formals_array actuals_array
-	      percent2 sum_array make_cum_array sum_parallel_hashes add_newline 
-	      simplify_path_name);
+	      percent2 sum_array make_cum_array sum_parallel_hashes add_newline
+	      simplify_path_name print_lint_summary);
 
 use checkargs;
 use em_constants;
 use paren;
 
+use strict;
 use Carp;
 use English;
 
 # Common functions to em_reports and em_analyze
 # For determining whether a Perl variable has numeric type.
 # This is incredibly disgusting; do something about it.
-sub is_number ($)
+sub is_number ( $ )
 {
   my ($arg) = check_args(1, @_);
   return ($arg =~ /^\d+$/);
 }
 
-sub type_name ($)
+sub type_name ( $ )
 {
   my ($type) = check_args(1, @_);
   if (is_number($type))
@@ -35,7 +36,7 @@ sub type_name ($)
 # Return the number of arguments, given a macro argument
 # declaration.  Just counts number of commas, and adds 1,
 # or zero if we were passed "".
-sub count_macro_args ($) {
+sub count_macro_args ( $ ) {
   my ($arg_decl) = check_args(1, @_);
   my $retval;
 
@@ -51,7 +52,7 @@ sub count_macro_args ($) {
 }
 
 # Given a macro argument declaration, return an array of formal names.
-sub formals_array ($)
+sub formals_array ( $ )
 { my ($args) = check_args(1, @_);
   $args =~ s/^\s*\(\s*//;
   $args =~ s/\s*\)\s*$//;
@@ -59,7 +60,7 @@ sub formals_array ($)
 }
 
 # Like formals_array, but works for arbitrary expressions
-sub actuals_array ($)
+sub actuals_array ( $ )
 { my ($args) = check_args(1, @_);
   # print "actuals_array <= $args\n";
   if (!($args =~ s/^\s*\(\s*(.*)\)\s*$/$1/))
@@ -97,7 +98,7 @@ sub actuals_array ($)
 
 
 # percent2(x) returns a percentage (not a fraction) which corresponds to arg1/arg2.
-sub percent2 ($$) {
+sub percent2 ( $$ ) {
   my ($x,$w) = check_args(2, @_);
   if ($w <= 0) {
     croak("percent2: Bad divisor: $x / $w");
@@ -112,7 +113,7 @@ sub percent2 ($$) {
 
 # sum_array sums all its inputs, typically the elements of an array.
 # Pass in a slice of the array in order to sum that part.
-sub sum_array (@) {
+sub sum_array ( @ ) {
   my (@args) = @_;
   my $sum = 0;
   { foreach my $elt (@args)
@@ -124,7 +125,7 @@ sub sum_array (@) {
 # elements in the array passed in.
 # e.g.     1, 3, 2,  1,  6,  2
 # returns  1, 4, 6,  7, 13, 15
-sub make_cum_array (@) { # returns @cum_array
+sub make_cum_array ( @ ) { # returns @cum_array
   my (@args) = @_;
   my @cum_array = ();
   my $sum = 0;
@@ -156,13 +157,14 @@ sub sum_parallel_hashes { # returns void; output in $_[0]
 
 
 # Add newline to end of string; return string unchanged if it already has one.
-sub add_newline ($)
+sub add_newline ( $ )
 { my ($string) = check_args(1, @_);
   if ($string =~ m/\n$/)
     { return $string; }
   else
     { return $string . "\n"; }
 }
+
 
 # Simplify a directory path by canonicalizing to not contain
 # any ".." or "." components
@@ -179,6 +181,61 @@ sub simplify_path_name ( $ ) {
   }
   return $result;
 }
+
+
+###########################################################################
+### Lint output
+###
+
+# Not the right place for this, but I want to share it between em_reports
+# and lint-summarize.
+
+sub print_lint_summary ( $$$$$$$$$$$$$;$ )
+{
+  my ($different_arity, $null_body, $newline_body, $unparen_body,
+      $swallow_semi, $free_var, $formal_name, $formal_mult_use,
+      $formal_adjacent_use, $formal_unparen_use, $formal_modified,
+      $macros, $defs, $packages)
+    = check_args_range(13, 14, @_);
+
+  print "\n\n";
+  print "Excluding libraries, $macros macros defined $defs times"
+    , (defined($packages) ? " in $packages packages" : ""), "\n";
+  print "$different_arity\t("
+    . sprintf("%2.2f",percent2($different_arity,$macros))
+      . "%) inconsistent arity\n";
+  print "$null_body\t("
+    . sprintf("%2.2f",percent2($null_body,$defs))
+      . "%) null body with args\n";
+  print "$newline_body\t("
+    . sprintf("%2.2f",percent2($newline_body,$defs))
+      . "%) contains newline\n";
+  print "$unparen_body\t("
+    . sprintf("%2.2f",percent2($unparen_body,$defs))
+      . "%) unparenthesized body\n";
+  print "$swallow_semi\t("
+    . sprintf("%2.2f",percent2($swallow_semi,$defs))
+      . "%) swallows semicolon\n";
+  print "$free_var\t("
+    . sprintf("%2.2f",percent2($free_var,$defs))
+      . "%) free variables\n";
+  print "$formal_name\t("
+    . sprintf("%2.2f",percent2($formal_name,$defs))
+      . "%) bad formal name\n";
+  print "$formal_mult_use\t("
+    . sprintf("%2.2f",percent2($formal_mult_use,$defs))
+      . "%) multiple formal uses\n";
+  print "$formal_adjacent_use\t("
+    . sprintf("%2.2f",percent2($formal_adjacent_use,$defs))
+      . "%) adjacent formal uses\n";
+  print "$formal_unparen_use\t("
+    . sprintf("%2.2f",percent2($formal_unparen_use,$defs))
+      . "%) unparenthesized formal uses\n";
+  print "$formal_modified\t("
+    . sprintf("%2.2f",percent2($formal_modified,$defs))
+      . "%) side-effected formal\n";
+}
+
 
 1; #Successful import
 __END__

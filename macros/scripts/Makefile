@@ -186,7 +186,8 @@ showvars:
 	@echo COMMON_DIR = $(COMMON_DIR)
 	@echo SCRIPTS = $(SCRIPTS)
 	@echo SCRIPTSPATH = $(SCRIPTSPATH)
-
+	@echo EXTRA_ANALYZE_FLAGS = $(EXTRA_ANALYZE_FLAGS)
+	@echo EXTRA_REPORTS_FLAGS = $(EXTRA_REPORTS_FLAGS)
 
 copy: $(PAPER_TABLES)
 	perl -pi.bak -e 's/z*<total>/Total/g' $(PAPER_TABLES)

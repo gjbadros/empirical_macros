@@ -53,7 +53,7 @@ my $debug_paren = $false;
 
 # Takes a simplified line as its argument; returns a string containing the
 # unbalanced braces (empty string if all braces are balanced).
-sub brace_change ($)
+sub brace_change ( $ )
 { my ($line) = check_args(1, @_);
   if ($debug_paren) { print "brace_change $line"; }
   my $result_num = 0;
@@ -73,7 +73,7 @@ sub brace_change ($)
 # unbalanced parens (empty string if all parens are balanced).
 # Perhaps this should also check for braces (and complain or err if any are
 # found before parens balance).
-sub paren_change ($)
+sub paren_change ( $ )
 { my ($line) = check_args(1, @_);
   if ($debug_paren) { print "paren_change <= $line\n"; }
   my $result_num = 0;
@@ -96,7 +96,7 @@ sub paren_change ($)
 # Ignores strings, character constants, comments.
 # Largely lifted from old check_macro_body (which didn't ignore those, and
 # did more to boot, but also tried to do too much).
-sub contains_mismatch ($)
+sub contains_mismatch ( $ )
 { my ($body) = check_args(1, @_);
   if ($debug_paren) { print "contains_mismatch <= $body"; }
 
