@@ -151,6 +151,7 @@ struct cpp_buffer {
   /* True if this is a header file included using <FILENAME>.  */
   char system_header_p;
   char seen_eof;
+  char fHandlingDirective;
 
   /* True if buffer contains escape sequences.
      Currently there are are only two kind:
@@ -263,6 +264,9 @@ struct cpp_reader {
 
   /* Number of bytes since the last newline.  */
   int deps_column;
+
+  /* Whether we're on a directive line or not --09/16/97 gjb */
+  int fGettingDirective;
 };
 
 #define CPP_BUF_PEEK(BUFFER) \

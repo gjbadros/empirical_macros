@@ -17,15 +17,13 @@ sub AddHook {
   $Hooks[$$indexname] = $fnref;
 }
 
-sub PrintUID { 
-  print "UID is $<\n"; 
-}
-
 sub Startup {
-  print "STARTUP...\n";
+  print STDERR "STARTUP...\n";
   open(CHOUT,">chout.listing") || die "Could not open output file: $!";
   open(TOKEN,">token.listing") || die "Could not open output file: $!";
+  open(TP,">textprops.el") || die "Could not open output file: $!";
 #  select CHOUT;
+  select STDERR;
   $| = 1; # Turn on autoflush
 }
 
@@ -106,9 +104,20 @@ sub delete_def {
 }
 
 sub expand_macro {
-  my ($mname,$expansion) = @_;
+  my ($mname,$expansion,$length,$fInText) = @_;
+  my $start = cpp::CBytesOutput()+1;
+  my $end = $start + $length - 3; # Subtract off for the @ @, and it's an inclusive range
   print "Lookup = ", cpp::lookup($mname), "\n";
-  print "expand_macro $mname => $expansion\n";
+  print "expand_macro $mname => $expansion (length $length:offset $start - $end)\n";
+  print TP "(put-text-property $start $end \'doc \"Expansion of $mname\")\n";
+  print TP "(put-text-property $start $end \'face \'italic)\n";
+}
+
+sub ifdef_macro {
+  my ($mname,$expansion,$length,$fInText) = @_;
+  my $start = cpp::CBytesOutput()+1;
+  my $end = $start + $length - 3; # Subtract off for the @ @, and it's an inclusive range
+  print "ifdef_macro $mname => $expansion (offset $start - $end)\n";
 }
 
 sub special_symbol {
@@ -189,7 +198,7 @@ sub done_include_file {
 # Token's come a lot, so redirect this output somewhere else
 sub Got_token {
   my ($token,$sz) = @_;
-  print TOKEN substr($token,4),"\n";
+  print TOKEN substr($token,4),", FExpandingMacros = ",cpp::FExpandingMacros(),"\n";
 }
 
 sub do_function {
@@ -214,6 +223,7 @@ AddHook("DELETE_DEF",\&delete_def);
 AddHook("CPP_ERROR",\&cpp_error);
 AddHook("CPP_OUT",\&cpp_out);
 AddHook("EXPAND_MACRO",\&expand_macro);
+AddHook("IFDEF_MACRO",\&ifdef_macro);
 AddHook("SPECIAL_SYMBOL",\&special_symbol);
 AddHook("COMMENT",\&comment);
 AddHook("STRING_CONSTANT",\&string_constant);

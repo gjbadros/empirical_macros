@@ -68,3 +68,24 @@ lookup(sz)
 	RETVAL = hp->value.defn->expansion;
 	OUTPUT:
 	RETVAL
+
+int
+CBytesOutput()
+	CODE:
+	RETVAL = cBytesOutput;
+	OUTPUT:
+	RETVAL
+
+int
+CBytesCppRead()
+	CODE:
+	RETVAL = cBytesCppRead;
+	OUTPUT:
+	RETVAL
+
+int
+FExpandingMacros()
+	CODE:
+	RETVAL = !parse_in.no_macro_expand;
+	OUTPUT:
+	RETVAL

@@ -55,6 +55,8 @@ Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 char  *cur_file;
 int    show_as_code = 1;
 int    show_syms = 0;
+int cBytesOutput = 0;
+int cBytesCppRead = 0;
 
 #define    CT_VERSION    "C-Tree Version 0.05"
 
@@ -214,6 +216,7 @@ cppmain_handle_options (cpp_reader *pfile, int argc, char **argv)
   return i;
 }
 
+
 int
 main (int argc, char **argv, char **env)
 {
@@ -298,10 +301,15 @@ main (int argc, char **argv, char **env)
       {
       enum cpp_token kind;
       kind = cpp_get_token (&parse_in);
+      gjb_call_hooks_sz_szl(CPP_OPTIONS(&parse_in),HI_TOKEN,SzFromToken(kind),
+			    parse_in.token_buffer,
+			    CPP_WRITTEN(&parse_in));
+      cBytesCppRead += CPP_WRITTEN(&parse_in);
       if (! opts->no_output)
 	{
 	fwrite (parse_in.token_buffer, 1, CPP_WRITTEN (&parse_in), stdout);
 	}
+      cBytesOutput += CPP_WRITTEN(&parse_in);
       gjb_call_hooks_szl(opts,HI_CPP_OUT,parse_in.token_buffer,CPP_WRITTEN(&parse_in));
       gjb_call_hooks_sz_szl(opts,HI_TOKEN,SzFromToken(kind),parse_in.token_buffer,
 			    CPP_WRITTEN(&parse_in));

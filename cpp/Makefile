@@ -233,6 +233,11 @@ OBJECTS = $(NON_GRAMMAR_OBJECTS) $(GRAMMAR_OBJECTS)
 SD_OBJECTS = scan-decls.o cpplib.o cpphash.o cppalloc.o cpperror.o cppexp.o version.o backcalls.o cpphook.o
 
 # Making the preprocessor/parse
+pcppct: $(NON_GRAMMAR_OBJECTS) $(CT_GRAMMAR_OBJECTS) hook_index_constants.pm
+	rm -f $@
+	$(CC) $(ALL_CFLAGS) $(LDFLAGS) -o $@ $(filter-out hook_index_constants.pm,$^) $(LIBS) $(PERLLIBS)
+
+# This target is obsolete -- 
 pcpp: $(OBJECTS) hook_index_constants.pm
 	rm -f $@
 	$(CC) $(ALL_CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS) $(LIBS) $(PERLLIBS)
@@ -240,10 +245,6 @@ pcpp: $(OBJECTS) hook_index_constants.pm
 cppmain: $(OBJECTS)
 	rm -f $@
 	$(CC) $(ALL_CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS) $(PERLLIBS)
-
-pcppct: $(NON_GRAMMAR_OBJECTS) $(CT_GRAMMAR_OBJECTS) hook_index_constants.pm
-	rm -f $@
-	$(CC) $(ALL_CFLAGS) $(LDFLAGS) -o $@ $(filter-out hook_index_constants.pm,$^) $(LIBS) $(PERLLIBS)
 
 
 scandecls: $(SD_OBJECTS)

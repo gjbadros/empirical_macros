@@ -138,6 +138,66 @@ XS(XS_cpp_lookup)
     XSRETURN(1);
 }
 
+XS(XS_cpp_CBytesOutput)
+{
+    dXSARGS;
+    if (items != 0)
+	croak("Usage: cpp::CBytesOutput()");
+    {
+#line 74 "backcalls.xs"
+	int	RETVAL;
+#line 74 "backcalls.xs"
+#line 75 "backcalls.xs"
+	RETVAL = cBytesOutput;
+#line 77 "backcalls.xs"
+	ST(0) = sv_newmortal();
+	sv_setiv(ST(0), (IV)RETVAL);
+#line 77 "backcalls.xs"
+#line 77 "backcalls.xs"
+    }
+    XSRETURN(1);
+}
+
+XS(XS_cpp_CBytesCppRead)
+{
+    dXSARGS;
+    if (items != 0)
+	croak("Usage: cpp::CBytesCppRead()");
+    {
+#line 81 "backcalls.xs"
+	int	RETVAL;
+#line 81 "backcalls.xs"
+#line 82 "backcalls.xs"
+	RETVAL = cBytesCppRead;
+#line 84 "backcalls.xs"
+	ST(0) = sv_newmortal();
+	sv_setiv(ST(0), (IV)RETVAL);
+#line 84 "backcalls.xs"
+#line 84 "backcalls.xs"
+    }
+    XSRETURN(1);
+}
+
+XS(XS_cpp_FExpandingMacros)
+{
+    dXSARGS;
+    if (items != 0)
+	croak("Usage: cpp::FExpandingMacros()");
+    {
+#line 88 "backcalls.xs"
+	int	RETVAL;
+#line 88 "backcalls.xs"
+#line 89 "backcalls.xs"
+	RETVAL = !parse_in.no_macro_expand;
+#line 91 "backcalls.xs"
+	ST(0) = sv_newmortal();
+	sv_setiv(ST(0), (IV)RETVAL);
+#line 91 "backcalls.xs"
+#line 91 "backcalls.xs"
+    }
+    XSRETURN(1);
+}
+
 #ifdef __cplusplus
 extern "C"
 #endif
@@ -153,6 +213,9 @@ XS(boot_backcalls)
         newXS("cpp::fname", XS_cpp_fname, file);
         newXS("cpp::nominal_fname", XS_cpp_nominal_fname, file);
         newXS("cpp::lookup", XS_cpp_lookup, file);
+        newXS("cpp::CBytesOutput", XS_cpp_CBytesOutput, file);
+        newXS("cpp::CBytesCppRead", XS_cpp_CBytesCppRead, file);
+        newXS("cpp::FExpandingMacros", XS_cpp_FExpandingMacros, file);
     ST(0) = &sv_yes;
     XSRETURN(1);
 }

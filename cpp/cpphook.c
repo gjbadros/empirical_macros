@@ -41,6 +41,14 @@ inline SV *newSVpvlen(char *sz, int cch) {
   return newSVpv(sz,cch);
 }
 
+inline SV *newSVpvOrNull(char *sz, int cch) {
+  if (sz)
+    return newSVpv(sz,cch);
+  else
+    return newSVpv("@NULL@",6);
+}
+
+
 /* return a single new SV * which is the various arguments
  * OR-ed in together into one integer, each integer getting a bit
  * The list should be terminated with a negative number
@@ -151,6 +159,47 @@ gjb_call_hooks_sz_szl(struct cpp_options *opts, HOOK_INDEX ih,
   PUSHMARK(sp);
   XPUSHs(sv_2mortal(newSVpv(sz1, 0)));
   XPUSHs(sv_2mortal(newSVpvlen(sz2, cch)));
+  PUTBACK ;
+     
+  perl_call_sv(psvFunc, G_DISCARD);
+}
+
+void
+gjb_call_hooks_sz_szl_i(struct cpp_options *opts, HOOK_INDEX ih,
+			char *sz1, char *sz2, int cch, int i)
+{
+  SV *psvFunc = NULL;
+
+  dSP;
+  
+  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+    return;
+
+  PUSHMARK(sp);
+  XPUSHs(sv_2mortal(newSVpv(sz1, 0)));
+  XPUSHs(sv_2mortal(newSVpvlen(sz2, cch)));
+  XPUSHs(sv_2mortal(newSViv(i)));
+  PUTBACK ;
+     
+  perl_call_sv(psvFunc, G_DISCARD);
+}
+
+void
+gjb_call_hooks_sz_szl_i_i(struct cpp_options *opts, HOOK_INDEX ih,
+			  char *sz1, char *sz2, int cch, int i1, int i2)
+{
+  SV *psvFunc = NULL;
+
+  dSP;
+  
+  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+    return;
+
+  PUSHMARK(sp);
+  XPUSHs(sv_2mortal(newSVpv(sz1, 0)));
+  XPUSHs(sv_2mortal(newSVpvlen(sz2, cch)));
+  XPUSHs(sv_2mortal(newSViv(i1)));
+  XPUSHs(sv_2mortal(newSViv(i2)));
   PUTBACK ;
      
   perl_call_sv(psvFunc, G_DISCARD);
@@ -311,7 +360,7 @@ gjb_call_hooks_sz_sz_3flags(struct cpp_options *opts, HOOK_INDEX ih,
     return;
 
   PUSHMARK(sp);
-  XPUSHs(sv_2mortal(newSVpv(sz1, 0)));
+  XPUSHs(sv_2mortal(newSVpvOrNull(sz1, 0)));
   XPUSHs(sv_2mortal(newSVpv(sz2, 0)));
   XPUSHs(sv_2mortal(newSVbitmap(f1,f2,f3,-1)));
   PUTBACK ;

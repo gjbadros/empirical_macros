@@ -20,9 +20,9 @@ cpp_yy_input(char *buf,int max_size)
 {
     int result;
     enum cpp_token kind = cpp_get_token (&parse_in);
-    gjb_call_hooks_szl(CPP_OPTIONS(&parse_in),CPP_OUT,
+    gjb_call_hooks_szl(CPP_OPTIONS(&parse_in),HI_CPP_OUT,
 		       parse_in.token_buffer,CPP_WRITTEN(&parse_in));
-    gjb_call_hooks_sz_szl(CPP_OPTIONS(&parse_in),TOKEN,SzFromToken(kind),
+    gjb_call_hooks_sz_szl(CPP_OPTIONS(&parse_in),HI_TOKEN,SzFromToken(kind),
 			  parse_in.token_buffer,
 			  CPP_WRITTEN(&parse_in));
     if (kind == CPP_EOF)

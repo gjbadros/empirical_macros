@@ -3070,7 +3070,16 @@ macroexpand (pfile, hp)
 
   pfile->output_escapes--;
 
-  gjb_call_hooks_sz_szl(CPP_OPTIONS(pfile),HI_EXPAND_MACRO,hp->name,xbuf,xbuf_len);
+  if (pfile->fGettingDirective) 
+    {
+    gjb_call_hooks_sz_szl_i_i(CPP_OPTIONS(pfile),HI_IFDEF_MACRO,
+			      hp->name,xbuf,xbuf_len,xbuf_len-1,nargs);
+    }
+  else
+    {
+    gjb_call_hooks_sz_szl_i_i(CPP_OPTIONS(pfile),HI_EXPAND_MACRO,
+			      hp->name,xbuf,xbuf_len,xbuf_len-1,nargs);
+    }
 
   /* Now put the expansion on the input stack
      so our caller will commence reading from it.  */
@@ -3130,27 +3139,37 @@ static enum cpp_token
 get_directive_token (pfile)
      cpp_reader *pfile;
 {
+  enum cpp_token token;
+  pfile->fGettingDirective++;
+  //  fprintf(stderr,"INCd to %d\n",pfile->fGettingDirective);
   for (;;)
     {
       long old_written = CPP_WRITTEN (pfile);
-      enum cpp_token token;
       cpp_skip_hspace (pfile);
       if (PEEKC () == '\n')
-	  return CPP_VSPACE;
+	  {
+	  token = CPP_VSPACE;
+	  goto RETURN;
+	  }
       token = cpp_get_token (pfile);
       switch (token)
       {
       case CPP_POP:
 	  if (! CPP_IS_MACRO_BUFFER (CPP_BUFFER (pfile)))
-	      return token;
+	      goto RETURN;
 	  /* ... else fall though ... */
-      case CPP_HSPACE:  case CPP_COMMENT:
+      case CPP_HSPACE:  
+      case CPP_COMMENT:
 	  CPP_SET_WRITTEN (pfile, old_written);
 	  break;
       default:
-	  return token;
+	  goto RETURN;
       }
     }
+ RETURN:
+  pfile->fGettingDirective--;
+  //  fprintf(stderr,"Decd to %d\n",pfile->fGettingDirective);
+  return token;
 }
 
 /* Handle #include and #import.
@@ -4191,7 +4210,9 @@ do_if (pfile, keyword, buf, limit)
   HOST_WIDE_INT value;
   U_CHAR *pchStartExpr = CPP_BUFFER(pfile)->cur+1;
   U_CHAR *pchEndExpr = NULL;
+  pfile->fGettingDirective++; // FIXGJB: better flag?
   value = eval_if_expression (pfile, buf, limit - buf);
+  pfile->fGettingDirective--;
   pchEndExpr = CPP_BUFFER(pfile)->cur;
   conditional_skip (pfile, value == 0, T_IF, NULL_PTR);
   gjb_call_hooks_szl_szl_i(CPP_OPTIONS(pfile),HI_DO_IF,
@@ -6416,6 +6437,7 @@ init_parse_file (pfile)
   pfile->timebuf = NULL;
   pfile->only_seen_white = 1;
   pfile->buffer = CPP_NULL_BUFFER(pfile);
+  pfile->fGettingDirective = 0;
 }
 
 static struct cpp_pending *
