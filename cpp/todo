@@ -1,3 +1,24 @@
+* Title:  (PCP^3?) Integrating Parsing with Preprocessor Analysis for
+Improving Abstraction in (Legacy/Existing) C Programs
+* Title:  (PCP^3?) Improving Abstraction in (Legacy/Existing) C Programs
+by Integrating Parsing with Preprocessor Analysis
+
+
+o Is macro always expanded into same grammar tokens (e.g., is it always
+used as type identifier? 
+
+e.g.,
+
+#define VREAL1 float*
+typedef float* VREAL2;
+
+VREAL1 v1, v2;
+VREAL2 v3, v4;
+
+v1 is float* while v2 is just a float.
+v3 and v4 are both float*
+
+
 o Multiple hooks per event
 o ability to remove hooks
 o add type documentations for variables
