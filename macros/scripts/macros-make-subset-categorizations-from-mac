@@ -36,6 +36,8 @@ BEGIN {
 		      'stringization' => $i++,
 		      'LAST' =>$i++
 		     );
+  my $lastargv = "";
+}
 
 sub marks_for_categories {
   $listref = $_[0];
@@ -50,11 +52,19 @@ sub marks_for_categories {
   }
   return $str;
 }
-}
+
+# Display the file we're working on
+#if (!defined($ARGV) || !defined($lastargv) || $ARGV ne $lastargv) {
+#  print STDERR $ARGV, "\n";
+#  $lastargv = $ARGV;
+#}
 
 use English;
-next if /^[#%]/;
+next if /^[\#%]/;
 next if /FromInclude<>/;
+next if !defined($F[8]); # the categories are not listed for cond comp directive only macros
+#i.e. macros that are used in ccd-s, but not #define-d anywhere
 my @cat = split(/,/,$F[8]);
+
 print marks_for_categories(\@cat);
 print "\n";
