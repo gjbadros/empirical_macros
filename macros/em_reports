@@ -156,6 +156,10 @@ use vars qw(@macros_c_number_uses
 	   $macros_c_most_defs_distinct
 	   @macros_c_most_defs_distinct_for);
 
+foreach my $i (0..$catLast) { 
+   $macros_c_most_uses_for[$i] = 0;
+}
+
 my (%cppcmdcount, %cppcmdcount_ni, %cppcmdcount_hdr_ni, %cppcmdcount_c_ni);
 my (%category_counts_ni, %category_counts_c_ni, %category_counts_hdr_ni);
 
