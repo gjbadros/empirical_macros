@@ -1,4 +1,4 @@
 #!/uns/bin/zsh -
 # Should only take one argument, a .mac file.
 # Eighth field is something like "CodeCond" or "NoUses".
-awk < "$1" 'NR>1 && $0 !~ /^[%#]/ && $10 !~ /^FromInclude/ {print $8}' | sort | uniq -c
+(echo "Code\nCodeCond\nCodeMacro\nCodeMacroCond\nCond\nMacro\nMacroCond\nNoUses"; awk < "$1" 'NR>1 && $0 !~ /^[%#]/ && $10 !~ /^FromInclude/ {print $8}') | sort | uniq -c | awk '$1--'
