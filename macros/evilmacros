@@ -444,12 +444,14 @@ my $builtin_type_re = $builtin_type_base_re . $type_suffix_re;
 
 ## Binary operators
 # $numeric_binop_regexp should precede $bool_binop_regexp because of < and <<.
+# $bool_binop_regexp should precede $numeric_binop_regexp because of | and ||.
 # Better yet, get rid of this, go back to one regexp, and have a hashtable to
 # give precedences, types, etc.
 my $numeric_binop_regexp = '<<=?|>>=?|[-*\/%+&^\|]=?';
 my $bool_binop_regexp = '[<=>!]=|&&|\|\||<|>';
 # This might return a boolean, number, or something else.
 my $arb_type_binop_regexp = '=';
+my $binop_regexp = '<<=?|>>=?|&&|\|\||[<=>!]=|[-*\/%+&^\|]=?|[<=>]';
 
 
 ###########################################################################
@@ -3194,7 +3196,7 @@ sub parse_exp_follower ($$)
     { return parse_exp_follower($typeUNKNOWN, $POSTMATCH); }
 
   # Binary operators:  multi-char operators must precede single-char ones
-  if (($follow =~ /^($numeric_binop_regexp|$bool_binop_regexp|$arb_type_binop_regexp)/o)
+  if (($follow =~ /^($binop_regexp)/o)
       || ($commaop && ($follow =~ /^(,)/)))
     { my $op = $1;
       my $arg2 = $POSTMATCH;
@@ -3435,7 +3437,9 @@ PROCESSLINE:
 		    { parse_error("Couldn't combine function def split over lines: $line");
 		      # Fall through.
 		    } }
-	      elsif (($line =~ /^\s*($type_declarator_re)\s*([,=;\(])/o)
+	      # The negative lookahead assertion is to avoid matching
+	      # "JOBSTATE (previous_job) == JSTOPPED", bash-1.14.7/jobs.c:1697.
+	      elsif (($line =~ /^\s*($type_declarator_re)\s*([,=;\(])(?!=)/o)
 		     # must check this second, to get "int (*foo) (arg1, arg2)"
 		     || ($line =~ /^($identifier_re)\s*(\()/o))
 		{
@@ -3728,6 +3732,8 @@ ATCOMMA:
 				# Maybe return something of the appropriate type.
 				{ $remaining = "0" . $remaining; }
 			      my $postexp = skip_expression_nocommaop($remaining);
+			      # print "After skip_expression_nocommaop, postexp $postexp\n";
+
 			      if ($postexp eq "")
 				{ # do nothing; done with this line, because
 				  # parsing of the expression failed
@@ -3975,16 +3981,20 @@ sub process_function_definition_or_declaration ($$$)
       else
 	{ mdie("Couldn't find semicolon or comma I just found in $remaining"); }
     }
+  # function definition
+  elsif (defined($current_function))
+    { parse_error("Function definition for $identifier in function $current_function starting at line $current_function_start_line");
+      # Now just return $remaining and hope for the best.
+    }
   else
-    {				# function definition
+    {
       # print "found function definition $identifier; remaining $remaining\n";
 
       # exit_scope makes these undefined.
       # $current_function_start_line may get set earlier, if we see a split
       # declaration/definition (that's a bit gross).
       # Perhaps check that it is already set.
-      if (defined($current_function))
-	{ mdie("Already in function $current_function starting at line $current_function_start_line?"); }
+
       $current_function = $identifier;
       # FIX: Why subtract 1 here?  Is this right??
       if (!defined($current_function_start_line))
@@ -4168,21 +4178,26 @@ sub skip_expression_nocommaop ($)
   # print "skipping expression $input\n";
 
   if ($input =~ /^\s*\{/)
-    { ($type, $remaining) = parse_array_initializer($POSTMATCH);
+    { my $post_open_brace = $POSTMATCH;
+      ($type, $remaining) = parse_array_initializer($post_open_brace);
       if ($debug_parse_array_init)
-	{ print "parse_array_initializer('$POSTMATCH') => '" . type_name($type) . "' '$remaining'\n"; }
+	{ print "parse_array_initializer('$post_open_brace') => '" . type_name($type) . "' '$remaining'\n"; }
       if ($type eq $typeFAIL)
 	{ parse_error("skip_expression_nocommaop: parse_array_initializer failed, remaining = $remaining\n");
-	  # just skip it -- use $input, not $remaining
+	  # just skip it -- don't use $input, which has an open that
+	  # find_close_paren doesn't expect.
 	  $type = $typeUNKNOWN;
-	  my ($close_brace_pos, $expanded_input) = find_close_brace($input, 0, $true);
-	  my $remaining = substr($expanded_input, $close_brace_pos+1); }
+	  my ($close_brace_pos, $expanded_input) = find_close_brace($post_open_brace, 0, $true);
+	  $remaining = substr($expanded_input, $close_brace_pos+1);
+	  if ($debug_parse_array_init)
+	    { print "failed to parse array init, found close brace before $remaining\n"; }
+	}
       # print "parse_array_initializer returned $type $remaining\n";
     }
   else
     { ($type, $remaining) = parse_exp_nocommaop($input, "ignore types"); }
   if (!$type)
-    { mdie("No type at $remaining?");
+    { mdie("No type for initializer $remaining");
       # return "";
     }
   else
@@ -4412,11 +4427,12 @@ sub categorize_macro_def ($)
   elsif ($body =~ /^$char_literal_re$/)
     { $category = $catLITERAL;
       $type = $typeCHAR; }
-  elsif ($body =~ /^$c_reserved_nontype_word_re|$c_reserved_type_word_re$/)
-    { # $failure_type = "expands_to_reserved_word";
-      $category = $catRESDWORD;
-      evilprint("expands to reserved word\n    $body\n");
-    }
+# DON'T DO THIS!  Being a statement has precedence over having a reserved word.
+#   elsif ($body =~ /^$c_reserved_nontype_word_re|$c_reserved_type_word_re$/)
+#     { # $failure_type = "expands_to_reserved_word";
+#       $category = $catRESDWORD;
+#       evilprint("expands to reserved word\n    $body\n");
+#     }
   else
     { my $remaining;
       reset_parse_vars();
@@ -4521,7 +4537,7 @@ CATEGORIZED:
   update_categories_for($category);
 
   if ($debug_categorize_macro)
-    { print "categorize_macro_def ($index): $category",
+    { print "categorize_macro_def ($index): $categoryname[$category]",
           (defined($type) ? "(" . type_name($type) . ")" : ""),
           ": $body\n"; }
 }
@@ -4755,7 +4771,7 @@ sub is_void_macro ($)
 # or modify the globals for the current macro when we're in the classification
 # phase.
 
-# This is called only if parsing the expression as an expession and other
+# This is called only if parsing the body as an expession and other
 # simple tests already failed.
 sub check_macro_body ($) {
   my ($body) = check_args(1, @_);
@@ -4778,7 +4794,7 @@ sub check_macro_body ($) {
     # Found paren, quote, cpp directive, or comment
     { my $match = $MATCH;
       $body = $POSTMATCH;
-      # print "$match ||| $body\n";
+      if ($debug_categorize_macro) { print "check_macro_body matched '$match' before $body\n" }
       if ($match =~ /[\[\(\{]/)
         { push(@nesting,$match);
 	  # print STDERR "FRONTMATCH\n";
@@ -5561,16 +5577,35 @@ sub remove_newline ($)
 ### Testing
 ###
 
-sub test_categorize_macro_def ($)
-{ my ($body) = check_args(1, @_);
+# Don't bother checking type; we test expression types elsewhere.
+sub test_categorize_macro_def ($$)
+{ my ($category,$body) = check_args(2, @_);
   $mdef_body[1000] = $body;
   $mdef_body_noc[1000] = $body;
   $mdef_name[1000] = "dummy";
   $mdef_args[1000] = "(arg)";
   undef $mdef_category[1000];
   categorize_macro_def(1000);
-  print $categoryname[$mdef_category[1000]] . "\n";
+  if ($category ne $categoryname[$mdef_category[1000]])
+    { print "Category $category should have been $categoryname[$mdef_category[1000]] for $body\n"; }
 }
+
+sub test_categorize_macro_defs ()
+{
+  $current_file = "testing";	# hack, for input_file_and_line
+  $current_ftype_index = 1;	# hack, for update_categories_for
+  test_categorize_macro_def("expression", "(uch)get_byte()");
+  test_categorize_macro_def("expression", "memset ((voidp)(s), 0, (n))");
+  test_categorize_macro_def("expression", "((char_type *)(&d_buf[DIST_BUFSIZE-1]))");
+  test_categorize_macro_def("expression", "((ush)(uch)((p)[0]) | ((ush)(uch)((p)[1]) << 8))");
+  test_categorize_macro_def("expression", "((ulg)(SH(p)) | ((ulg)(SH((p)+2)) << 16))");
+  test_categorize_macro_def("expression", "malloc((size_t)(items)*(size_t)(size))");
+  test_categorize_macro_def("expression", "(inptr < insize ? inbuf[inptr++] : fill_inbuf(0))");
+  test_categorize_macro_def("literal", "\"\\037\\235\"");
+  test_categorize_macro_def("literal", "\"\037\235\"");
+  test_categorize_macro_def("statement", "if (status < 0) { perror(name); error=1; }");
+}
+
 
 # Print all lines that look like declarations.
 sub test_typedecl_regexp ()
@@ -5644,6 +5679,12 @@ sub test_parse_expressions ()
   test_parse_expression("(va_list)__builtin_saveregs()", "va_list");
   test_parse_expression("((AP) = (va_list)__builtin_saveregs())", "va_list");
   test_parse_expression("O_WRONLY | O_CREAT | O_EXCL | O_BINARY", $typeUNKNOWN);
+  test_parse_expression("(foo ? string2[startpos - size1]  : string1[startpos])", $typeUNKNOWN);
+  test_parse_expression("(size1 == 0)", "bool");
+  test_parse_expression("(startpos >= size1)", "bool");
+  test_parse_expression("(foo || bar)", "bool");
+  test_parse_expression("(size1 == 0 || startpos >= size1)", "bool");
+  test_parse_expression("(size1 == 0 || startpos >= size1 ? string2[startpos - size1]  : string1[startpos])", $typeUNKNOWN);
 }
 
 sub test_parse_type ($$)
@@ -5763,16 +5804,6 @@ sub test_typedecl_regexps ()
 # print defined($type_num["foo"]);
 # print "foo" + 0;
 # print type_name(1);
-
-# test_categorize_macro_def("(uch)get_byte()");
-# test_categorize_macro_def("memset ((voidp)(s), 0, (n))");
-# test_categorize_macro_def("((char_type *)(&d_buf[DIST_BUFSIZE-1]))");
-# test_categorize_macro_def("((ush)(uch)((p)[0]) | ((ush)(uch)((p)[1]) << 8))");
-# test_categorize_macro_def("((ulg)(SH(p)) | ((ulg)(SH((p)+2)) << 16))");
-# test_categorize_macro_def("malloc((size_t)(items)*(size_t)(size))");
-# test_categorize_macro_def("(inptr < insize ? inbuf[inptr++] : fill_inbuf(0))");
-# print "<<" . test_categorize_macro_def("\"\\037\\235\"") . ">>\n";
-# print "<<" . test_categorize_macro_def("\"\037\235\"") . ">>\n";
 
 # $foo = "x"; $foo =~ /x/; print defined($POSTMATCH), defined($POSTMATCH), defined($POSTMATCH), "\n";
 # print ("" eq "\n"), "\n";
@@ -5943,6 +5974,7 @@ if ($opt_T)
 { test_parse_types();
   test_typedecl_regexps();
   test_parse_expressions();
+  test_categorize_macro_defs();
   exit -1;			# Don't run following programs, eg from gzip.
   # exit;			# Find this via search for the string "exit;".
 }
@@ -5966,7 +5998,7 @@ initialize_lists_of_hashes();
 ## Begin processing files
 
 if ($opt_v) { print STDERR "Processing ", scalar(@files), " files",
-  	                   ($opt_I ? "" : "(plus \#included files)"), "...\n"; }
+  	                   ($opt_I ? "" : " (plus \#included files)"), "...\n"; }
 
 find_macro_definitions();	# also counts other preprocessor usage
 
