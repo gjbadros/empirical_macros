@@ -172,7 +172,9 @@ use vars qw($getopts_option_letters $c_reserved_type_word_alternatives
 
 use vars qw(%macros_c_all_uses @freq_use_buckets @freq_def_buckets
 	   @macros_c_number_uses @macros_c_number_defs
-	   $macros_c_most_uses   $macros_c_most_defs);
+	   @macros_c_number_uses_for @macros_c_number_defs_for
+	   $macros_c_most_uses   $macros_c_most_defs
+	   @macros_c_most_uses_for @macros_c_most_defs_for);
 
 
 my (%cppcmdcount, %cppcmdcount_ni, %cppcmdcount_hdr_ni, %cppcmdcount_c_ni);
@@ -417,10 +419,23 @@ sub output_stats ()
   select(FREQUSE);
   OutputCountsHistogramCum(0,$macros_c_most_uses,
 			   make_cum_array(@macros_c_number_uses));
+  my $cat;
+  foreach $cat (0..$catLast) {
+    local $WARNING = 0;
+    print "\n#Category: $categoryname[$cat]\n";
+    OutputCountsHistogramCum(0,$macros_c_most_uses_for[$cat],
+			     make_cum_array(@{$macros_c_number_uses_for[$cat]}));
+  }
 
   select(FREQDEF);
   OutputCountsHistogramCum(1,$macros_c_most_defs,
 			   make_cum_array(@macros_c_number_defs));
+  foreach $cat (0..$catLast) {
+    local $WARNING = 0;
+    print "Category: $categoryname[$cat]\n";
+    OutputCountsHistogramCum(1,$macros_c_most_defs_for[$cat],
+			     make_cum_array(@{$macros_c_number_defs_for[$cat]}));
+  }
 }
 
 
@@ -566,10 +581,14 @@ sub compute_freq_use_info () {
   my $name;
   foreach $name (keys %macros) {
     next if MacroNotDefinedInsidePackage($name);
+    my $index = $macros{$name}[0]; #FIXGJB: do not just look at first definition
+    my $category = $mdef_category[$index];
     my $c = sum_array(@{$macros_uses{$name}}[@i_usage_all]);
     local $WARNING = 0;# want to exploit scalars being 0 when undefined
+    $macros_c_number_uses_for[$category][$c]++;
     $macros_c_number_uses[$c]++;
     $macros_c_most_uses = $c if ($c > $macros_c_most_uses);
+    $macros_c_most_uses_for[$category] = $c if ($c > $macros_c_most_uses_for[$category]);
   }
 }
 
@@ -580,10 +599,14 @@ sub compute_freq_def_info () {
   my $name;
   foreach $name (keys %macros) {
     next if MacroNotDefinedInsidePackage($name);
+    my $index = $macros{$name}[0];  #FIXGJB: do not just look at first definition
+    my $category = $mdef_category[$index];
     my $c = $#{$macros{$name}} + 1;
     local $WARNING = 0; # want to exploit scalars being 0 when undefined
+    $macros_c_number_defs_for[$category][$c]++;
     $macros_c_number_defs[$c]++;
     $macros_c_most_defs = $c if ($c > $macros_c_most_defs);
+    $macros_c_most_defs_for[$category] = $c if ($c > $macros_c_most_defs_for[$category]);
   }
 }
 
