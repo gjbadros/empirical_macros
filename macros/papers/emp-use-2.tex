@@ -2144,7 +2144,14 @@ classifications, and of dependences on macros did not decline
 substantially\comment{be specific}.  We conclude that macro usage in our test programs presents
 no obvious single point of attack: even eliminating one prevalent use did
 not eliminate\,---\,or even significantly reduce\,---\,the complexity
-introduced by preprocessor.
+introduced by preprocessor.  
+
+However, when multiple conditional guards can be
+eliminated, using Cppp can be a big win in simplifying source code.  One 
+author used the Cppp tool to eliminate numerous compile-time options that
+the \textsc{Scwm} window manager had inherited from its predecessor,
+\texttt{fvwm2}.  This transformation resulted in a cleaner code base
+that was easier for developers to understand and continue to evolve.
 
 
 \section{Related work}
