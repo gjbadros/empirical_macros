@@ -1,0 +1,277 @@
+From: Michael Ernst <mernst@cs.washington.edu>
+Subject: Macros paper: reviews
+To: David Notkin <notkin@cs.washington.edu>,
+        Greg Badros <gjb@cs.washington.edu>
+Date: Thu, 13 Jan 2000 17:03:48 -0800 (PST)
+X-From-Line: mernst@cs.washington.edu  Thu Jan 13 17:03:49 2000
+Received: from rhodes.cs.washington.edu (rhodes.cs.washington.edu [128.95.1.134])
+	by june.cs.washington.edu (8.9.3/8.9.3/0.3j) with ESMTP id RAA51979
+	for <gjb@june.cs.washington.edu>; Thu, 13 Jan 2000 17:03:49 -0800 (PST)
+	(envelope-from mernst@cs.washington.edu)
+Received: (from mernst@localhost)
+	by rhodes.cs.washington.edu (8.9.3/8.9.3/0.3) id RAA23856;
+	Thu, 13 Jan 2000 17:03:48 -0800 (PST)
+	(envelope-from mernst@cs.washington.edu)
+Message-Id: <200001140103.RAA23856@rhodes.cs.washington.edu>
+X-Authentication-Warning: rhodes.cs.washington.edu: mernst set sender to mernst@cs.washington.edu using -f
+Lines: 258
+Xref: clavicle.cs.washington.edu inbox:14504
+
+Here are the reviews, at last.  I haven't looked at them yet.
+
+					-Mike
+
+------- Start of forwarded message -------
+Date: Thu, 13 Jan 2000 18:36:45 -0500 (EST)
+From: Jens Palsberg <palsberg@cs.purdue.edu>
+To: mernst@cs.washington.edu
+Subject: your paper
+
+Dear Michael Ernst, Greg Badros, David Notkin,
+   Re:  Your submission to IEEE Transactions on Software Engineering
+        entitled "An empirical analysis of C preprocessor use."
+
+As I wrote earlier, the paper is accepted for publication in IEEE TSE.  
+Appended are three reviews.  Please consider doing some of the suggested 
+revisions.  After those possible revisions, the result is the final 
+version of the paper.  I think the suggested revisions are well worth 
+doing, and I hope you can put in a reasonable effort.  Do not worry about 
+the length of the paper.  When the final version is ready, send it to me
+for a quick check that everything is in order, and when I then give the
+go-ahead, send it to IEEE, with cc to me.  If you have questions while 
+preparing the final version, don't hesitate with contacting me.
+
+Please contact Yu-Tzu Tsai (ytsai@computer.org) in the IEEE office 
+for information about how and in what format to deliver the final 
+version of the paper.  
+
+I would be grateful if you could give me an estimate of when you
+plan to send me the final version of the paper.
+
+Sincerely,
+
+Jens Palsberg
+Purdue University
+Associate Editor of IEEE Transactions on Software Engineering
+www.cs.purdue.edu/people/palsberg
+
+
+- ----------------------------------------------------------------------
+REVIEW A
+
+I have re-read the paper and believe that it adequately addresses my
+initial comments.  
+
+On additional comment concerning Figure 8 on page 18:
+
+  a) I think the graphic is confusing and is better left out and just
+     explained in words.
+  b) The caption of the graphic has two errors of form. The final sentence
+     of the caption should read:
+
+      "This chart shows which different macro definition categories tend to
+       occur together and assist in understanding the reason for macro names
+       whose multiple definition cause them to be categorized as `other'."
+
+- ----------------------------------------------------------------------
+REVIEW B
+
+I had already recommended the article "An empirical analysis of
+preprocessor use" by Ernst, Badros, Notkin for acceptance. The revised
+version definitely improved an already very interesting article, hence
+I definitely recommend it for publication in the IEEE Transactions on
+software Engineering.
+
+- ----------------------------------------------------------------------
+
+REVIEW C
+
+The revision, while much improved, is still flawed.  I have found it
+difficult to make a recommendation.  While I believe this paper is not
+suitable for publication in its current form, I also believe in the
+value of the work.  TSE rules do not permit me to recommend another
+major revision, so my only possible recommendations are rejection, or
+acceptance with minor revisions to be handled by the editor.  With
+grave reservations, I have recommended the latter.
+
+The major problem with the paper is that it does not deliver on its
+claims.  It does not produce `an understanding of actual usage.'  It
+does not `provides significant insights' about how the preprocessor is
+used in practice.  It does not `confirm or contradict intuitions'
+about the preprocessor.  The paper presents data, not insights.
+Accordingly, if the paper is to be published, the introduction and
+abstract *must* be revised to withdraw the first two claims.  Your
+revised introduction should include all of the information and caveats
+that appear in items 10 and 11 of the letter that accompanies your
+revision.  I believe you may be able substantiate the third claim,
+which you make in the conclusion; otherwise, it too must go.
+
+Another serious problem is that you still do not present sufficient
+evidence or reasoning indicating why some macros are `erroneous' or
+`problematic'.  Too often these claims are bald assertions.
+
+The taxonomy in section 5.3 contains two grave errors in judgment (in my
+opinion) and an error of fact.  For the paper to be acceptable, this
+section *must* include the *reasoning* backing up the claims.  More below.
+
+The conclusions are much too sketchy.  For example, I can't even
+identify which uses are common for purposes of writing programming
+tools.  If you haven't actually identified common uses, but expect me
+to pull them out of your data, you expect too much.  If you have
+identified common uses, share your knowledge.  As another example,
+*which* features were interesting and surprising?  Which results were
+not predictable a priori.
+
+There are areas of presentation, particularly of figures, that still
+warrant substantial improvement.  Figure 10 in particular is
+unacceptable.  You have most of the information from my first review.
+
+I am not aware of any a priori space limitations that TSE imposes on
+accepted papers.  If the editor needs to argue for `extra' space in
+order to fill in missing pieces, he will certainly have my full
+support. 
+
+
+Details follow.
+
+
+
+What are the `difficulties' that could be caused at the end of the
+penultimate paragraph of your introduction?  I had thought section 2
+would make these clear, but it does not.  Section 2 contains only
+constructs that are asserted `problematic' without supporting evidence
+(another problem that should have been fixed in this revision).
+
+At the top of page 3, identify situations in which `only some sort of
+preprocessing of Cpp analysis can produce useful answers'.
+
+I'm alarmed that the Statement category on page 8 doesn't distinguish
+the else-capturing FREE from the other macros, nor the SIGNAL_RETURN,
+which requires a semicolon, from the SWALLOW_LINE, which may behave
+strangely when followed by semicolon 
+(e.g., if (p) SWALLOW_LINE(fp); else assert(feof(fp));)
+
+Even the Symbol and Unknown Symbol categories deserve examples.
+Please explain the huge Unknown Symbol entry for perl.
+
+I still learn nothing from Figure 4.  Put it in an appendix, or better
+yet, make the data available electronically.
+
+On page 11, what does it mean `we did not track calls to functions or
+macros with side effects'?  Does it mean your analyses don't reveal
+whether they have side effects, or your analysis ignores such
+functions and macros?
+
+Page 11: C lacks not only reference arguments but also inline
+functions.
+
+You present no evidence for the `more unexpected and harder to
+understand' claim at the top of page 12.
+
+Page 12, stringization enables one to define tables that interconvert
+internal names and strings.  These are useful for serialization as
+well as debugging.
+
+
+Section 5.3: what makes these macros erroneous?  Are they always
+erroneous or just sometimes?  Under what circumstances?  Why are the
+definitions erroneous and not the uses?
+
+Page 13, unparenthesized formal: is a precedence error with a comma
+just unlikely, or impossible?  Exactly what C operators have lower
+precedence than comma?  What are the implications of the answer (which
+you will find on page 53 of K&R)?  This sort of omission hurts your
+credibility.
+
+At the top of page 14, similar questions about function call.
+And it is not simply relevant what the precedence of function call is,
+but rather what its syntactic relationship to a macro use is---they
+look the same.  So again, why is this relevant (to potential errors)?
+
+Page 14, `dangling semicolon'.  What about macros whose bodies are
+{ ... }, as in 
+
+  #define ABORT() { fprintf(stderr, "Yo mama writes C++"); kill(getpid(),SIGABRT
+); }
+
+This macro also has the property `while its invocation looks like a
+function call, it should not be used as function call'.  Why doesn't
+it appear in the same taxon?
+
+On a related point, the recommendation at the top of page 15, to wrap
+statements in braces, is a disaster, for precisely this reason.
+Again, your credibility plummets --- this kind of error is an example
+of why you *must* present the *reasoning* behind your assertions.
+In this case, the reasoning is that macros that might reasonably
+function as statements should be acceptable anywhere a function-call
+statement would be, because the uses look too much like function
+calls, and to do anything else would be to set a trap for the unwary.
+
+
+
+Page 14, `side-effected formal' appears wrong.  Neither glyphs nor
+frame need be an lvalue.  I agree that frame must be the name of a
+field in a struct pointed to by glyphs, and this is passing strange.
+Consider, e.g.,
+
+  #define SET_GLYPHS_FRAME(glyphs,frame) (set_ ## #frame((glyphs), (frame)))
+
+as an alternative.  Might not this simple function call serve as well?
+Or am I overlooking something obvious?
+
+
+
+At the bottom of page 15, presumably it is `86% of macro *names*' that
+are defined just once?
+
+
+In section 5.5, I am surprised by the decision to consider all strings
+and character literals identical.  What happens if this element of the
+canonicalization isn't done?  Do the results change in any interesting
+way?  (If this was in the first draft, my apologies for missing it
+then.)
+
+Figure 7 is very helpful.
+
+In figure 8, if I understand what is going on, the algorithm in Figure
+7 would determine a `final' category.  I would find it most helpful if
+that column were included in Figure 8, perhaps separated by blank
+space from the other columns.  I really wish not to run Fig 7 in my
+head multiple times.
+
+I would love to see a Tukey box (median, mean, quartiles, and 90%
+confidence) added to figure 9 as a summary row.
+
+
+In Figure 10, you must not connect the items at 0 to the items at 1.
+This procedure is scientifically meaningless and can only serve to
+mislead the reader.  If you need a short line segment to help the
+reader distinguish the points at 0, simply draw a flat horizontal line
+segment about 3/8 of an inch wide and centered at 0.   Do *not*, under
+*any* circumstances, connect the points at zero to the points at 1.
+The points at 0 are infinitely far away to the left and there must be
+a break.  You should put a break in your X axis as well, and if
+possibly insert the usual wavy symbol for `large gap'.
+
+
+I missed this on first reading, but it appears to me that Figure 11
+presents the same kind of information as figures 4 and 8 (i.e., not
+just categories, but combinations of categories).  If that impression
+is actually true, you owe it to your readers to present the
+information in the same format as figures 4 and 8.
+
+How did you classify the names (symbols) mentioned at the top of page
+23?
+
+How did you choose the widths of the buckets used on page 25?
+
+
+In your conclusions, you claim your article `serves to confirm or
+contradict intuitions about the use of the C preprocessor'.  This is
+an important claim and again unsubstantiated.  Please give us a good
+selection of intuitions and show how the information you have gathered
+serves to confirm or contradict them.
+
+END OF MESSAGE
+------- End of forwarded message -------
+
