@@ -4275,9 +4275,12 @@ sub categorize_macro_def
       # $type was ($type != $typeFAIL)
       if ($type && ($remaining =~ /^\s*$/))
 	# Expression
-	{ $category = $catEXP;
-	  if ($parse_exp_saw_equals)
+	{ if ($body =~ /^$constant_exp_re$/)
+	    { $category = $catSOMECONSTANT; }
+	  elsif ($parse_exp_saw_equals)
 	    { $category = $catEXPASSIGN; }
+	  else
+	    { $category = $catEXP; }
 	  # print "category = $categoryname[$category]; found expression $body\n";
 	  { my $arg;
 	    foreach $arg (split(/[\(, \t]*/, $mdef_args[$index]))

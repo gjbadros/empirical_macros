@@ -40,22 +40,21 @@ Seattle, WA  98195-2350\\
 \begin{abstract}
 
   The C programming language is intimately connected to its macro
-  preprocessor.  This relationship affects, indeed generally hinders,
-  both the tools (compilers, debuggers, call graph extractors, etc.)
-  built to engineer C programs and also the ease of translating to other
-  languages such as C++.  In this paper we analyze over 20 packages
-  comprising almost one million lines of publicly available C code, determining
-  the ways in which the preprocessor is used in practice.  We developed
-  a framework for analyzing preprocessor usage, using it to extract
-  information about the percentage of preprocessor directives in C
-  programs, about the frequency of use of defined macros, about the
-  relationship between C functions and their use of macros, and about
-  the macros that are difficult to express in terms of other C or C++
-  language features.  We report on the analysis, in particular
+  preprocessor.  This relationship affects, indeed generally hinders, both
+  the tools (compilers, debuggers, call graph extractors, etc.)\ built to
+  engineer C programs and also the ease of translating to other languages
+  such as C++.  In this paper we analyze over 20 packages comprising almost
+  one million lines of publicly available C code, determining the ways in
+  which the preprocessor is used in practice.  We developed a framework for
+  analyzing preprocessor usage, using it to extract information about the
+  percentage of preprocessor directives in C programs, the frequency of use
+  of defined macros, the relationship between C functions and their use of
+  macros, and the macros that are difficult to express in terms of other C
+  or C++ language features.  We report on the analysis, in particular
   illustrating data that are material when considering the definition of
-  tools for C or C++.  We present how the results (and the supporting
-  framework) lay the foundation for developing a tool to reduce usage of
-  the preprocessor by translating from C to C++.
+  tools for C or C++.  The results (and the supporting framework) lay the
+  foundation for developing a tool to reduce usage of the preprocessor by
+  translating from C to C++.
 
 \end{abstract}
 
@@ -63,14 +62,17 @@ Seattle, WA  98195-2350\\
 
 \section{Introduction}
 
-The C programming language~\cite{ansi} is intimately connected to its
-macro preprocessor, Cpp~\cite[Ch.3]{Harbison91}.  Nobody writes
-programs in ``pure'' C; facilities of the preprocessor such as
-including other files, defining constants and macros, conditional
-compilation, etc. are present in essentially every program.  This
-relationship between the C language and the preprocessor has a number
-of consequences, many of which were probably not anticipated by the
-original designers.
+The C programming language~\cite{ansi} is intimately connected to its macro
+preprocessor, Cpp~\cite[Ch.3]{Harbison91}.  Preprocessor facilities such as
+files inclusion, defining constants and macros, conditional compilation,
+etc.\ are present in essentially every C program.  
+While the preprocessor can be used in a simple or well-structured way to
+improve portability, performance, or readability, it also lends itself to 
+arbitrary source code manipulations which complicate understanding of the
+program by both programmers and tools.
+This relationship
+between the C language and the preprocessor has a number of consequences,
+many of which were probably not anticipated by the original designers.
 
 Stroustrup puts the consequences of this relationship in perspective:
 \begin{quote}
@@ -80,77 +82,119 @@ problem to programmers, maintainers, people porting code, and tool
 builders~\cite[p.~424]{Stroustrup-DesignEvolution}.
 \end{quote}
 
-As one example, source-level debuggers either map information back to
-the original source code or else leave this task to the programmer.
-As another related example, call graph extractors generally work in
-terms of the post-processed code, even when a human programmer---as
-opposed to an optimizing compiler, for example---is the intended
-consumer of the call graph~\cite{Murphy-icse18}.  Handling the mapping
-between the original and the post-processed source is not easy for
-many tools, often leaving the programmer responsible for inferring the
-mapping, which is an undesirable and error-prone situation.
+[Fix: preprocessor vs. pre-processed.]
 
-A related consequence is the difficulty that the preprocessor adds in
-translating programs from C to C++.  For example, Siff and Reps have
-described a technique that uses type inferencing to produce C++
-function templates from C; however, the input is restricted to be ``a
-C program component that $\ldots$ has been pre-processed so that all
-include files are incorporated and all macros
-expanded~\cite[p.~145]{Siff-fse96}.''  O'Callahan and Jackson also use
-type inference, although for program understanding rather than
-translation; they, too, apply their techniques to post-processed
+Tools may ignore macro definitions altogether, accept only pre-processed
+code (perhaps by running Cpp on their input), or attempt to emulate the
+preprocessor.
+
+Ignoring preprocessor directives is an option for approximate tools, but
+accurate information about function extents, scope nesting, declared
+variables and functions, and so forth requires addressing the preprocessor.
+
+Operating on pre-processed code, the most common strategy, is simple to
+implement, but then the tool's input is different from what the programmer
+sees.  Even when line number mappings are maintained, other information is
+lost in the mapping back to the original source code.  For instance,
+source-level debuggers have no symbolic names or types for constants
+introduced via \verb|#define|.  As another related example, call graph
+extractors generally work in terms of the post-processed code, even when a
+human programmer---as opposed to an optimizing compiler, for example---is
+the intended consumer of the call graph~\cite{Murphy-icse18}.  Some tools
+even leave the programmer responsible for inferring the mapping between the
+original and the post-processed source, which is an undesirable and
+error-prone situation.
+
+A tool which first preprocesses code, or insists on preprocessed code as
+input, cannot be run on a non-syntactic program or one which will not
+preprocess (or produces nonsense) on the system on which the tool is being
+run.  These constraints complicate porting and maintenance, two of the
+situations in which program understanding and transformation tools are most
+likely to be desired.  Additionally, a tool supplied only one pre-processed
+instantiation of the source code cannot reason about the program as a
+whole, only that version which results from one particular set of
+preprocessor variables.  (For instance, a bug in one configuration may not
+be discovered despite exhaustive testing of other configurations that do
+not incorporate particular code or do not admit particular paths through
+the code.)
+
+The third option, emulating the preprocessor, is fraught with difficulty.
+Macro definitions consist of complete tokens but need not be complete
+expressions or statements.  Conditional compilation and alternative macro
+definitions lead to very different results from a single original program
+text.  Tradeoffs must be made between performing preprocessing and
+maintaining the code in as close to its original form as possible.
+Preprocessing also adds complexity to an implementation, but in many
+situations only performing some sort of preprocessing can produce correct
+answers.
+
+
+All three approaches would be unnecessary if programs did not use
+preprocessor directives.  This is exactly what Stroustrup suggests:
+\begin{quote}
+  I'd like to see Cpp abolished.  However, the only realistic and
+  responsible way of doing that is first to make it redundant, then
+  encourage people to use the better alternatives, and {\em then\/}---years
+  later---banish Cpp into the program development environment with the
+  other extra-linguistic tools where it
+  belongs~\cite[p.~426]{Stroustrup-DesignEvolution}.
+\end{quote}
+C++ contains a number of features---such as \verb|const|, \verb|inline|,
+templates, and reference arguments---which obviate many uses of Cpp.  Thus,
+translation to C++
+is another path for partial elimination of Cpp.  However, the preprocessor
+itself complicates the translation.  For example, Siff and Reps describe a
+technique that uses type inferencing to produce C++ function templates from
+C; however, the input is ``a C program component that $\ldots$ has been
+pre-processed so that all include files are incorporated and all macros
+expanded~\cite[p.~145]{Siff-fse96}.''  Such preprocessing may impact the
+readability and reusability of the resulting C++ templates.  [fix: this
+doesn't feel like it belongs at all.]  O'Callahan and Jackson also use type
+inference, although for program understanding rather than translation;
+they, too, apply their techniques to post-processed
 code~\cite{OCallahan-icse97}.
 
-Having tools use post-processed source code increases the dissonance
-between what the programmer writes and what the tools analyze.  There
-are several ways to try to reduce this problem; Stroustrup suggests
-the following:
-\begin{quote}
-I'd like to see Cpp abolished.  However, the only realistic and
-responsible way of doing that is first to make it redundant, then
-encourage people to use the better alternatives, and {\em
-then\/}---years later---banish Cpp into the program development
-environment with the other extra-linguistic tools where it
-belongs~\cite[p.~426]{Stroustrup-DesignEvolution}.
-\end{quote}
+[fix: where does this go?]
+[As one example, source-level debuggers either map information back to
+the original source code or else leave this task to the programmer.]
 
-As a step in this direction, we performed an empirical analysis of the
-ways in which the preprocessor is used in a large collection of C
-programs; we analyzed 23 packages that comprise nearly one
-million lines of code.  Section~\ref{sec:gathering} lists the packages
-and their sizes.  The intent of the analysis is to build a better
-understanding of how the preprocessor is used.  In turn, this will
-help us to build a C to C++ conversion tool with two attractive
-properties: one, it will take as input C programs complete with
-preprocessor directives; and two, it will map many---preferably
-most---uses of directives into C++ language features.\footnote{It is
-not practical to eliminate all uses of Cpp.  For example, C++
-currently provides no replacement for the \verb+\#include+ directive.}
-The framework we developed for analyzing preprocessor usage provides a
+[fix: need a section break or something here.]
+
+As a step toward preprocessor elimination, we empirically analyzed
+preprocessor usage in 23 C packages comprising nearly one million lines of
+code.  Section~\ref{sec:gathering} lists the packages and their sizes.  The
+analysis is intended to build a better understanding of how the
+preprocessor is used.  In turn, this will help us to build a C to C++
+conversion tool with two attractive properties: it will take as input C
+programs complete with preprocessor directives, and it will map
+many---preferably most---uses of directives into C++ language
+features.\footnote{It is not practical to eliminate all uses of Cpp.  For
+  example, C++ currently provides no replacement for the \verb+\#include+
+  directive.} Our framework for analyzing preprocessor usage provides a
 basis for the development of such a conversion tool.
 
-In this paper, we report on several specific analyses that we
-performed.  
-\begin{itemize}
+[fix: is this list complete?]
+This paper reports on several specific analyses we performed.
+\begin{itemize}\itemsep 0pt \parskip 0pt
 
 \item We computed the percentage of original C source code lines that
 were preprocessor directives, including a breakdown of the frequency
-of specific directives (such as \verb+#define+); the analysis is shown
-in Section~\ref{sec:directives}. It was not unusual to find C programs
+of specific directives (such as \verb+#define+) (see
+Section~\ref{sec:directives}). It was not unusual to find C programs 
 in which over 10\% of the total lines were preprocessor directives.
 
 \item We computed which macros were defined, how often they were
 defined, how often they were undefined, and the number of times they
 were expanded both from other preprocessor directives and also from
-true C source code; the analysis is shown in Section~\ref{sec:usage}.
+true C source code (see Section~\ref{sec:usage}).
 [FIX: pithy observation goes here]
 
 \item We categorized definitions of macros according to what they
       expanded to; for example, we determined which macros simply
-      defined a preprocessor symbol, which defined constants, etc.;
-      the analysis is shown in Section~\ref{sec:categorization}.  We
+      defined a preprocessor symbol, which defined constants, etc.~(see
+      Section~\ref{sec:categorization}).  We
       were particularly interested in determining which macros are
-      defined in a way that is difficult to convert to other language
+      difficult to convert to other language
       features.  [FIX: pithy observation goes here]
 
 \end{itemize}
@@ -168,11 +212,10 @@ our tool on C++ code demonstrates that many C++ packages still rely on
 Cpp, even when C++ provides mechanisms within the language to support
 a nearly identical construct.  This probably holds due to a
 combination of trivial translations from C to C++ and of C programmers
-becoming C++ and continuing on with particular habits.}  We are
-interested in translations that don't merely allow a C program to be
-compiled by a C++ compiler (this is not usually too difficult, by
-intentional design of C++) but rather---like the conversion to C++
-function templates by Siff and Reps---take advantage of the new,
+becoming C++ programmers and continuing on with particular habits.}  We are
+interested not in translations that merely allow a C program to be
+compiled by a C++ compiler (which is usually easy, by
+intentional design of C++) but those that take advantage of the new,
 presumably superior, constructs of C++.
 
 %[FIX: Two important points to address: C code almost *is*
@@ -189,56 +232,66 @@ guidance on how to use C macros effectively, provide tools for
 checking macro usage for given programs, etc.
 
 Carroll and Ellis state that ``almost all uses of macros can be
-eliminated from C++ libraries.''~\cite[p.146]{Carroll95} As evidence of this,
-they list eight categories of macro usage, and explain how to convert
-these types of constructs into C++ mechanisms.  They do not, however,
-discuss automatic conversion, and focus only on instructing the
+eliminated from C++ libraries.''~\cite[p.146]{Carroll95} 
+They list eight categories of macro usage and explain how to convert
+these types of constructs into C++ mechanisms.  They do not
+discuss automatic conversion, but  focus on instructing the
 software engineer on better ways to do Cpp-like things.
 
 Similarly, a number of organizations provide hints about effective
-ways to the use the C preprocessor.  One example found on the Web
+ways to the use the C preprocessor.  One example 
 discusses a set of techniques including simple macros, argument
 macros, predefined macros, stringification macros, concatentation
 macros, undefining and redefining
-macros.\footnote{wwwwbs.cs.tu-berlin.de/\~kraxel/gnuinfo/cpp/Macros.html}
-This Web site also identifies a set of ``pitfalls and subtleties of
+macros.\footnote{wwwwbs.cs.tu-berlin.de/\~\relax kraxel/gnuinfo/cpp/Macros.html}
+It also identifies a set of ``pitfalls and subtleties of
 macros''; these are much like some of the problems our analysis tool
 identifies, as discussed below.  Our effort does not only categorize
 problems, but it also determines the frequency of appearance of those
 problems. 
 
-There are a number of tools to check whether specific C programs
-satisfy particular constraints.  The lint program checker is part of
-the standard distribution of most Unix systems, checking for uses of C
-that are likely to be problematic.  The implementation of lint is
-complicated by the fact that it tries to replicate significant
-functions of both the C compiler and also the preprocessor.  LCLint, a
-recently developed tool at MIT, handles many of the checks that lint
-does; furthermore, LCLint allows the programmer to add annotations
-that then permit additional checks to be
-performed~\cite{Evans-fse94}\cite{Evans-pldi96}.  LCLint is effective
-at analyzing macro usage.  Examples of checks that LCLint can
-optionally perform on macros that define functions include:
+There are a number of tools to check whether specific C programs satisfy
+particular constraints.  The lint program checker, distributed with most
+Unix systems, checks for uses of C that are likely to be problematic.  The
+implementation of lint is complicated by the fact that it tries to
+replicate significant functions of both the C compiler and also the
+preprocessor.  LCLint, a recently developed tool at MIT, handles many of
+the checks that lint does; furthermore, LCLint allows the programmer to add
+annotations that then permit additional checks to be
+performed~\cite{Evans-fse94}\cite{Evans-pldi96}.  Examples of checks that
+LCLint can optionally perform on function-like macros---that
+is, those which take arguments---include:
 \begin{quote}
 $\ldots$ a parameter to a macro may not be used as the left hand side
 of an assignment expression $\ldots$, a macro definition must be
 syntactically equivalent to a statement when it is invoked followed by
 a semicolon $\ldots$, the type of the macro body must match the return
 type of the corresponding function $\ldots$\footnote{From Section 8 of
-David Evan's LCLint User's Guide, Version 2.2 (August 1996); larch-www.lcs.mit.edu:8001/larch/lclint/guide/guide.html}
+David Evan's LCLint User's Guide, Version 2.2 (August 1996); larch-www.lcs.mit.edu:8001/\discretionary{}{}{}larch/\discretionary{}{}{}lclint/\discretionary{}{}{}guide/\discretionary{}{}{}guide.html}
+[FIX: That footnote should really be a reference instead.]
 \end{quote}
+[Fix: that quotation is really easy to nitpick:
+ 1) assignment parameters is fine (just turn into a reference argument) but
+    assignment of non-parameters that aren't at global scope is quite bad.
+ 2) in x=foo(); we do NOT want foo() to be a statement
+ 3) a macro doesn't have a single type, but may have many polymorphic types
+Should we mention these things?  I don't want to seem nitpicky or petty.]
+LCLint's approach is prescriptive: programmers are encouraged not to use
+constructs that might be dangerous, or to change code that contains such
+constructs.  We are more interested in analyzing, describing, and
+automatically removing such uses so that tools can better process existing
+code without requiring human interaction or producing misleading results.
+
 
 \section{The Data}\label{sec:gathering}
 
-Figure~\ref{fig:packages} shows the packages we analyzed, along with
-their sizes.  The size of each package is given in terms of both the
-physical line count---the actual numbers of lines in the file (in Unix
-terms, this is the number of newline characters plus one)---and also
-the non-comment/non-blank (NCNB) line count, which eliminates any
-lines that contain only comments or that are blank lines (consisting
-only of whitespace).  Throughout the remainder of the analysis, we use
-only the NCNB length, since that focuses more clearly on the essential
-source text of a package.
+Figure~\ref{fig:packages} shows the packages we analyzed, along with their
+sizes.  For each package we also report the physical line count---the
+number of lines (or newline characters) in the file---and the non-comment,
+non-blank (NCNB) line count, which disregards lines consisting of only
+comments or whitespace.  The remainder of the analysis uses only the NCNB
+length, since that focuses more clearly on the essential source text of a
+package.
 
 \begin{figure}
 \input{package_and_sizes-tbl.tex}
@@ -249,6 +302,12 @@ source text of a package.
 %% that would be great, but I doubt the benefit is worth the effort for now
 
 \section{Occurrence of Preprocessor Directives}\label{sec:directives}
+
+[fix: I hate these detailed explanations of figures.  It would go better in
+a caption, but may not be needed at all.]
+[fix: this is a really bizarre ordering.  Should go in approximate size
+order:
+ #define, conditionals, etc.]
 
 The first question we asked was simple: how often do
 preprocessor directives appear in C programs?
@@ -262,7 +321,7 @@ preprocessor directives: (a) \verb+#undef+ is the next row down, (b)
 \verb+#include+ is the next row down, (c) \verb+#define+ is the next
 row down, (d) the conditional compilation directives (\verb+#ifdef+,
 \verb+#ifndef+, \verb+#if+, \verb+#endif+, \verb+#else+, and
-\verb+#elif+ are combined into a single group shown in the next row,
+\verb+#elif+) are combined into a single group shown in the next row,
 and (e) any other directives in the bottom row. 
 
 \begin{figure}
@@ -283,11 +342,11 @@ breakdown of the \verb+#define+s is given below.
 The second question we asked was: where and how often are macros
 defined and used in practice?  Specifically, for each macro we
 determined:
-\begin{itemize}
+\begin{itemize}\itemsep 0pt \parskip 0pt
 
 \item How many times it was \verb+#define+d.
 \item How many times it was \verb+#undef+ined.
-\item How many arguments (if any) it defined.
+\item How many arguments (if any) it takes.
 \item How many times (and where) it was mentioned in C source code.
 \item How many times (and where) it was mentioned in other
 preprocessor directives.
