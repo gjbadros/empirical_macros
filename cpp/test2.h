@@ -20,7 +20,7 @@
 int main (char *argv, int argc)
 {
  TEST3:
-  MAX   (FOO,LONG_BAR);
+  MAX   (  FOO,     LONG_BAR);
   MAX(LONG_BAR,FOO);
  NEWTEST:
   /* MULTI -> HELLO -> LONG_BAR LONG_BAR -> bar bar */
@@ -41,10 +41,10 @@ int main (char *argv, int argc)
   MACRO_ALPHA;
   MACRO_ECHO;
  TEST4:
-  MAX(MACRO_ALPHA,MACRO_ECHO);
+  MAX(MACRO_ALPHA,    MACRO_ECHO);
  TEST5:
   __P((int, long));
-  __P((FOO, LONG_BAR));
+  __P((FOO,   LONG_BAR));
   __P((MACRO_ALPHA));
  TEST6:
    REVERSE;
