@@ -338,7 +338,7 @@ system supports.  The presence or absence of a feature requires different
 (or sometimes additional) system calls or other code.
 
 
-\subsection{The {\tt \#line} and {\tt \#undef} directives}
+\subsection{{\tt \#line}, {\tt \#undef}, and ``other'' directives}
 
 Sometimes the definedness of a macro is used as a boolean value, as in bash
 (see immediately above).  However, {\tt \#undef} is only rarely used to set
@@ -356,6 +356,9 @@ itself to parse its input, but also includes an already-procesed version of
 its input specification (that is, C code corresponding to a {\tt .l} file)
 for bootstrapping.
 
+The only significant user of other directives is the g77 package, which
+contains 157 uses of {\tt \#error} to check for incompatible preprocessor
+flags.
 
 
 [[[FIX THIS:]]]
