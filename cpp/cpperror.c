@@ -81,9 +81,9 @@ cpp_file_line_for_message (pfile, filename, line, column)
      int line, column;
 {
   if (column > 0)
-    fprintf (stderr, "%s:%d:%d: ", filename, line, column);
+    fprintf (stderr, "%s%s:%d:%d: ", SzIsSpeculative(),filename, line, column);
   else
-    fprintf (stderr, "%s:%d: ", filename, line);
+    fprintf (stderr, "%s%s:%d: ", SzIsSpeculative(),filename, line);
 }
 
 /* IS_ERROR is 1 for error, 0 for warning */
