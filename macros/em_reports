@@ -142,7 +142,7 @@ use vars @depend_state_file_vars;
 my @mdef_body_simple;
 
 
-use vars qw(%macros_c_all_uses @freq_use_buckets @freq_def_buckets
+use vars qw(%macros_c_all_uses
 	   @macros_c_number_uses @macros_c_number_defs
 	   @macros_c_number_uses_for @macros_c_number_defs_for
 	   $macros_c_most_uses   $macros_c_most_defs
@@ -906,9 +906,11 @@ sub output_frequse ( )
 			   make_cum_array(@macros_c_number_uses));
   foreach my $cat (0..$catLast) {
     local $WARNING = 0;
-    print "\n#Category: $categoryname[$cat]\n";
-    OutputCountsHistogramCum(0,$macros_c_most_uses_for[$cat],
-			     make_cum_array(@{$macros_c_number_uses_for[$cat]}));
+    if ($#{$macros_c_number_uses_for[$cat]} >= 0) {
+      print "\n#Category: $categoryname[$cat]\n";
+      OutputCountsHistogramCum(0,$macros_c_most_uses_for[$cat],
+			       make_cum_array(@{$macros_c_number_uses_for[$cat]}));
+    }
   }
 }
 
@@ -922,9 +924,11 @@ sub output_freqdef ( )
 			   make_cum_array(@macros_c_number_defs));
   foreach my $cat (0..$catLast) {
     local $WARNING = 0;
-    print "\n#Category: $categoryname[$cat]\n";
-    OutputCountsHistogramCum(1,$macros_c_most_defs_for[$cat],
-			     make_cum_array(@{$macros_c_number_defs_for[$cat]}));
+    if ($#{$macros_c_number_defs_for[$cat]} >= 0) {
+      print "\n#Category: $categoryname[$cat]\n";
+      OutputCountsHistogramCum(1,$macros_c_most_defs_for[$cat],
+			       make_cum_array(@{$macros_c_number_defs_for[$cat]}));
+    }
   }
 }
 
@@ -1069,9 +1073,6 @@ sub compute_global_cpp_sums ( ) {
 
 }
 
-@freq_use_buckets = (0,1,2,3,4,5,6,8,10,20,40,80);
-@freq_def_buckets = (1,2,3,4,5,6,7,8,10,12,14);
-
 # Return false if any of the definitions of the macro name
 # occur inside the package
 sub MacroNotDefinedInsidePackage ( $ ) { # returns bool
@@ -1120,27 +1121,24 @@ sub compute_freq_use_info ( ) {
   }
 }
 
+
+sub macro_name_lub_category( $ ) {
+  my ($name) = check_args(1,@_);
+  my $result = $catNO_DEF;
+  foreach my $index (@{$macros{$name}}) {
+    $result = category_lub( $result, $mdef_category[$index] );
+  }
+  warn "Mismatch: $result vs. $mncategory{$name} for $name!" if ($result ne $mncategory{$name});
+  return $result;
+}
+
 sub compute_freq_def_info ( ) {
   check_args(0, @_);
   $macros_c_most_defs = 0;
   # $#{$macros{$name}} is the number of macro definitions of $name
   foreach my $name (keys %macros) {
     next if MacroNotDefinedInsidePackage($name);
-    my $index = $macros{$name}[0];
-    if ($mdef_category[$index] == $catNULL_DEFINE) {
-      # if the first definition's category is NULLDEFINE, use
-      # a different category if any of its other definitions were
-      # not NULLDEFINEs.
-      my $i = 1;
-      while (defined($macros{$name}[$i]) &&
-	     $mdef_category[$macros{$name}[$i]] == $catNULL_DEFINE) {
-	$i++;
-      }
-      if (defined($macros{$name}[$i])) {
-	$index = $i;
-      }
-    }
-    my $category = $mdef_category[$index];
+    my $category = macro_name_lub_category($name);
     my $c = $#{$macros{$name}} + 1;
     local $WARNING = 0; # want to exploit scalars being 0 when undefined
     $macros_c_number_defs_for[$category][$c]++;
@@ -1151,7 +1149,7 @@ sub compute_freq_def_info ( ) {
 }
 
 sub OutputCountsHistogramRaw ( $$@ ) {
-  my ($low,$high,@counts) = @_;
+  my ($low,$high,@counts) = check_args_at_least(3,@_);
   my $total = sum_array(@counts);
   print "Total", $total, "\n";
   for (my $i = $low; $i <= $high; $i++) {
@@ -1160,7 +1158,7 @@ sub OutputCountsHistogramRaw ( $$@ ) {
 }
 
 sub OutputCountsHistogramCum ( $$@ ) {
-  my ($low,$high,@counts) = @_;
+  my ($low,$high,@counts) = check_args_at_least(3,@_);
   my $total = (scalar(@counts) == 0) ? 0 : $counts[$#counts];
   print "Total", $total, "\n";
   for (my $i = $low; $i <= $high; $i++) {
@@ -1188,7 +1186,7 @@ sub read_variables {
       $i--;
     }
   } else {
-    do $file;
+    do $file || warn "File $file can't be do-ne";
     if ($@) { die "Trouble with \"do $file\": $@"; }
   }
 }
