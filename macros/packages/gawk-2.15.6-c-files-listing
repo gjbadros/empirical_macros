@@ -51,6 +51,7 @@
 ./vms/vms_gawk.c
 ./vms/vms_misc.c
 ./vms/vms_popen.c
+# ./config/sgi{33,405}.cc shouldn't be included -- not C code
 ./config/sgi33.cc
 ./config/sgi405.cc
 ./config/solaris2.cc
