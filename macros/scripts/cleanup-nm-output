@@ -1,0 +1,15 @@
+#!/uns/bin/perl -wn
+# Run this on the output of something like 
+#   find . -perm +u+x -print | xargs nm
+# to get just a list of the symbols, one per line
+
+# (I couldn't figure out a way to get find to omit directories while
+# including executables); something like one of these ought to have worked,
+# but didn't.)
+#   find . -depth -type d -prune -or -perm +u+x -print
+#   find . -depth -type d -prune -o -print
+
+# It's safe to include all symbols, even unresolved ones (thus the "." in
+# the regexp).
+if (/^[ 0-9a-f]{8} . ([a-zA-Z0-9_]*)$/)
+{ print $1, "\n"; }
