@@ -25,7 +25,7 @@ Software Engineering"}
 
 
 @TechReport{ellemtel92,
-  author = 	 {Ellemtel Telecommunication Systems Laboratory},
+  author = 	 {{Ellemtel Telecommunication Systems Laboratory}},
   title = 	 {Programming in {C++}: Rules and Recommendations},
   institution =  {Ellemtel Telecommunications},
   year = 	 1992,
@@ -36,7 +36,7 @@ Software Engineering"}
 Update according to GCC manual?
 @Manual{cpp-manual,
   title = 	 {{GNU} {C} Preprocessor Manual},
-  author =	 {{GNU}~Project},
+  author =	 {{GNU~P}roject},
   edition =	 {v2.7.2}
 }
 
@@ -56,9 +56,10 @@ Update according to GCC manual?
   organization = {{GNU} Project},
   year =	 1997,
   month =	 {July},
-  note =	 {ftp://prep.ai.mit.edu/pub/gnu/standards/standards.texi}
+  note =	 {\relax{}ftp://prep.ai.mit.edu/\discretionary{}{}{}pub/\discretionary{}{}{}gnu/\discretionary{}{}{}standards/\discretionary{}{}{}standards.texi}
 }
-
+The use of "\relax{}" in the note prevents BibTeX from making a bad break
+(in the middle of a TeX \discretionary macro).  Don't change!
 
 
 @Misc{Deutsch90,
@@ -120,7 +121,8 @@ Update according to GCC manual?
   booktitle= 	icse97,
   month= 	may,
   year= 	1997,
-  notes=        "To appear."
+  pages =        "338--348",
+  publisher =    "ACM Press",
 )
 
 @Book{KernighanR88,
@@ -158,15 +160,16 @@ Update according to GCC manual?
   year= 	1994
 )
 
-@InProceedings( Evans-pldi96,
-  author= 	"Evans, David",
-  title= 	"Static detection of dynamic memory errors",
-  booktitle= 	"ACM SIGPLAN '96: Programming Language Design
-		  and Implementation",
-  pages= 	"44--53",
-  month= 	may,
-  year= 	1996
-)
+@Manual{Evans:LCLint,
+  title = 	 {LCLint User's Guide},
+  author =	 {David Evans},
+  OPTorganization = {},
+  OPTaddress = 	 {},
+  year =	 1996,
+  month =	 Aug,
+  note =	 {Version 2.2.  http://larch-www.lcs.mit.edu:8001/\discretionary{}{}{}larch/\discretionary{}{}{}lclint/\discretionary{}{}{}guide/\discretionary{}{}{}guide.html}
+}
+
 
 @InProceedings{Krone94,
   author = 	 {Krone, Maren and Snelting, Gregor},
@@ -188,17 +191,6 @@ Update according to GCC manual?
   address =	 "Palo Alto, California",
   month =	 Jan
 }
-
-@Manual{Evans:LCLint,
-  title = 	 {LCLint User's Guide},
-  author =	 {David Evans},
-  OPTorganization = {},
-  OPTaddress = 	 {},
-  year =	 1996,
-  month =	 Aug,
-  note =	 {Version 2.2.  http://larch-www.lcs.mit.edu:8001/\discretionary{}{}{}larch/\discretionary{}{}{}lclint/\discretionary{}{}{}guide/\discretionary{}{}{}guide.html}
-}
-
 
 @InProceedings{WeiseC93,
   author =       "Daniel Weise and Roger Crew",
@@ -296,7 +288,7 @@ Also CodeWizard, which implements the tests in Scott Myers's books:
 
 @InProceedings{SpencerC92,
   author = 	 "Henry Spencer and Geoff Collyer",
-  title = 	 "\#ifdef Considered Harmful, or Portability Experience with C News",
+  title = 	 "\#ifdef Considered Harmful, or Portability Experience with {C} {N}ews",
   booktitle = 	 "Usenix Summer 1992 Technical Conference",
   year =	 1992,
   address =	 "San Antonio, Texas",
@@ -363,7 +355,7 @@ They also break down the 166 uses of #ifdef into categories:
   institution =  "Bell Labs",
   address =      "Murray Hill, NJ",
   keywords =     "CSTR",
-  note =         "updated version TM 78-1273-3",
+  ignore-note =         "Updated version TM 78-1273-3",
 }
 
 @Manual{GNUEmacs19.26,
@@ -386,28 +378,15 @@ They also break down the 166 uses of #ifdef into categories:
   year=1990
 }
 
-@article{scheme:languagespec,
-  title="Revised^3 Report on the Algorithmic Language Scheme",
-  author="Jonathan Rees and William Clinger",
-  journal="SIGPLAN Notices",
-  month=dec,
-  year=1986,
-  volume=21,
-  number=12
-}
 
 @Article{Clinger91:R4RS,
   author =       "William Clinger and Jonathan A. Rees",
   title =        "The Revised\(^{4}\) Report on the Algorithmic Language
-                 Scheme",
+                 {S}cheme",
   journal =      "ACM LISP Pointers",
   volume =       "4",
   number =       "3",
   year =         "1991",
-  reffrom =      "Queinnec:acm:lp:1992",
-  reffrom =      "Tung:acm:lfp:1992",
-  reffrom =      "Danvy:Lawall:acm:lfp:1992",
-  reffrom =      "Morrisett:Tolmach:acm:ppopp:1993",
 }
 
 @InProceedings{lfp86*151,
@@ -435,4 +414,320 @@ They also break down the 166 uses of #ifdef into categories:
   comments =     "This is the official citation for the MOP spec. It can
                  also be used as a citation for an intro to the *idea*
                  of a MOP.",
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% I haven't yet read the following articles.
+%%%
+
+@InProceedings{favre:97,
+  author =       "Jean-Marie Favre",
+  title =        "{CPP} Denotational Semantics and its Application to
+                 Software Maintenance",
+  booktitle =    "1st Euromicro Working Conference on Software
+                 Maintenance and Reengineering CSMR 97",
+  month =        mar,
+  year =         "1997",
+  publisher =    "IEEE Computer Society Press",
+  abstract =     "Very often, portability of large software products is
+                 achieved via the empirical use of old tools like CPP,
+                 the preprocessor of the C language. Though powerful low
+                 level features like conditional compilation cause
+                 serious maintenance problems. There is a lack of
+                 adequate tools to support such activities. This paper
+                 presents our approach to this problem. We introduce
+                 APP, an abstract language semantically equivalent to
+                 CPP but based on traditional programming-in-the-small
+                 concepts. A rigorous description of the semantics of
+                 this language makes it possible to develop reliable
+                 reverse engineering tools.",
+  class =        "Reverse_Engineering, Reverse_Design,
+                 Configuration_Structures",
+  sender =       "antonio@ifi.unizh.ch",
+}
+
+
+@InProceedings{Favre96,
+  author = 	 "Jean-Marie Favre",
+  title = 	 "Preprocessors from an abstract point of view",
+  booktitle = 	 "International Conference on Software Maintenance (ICSM'96)",
+  year =	 1996,
+  publisher =	 "IEEE Computer Society Press",
+  address =	 "Monterey, California",
+  month =	 nov # "~4--8,"
+}
+Argues that Cpp leads to problems in understanding.
+Introduces App, an "abstract" version of Cpp which has a more traditional
+programming language syntax.  A very simple semantics can be assigned to
+this (because there is no looping, etc.), then traditional analyses such as
+call graph construction, control and data flow analysis, slicing, and
+specialization can be performed on it.  This is implemented in the
+Champollion/APP environment, though the implementation doesn't cope with
+"the full lexical conventions of the C language" nor with macros that take
+parameters.  [We found that 72% of macro names never take any arguments; I
+don't know the figure for macro definitions offhand.]
+
+
+@InProceedings{Favre95,
+  author = 	 "Jean-Marie Favre",
+  title = 	 "The {CPP} paradox",
+  booktitle = 	 "9th European Workshop on Software Maintenance",
+  year =	 1995,
+  address =	 "Durham, England",
+  month =	 sep # "~25--27,"
+}
+Not much content here.
+While Cpp is much-maligned, it is also much-used:  while obsolescent, it is
+useful.  Discusses uses of Cpp and a list of drawbacks (non-locality, no
+semantics (only uninterpreted text), lazy evaluation, no "non-defined"
+value, different view for tool and programmer.
+Notes that APP will give a semantics for Cpp.
+This is a precursor to Favre96, and it even shares some of the same text.
+Not really worth citing.
+
+
+Other Favre papers in English (from
+http://www-adele.imag.fr/users/Jean-Marie.Favre/):
+
+     J.M. Favre 
+     "Understanding-In-The-Large" 
+     International Workshop on Program Comprehension (IWPC'97) 
+     Deadborn (Michigan), May 
+     1997 
+
+     J.M. Favre 
+     "A Rigorous Approach to Support the Maintenance of Large Portable Software 
+     Euromicro Working Conference on Software Maintenance and Reengineering (CSMR'97) 
+     Berlin (Germany), March 
+     1997 
+
+     J.M. Favre 
+     "Using Mathematical abstractions to support reverse engineering of software variant representations" 
+     4th International Symposium on Applied Corporate Computing (ISACC'96) 
+     Monterrey (Mexico), November 
+     1996 
+
+     J.M. Favre 
+     "Reverse Engineering and Configuration Management: Concepts and Perspectives" 
+     Software Conf'96 
+     Paris (France), 11-12 June, 6 pages 
+     1996 
+
+     J.M. Favre 
+     "Support For Reengineering-in-The-Large" 
+     Doctoral Consortium of CAiSE'94 
+     (Workshop of the 6th International Conference of Computer Aided Information System Engineering, Utrecht (Netherlands), 6-10 june,
+     1994), 
+     Memoranda Informatica 94-24, Univeristy of Twente 
+     1994. 
+
+     J.M. Favre 
+     "Reengineering-in-The-Large vs Reengineering-in-The-Small" 
+     1st SEI Workshop on Reengineering, 
+     Pittsburgh, 3-5 may 1994, Software Engineering Institute, Carnegie Mellon University 
+     1994. 
+
+     J. Estublier and J.M. Favre 
+     "Structuring Large Versioned Software Products" 
+     13th International Computer Software and Applications Conference, 
+     Orlando (Florida), September, pp. 404-411, 
+     1989. 
+
+
+@TechReport{SpulerS92,
+  author = 	 "David A. Spuler and A. Sayed Muhammed Sajeev",
+  title = 	 "Static detection of preprocessor macro errors in {C}",
+  institution =  "James Cook University",
+  year = 	 "1992",
+  OPTkey = 	 "",
+  OPTtype = 	 "",
+  OPTnumber = 	 "92/7",
+  OPTaddress = 	 "Townsville, Australia",
+  OPTmonth = 	 "",
+  OPTnote = 	 "",
+  OPTannote = 	 "",
+  URL = 	 "http://www.cs.jcu.edu.au/ftp/pub/techreports/92-7.ps.gz",
+}
+18 pages
+David Spuler: dspuler at phuket.bmc.com
+Abstract:
+  The preprocessor incorporated into the C language is often used to substitute
+  in-line code for function calls using preprocessor macros. However, the
+  semantics of macro calls are different to those for function calls and there
+  are a number of common pitfalls. This paper examines the most common errors
+  and presents a number of algorithms whereby the compiler can detect these
+  errors at compile-time. The algorithms vary in complexity from a simple
+  analysis of lexical tokens in the preprocessor to examination of the parse
+  tree within the parser. Most of the algorithms have been implemented in a
+  prototype C macro checker called Check.
+Describes a series of errors in macro definitions or use:
+ * missing braces on multiple statement macros
+ * dangling else in macros containing if
+ * side effects to macro calls
+ * operator precedence errors
+"Many" of the checks have been implemented in a tool called Check.
+Except for operator precedence errors, everything is at the lexical level:
+no parsing, lots of approximations (eg, suppress certain errors if any
+statement-like token appears in a macro).  Unsubstantiated claims about
+what extra work (parsing, etc.) is worthwhile and what isn't.  Much of the
+paper discusses precedence work:  a parse-free technique on definitions,
+and a version with parsing which examines invocations to show uses which
+actually trigger the problem.  No reports about running it on actual code
+(except an implication that it's being used for a programming class).
+[[Also see David A. Spuler, Check: A Better Checker for C, B Sc (Honours)
+Thesis, James Cook Universaity, Townsville, Australia (1990).]]
+
+
+Understanding code containing preprocessor construct
+Panos E. Livadas, David T. Small
+IEEE Third Workshop on Program Comprehension
+Washington, November 1994
+Also:
+Understanding Code Containing Preprocessor constructs, by panos E. Livadas and David T. Small, SERC-TR-73-F, June 1994.
+Description: Understanding, debugging, and maintaining software is a costly
+and difficult task. The difficulties are exacerbated in programs written to
+take advantage of preprocessing facilities. This paper examines problems
+associated with source code containing preprocessor constructs -i.e.,
+included files, conditional compilation, and macros. We define the useful
+mappings from tokens in the proprocessor's output to the source file(s),
+and propose that by capturing these correspondences an internal program
+representation can be built which will allow for the use of maintenance
+techniques including program slicing, dicing, and ripple analysis. The
+method presented is generic; to illustrate that the technique is feasible,
+we discuss ANSI C preprocessor constructs - in particular, macro
+substitution - and explain the modules developed to handle them in Ghinsu -
+an integrated maintenance environment for ANSI C programs.
+
+@Article{ABACUS89,
+  key =          "Abacus",
+  author =       "A. Abacus",
+  title =        "Parameterizing {C} Code at Compile and Run Time",
+  journal =      "Structured Programming",
+  publisher =    "Springer-Verlag",
+  volume =       "10",
+  number =       "4",
+  year =         "1989",
+  pages =        "209--214",
+  keywords =     "parameterization; C; debugging; imbedded debugging
+                 code; C preprocessor",
+  abstract =     "This paper describes a convenient mechanism for
+                 imbedding debugging code within the source code of
+                 programs written in C. Debugging code can be packaged
+                 into any number of functionally independent debugging
+                 units. Conditional compilation of each unit is
+                 controlled by a separate compile time switch. Execution
+                 of each compiled unit is controlled by a separate run
+                 time switch. Efficient final products can be generated
+                 by turning off compile time switches of all debugging
+                 units. This packaging method depends on the C
+                 preprocessor and its final refinement depends on the
+                 ability of the compiler to perform 'dead code removal'
+                 optimization. Each routine or a family of related
+                 routines can be parameterized independently of other
+                 routines. Run time options of library routines can be
+                 changed without access to their source code. This
+                 parameterization is not restricted to debugging code.
+                 The same mechanism may be used to select one of several
+                 implementations of a feature, or to set initial values
+                 of variables.",
+  bibdate =      "Tue Nov 7 08:25:39 1989",
+  owner =        "robyn",
+}
+
+@Article{Mudd:1990:ACD,
+  author =       "John Mudd",
+  title =        "Automating {C} Debugging with Preprocessor Macros",
+  journal =      "Computer Language Magazine",
+  volume =       "7",
+  number =       "2",
+  pages =        "69--??",
+  month =        feb,
+  year =         "1990",
+  coden =        "COMLEF",
+  ISSN =         "0749-2839",
+  bibdate =      "Tue Jan 23 08:04:25 MST 1996",
+  acknowledgement = ack-nhfb,
+}
+
+@Article{Allison:1994:P,
+  author =       "Chuck Allison",
+  title =        "The Preprocessor",
+  journal =      "C Users Journal",
+  volume =       "12",
+  type =         "Code Capsules",
+  number =       "3",
+  pages =        "101--??",
+  month =        mar,
+  year =         "1994",
+  ISSN =         "0898-9788",
+  bibdate =      "Fri Aug 30 16:52:23 MDT 1996",
+  acknowledgement = ack-nhfb,
+}
+
+%% These resulted from an online search for "Cpp"
+
+@Article{Parks:JCLT-2-3-194,
+  author =       "John H. Parks",
+  title =        "Case Study: Building an {ANSI CPP}",
+  journal =      "The Journal of {C} Language Translation",
+  volume =       "2",
+  number =       "3",
+  pages =        "194--206",
+  month =        dec,
+  year =         "1990",
+  ISSN =         "1042-5721",
+  bibdate =      "Fri Nov 21 15:06:25 1997",
+  acknowledgement = ack-nhfb,
+  remark =       "A thorough look at the issues involved in building an
+                 ideal preprocessor that can be user-configurable to
+                 support ANSI C and most common extensions.",
+}
+
+
+@Article{Hazard:1991:UCA,
+  author =       "William P. Hazard",
+  title =        "Using cpp to Aid Portability",
+  journal =      "Computer Language Magazine",
+  volume =       "8",
+  number =       "11",
+  pages =        "49--??",
+  month =        nov,
+  year =         "1991",
+  coden =        "COMLEF",
+  ISSN =         "0749-2839",
+  bibdate =      "Tue Jan 23 08:04:25 MST 1996",
+  acknowledgement = ack-nhfb,
+}
+
+@InProceedings{Locanthi:1987:FBA,
+  author =       "Bart N. Locanthi",
+  title =        "Fast bitblt() with asm() and cpp",
+  editor =       "{USENIX Association}",
+  booktitle =    "{EUUG} Conference Proceedings, Autumn, 1987. Dublin,
+                 Ireland",
+  publisher =    "EUUG",
+  address =      "Buntingford, Herts, UK",
+  month =        "Autumn",
+  year =         "1987",
+  pages =        "243--259",
+  month =        "Autumn",
+  year =         "1987",
+  bibdate =      "Tue Feb 20 15:42:13 MST 1996",
+  acknowledgement = ack-nhfb,
+  affiliation =  "AT\&T Bell Laboratories, Murray Hill",
+}
+
+@Article{Ream:1990:CCV,
+  author =       "Edward K. Ream",
+  title =        "{CUG319 CPP v5.3}",
+  journal =      "C Users Journal",
+  volume =       "8",
+  type =         "CUG New Release",
+  number =       "7",
+  pages =        "111--??",
+  month =        jul,
+  year =         "1990",
+  ISSN =         "0898-9788",
+  bibdate =      "Fri Aug 30 16:52:23 MDT 1996",
+  acknowledgement = ack-nhfb,
 }
