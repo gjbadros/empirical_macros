@@ -58,9 +58,9 @@ BEGIN {
   print " ",       "Null",   " ",        " ",          " ",        "",         "Type",   "Not",    " ",     "Unknown",	"Failed";
   print "Package", "define", "Constant", "Expression", "Statement", "Syntactic","related","C code", "Other", "symbol",	"classification";
 
-  my ($cNull, $cLit, $cExp, $cStm, $cSyntax, $cType,
+  my ($cNull, $cConst, $cExp, $cStm, $cSyntax, $cType,
       $cNonC, $cOther, $cFail, @rest) = 0 x 40;
-  my ($sNull, $sLit, $sExp, $sStm, $sSyntax, $sType,
+  my ($sNull, $sConst, $sExp, $sStm, $sSyntax, $sType,
       $sNonC, $sOther, $sFail, @rest2) = 0 x 40;
 
 }
@@ -70,8 +70,8 @@ BEGIN {
 if (/^CATEGORIES_NI:/) {
   $fFoundLine = 1;
   $cNull = sum_meta_category(@mcat_NULL); $sNull += $cNull;
-  $cLit = sum_meta_category(@mcat_LITERAL); $sLit += $cLit;
-  $cExp = sum_meta_category(@mcat_NONLITERAL_EXPRESSION); $sExp += $cExp;
+  $cConst = sum_meta_category(@mcat_CONSTANT); $sConst += $cCons;
+  $cExp = sum_meta_category(@mcat_NONCONSTANT_EXPRESSION); $sExp += $cExp;
   $cStm = sum_meta_category(@mcat_STATEMENT); $sStm += $cStm;
   $cSyntax = sum_meta_category(@mcat_SYNTAX); $sSyntax += $cSyntax;
   $cType = sum_meta_category(@mcat_TYPE); $sType += $cType;
@@ -79,13 +79,13 @@ if (/^CATEGORIES_NI:/) {
   $cOther = sum_meta_category(@mcat_OTHER); $sOther += $cOther;
   $cSymUknown = sum_meta_category(@mcat_SYMBOL_UNKNOWN); $sSymUnknown += $cSymUknown;
   $cFail = sum_meta_category(@mcat_FAILURE); $sFail += $cFail;
-  $totLine = $cNull + $cLit + $cExp + $cStm + $cSyntax +
+  $totLine = $cNull + $cConst + $cExp + $cStm + $cSyntax +
     $cType + $cNonC + $cSymUknown + $cFail + $cOther;
 
   my $filename = $ARGV;
   $filename =~ s/\..*$//;
 
-  print $filename, map {sprintf $FORMAT, $_ } pct($cNull), pct($cLit), pct($cExp), pct($cStm), pct($cSyntax),
+  print $filename, map {sprintf $FORMAT, $_ } pct($cNull), pct($cConst), pct($cExp), pct($cStm), pct($cSyntax),
     pct($cType), pct($cNonC), pct($cOther), pct($cSymUknown), pct($cFail);
 
   $totLine = 0;
@@ -107,11 +107,11 @@ if (/^CATEGORIES_NI:/) {
 END {
   if (!$nolatex) { print "\\hline\n" };
   if ($fFoundLine) {
-    $totLine = $sNull + $sLit + $sExp + $sStm + $sSyntax + $sType +
+    $totLine = $sNull + $sConst + $sExp + $sStm + $sSyntax + $sType +
       $sNonC + $sFail + $sOther;
-    print "Total", map {sprintf $FORMAT, $_ } ( pct($sNull), pct($sLit), pct($sExp), pct($sStm), pct($sSyntax), pct($sType),
+    print "Total", map {sprintf $FORMAT, $_ } ( pct($sNull), pct($sConst), pct($sExp), pct($sStm), pct($sSyntax), pct($sType),
       pct($sNonC), pct($sOther), pct($sSymUnknown), pct($sFail) );
-    print "Total-raw", map {sprintf "%2.0f", $_} ($sNull, $sLit, $sExp, $sStm, $sSyntax, $sType,
+    print "Total-raw", map {sprintf "%2.0f", $_} ($sNull, $sConst, $sExp, $sStm, $sSyntax, $sType,
       $sNonC, $sOther, $sSymUnknown, $sFail );
   }
   $ORS="";

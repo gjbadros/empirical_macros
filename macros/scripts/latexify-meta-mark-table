@@ -11,7 +11,7 @@ print '
 \addtolength{\columnsep}{-.5\columnsep}
 % The *{n}{c|} below creates n duplicate columns of that type (centered, here)
 \begin{tabular}{|r|*{10}{c|}}\hline
-\rotatebox{90}{Percentage of macro names~} &
+\rotatebox{90}{\parbox{1in}{Percentage of~ \\\\ macro names}~} &
 \rotatebox{90}{Null define~} &
 \rotatebox{90}{Constant~} &
 \rotatebox{90}{Expression~} &
@@ -22,7 +22,7 @@ print '
 \rotatebox{90}{Not C code~} &
 \rotatebox{90}{Other~} &
 \rotatebox{90}{Failed classification~}
-\\\\\\hline
+\\\\ \hline
 ';
 }
 
@@ -43,7 +43,7 @@ if (defined $ARGV[0]) {
 while (<>) {
   ($count,$marks) = /^( +\d+)\s(.*)$/;
 
-#  print STDERR $count, "\n";
+#  print STDERR "$count <<$marks>>\n";
   @m = split(//,$marks);
   $out = join("&", @m);
   $out =~ s/\*/\\black/g;
@@ -52,7 +52,11 @@ while (<>) {
     if ($pct == 0) {
       print "$count &";
     } else {
-      printf "%6.02g\\% &",100*$count/$sum;
+      my $pct_string = sprintf "%6.02g\\% &", 100*$count/$sum;
+      # If only one significant digit, fix.
+      $pct_string =~ s/^(\s*)  (\d)(\\%)/$1$2.0$3/;
+      $pct_string =~ s/^(\s*) (0\.0*\d)(\\%)/$1${2}0$3/;
+      print $pct_string;
     }
     print $out, ' \\\\\\hline', "\n";
   }

@@ -52,8 +52,8 @@ my @use_files;
 my @categories = \(
   @nm_mcat_FAILURE,
   @nm_mcat_NULL,
-  @nm_mcat_LITERAL,
-  @nm_mcat_NONLITERAL_EXPRESSION,
+  @nm_mcat_CONSTANT,
+  @nm_mcat_NONCONSTANT_EXPRESSION,
   @nm_mcat_STATEMENT,
   @nm_mcat_TYPE,
 #  @nm_mcat_DECLARATION,
@@ -65,8 +65,8 @@ my @categories = \(
 {
   @nm_mcat_FAILURE = map {$categoryname[${$_}]} @mcat_FAILURE;
   @nm_mcat_NULL = map {$categoryname[${$_}]} @mcat_NULL;
-  @nm_mcat_LITERAL = map {$categoryname[${$_}]} @mcat_LITERAL;
-  @nm_mcat_NONLITERAL_EXPRESSION = map {$categoryname[${$_}]} @mcat_NONLITERAL_EXPRESSION;
+  @nm_mcat_CONSTANT = map {$categoryname[${$_}]} @mcat_CONSTANT;
+  @nm_mcat_NONCONSTANT_EXPRESSION = map {$categoryname[${$_}]} @mcat_NONCONSTANT_EXPRESSION;
   @nm_mcat_STATEMENT = map {$categoryname[${$_}]} @mcat_STATEMENT;
   @nm_mcat_TYPE = map {$categoryname[${$_}]} @mcat_TYPE;
 #  @nm_mcat_DECLARATION = map {$categoryname[${$_}]} @mcat_DECLARATION;

@@ -18,10 +18,12 @@ COMMON_DIR := $(shell dirname `ls -l Makefile | awk '{print $$NF}'`)
 #COMMON_DIR := /homes/gws/mernst/research/notkin/macros/scripts
 #COMMON_DIR := /homes/gws/gjb/macros/scripts
 
+# "=", not ":=", so that these are re-expanded every time (and setting
+# USER_PREFIX in Makefile.user has an effect).
 FAST_DIR = $(USER_PREFIX)/fast
-PAPER_DIR := $(USER_PREFIX)/papers
-PAPER_CPPP_DIR := $(USER_PREFIX)/papers/cppp
-PAPER_ORIG_DIR := $(USER_PREFIX)/papers/orig
+PAPER_DIR = $(USER_PREFIX)/papers
+PAPER_CPPP_DIR = $(USER_PREFIX)/papers/cppp
+PAPER_ORIG_DIR = $(USER_PREFIX)/papers/orig
 
 EXTRA_ANALYZE_FLAGS := -v
 EXTRA_REPORTS_FLAGS := -v
@@ -221,6 +223,7 @@ sdepend_bymacro: $(SDEPEND_BY_MACRO)
 ###
 
 showvars:
+	@echo USER_PREFIX = $(USER_PREFIX)
 	@echo PKG_DIR = $(PKG_DIR)
 	@echo PKG_PREFIX = =$(PKG_PREFIX)=
 	@echo PKGS = $(PKGS)
@@ -238,15 +241,15 @@ showvars:
 
 copy: $(PAPER_TABLES)
 	perl -pi.bak -e 's/z*<total>/Total/g' $(PAPER_TABLES)
-	cp $(PAPER_TABLES) $(PAPER_DIR)
+	cp -p $(PAPER_TABLES) $(PAPER_DIR)
 
 copycppp: $(PAPER_TABLES)
 	perl -pi.bak -e 's/z*<total>/Total/g' $(PAPER_TABLES)
-	cp $(PAPER_TABLES) $(PAPER_CPPP_DIR)
+	cp -p $(PAPER_TABLES) $(PAPER_CPPP_DIR)
 
 copyorig: $(PAPER_TABLES)
 	perl -pi.bak -e 's/z*<total>/Total/g' $(PAPER_TABLES)
-	cp $(PAPER_TABLES) $(PAPER_ORIG_DIR)
+	cp -p $(PAPER_TABLES) $(PAPER_ORIG_DIR)
 
 fast:	$(SCRIPTSPATH)
 	for i in $(SCRIPTSPATH); do bn=$(FAST_DIR)/`basename $$i`; rm -f $$bn; remove_check_args $$i > $$bn; chmod +x $$bn; chmod -w $$bn; done

@@ -33,8 +33,8 @@ BEGIN {
 
   # The order here is the left->right order in the table
   make_mapping_for($i++,@mcat_NULL);
-  make_mapping_for($i++,@mcat_LITERAL); # This is "Constant"
-  make_mapping_for($i++,@mcat_NONLITERAL_EXPRESSION);
+  make_mapping_for($i++,@mcat_CONSTANT);
+  make_mapping_for($i++,@mcat_NONCONSTANT_EXPRESSION);
   make_mapping_for($i++,@mcat_STATEMENT);
   make_mapping_for($i++,@mcat_TYPE);
   make_mapping_for($i++,@mcat_SYNTAX);
@@ -45,13 +45,13 @@ BEGIN {
   $cCategoryNames = $i;
 
   sub make_mapping_for {
-    my ($i,@vars) = @_;
+    my ($j,@vars) = @_;
     foreach my $varname (@vars) {
       my $catname = $categoryname[$$varname];
-      $categoryname{$catname} = $i;
-#DBG      print STDERR "Setting $catname to $i\n";
+      $categoryname{$catname} = $j;
+#DBG      print STDERR "Setting $catname to $j\n";
     }
-  }  
+  }
 }
 
 my $cdefs_min_filter = $opt_d || 0;   # only output stats with more than this many defintions
