@@ -58,7 +58,7 @@ DDFCUM  := $(addsuffix .freqddf_cum,$(PKGS))
 NUMARG  := $(addsuffix .numarg,$(PKGS))
 CATUSECUM  := cat-*.frequse_cum
 CATDEFCUM  := cat-*.freqdef_cum
-CATDDFCUM  := cat-*.freqdef_cum
+CATDDFCUM  := cat-*.freqddf_cum
 
 PERR := $(addsuffix .perr,$(PKGS))
 
