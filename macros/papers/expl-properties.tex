@@ -49,11 +49,11 @@
   as tokens but as strings, constructing a new token out of their
   concatenation, as in {\tt \#define \verb|_SIZEOF|(x) \verb|sz_|\#\#x},
   after which the macro invocation {\tt \verb|_SIZEOF|(int)} expands to the
-  symbol {\tt sz_int}.  The resulting symbol might appear literally, or
+  symbol {\tt \verb|sz_int|}.  The resulting symbol might appear literally, or
   only as a pasted symbol, at its other uses.  Since pasting is often
   abstracted out into a separate macro\,---\,such as {\tt \#define
   \verb|__CONCAT|(x,y) x \#\# y}\,---\,the incidence of pasting is higher
-than the direct uses reflected by this statistic.
+  than the direct uses reflected by this statistic.
 
 \item[Use argument as type]
   This macro uses one of its arguments as a type.  Not all uses can be
