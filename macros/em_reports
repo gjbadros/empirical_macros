@@ -17,6 +17,9 @@ my $getopts_option_letters = 'ihvtIAau1pTg:d:D:M:S:F:L:C:P:c:s:';
 
 # FIX: remove -D -U -S -F -L -C options.
 
+# Usage: something like this
+# for i in ../*.state; do NM=${i:t:r}; em_reports -s $i -d .:$NM > $NM.repout 2> $NM.reperr; done 
+
 # Remove the asterisks below when the options are known to the users.
 
 sub usage () {
