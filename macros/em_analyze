@@ -895,13 +895,7 @@ sub process_macro_definition ($$$$)
 
   $mdef_physical_lines[$this_macro_index] = $macro_physical_lines;
   $mdef_physical_ncnb_lines[$this_macro_index] = $macro_physical_ncnb_lines;
-  @{$mdef_dependenton[$this_macro_index]} = @dependenton;
-  # Old way to copy array, replaced by teh above
-  #   # @mdef_dependenton[$this_macro_index] = @dependenton;
-  #   { my $i;
-  #     $mdef_dependenton[$this_macro_index][0] = @dependenton;
-  #     for $i (0..$#dependenton)
-  #       { $mdef_dependenton[$this_macro_index][$i] = $dependenton[$i]; } }
+  $mdef_dependenton[$this_macro_index] = [ @dependenton ];
   if (!defined($current_file))
     { mdie("undefined current_file while processing $name"); }
   $mdef_file[$this_macro_index] = $current_file;
@@ -931,143 +925,82 @@ sub process_macro_undefinition ($$) {
 ### Dependenton processing
 ###
 
-# Given a macro name, try to merge the dependentons for all its definitions,
-# and return a single dependenton or $false.
-# Hack: optionally takes an additional @dependenton to merge with the macros.
-sub macro_dependenton ($@)
+# Given a macro name, return a list of three lists containing (direct)
+# must include, expansion, and may include dependences.
+sub macro_must_and_may_dependences ($)
 {
-  my ($macro_name, @dependenton) = check_args_at_least(1, @_);
-  my @indices = @{$macros{$macro_name}};
-  #shift(@indices);		# eliminate the count of size
+  my $macro_name = check_args(1, @_);
+  my $must_dependences = macro_defined_dependenton($macro_name);
+  my %must_dep = ();
+  my %may_dep = ();
+  { my $dep;
+    for $dep (@$must_dependences)
+      { $must_dep{$dep} = $true; } }
+  { my $mdef_dep;
+    for $mdef_dep (map { $mdef_dependenton[$_] } @{$macros{$macro_name}})
+      { if (! (defined($must_dep{$mdef_dep})))
+	  { $may_dep{$mdef_dep} = $true; } } }
+  return ($must_dependences, keys %may_dep);
+}
+
+
+# Given a macro name, try to merge the dependentons for all its
+# definitions, and return a single dependenton or $false.  If a dependenton
+# is returned, then the the macro is defined iff the resulting conditions
+# are true, but the macro's value may also depend on other conditions,
+# because two definitions dependent on (foo, !bar) and (foo, bar) yield a
+# defined_dependenton of (foo).
+# 
+# Hack: optionally takes an additional dependenton to merge with the macros.
+sub macro_defined_dependenton ($$)
+{
+  my ($macro_name, $extra_dependenton) = check_args_range(1, 2, @_);
+  my @dependentons = map { $mdef_dependenton[$_] } @{$macros{$macro_name}};
+  if (defined($extra_dependenton))
+    { push @dependentons, $extra_dependenton; }
+
   my @result = ($false);
-  # scratch indices, since I must pass in at least one index.
-  # (I don't yet know how to pass two arrays.)
-  my $extraindexmin = $cMacrosInTables + 10;
-  my $extraindexmax = $extraindexmin-1;
-  if (@dependenton > 0)
-    { $extraindexmax++;
-      @{$mdef_dependenton[$extraindexmax]} = @dependenton;
-      # Old way to copy array, replaced by the above
-      # # @mdef_dependenton[$extraindexmax] = @dependenton;
-      # { my $i;
-      #   $mdef_dependenton[$extraindexmax][0] = @dependenton;
-      #   for $i (0..$#dependenton)
-      #    { $mdef_dependenton[$extraindexmax][$i] = $dependenton[$i]; } }
-      push(@indices, $extraindexmax); }
+
   # Perhaps use a named loop instead of the gotos.
 MDLOOP:
-  if (scalar(@indices) == 0)
-    { @result = @mdef_dependenton[$indices[0]]; # protect from undef below
-      goto MDDONE; }
-  ## ***** This can't work at all!
-  ## If failure, should try next pair, not fail completely.  Test this!
+  if (scalar(@dependentons) == 1)
+    { return $dependentons[0]; }
+
   # Try to find two definitions that can be merged.
-  my $index1;
-  for $index1 (0..$#indices-1)
-    { my $index2;
-      for $index2 ($index1+1..$#indices)
-	{ my @merged = merge_dependenton($index1, $index2);
-	  if ((@merged == 1) && !$merged[0])
-	    { goto MDDONE; }
-	  else
-	    { $extraindexmax++;
-	      @{$mdef_dependenton[$extraindexmax]} = @merged;
-	      # Old way to copy array, replaced by the above
-	      # # @mdef_dependenton[$extraindexmax] = @merged;
-	      # { my $i;
-	      #   $mdef_dependenton[$extraindexmax][0] = @merged;
-	      #     for $i (0..$#dependenton)
-	      #     { $mdef_dependenton[$extraindexmax][$i] = $merged[$i]; } }
-	      goto MDLOOP; } } }
-
-MDDONE:
- { my $i;
-   for $i ($extraindexmin..$extraindexmax)
-     { undef $mdef_dependenton[$i][0];
-       # Is the above necessary, given this?
-       undef $mdef_dependenton[$i]; } }
-
-  # This does not work, because I sometimes call this in scalar context to
-  # determine compatibility, not what the dependenton would be.
-  # # If failure, the result is a list of $false.
-  # return @result;
-
-  # In list context, there's no point to this.  In scalar context, these
-  # results really are different.
-  if ((@result == 1) && !$result[0])
-    { return $false; }
-  else
-    { return @result; }
+  { my $index1;
+    for $index1 (0..$#dependentons-1)
+      { my $index2;
+	for $index2 ($index1+1..$#dependentons)
+	  { my $merged = merge_dependenton($dependentons[$index1], $dependentons[$index2]);
+	    if ($merged)
+	      { # $index2 > $index1, so do $index2 first
+		@dependentons = splice(@dependentons, $index2, 1);
+		@dependentons = splice(@dependentons, $index1, 1);
+		# Would shift be better, to not redo failures?  Probably short anyway.
+		push(@dependentons, $merged);
+		goto MDLOOP; } } } }
+  return $false;
 }
 
 
-# Takes an index and a dependenton array.
+# Takes a pair of references to dependenton arrays.
 # If the dependentons are the same for all but the last element, return all
 # but that last element.  Otherwise return $false.
-sub merge_dependenton ($@)
-{ my ($index, @do2) = check_args_at_least(1, @_);
-  if (!dependenton_single_difference($index, @do2))
-    { return $false; }
-  return @{$mdef_dependenton[$index]};
-  #   # Return @do1.
-  #   my @do1;
-  #   @do1 = @{$mdef_dependenton[$index]};
-  #   # Old way to copy array, replaced by the above
-  #   # # @do1 = @mdef_dependenton[$index];
-  #   # { my $i;
-  #   #   for $i (0..$mdef_dependenton[$index][0])
-  #   #     { $do1[$i] = $mdef_dependenton[$index][$i]; } }
-  #   pop(@do1);
-  #   return @do1;
-}
+sub merge_dependenton ($$)
+{ my ($do1, $do2) = check_args(2, @_);
+  my $len1 = $#{$do1};
+  my $len2 = $#{$do2};
 
-
-sub dependenton_single_difference ($@)
-{ my($index, @do2) = check_args_at_least(1, @_);
-  my @do1;
-  if (!defined($mdef_dependenton[$index])) {
-    die "Bad ref, mdef_dependenton[ $index ]";
-  }
-  @do1 = @{$mdef_dependenton[$index]};
-  # Old way to copy array, replaced by the above
-  #   # @do1 = @mdef_dependenton[$index];
-  #   { my $i;
-  #     for $i (0..$mdef_dependenton[$index][0])
-  #       { $do1[$i] = $mdef_dependenton[$index][$i]; } }
-  if ((@do2 == 1) && is_number($do2[0]))
-    { @do2 = @mdef_dependenton[$do2[0]]; }
-
-  if ($#do1 != $#do2)
+  if ($len1 != $len2)
     { return $false; }
   { my $i;
-    for $i (0..$#do1-1)
-      { if ($do1[$i] ne $do2[$i])
+    for $i (0..$len1-1)
+      { if ($do1->[$i] ne negate_cpp_if_condition($do2->[$i]))
 	  { return $false; } } }
-  if ($do1[$index] ne negate_cpp_if_condition($do2[$index]))
-    { return $false; }
-  return $true;
+  my $result = [ @$do1 ];
+  pop(@$result);
+  return $result;
 }
-
-
-# These dependenton functions take a macro name and a dependenton array and
-# compare the macro's dependenton to the one passed in.  Perhaps also permit
-# the passed in array to instead itself be a macro name.
-
-## This isn't really enough; we need to canonicalize macro dependence
-## information, perhaps even make it order-independent.
-sub dependenton_identical ($@)
-{
-  my ($macro_name, @depend) = check_args_at_least(1, @_);
-  my @macro_depend = macro_dependenton($macro_name);
-  if ($#depend != $#macro_depend)
-    { return $false; }
-  { my $i;
-    for $i (0..$#depend)
-      { if ($depend[$i] ne $macro_depend[$i])
-	  { return $false; } } }
-  return $true;
-}
-
 
 
 
@@ -1106,6 +1039,9 @@ sub cpp_trivially_true_condition ($)
 }
 
 
+###########################################################################
+### Miscellaneous?  (Greg, where do these belong?  Surely not here...)
+###
 
 # Return a sorted version of the list
 # passed in, with duplicates removed
@@ -2873,7 +2809,7 @@ PROCESSLINE:
 			 && exists($macros{$declarator})
 			 # This test is intended to skip over macros that
 			 # can't be active right now.
-			 && (!macro_dependenton($declarator, @dependenton))
+			 && (!macro_defined_dependenton($declarator, [ @dependenton ]))
 			 )
 		    ## FIX: all this belongs in simple_macro_substitute.
 		    { # The function being defined is actually a macro.
