@@ -1,56 +1,74 @@
+The following categories are based on macro names:
+
 \begin{description}
 %% See ccd_lexical_category in em_analyze for the routines
 %% which implements these heuristics
 
-\item[Package-specific] These guards check conditions specific
-      to the given package.  They do not fit any of the other categories.
+\item[Package-specific] 
+  These symbols are specific to the given package.  They do not fit any of
+  the other categories.
 
-\item[Portability, feature] These guards check symbols which
-      describe specific capabilities of the target machine or operating
-      system (e.g., \texttt{BYTEORDER}, \verb|BROKEN_TIOCGWINSZ|).
-
-\item[Portability, language or library] These guards check
-      symbols that compilers may predefine, that standard libraries may
-      define, or that the package may define as part of the build
-      process to indicate existence of compiler, language, or library
-      features (e.g., \texttt{GNUC}, \texttt{STDC}, or \verb|HAS_BOOL|).
-
-\item[Portability, machine] These guards check symbols which
-      name the operating system or machine hardware (e.g.,
-      \texttt{sun386} or \texttt{MACINTOSH}.
+\item[Portability, machine]
+  These symbols name the operating system or machine
+  hardware (e.g., \texttt{sun386} or \texttt{MACINTOSH}).
       
-\item[Portability, system macro] These guards check symbols
-      which are commonly defined constants or pseudo-inline functions in
-      system or language libraries (e.g., \verb|O_CREATE|,
-      \texttt{isalnum}, or \verb|S_IRWXUSR|).
+\item[Portability, feature]
+  [[``feature'' is unhelpful; rename]] These symbols describe specific
+  capabilities [[byte order isn't a ``capability'']] of the target machine
+  or operating system (e.g., \texttt{BYTEORDER}, \verb|BROKEN_TIOCGWINSZ|).
 
-\item[Miscellaneous system] These guards test reserved symbols
-      (i.e., those beginning with two underscores) and which do not
-      fit any other category.
+\item[Portability, system macro]
+  These symbols are commonly defined constants or
+  pseudo-inline functions in system or language libraries (e.g.,
+  \verb|O_CREATE|, \texttt{isalnum}, or \verb|S_IRWXUSR|).
+
+\item[Portability, language or library]
+  These symbols are predefined by a compiler, defined by a standard
+  library, or defined by the package [[as part of the build
+  process]] to indicate existence of compiler, language, or library features
+  (e.g., \texttt{GNUC}, \texttt{STDC}, or \verb|HAS_BOOL|).
+
+\item[Miscellaneous system]
+  These symbols are reserved (i.e., they begin with two underscores) and do
+  not fit any other category.
       
-\item[Debugging] These guards control inclusion of debugging
-      or tracing code.  Macro names tested include the
-      substring \texttt{DEBUG} or \texttt{TRACE} (or both).
+\item[Debugging]
+  These symbols control inclusion of debugging or tracing code.  The macro
+  names include \texttt{DEBUG} or \texttt{TRACE} (or both).
       
+\item[Multiple inclusion prevention]
+  These guards encompass an entire file to ensure that the enclosed code is
+  seen only once per translation unit by the compiler.  Such guards are
+  indicated by a trailing \verb|_H| or \verb|_INCLUDED| in the macro name
+  they check.
+\end{description}
+
+
+These have to do with the entire guard, or with context:
+
+\begin{description}
 \item[Commenting] These guards either definitely succeed and
-      have no effect as currently written (e.g., \texttt{\#ifdef 1}), or
-      definitely fail and unconditionally skip a block (e.g.,
-      \texttt{\#ifdef 0}).  (Also ands and ors of them.)
+  have no effect as written (e.g., \texttt{\#ifdef 1}), or definitely fail
+  and unconditionally skip a block (e.g., {\tt \#ifdef (0 \&\&
+    \verb|OTHER_TEST|)}).  These guards are used to comment out code or to
+  override other conditions (e.g., to unconditionally enable a previously
+  experimental feature).
       
-\item[MI prevention] These guards encompass an entire file to
-      ensure that the enclosed code is seen only once per translation
-      unit by the compiler.  Such guards are indicated by a trailing
-      \verb|_H| or \verb|_INCLUDED| in the macro name they check.
-
-\item[Redefinition suppression] These guards are immediately
-      followed a definition of the same symbol, thus avoid preprocessor
+\item[Redefinition suppression] These guards test non-definedness of
+  symbol, and control only  a definition of the same symbol, thus avoid preprocessor
       warnings about a redefinition of a name (e.g., \texttt{\#ifndef
-      FOO} followed by \texttt{\#define FOO ...} and \texttt{\#endif} on
-      immediately subsequent lines).
+      FOO} followed by \texttt{\#define FOO ...} and \texttt{\#endif}).
+    
+    The purpose is to provide a default value used unless another part of
+    the system, or the compilation command, specifies another value.
 
 \item[Mixed categories] These guards test multiple symbols
       which independently fall into different categories (e.g.,
       {\tt \#if defined(\verb|STDIO_H|) || \verb|SYSV_SIGNALS|}).
+
+      [[Can ``mixed'' ever result from commenting or redefinition
+      suppression?  Which has precedence, ``mixed'' or those?  (I hope
+      those!)  So perhaps put these before the macro name heuristics.]]
 
 \end{description}
 

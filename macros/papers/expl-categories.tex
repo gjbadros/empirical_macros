@@ -1,131 +1,135 @@
+
+
 \begin{description}
   \sloppy
   \emergencystretch=2em
 
+%%  mcat_NULL: 5391
+%%    100%  null_define (5391)
 % @mcat_NULL = qw( catNULL_DEFINE );
 \item[Null define]  The {\tt \#define} gives only an
   identifier name but no macro body, as in {\tt \#define
-  \verb|HAVE_PROTO|}\@.  Such macros appear most frequently in Cpp
+  \verb|HAVE_PROTO|}\@.  Such macros appear frequently in Cpp
 directives (such as {\tt \#ifdef}), where they are used as boolean
-variables by the preprocessor, but may also appear in code.  For instance,
+variables by the preprocessor.  In code, they often represent optional
+syntax.  For instance,
 macro {\tt private} may expand either to {\tt static} or to nothing,
-depending on whether a debugging mode is set.  The definition which
-causes it to expand to nothing is categorized as a null define (the
-other is categorized as ``other syntactic macro'';  see below).
+depending on whether a debugging mode is set.
 
+%%  mcat_CONSTANT: 18971
+%%    0.00%  constant (0)
+%%    97%  literal (18426)
+%%    2.9%  some_constant (545)
 % @mcat_CONSTANT = qw( catCONSTANT catLITERAL catSOME_CONSTANT );
-\item[Constant] The macro body is either a literal or an operator
-  applied to constant values.  For instance, {\tt \#define NULL 0}, {\tt \#define
-  \verb|ARG_MAX| 131072}, and {\tt \#define ETCHOSTS "/etc/hosts"} define
-literals, while {\tt \#define \verb|RE_DUP_MAX| ((1<<15)-1)} and {\tt
+\item[Constant] The macro body is either a literal (97\% of this category)
+  or an operator applied to constant values (3\% of this category).
+  These macros act like {\tt const} variables. 
+  For instance, {\tt \#define NULL 0}, {\tt \#define \verb|ARG_MAX|
+  131072}, and {\tt \#define ETCHOSTS "/etc/hosts"} define literals, while
+{\tt \#define \verb|RE_DUP_MAX| ((1<<15)-1)} and {\tt
 \#define \verb|RED_COLS| (1 << \verb|RED_BITS|)} (where \verb|RED_BITS| is
-a constant, possibly a literal) define constants.  Such macros act like
-{\tt const} variables.
+a constant, possibly a literal) define constants.  This category includes
+both macros whose value is invariant across all configurations of the
+package and those which depend on other compile-time values.  
 
+%%  mcat_NONCONSTANT_EXPRESSION: 13529
+%%    100%  expression (13529)
 % @mcat_NONCONSTANT_EXPRESSION = qw( catEXP );
 \item[Expression]  The macro body is an expression, as in {\tt \#define
-  sigmask(x) (1 << ((x)-1))}.  This expression might have a single constant
-value everywhere (the usual case for expression macros without arguments,
-most of which are classified as constants, above) or might have a
-different value on each use (the usual case for expression macros with
-arguments).
+  sigmask(x) (1 << ((x)-1))} or {\tt \#define mtime mailfiles[i]->\verb|mod_time|}.
+Such a macro acts like a function which returns a value (though the
+macro need not take any arguments, so may look syntactically unlike a function).
+The expression might have a single constant value everywhere (the usual
+case for expression macros without arguments, most of which are classified
+as constants, above) or might have a different value on each use (the usual
+case for expression macros with arguments).
 
+%%  mcat_STATEMENT: 2656
+%%    47%  statement (1242)
+%%    45%  semicolonless_statement (1197)
+%%    1.5%  partial_statement (40)
+%%    3.0%  statements (79)
+%%    3.5%  semicolonless_statements (94)
+%%    0.15%  partial_statements (4)
 % @mcat_STATEMENT = qw( catSTATEMENT catSTATEMENT_SANS_SEMI catPARTIAL_STATEMENT
 %                        catSTATEMENTS catSTATEMENTS_SANS_SEMI catPARTIAL_STATEMENTS );
-% Problem: can't figure out how to get typewriter curly braces in footnote.
+% These aren't great examples (not from actual code); but so be it, as the
+% actual examples are *very* long.
 \item[Statement]  The macro body is a complete statement such as
   ``{\tt x = 3;}'', ``{\tt if (s) free(s);}'' or ``{\tt \verb|{| int x =
     y*y; printf("\%d", x); \verb|}|}''.  Such a macro is like a function
     returning {\tt void}, except that uses should not be followed by a
-    semicolon.\footnote{Since the body is already a complete statement, the
-      extra semicolon can cause problems such as mis-parsing of nested {\tt
-      if} statements.  Such macros can be confusing to use, because
-    programmers are inclined to add a semicolon after invocations that look
-    like functions; wrapping the body in {\tt do \{\ldots\} while (0)}, a
-    partial statement which requires a trailing semicolon, solves this
-    problem.  To our surprise, we found few uses of that construct, but
-    many error-prone instances of a macro that expanded to a statement like
-    \{\ldots\} in which a call to the macro was immediately followed by a
-    semicolon.}
+    semicolon (see section on macro lint: \ref{sec:lint}).
+    
+    To reduce the number of categories in this presentation, the statement
+    categogry aggregates single statements (comprising 47\% of the category),
+    statements missing their final semicolon (as in {\tt \#define QUIT if
+    (\verb|interrupt_state|) \verb|throw_to_top_level|()}; these account
+  for 45\%), multiple statements (3.0\%), multiple statements where the
+  last one is missing its final semicolon (3.5\%), and partial statements
+  (as in {\tt \#define ASSERT(p) if (!(p)) botch(\verb|__STRING|(p));
+  else}; these are the final less than 2\%).
 
-  This includes:
-    * statement
-  and also smaller categories:
-    * statement missing final semicolon, like do {...} while (0)
-    * partial statement (like nothing following "else")
-    * multiple statements
-    * multiple statements, last one lacks semicolon
-    * multiple statements, last one is partial
-
+%%  mcat_TYPE: 697
+%%    82%  type (569)
+%%    0.00%  partial_type (0)
+%%    3.3%  declaration (23)
+%%    15%  semicolonless_declaration (105)
 % @mcat_TYPE = qw( catTYPE catPARTIAL_TYPE catDECLARATION catDECLARATION_SANS_SEMI);
 % #my @mcat_DECLARATION = qw( catDECLARATION catDECLARATION_SANS_SEMI );
 % #folded DECLARATION into the above, TYPE
 % The DECLARATION ones are quite rare.
-\item[Type-related]  These macros either take a type as an argument, pass
-  a type to another macro, expand to a type or partial type, or use such a
-  macro.  
-
-      These macros
-    %  either take a type as an argument, pass a type to another macro, 
-      expand to a type or partial type, or expand to a
-      declaration (possibly missing its trailing semicolon).  [[Some of these
-      get classified as ``multiple symbols''.]]
-      Examples include {\tt \#define \verb|__ptr_t| void *}, {\tt
-      \#define \verb|__INLINE| extern inline}, {\tt \#define \verb|ALIGN_SIZE|
-    sizeof(double)}, and {\tt \#define PTRBITS \verb|__BITS|(char*)}.  Since
-    types are not first-class in C, they may not be passed to functions or
-    returned as results; additionally, these macros may produce or use only
-    part of a type (such as a storage class).  As a result, these macros may be
-    tricky to understand, and cannot be eliminated via straightforward
-    translation (though C++ templates may provide some hope).
+\item[Type-related] 
+  These macros expand to a type or partial type (such as a storage class),
+  or expand to a declaration (possibly missing its terminating semicolon).
+  [[Not all such are caught in the ``type'' category; some get classified
+  as ``multiple symbols''.]]  Examples include {\tt \#define \verb|__ptr_t|
+  void *}, {\tt \#define \verb|__INLINE| extern inline}, {\tt \#define
+private static}, {\tt \#define \verb|FLOAT_ARG_TYPE| union \verb|flt_or_int|}, and {\tt
+\#define CMPtype SItype}.  As a result, these macros may be tricky to
+understand, and cannot be eliminated via straightforward translation
+(though C++ templates may provide some hope).
 
 
 
+%%  mcat_SYNTAX: 189
+%%    18%  mismatched_entities (34)
+%%    82%  punctuation (155)
 % This includes ( catUNBALANCED catPUNCTUATION )
-\item[Other syntactic macros]  
-  * unbalanced parentheses/braces/brackets
-  * punctuation
+\item[Syntactic]  The macro body is either punctuation (as in
+  {\tt \#define AND ;}, making up 82\% of this category) or contains
+  unbalanced parentheses, braces, or brackets.  The latter are often used
+  to create a block and perform actions that must occur at its beginning
+  and end, as for \verb|BEGIN_GC_PROTECT| and \verb|END_GC_PROTECT|.
+  
+  Like stringization and pasting, these macros make essential use of the
+  unique features of the preprocessor.
 
-  Like stringization and pasting, these
-  macros make essential use of the unique features of the preprocessor.
-  Our framework separately categorizes a number of such macros, including
-  those that expand to a reserved word (such as {\tt \#define private
-  static}, mentioned above), those that expand to a delimiter (such as
-{\tt \#define AND ;}), and those with mismatched parentheses, brackets, or
-braces.  The latter are often used to create a block and perform actions
-that must occur at its beginning and end, as for \verb|BEGIN_GC_PROTECT|
-and \verb|END_GC_PROTECT|.
 
+%%  mcat_SYMBOL: 870
+%%    1.7%  reserved_word (15)
+%%    94%  function_name (820)
+%%    4.0%  symbols (35)
 % @mcat_SYMBOL = qw( catRESERVED_WORD catFUNCTION_NAME catSYMBOLS);
-\item[Symbols]  Reserved word, function name, or space-separated sequence
-of symbols.
+\item[Symbols]
+  The macro body is a single identifier that is either a function name
+  (94\% of this category) or a reserved word (2\%, much of it uses of
+  variable names which are reserved in another dialect).  A macro body
+  which is a macro name inherits that macro's classification rather than
+  appearing here.
+  
+  In this paper's presentation, a macro is also placed in this category if
+  it expands to a space-separated sequence of symbols which cannot be
+  positively identified as a partial declaration or other construct.  This
+  accounts for the other 4\% of this category and is a failed
+  categorization of sorts, but occurs frequently enough to deserve special
+  notice.
 
-The latter is really a failure of sorts.
-
-% @mcat_SYMBOL_UNKNOWN = qw( catSYMBOL_UNKNOWN );
-\item[Unknown symbol]  Single unknown symbol, typically due to something
-defined on some other architecture (for which we don't have header files,
-or else we'd parse 'em:  we parse more than any single invocation of the
-compiler would).  They can also be variables or functions that we failed to
-parse.
-
-
-% @mcat_NON_C_CODE = qw( catCOMMAND_LINE catASSEMBLY_CODE );
-\item[Not C code]  Operating system command lines (eg, compilation
-commands, appearing in a file which is used by the preprocessor both when
-run over code and Makefiles), and assembly code.
-
-
-
-
-
-
-
-% @mcat_FAILURE = qw( catNOT_YET catIN_PROCESS catNO_DEF catFAILURE catMULTIPLE );
-\item[Failed classification]
-
-  [[This needs to be rewritten, probably.]]
-  [[Need to discuss why definitions fail, and give examples.]]
+  We are concerned with how it {\em could} be used, not just how it {\em
+  happens} to be used.  That's why we can't take the easy out.  But it
+  would be interesting to look at uses, which would let us infer the {\em
+  intended} use (if not all {\em possible} uses).  We are actively pursing
+  this line of research.
 
   Multiple adjacent identifiers\,---\,as in
   {\tt \#define EXFUN(name, proto) name proto} and {\tt \#define
@@ -139,7 +143,97 @@ run over code and Makefiles), and assembly code.
   classification failures.  These packages contain 93, 297, 932, and 58 macro
   definitions, respectively.
 
+
+
+
+%%  mcat_SYMBOL_UNKNOWN: 2765
+%%    100%  unknown_symbol (2765)
+% @mcat_SYMBOL_UNKNOWN = qw( catSYMBOL_UNKNOWN );
+\item[Unknown symbol]
+  The macro expands to a single symbol which is not defined in the package
+  or in any library header files included by the package.  The symbol may
+  be defined by compiler command lines or may only be meaningful with a
+  particular architecure, system, or library for which we did not have
+  header files available (and used only inside an appropriate conditional
+  compilation guard).  If the macro name has another definition which is
+  not an unknown symbol, then we can safely assume that the inaccessible
+  definition has similar characteristics.
+
+  Unknown symbols can also be variables or functions that we failed to
+  parse.  We use an approximate parsing technique that can succeed where an
+  exact parse would no (as for unsyntactic code or entities broken by
+  preprocessor directives), but somesimes fail to recognize all
+  declarations and definitions.
+
+
+%%  mcat_NON_C_CODE: 639
+%%    90%  command_line_arguments (574)
+%%    10%  assembly_code (65)
+% @mcat_NON_C_CODE = qw( catCOMMAND_LINE catASSEMBLY_CODE );
+\item[Not C code]  The predominant use of such macros is for 
+  filenames and operating system command lines (together, 90\% of this
+  category) and assembly code (the remaining 10\%).  The former usually
+  appear in a file which is used by the preprocessor both when run over
+  code and Makefiles.  We use conservative heuristics to determine when a
+  line belongs in this category\,---\,after all, {\tt \#define
+  \verb|SYSDEP_CFLAGS| -43 -w} creates a perfectly valid C
+  expression\,---\,so we misclassify some such macros.  (See the ``expression
+  plus not C code'' line at 0.14\% in figure~\ref{fig:subset-categories}.)
+  
+  The assembly code component includes only macros whose expansion is
+  assembly code (as opposed to expressions and statements which happen to
+  contain snippets of assembly code) makes up 10\% of this category.
+  
+  (We see those macros because: 1. we process all the .h files, and 2. some
+  files are used for preprocessing both code and Makefiles, etc.  This
+  latter use is problematic in itself, because by definition CPP is
+  supposed to get a syntactic C program; it should err if what's between
+  single quotes isn't a legal character constant, etc.  But many
+  implementations don't perform any such checks.)
+
+
+%%  mcat_FAILURE: 802
+%%    0.00%  uncategorized (0)
+%%    7.9%  being_categorized (63)
+%%    10%  never_defined (82)
+%%    78%  failed_categorization (628)
+%%    3.6%  multiply_categorized (29)
+% @mcat_FAILURE = qw( catNOT_YET catIN_PROCESS catNO_DEF catFAILURE catMULTIPLE );
+\item[Failed classification]
+
+Varargs.
+Uses of pasting.
+Complicated operating system command lines or flags.
+Uses of other macros which have multiple definitions, or complicated
+        definitions (we don't try to expand the latter, though probably we should).
+Partial statements (e.g., case labels, parts of structure declarations), Partial expressions.
+Passing in operators, as in "cmp".
+Use of non-portable extensions.
+C++ code.
+Tricky declaration argument stuff:  ARGS2(t,a,u,b) (a,b) t a; u b;
+JMESSAGE(code,string) string ,
+
+
+
+  [[This needs to be rewritten, probably.]]
+  [[Need to discuss why definitions fail, and give examples.]]
+
   Some of these are just limitations of our parser.
+
+  The classifications are heuristic.  Maybe we could do better by fully
+  expanding.
+
+  
+  Our tool failed to categorize less than 2\% of the 46462 definitions
+  [[plus a small number of ``multiple symbols'']]; performing even a single
+  level of macro expansion in bodies would make most of the latter
+  failures, and many of the former ones, categorizable.  Other
+  straightforward improvements include making a second pass after an
+  initial categorization and using dependence information to determine
+  which definitions can be active at an invocation site.  We have not
+  pursued these enhancements, primarily because our tool is already
+  accurate enough for our purposes.
+
 
 % and illegal identifier
 %   names ({\tt \#define \verb|FAT$C_VFC| 3} for VMS compilation), tokens %$HACK
@@ -154,3 +248,8 @@ run over code and Makefiles), and assembly code.
 % \pkg{gnuplot}, cvs, and \pkg{groff} accounted for over 75\% of the failures, many of
 % which could be eliminated by slightly relaxing the parsing rules.
 \end{description}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "emp-use-2"
+%%% End: 
