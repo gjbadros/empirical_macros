@@ -1006,6 +1006,8 @@ sub merge_dependenton ($$)
 
   if ($len1 != $len2)
     { return $false; }
+  if ($len1 == -1)
+    { return [ ]; }
   { my $i;
     for $i (0..$len1-1)
       { if ($do1->[$i] ne $do2->[$i])
@@ -1616,6 +1618,8 @@ sub find_close_brace ($;$$)
   return ($pos - 1, $exp);
 }
 
+#print join(":",words_in(cline_simplify("FOO"))), "\n";
+#exit 0;
 
 sub update_for_cond_comp_directive ($$) {
   my ($cpp_cmd,$args) = check_args(2, @_);
@@ -1623,24 +1627,58 @@ sub update_for_cond_comp_directive ($$) {
   my @words = ();
 
   # Note: macros_appearing_in can only be used on the second pass
-  if ($cpp_cmd eq "if" || $cpp_cmd eq "elif") {
-    @words = macros_appearing_in(cline_simplify($args));
-  } else {
-    @words = ($args);
-  }
+#  if ($cpp_cmd eq "if" || $cpp_cmd eq "elif") {
+#    @words = words_in(cline_simplify($args));
+#  } else {
+#    @words = ($args);
+#  }
+  @words = possible_macro_names_in(cline_simplify($args));
   my $ccdCategory;
   my $word;
-  foreach $word (@words) {
-    my $curr_ccdCategory = ccd_lexical_category($word);
-    if ($debug_ccd_categories) {
-      print STDERR "CCD_LEXICAL_CATEGORY: $word in ",
-                   $cond_category_name[$curr_ccdCategory], "\n";
+  if ($#words < 0 && ($args eq "0" || $args eq "1")) {
+    $ccdCategory = $ccatCOMMENTING;
+  } else {
+    if ($#words < 0) {
+      print STDERR "CCD_LEXICAL_CATEGORY: No words!\n$cpp_cmd, $args\n";
+      return;
     }
-    if (defined($ccdCategory) && $curr_ccdCategory != $ccdCategory) {
-      $ccdCategory = $ccatMIXED;
-      last;
+    foreach $word (@words) {
+      my $curr_ccdCategory = ccd_lexical_category($word);
+      if ($debug_ccd_categories) {
+	print STDERR "CCD_LEXICAL_CATEGORY: $word in ",
+	$cond_category_name[$curr_ccdCategory], "\n";
+      }
+      if (defined($ccdCategory) && $curr_ccdCategory != $ccdCategory) {
+	if ($debug_ccd_categories) {
+	  print STDERR "CCD_LEXICAL_CATEGORY: $word in mixed, now\n";
+	}
+	$ccdCategory = $ccatMIXED;
+	last;
+      }
+      $ccdCategory = $curr_ccdCategory;
     }
-    $ccdCategory = $curr_ccdCategory;
+    if ($ccdCategory == $ccatOTHER && $#words == 0 &&
+	($cpp_cmd eq "ifndef" || $args =~ /\!\s*defined/)) {
+      # now look at next two lines and see if this is an ccatREDEF_SUPPRESION
+      my $simple = "";
+      my $simple2 = "";
+      my $iLinesPeeked = 1;
+      $word = $words[0];
+      while ($simple = peek_fulltoken_line($iLinesPeeked++)) {
+	last if ($simple !~ /^\s*$/);
+      }
+      if ($simple =~ /^\s*\#\s*define\s+$word/) {
+	while ($simple2 = peek_fulltoken_line($iLinesPeeked++)) {
+	  last if ($simple2 !~ /^\s*$/);
+	}
+	if ($simple2 =~ /^\s*\#\s*endif/) {
+	  $ccdCategory = $ccatREDEF_SUPPRESION;
+	}
+      }
+      if ($debug_ccd_categories) {
+	print STDERR "CCD_LEXICAL_CATEGORY: other -> $cond_category_name[$ccdCategory], from\n 1: $simple 2: $simple2\n";
+      }
+    }
   }
   $rg_ccd_cat_counts[$current_ftype_index][$ccdCategory]++;
 }
@@ -1660,13 +1698,19 @@ sub ccd_lexical_category ($) {
   if ($mname =~ /^(VAXC|TURBOC|BORLANDC|MSC_VER|cplusplus|STDC|GNUC|GNU_LIBRARY|MWERKS|MSC|ZTC|PUREC|applec|THINK_C|SC|STDC|STDC_HEADERS|HAVE_GCC|lint|LINT|NeedFunctionPrototypes|FUNCPROTO|NO_PROTO|HAVE_PROTOS|DJGPP|KR_headers|NON_UNIX_STDIO|DECC|DECCXX)$/) {
     return $ccatPORT_LANLIB;
   }
+  if ($mname =~ /^(const|static|inline|volatile|signed|unsigned)$/) {
+    return $ccatPORT_LANMACRO;
+  }
   if ($mname =~ /^(STACK_DIRECTION|STACK_GROWS_DOWNWARD|STACK_GROWTH_DOWN|arch_is_big_endian|arch_is_little_endian|arch_ints_are_short|arch_arith_rshift|BYTEORDER|HAVE_.+|NO_(STDLIB|UNISTD|LIMITS)|.+_MISSING|BROKEN_.+|NO_FCNTL|_POSIX_VERSION|READLINE_LIBRARY|BSD_SIGNALS|POSIX_SIGNALS|SYSTYPE_SYSV|SYSTYPE_BSD|ELF|COFF|.+_BUG)$/) {
     return $ccatPORT_FEATURE;
+  }
+  if ($mname =~ /^(strr?chr|errno|SIG[0-9A-Z]{2,6}|S_I(READ|RWXU|RWXG|RWXO|[FS](MT|SOCK|LNK|REG|BLK|DIR|CHR|F?IFO|[UG]ID|VTX|))|TIOC[0-9A-Z]{1,9})$/) {
+    return $ccatPORT_SYSMACRO;
   }
 
   $mname =~ tr/[A-Z]/[a-z]/;
 
-  if ($mname =~ /^(hpux|.*sun_fpa.*|32bit|386bsd|m_xenix|aix(rt|370|3_2|_13|esa|pc)?|alliant(_2800)?|alpha|amiga(dos|_ac_5|_sc_6_1)?|apollo|atari(st)?|att(386|3b)|bfly1|bsd(i|4_[1234])?|butterfly|cadmus|clipper|convex|cray([12]|[xy]mp|_stack)?|cx_ux|dgux|dos_nt|drs6000|gmicro|hp(2648|26|76|gl|300|9000|s[2345678]00|_osf|osf1|pa|ux(_[156789])?)?|i370|i386|i860|i960|ibm(032|esa|r2|rt)?|interdata|iris[234567]d?|is68k|linux|luna88k|lynx|.*kbcs_target|m68k|m88(k|000)|m_unix|mac_tcl|macintosh|macos|maxport|mc680[01234]0|mc68k32|minix|mips(_sysv|eb|el)|motorola|msdos|multimax|netbsd|newsos5|next|os2|osf(1|_alpha|_os)|pa_risc1_1|paragon|pdp11|powerpc|pyr|qnx|risc6000|sequent|sgi|sparc(v9)?|sun([23])?|sun386i|sunos[45]|svr4_2|sysv(3|68|_ext)|tandem|tek(4132|4300)|tops20|tower32|u370|ultrix|umaxv|unix(pc)?|usg(5_4|4_2)?|vax|vms|vms_posix|win(dows(nt|95)?|32|16)?|xenix(_2[23]|286)?|z8000)$/) {
+  if ($mname =~ /^(hpux|.*sun_fpa.*|32bit|386bsd|m_xenix|aix(rt|370|3_2|_13|esa|pc)?|alliant(_2800)?|alpha|amiga(dos|_ac_5|_sc_6_1)?|apollo|atari(st)?|att(386|3b)|bfly1|bsd(i|4_[1234])?|butterfly|cadmus|clipper|convex|cray([12]|[xy]mp|_stack)?|cx_ux|dgux|dos_nt|drs6000|gmicro|hp(2648|26|76|gl|300|9000|s[2345678]00|_osf|osf1|pa|ux(_[156789])?)?|i370|i386|i860|i960|ibm(032|esa|r2|rt)?|interdata|iris[234567]d?|is68k|linux|luna88k|lynx|.*kbcs_target|m68k|m88(k|000)|m_unix|mac_tcl|macintosh|macos|maxport|mc680[01234]0|mc68k32|minix|mips(_sysv|eb|el)|motorola|msdos|multimax|netbsd|newsos5|next|os2|osf(1|_alpha|_os)|pa_risc1_1|paragon|pdp11|powerpc|pyr|qnx|risc6000|sequent|sgi|sparc(v9)?|sun([23])?|sun386i|sunos[45]|svr4_2|sysv(3|68|_ext)|tandem|tek(4132|4300)|tops20|tower32|u370|ultrix|umaxv|unix(pc)?|usg(5_4|4_2)?|vax|vms|vms_posix|win(dows(nt|95)?|32|16)?|xenix(_2[23]|286)?|z8000|isc386)$/) {
     return $ccatPORT_MACHINE;
   }
 
@@ -1678,8 +1722,12 @@ sub ccd_lexical_category ($) {
   # but these are not strictly based on name
 
   #give MI_PREVENTION a rough go
-  if ($mname =~ /_H$/) {
+  if ($mname =~ /_h$/) {
     return $ccatMI_PREVENTION;
+  }
+
+  if ($mname eq "true" || $mname eq "false" || $mname eq "1" || $mname eq "0") {
+    return $ccatCOMMENTING;
   }
 
   return $ccatOTHER;
@@ -5164,6 +5212,14 @@ sub words_in ($)
   $text =~ s/^\W+//;
   return split(/\W+/,$text);
 }
+
+# This may not be quite right, but it works well enough
+sub possible_macro_names_in ($)
+{
+  my ($text) = check_args(1, @_);
+  return grep { $_ ne "defined" } words_in($text);
+}
+			      
 
 sub macros_appearing_in ($)
 {
