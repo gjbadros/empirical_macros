@@ -135,6 +135,8 @@ text_tables:	$(TEXT_TABLES)
 tbl-package-sizes: $(STAT)
 	macros-make-package-sizes-tbl-from-stat $^ > $@
 
+# To add commas, do this in Emacs:
+# (query-replace-regexp "\\([0-9]\\)\\([0-9][0-9][0-9]\\)\\([^0-9]\\)" "\\1,\\2\\3" nil)
 tbl-package-sizes.tex: tbl-package-sizes package_num_files
 	(echo "Package	Version	Physical lines	NCNB lines	Files	Description"; join -t'	' $(COMMON_DIR)/package_versions tbl-package-sizes | join -t'	' - package_num_files | join -t'	' - $(COMMON_DIR)/package_descriptions ) | latexify > $@
 
