@@ -4585,13 +4585,6 @@ do_xifdef (cpp_reader *pfile, struct directive *keyword,
   cchOffsetBranchStart = CchOffset_internal(pfile) + 2;
   conditional_skip (pfile, skip, T_IF, control_macro, szConditionalClause);
   /* This will call DO_XIFDEF hook and either DO_IFDEF or DO_IFNDEF hook */
-  gjb_call_hooks_i_i_sz_szlx3_i_i(CPP_OPTIONS(pfile),HI_DO_XIFDEF,
-				  cchOffsetStart,cchOffsetEnd,
-				  keyword->type == T_IFDEF? "IFDEF": "IFNDEF",
-				  pchStartExpr,pchEndExpr-pchStartExpr,
-				  pchEndExpr,pchEndGarbage-pchEndExpr,
-				  pchEndGarbage,CPP_BUFFER(pfile)->cur-pchEndGarbage,
-				  skip,cchOffsetBranchStart);
   if (keyword->type == T_IFDEF)
     gjb_call_hooks_i_i_szlx3_i(CPP_OPTIONS(pfile),HI_DO_IFDEF,cchOffsetStart,cchOffsetEnd,
 			       pchStartExpr,pchEndExpr-pchStartExpr,
@@ -4604,6 +4597,13 @@ do_xifdef (cpp_reader *pfile, struct directive *keyword,
 			       pchEndExpr,pchEndGarbage-pchEndExpr,
 			       pchEndGarbage,CPP_BUFFER(pfile)->cur-pchEndGarbage,
 			       skip);
+  gjb_call_hooks_i_i_sz_szlx3_i_i(CPP_OPTIONS(pfile),HI_DO_XIFDEF,
+				  cchOffsetStart,cchOffsetEnd,
+				  keyword->type == T_IFDEF? "IFDEF": "IFNDEF",
+				  pchStartExpr,pchEndExpr-pchStartExpr,
+				  pchEndExpr,pchEndGarbage-pchEndExpr,
+				  pchEndGarbage,CPP_BUFFER(pfile)->cur-pchEndGarbage,
+				  skip,cchOffsetBranchStart);
   return 0;
 }
 
