@@ -156,16 +156,29 @@ CchOffset()
  # of buffers up until we get an actual filename for the real filename
  # --09/17/97 gjb
 
+
+char *
+InFname()
+	struct cpp_options *opts = parse_in.data;
+	CODE:
+	RETVAL = opts?opts->in_fname:"@NONE@";
+	OUTPUT:
+	RETVAL
+
 char *
 Fname()
 	cpp_buffer *buffer = parse_in.buffer;
 	CODE:
-	while (buffer != CPP_NULL_BUFFER(&parse_in)) {
-	    if (buffer->nominal_fname) {
-		RETVAL = buffer->nominal_fname;
-		break;
-	    } else {
-		buffer = CPP_PREV_BUFFER(buffer);
+	if (buffer == 0) {
+	    RETVAL = "@NONE@";
+	} else {
+	    while (buffer != CPP_NULL_BUFFER(&parse_in)) {
+		if (buffer->nominal_fname) {
+		    RETVAL = buffer->nominal_fname;
+		    break;
+		} else {
+		    buffer = CPP_PREV_BUFFER(buffer);
+		}
 	    }
 	}
 	OUTPUT:
