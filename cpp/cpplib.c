@@ -802,6 +802,8 @@ init_parse_options (opts)
   opts->warn_comments = 0;
   opts->warn_import = 1;
   opts->warnings_are_errors = 0;
+
+  opts->call_perl_hooks = 0;
 }
 
 enum cpp_token

@@ -492,6 +492,11 @@ struct cpp_options {
 
   /* Target-name to write with the dependency information.  */
   char *deps_target;
+
+  /* Non-zero if we are to call the perl hooks that have
+     been registered */
+  char call_perl_hooks;
+
 };
 
 #define CPP_TRADITIONAL(PFILE) (CPP_OPTIONS(PFILE)-> traditional)
