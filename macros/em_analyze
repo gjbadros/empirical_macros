@@ -206,7 +206,7 @@ cat c-files-listing | $0 -i -d ~/macros/data/stable:pkgname
 #  * all uses are fully qualified with the package name ($main::$true), or
 #  * it is declared with "my" or appears in a use vars qw( ... ) declaration.
 use strict;
-## This gives Mike an error as of 1/27/97.
+# Verbose error messages; not sure whether I like it.
 # use diagnostics;
 
 # Permit use of $MATCH for $& and so forth.
@@ -243,7 +243,14 @@ use em_util;
 ## Perhaps give actual constant, so it can be determined.
 sub category_lub ($$)
 { my ($c1, $c2) = check_args(2, @_);
-  return (($c1 == $c2) ? $c1 : $catMULTIPLE);
+  if ($c1 == $c2)
+    { return $c1; }
+  elsif ($c1 == $catNULLDEFINE)
+    { return $c2; }
+  elsif ($c2 == $catNULLDEFINE)
+    { return $c1; }
+  else
+    { return $catMULTIPLE; }
 }
 
 
@@ -348,7 +355,7 @@ my $declarator_re = '(' . $declarator_parenthesized_re . '|'
 # Use this in preference to $type_identifier_re
 # 2 groups: $1 = type specifier, $2 = declarator
 # my $type_declarator_unparen_re = '(' . $type_specifier_re . ')\s*' . $declarator_re;
-# For functions, does NOT include teh open paren or any argument info.
+# For functions, does NOT include the open paren or any argument info.
 my $type_declarator_re = '(' . $type_specifier_re . ')\s*' . $declarator_re;
 # Should probably use $type_declarator_re and $type_re
 my $simple_arglist_re = '\(\s*(?:' . $identifier_re . '\s*\**\s*(?:,\s*' . $identifier_re . '\s*\**\s*)*)?\s*\)'; # 0 groups
@@ -1098,7 +1105,7 @@ sub merge_dependenton ($$)
 sub negate_cpp_if_condition ($)
 {
   my ($cond) = check_args(1, @_);
-  if ($cond =~ /^!defined\($identifier_re\)$/)
+  if ($cond =~ /^!defined\($identifier_re\)$/o)
     { return substr($cond,1); }
   elsif ($cond =~ /^!\((.*)\)$/)
     { my $negated = $1;
@@ -1510,11 +1517,11 @@ sub get_fulltoken_line (;$)
 # Two result values: success, lines.
 sub get_fulltoken_lines_to ($$$)
 { my ($regexp, $line, $limit) = check_args(3, @_);
-  if ($line =~ /$regexp/)
+  if ($line =~ /$regexp/)	# no /o
     { return($true, $line); }
   my $nextline;
   while (($limit > 0) && ($nextline = get_fulltoken_line($true)))
-    { my $success = ($nextline =~ /$regexp/);
+    { my $success = ($nextline =~ /$regexp/); # no /o
       $line = append_lines($line, $nextline);
       if ($success)
 	{ return ($true, $line); } }
@@ -1618,7 +1625,7 @@ sub update_for_cond_comp_directive ($$) {
       while ($simple = peek_fulltoken_line($iLinesPeeked++)) {
 	last if ($simple !~ /^\s*$/);
       }
-      if ($simple =~ /^\s*\#\s*define\s+$word/) {
+      if ($simple =~ /^\s*\#\s*define\s+$word/) { # no /o on regexp match
 	while ($simple2 = peek_fulltoken_line($iLinesPeeked++)) {
 	  last if ($simple2 !~ /^\s*$/);
 	}
@@ -1683,7 +1690,7 @@ sub ccd_lexical_category ($) {
     return $ccatMI_PREVENTION;
   }
 
-  if ($mname eq "true" || $mname eq "false" || $mname eq "1" || $mname eq "0" 
+  if ($mname eq "true" || $mname eq "false" || $mname eq "1" || $mname eq "0"
       || $mname eq "NOT_C_CODE") {
     return $ccatCOMMENTING;
   }
@@ -1747,10 +1754,10 @@ sub getline_handle_preprocessor_command ($$$$$)
     if (($cpp_cmd eq "ifdef") || ($cpp_cmd eq "ifndef") || ($cpp_cmd eq "undef"))
       { if ($cpp_cmd_arg_noc =~ /\s/)
 	  { die "Shouldn't see whitespace in <<$cpp_cmd_arg_noc>>"; }
-	if ($cpp_cmd_arg_noc !~ /^$identifier_re$/)
+	if ($cpp_cmd_arg_noc !~ /^$identifier_re$/o)
 	  { evilprint("argument should be a symbol: \#" . "$cpp_cmd $cpp_cmd_arg");
 	    # This happens in Emacs somewhere for an #undef, I think.
-	    if ($cpp_cmd_arg_noc !~ /^($identifier_re)\(/)
+	    if ($cpp_cmd_arg_noc !~ /^($identifier_re)\(/o)
 	      { $cpp_cmd_arg_noc = $1; } }
 	add_macro_used_by_cpp($cpp_cmd_arg_noc); }
     elsif (($cpp_cmd eq "if") || ($cpp_cmd eq "elif"))
@@ -1928,7 +1935,7 @@ sub add_macro_used_by_cpp ($)
     { # First, two debugging tests
       if (!$word)
 	{ croak "Empty word"; }
-      if ($word !~ /^$identifier_re$/)
+      if ($word !~ /^$identifier_re$/o)
 	{ if ($word =~ /^$number_literal_re$/o)
 	    { return }  # for stuff like #if BYTEORDER > 0x4321
 	  warn "non-identifier word $word"; # FIXMERNST
@@ -2170,7 +2177,7 @@ sub peek_to_cpp_command ($$$)
   my $this_result = "";
   my $this_size = 0;
   my $next_line = peek_fulltoken_line($peekahead+1);
-  while (defined($next_line) && ($next_line !~ /^\s*\#\s*$cpp_cmd_re\b/))
+  while (defined($next_line) && ($next_line !~ /^\s*\#\s*$cpp_cmd_re\b/)) # no /o
     { if ($debug_peek)
 	{ print "didn't find $cpp_cmd_re, offset $this_size: $next_line"; }
       if (($this_size > $size_limit) || ($next_line =~ /^\s*\#/))
@@ -2275,13 +2282,13 @@ sub cpp_merged_branches ()
 	  { my $rettype = $1;
 	    my $fname = $2;	# actually a declarator
 	    # print "found a function declarator '$rettype' '$fname'(\n";
-	    if ($fname =~ /^$identifier_re$/)
+	    if ($fname =~ /^$identifier_re$/o)
 	      { my $index = 1;
 		while ($fname && ($index <= $#parts))
 		  # This test is a hack.
 		  # Ought not insist that return type be identical, maybe?
 		  # Ought not insist on identical spacing in rettype.
-		  { if ($parts[$index] !~ /^\s*$rettype\s*$fname\s*\(/)
+		  { if ($parts[$index] !~ /^\s*$rettype\s*$fname\s*\(/)	# no /o
 		      { # print "part $index didn't match: $parts[$index]\n";
 			$fname = $false; }
 		    $index++; }
@@ -2475,7 +2482,7 @@ sub parse_exp ($;$)
   # First, cope with open parens
 
   # Cast
-  if ($exp =~ /^\(\s*($builtin_type_re)\s*\)/)
+  if ($exp =~ /^\(\s*($builtin_type_re)\s*\)/o)
     { # print "Found cast $1\n";
       my $casttype = parse_type($1);
       my ($type, $remaining) = parse_exp($POSTMATCH);
@@ -2487,12 +2494,12 @@ sub parse_exp ($;$)
       return parse_exp_follower($casttypenum, $remaining); }
   # Type in parens followed by (what looks like) paren, number, identifier, or
   # unary operator (without a binary counterpart: no +-!&*)
-  if (($exp =~ /^\(\s*($type_re)\s*\)\s*([0-9a-zA-Z_\(~])/)
+  if (($exp =~ /^\(\s*($type_re)\s*\)\s*([0-9a-zA-Z_\(~])/o)
       || ($exp =~ /^\(\s*($type_re\s*$type_suffix_re+)\s*\)\s*(.)/o) # ends with *: pointer
       # identifier ending with _t: type
       || ($exp =~ /^\(\s*([a-zA-Z_\$][a-zA-Z0-9_\$]*_t)\s*\)\s*(.)/)
       # identifier which expands to reserved word: type
-      || (($exp =~ /^\(\s*($identifier_re)\s*\)\s*(.)/)
+      || (($exp =~ /^\(\s*($identifier_re)\s*\)\s*(.)/o)
 	  && defined($mncategory{$1})
 	  && (($mncategory{$1} eq $catTYPE)
 	      # Is this latter really necessary?
@@ -2696,6 +2703,12 @@ sub parse_array_initializer ($)
   if ($initlist =~ /^\s*(,\s*)?\}/)
     { return (construct_array_type($typeUNKNOWN, 0), $POSTMATCH); }
 
+  if (($initlist =~ /^\s*$reserved_word_re/o)
+      || (($initlist =~ /\}/)
+	  && ($PREMATCH =~ /;\s*/)))
+    { # This is a statement, not an array initializer
+      return($typeFAIL, $initlist); }
+
   my $elttype;
   while ($true)
     { my ($thisinittype, $comma);
@@ -2747,7 +2760,7 @@ sub parse_function_decl_args ($)
   my @arg_decls = ();
 
   if (($text =~ /^\s*\)/) || ($text =~ /^\s*void\s*\)/)
-      || (($text =~ /^\s*($identifier_re)\s*\)/)
+      || (($text =~ /^\s*($identifier_re)\s*\)/o)
 	  && exists($macros{$1}) && exists($void_macros{$1})))
     # No arguments
     { return ($true, $POSTMATCH, @arg_decls); }
@@ -2822,7 +2835,7 @@ sub parse_KandR_function_arg_decls ($)
 	}
       $argnametype{$identifier} = $type;
       while ($nextchar eq ",")
-	{ if ($argdecls !~ /^\s*$declarator_re\s*([,;])/)
+	{ if ($argdecls !~ /^\s*$declarator_re\s*([,;])/o)
 	    { parse_error("Couldn't parse declarator following comma after '$typespec $declarator $nextchar': $argdecls\n");
 	      if ($argdecls !~ /\{/)
 		{ mdie("parse_KandR_function_arg_decls: no open brace in '$argdecls'"); }
@@ -2932,7 +2945,7 @@ sub parse_exp_follower ($$)
   # print "Checking for contatenated strings: ", type_name($type), ": $follow\n";
   if (($type eq $typeSTRING)
       && (($follow =~ /^\"/)
-	  || (($follow =~ /^$identifier_re/)
+	  || (($follow =~ /^$identifier_re/o)
 	      # Call categorize_macro_name here for side effect.
 	      && (categorize_macro_name($MATCH) || $true)
 	      && defined($mntype{$MATCH})
@@ -3141,7 +3154,6 @@ PROCESSLINE:
 		{ # Definition or declaration (probably of a function)
 		  # split over multiple lines
 		  # print "combining function definition split over multiple lines\n";
-		  # Used to be "...-1" (why?), but that gave a too-small answer.
 		  $current_function_start_line = current_line_no();
 		  my $nextline = get_fulltoken_line($true);
 		  if (defined($nextline))
@@ -3170,7 +3182,7 @@ PROCESSLINE:
 		  my $declarator;
 		  { my $identifier_or_typedecl = $1;
 		    # Do the easy case first here; order doesn't matter.
-		    if ($identifier_or_typedecl =~ /^$identifier_re$/)
+		    if ($identifier_or_typedecl =~ /^$identifier_re$/o)
 		      { # fix: should warn about implicit return type for function.
 			$typespec = "((int))";
 			$declarator = $identifier_or_typedecl; }
@@ -3510,7 +3522,7 @@ ATCOMMA:
 		  && ($line !~ /^\s*$/)
 		  # Hack.   Should really expand it and try again.
 		  ## What is this test?
-		  && (!(($line =~ /^($identifier_re)\s*\(/) && defined($macros{$1}))))
+		  && (!(($line =~ /^($identifier_re)\s*\(/o) && defined($macros{$1}))))
 		{ parse_error("properly unindented line was never processed: $line"); }
 
 	      # Beginning of line didn't match $type_declarator_re.
@@ -3631,7 +3643,7 @@ sub simple_macro_substitute ($)
 
   # Using "for" instead of foreach gives me 'Use of "" without parens is ambiguous'!
   for my $fdmacro (keys %fun_decl_arg_macros)
-    { if ($text =~ /\b$fdmacro\s*\(/)	# no /o here, as $fdmacro varies
+    { if ($text =~ /\b$fdmacro\s*\(/)	# no /o
 	{ my $prematch = $PREMATCH;
 	  my $postmatch = $POSTMATCH;
 	  my $close_paren_pos;
@@ -3704,17 +3716,17 @@ sub process_function_definition_or_declaration ($$$)
       # strings, each a type or a type declarator
       for my $i (0..$#arg_decls)
 	{ my $decl = $arg_decls[$i];
-	  if ($decl =~ /^$type_re_special$/)
+	  if ($decl =~ /^$type_re_special$/o)
 	    { # Like $type_re, but this must precede $type_declarator_re
 	      # and $type_re must follow it.
 	      $arg_types[$i] = parse_type($decl);
 	      # leave $arg_names[$i] undefined
 	    }
-	  elsif ($decl =~ /^$type_declarator_re$/)
+	  elsif ($decl =~ /^$type_declarator_re$/o)
 	    { my $type_specifier = $1;
 	      my $declarator = $2;
 	      ($arg_types[$i], $arg_names[$i]) = parse_declarator($type_specifier, $declarator); }
-	  elsif ($decl =~ /^$type_declarator_re\s*\(/)
+	  elsif ($decl =~ /^$type_declarator_re\s*\(/o)
 	    { my $type_specifier = $1;
 	      my $declarator = $2;
 	      my $args = '(' . $POSTMATCH;
@@ -3722,7 +3734,7 @@ sub process_function_definition_or_declaration ($$$)
 	      # make parse_declarator able to cope.
 	      ($arg_types[$i], $arg_names[$i]) = parse_declarator($type_specifier, $declarator);
 	      $arg_types[$i] .= '(' . $args; }
-	  elsif ($decl =~ /^$type_re$/)
+	  elsif ($decl =~ /^$type_re$/o)
 	    { $arg_types[$i] = parse_type($decl);
 	      # leave $arg_names[$i] undefined
 	    }
@@ -3774,17 +3786,17 @@ sub process_function_definition_or_declaration ($$$)
 	  # set @arg_{names,types}; arg_decls is a list of identifiers
 	  for my $i (0..$#arg_decls)
 	    { my $decl = $arg_decls[$i];
-	      if ($decl =~ /^$identifier_re$/)
+	      if ($decl =~ /^$identifier_re$/o)
 		{ $arg_names[$i] = $decl;
 		  # Is this at all the right thing to do???
 		  # Leave $arg_types[$i] undefined; will be filled in later.
 		}
-	      elsif ($decl =~ /^$type_declarator_re$/)
+	      elsif ($decl =~ /^$type_declarator_re$/o)
 		{ my $type_specifier = $1;
 		  my $declarator = $2;
 		  ($arg_types[$i], $arg_names[$i]) = parse_declarator($type_specifier, $declarator); }
 	      # A function, with arguments
-	      elsif ($decl =~ /^$type_declarator_arglist_re$/)
+	      elsif ($decl =~ /^$type_declarator_arglist_re$/o)
 		{ my $type_specifier = $1;
 		  my $declarator = $2;
 		  my $arglist = $3;
@@ -3821,8 +3833,8 @@ sub process_function_definition_or_declaration ($$$)
       else
 	{ # K&R-style definition
 	  # Must have an argument: zero arguments => parsed as ANSI-style.
-	  if (!($remaining =~ /^\s*$type_declarator_re\s*([,;])/))
-	    { if (($remaining =~ /^\s*($identifier_re)/)
+	  if (!($remaining =~ /^\s*$type_declarator_re\s*([,;])/o))
+	    { if (($remaining =~ /^\s*($identifier_re)/o)
 		  && exists($macros{$1}))
 		{ parse_error("Skipping macro $1 masquerading as K&R argument declarator");
 		  $remaining = $POSTMATCH; }
@@ -3838,7 +3850,7 @@ sub process_function_definition_or_declaration ($$$)
 	  # strings, each an identifier or a type declarator
 	  for my $i (0..$#arg_decls)
 	    { my $decl = $arg_decls[$i];
-	      if ($decl !~ /^$identifier_re$/)
+	      if ($decl !~ /^$identifier_re$/o)
 		{ parse_error("K&R-style function definition ('$type' '$identifier'), but non-identifier arg declarator $decl");
 		  return $remaining; }
 	      $arg_names[$i] = $decl;
@@ -4102,6 +4114,9 @@ sub categorize_macro_name ($)
 
   # Fix: should also get value here.
 
+  if ($debug_categorize_macro)
+    { print "Categorize macro name $name\n"; }
+
   # Categorize each definition body.
   for (my $i = 0; $i < $numdefs; $i++)
     { my $mdef_index = $macros{$name}[$i];
@@ -4147,9 +4162,10 @@ sub categorize_macro_name ($)
 
 
   if ($debug_categorize_macro)
-    { print " => $category",
-          (defined($type) ? "(" . type_name($type) . ")" : ""),
-          "\n"; }
+    { # This finishes off the line we started printing above
+      print " => $category",
+            (defined($type) ? "(" . type_name($type) . ")" : ""),
+            "\n"; }
 
   $mntype{$name} = $type;
   $mncategory{$name} = $category;
@@ -4184,38 +4200,44 @@ sub categorize_macro_def ($)
   if ($body eq "")
     # Null define
     { $category = $catNULLDEFINE; }
-  elsif ($body =~ /^($string_literal_re\s*)+$/)
+  elsif ((($body =~ /^\s*\{\s*$reserved_nontype_word_re/o)
+	  && ($body =~ /\}\s*$/))
+	 || (($body =~ /^\s*\{/)
+	     && ($body =~ /;\s*\}\s*$/)))
+    # Statement (open brace plus reserved word; ends with close brace)
+    { $category = $catSTATEMENT; }
+  elsif ($body =~ /^($string_literal_re\s*)+$/o)
     # String
     { # print "found string";
       $category = $catLITERAL;
       $type = $typeSTRING; }
-  elsif ($body =~ /^($float_literal_whole_re|$float_literal_frac_re|float_literal_exp_re|float_literal_noexp_re)$/)
+  elsif ($body =~ /^($float_literal_whole_re|$float_literal_frac_re|float_literal_exp_re|float_literal_noexp_re)$/o)
     { $category = $catLITERAL;
       $type = $typeFLOAT; }
-  elsif ($body =~ /^-?($hex_literal_re|$dec_oct_literal_re)$/)
+  elsif ($body =~ /^-?($hex_literal_re|$dec_oct_literal_re)$/o)
     { $category = $catLITERAL;
       $type = infer_int_type($body); }
-  elsif ($body =~ /^$char_literal_re$/)
+  elsif ($body =~ /^$char_literal_re$/o)
     { $category = $catLITERAL;
       $type = $typeCHAR; }
   # Being a statement has precedence over having a reserved word,
   # but this body is just a single word.
-  elsif ($body =~ /^$reserved_nontype_word_re$/)
+  elsif ($body =~ /^$reserved_nontype_word_re$/o)
     { # $failure_type = "expands_to_reserved_word";
       $category = $catRESDWORD;
       # evilprint("expands to reserved word: $body\n");
     }
   elsif ( # like $type_re, but unconditional suffix
 	 ($body =~ /^$type_specifier_re$type_suffix_re+$/o)
-	 || ($body =~ /^($reserved_type_word_re[ \t\*\[\]]*)+$/)
-	 || ($body =~ /^struct\s*$identifier_re$/))
+	 || ($body =~ /^($reserved_type_word_re[ \t\*\[\]]*)+$/o)
+	 || ($body =~ /^struct\s*$identifier_re$/o))
     { $category = $catTYPE; }
-  elsif (($body =~ /^$identifier_re$/)
+  elsif (($body =~ /^$identifier_re$/o)
 	 && (categorize_macro_name($body) || $true) # for side effect
 	 && (defined($mncategory{$body})))
     { $category = $mncategory{$body};
       $type = $mntype{$body}; }
-  elsif ($body =~ /\b\Q$mdef_name[$index]\E\b/)
+  elsif ($body =~ /\b\Q$mdef_name[$index]\E\b/)	# no /o
     { $category = $catRECURSIVE; }
   elsif (($body =~ /,\s*$builtin_type_re\s*[,\)]/o)
 	 || ($body =~ /\(\s*$builtin_type_re\s*(,|\)$)/o)
@@ -4236,7 +4258,7 @@ sub categorize_macro_def ($)
       { if ($type =~ /^category: /)
 	  # Not an expression after all.
 	  { $category = $POSTMATCH; }
-	elsif ($body =~ /^$constant_exp_re$/)
+	elsif ($body =~ /^$constant_exp_re$/o)
 	  # This is wrong; it considers (1 << ((x)-1))
 	  # constant because that matches $constant_exp_re.
 	  { $category = $catSOMECONSTANT; }
@@ -4265,7 +4287,7 @@ sub categorize_macro_def ($)
 	  { if (defined($macros{$type}))
 	      # This may be fine; fix later.
 	      { $category = $catMACROTYPE;
-		parse_error("Macro as type: $type");
+		# parse_error("Macro as type: $type");
 		goto CATEGORIZED; } }
 	# print "category posttype = $category\n";
 	# For each free variable, check its type.
@@ -4325,18 +4347,18 @@ sub categorize_macro_def ($)
   }
 
 CATEGORIZED:
-{ #HACKINDENT
-  $mdef_category[$index] = $category;
-  $mdef_type[$index] = $type;
-  # track our histogram of categories
-  update_categories_for($category,$mdef_file[$index]);
-  #print STDERR "$mdef_name[$index] in $mdef_file[$index], type ", compute_ftype_index($mdef_file[$index]), "\n";
+  { #HACKINDENT
+    $mdef_category[$index] = $category;
+    $mdef_type[$index] = $type;
+    # track our histogram of categories
+    update_categories_for($category,$mdef_file[$index]);
+    #print STDERR "$mdef_name[$index] in $mdef_file[$index], type ", compute_ftype_index($mdef_file[$index]), "\n";
 
-  if ($debug_categorize_macro)
-    { print "categorize_macro_def ($index: $mdef_name[$index]): $categoryname[$category]",
-          (defined($type) ? "(" . type_name($type) . ")" : ""),
-          ": $body\n"; }
-}
+    if ($debug_categorize_macro)
+      { print "categorize_macro_def ($index: $mdef_name[$index]): $categoryname[$category]",
+	    (defined($type) ? "(" . type_name($type) . ")" : ""),
+	    ": $body\n"; }
+  }
 }
 
 
@@ -4395,8 +4417,8 @@ sub is_fun_decl_arg_macro ($)
     if ($body =~ /^\(\s*\)$/) {
       $expands_to_just_parens = $true;
       $one_expanded_to_just_parens = $true;
-    } elsif (($body =~ /^$identifier_re$/)
-	     && ($args =~ /^\(\s*\Q$body\E\s*\)$/)) {
+    } elsif (($body =~ /^$identifier_re$/o)
+	     && ($args =~ /^\(\s*\Q$body\E\s*\)$/)) { # no /o in regexp match
       $expands_to_itself = $true;
       $one_expanded_to_itself = $true;
     }
@@ -4460,7 +4482,7 @@ sub is_semi_fun_decl_arg_macro ($)
     if ($body eq "\(") {
       $expands_to_just_paren = $true;
       $one_expanded_to_just_paren = $true;
-    } elsif ($args =~ /^\(\s*\Q$body\E\s*\)$/) {
+    } elsif ($args =~ /^\(\s*\Q$body\E\s*\)$/) { # no /o in regexp match
       $expands_to_itself = $true;
       $one_expanded_to_itself = $true;
     }
@@ -4618,7 +4640,7 @@ sub check_macro_body ($) {
 		{ $category = $catSTATEMENT;
 		  $failure_type = "semicolonless, braceless if";
 		  return ($result,$failure_type,$category); } } } }
-  if ($body =~ /^goto\s*$identifier_re$/)
+  if ($body =~ /^goto\s*$identifier_re$/o)
     { $category = $catSTATEMENT;
       $failure_type = "semicolonless goto";
       return ($result,$failure_type,$category); }
@@ -5365,8 +5387,6 @@ sub update_categories_for ($$) {
   }
   $rg_category_counts[$ftype_index]->{$category}++;
 
-#  print STDERR "CAT: $category got incremented -- now is ",
-#  $rg_category_counts[$current_ftype_index]->{$category}, "\n";
   if ($debug_categorize_macro)
     { print STDERR "CAT: $category got incremented -- now is ",
         $ {$rg_category_counts[$current_ftype_index]}{$category}, "\n"; }
@@ -5653,7 +5673,7 @@ sub test_parse_expression ($$)
 sub test_regexp ($$;$)
 {
   my ($string, $regexp, $regexp_pretty) = check_args_range(2, 3, @_);
-  if ($string !~ /$regexp/)
+  if ($string !~ /$regexp/)	# no /o
     { print "'$string' should have matched "
 	. (defined($regexp_pretty) ? $regexp_pretty : "regexp '$regexp'") . "\n"; }
 }
@@ -5990,7 +6010,10 @@ print STDERR "Categorizing $cMacrosInTables macros\n";
       $current_ftype_index = compute_ftype_index($current_file);
       $current_macro_line_number = $mdef_line[$i];
       categorize_macro_def($i);
-    } }
+    }
+  for my $mname (keys %macros)
+    { categorize_macro_name($mname); }
+}
 
 #print STDERR "Included files:", join("\n",@files_included), "\n";
 
