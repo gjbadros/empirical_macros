@@ -1,10 +1,15 @@
-#!/uns/bin/perl -w -I/scratch/gjb/cpp/xs/cpp/blib/arch -I/scratch/gjb/cpp/xs/cpp/blib/lib -I/scratch/gjb/cpp
+#!/uns/bin/perl -w -I/scratch/gjb/cpp/xs/cpp/blib/arch -I/scratch/gjb/cpp/xs/cpp/blib/lib -I/scratch/gjb/cpp -I/homes/gws/gjb/macros
 #$Id$
 # Requirements:
 #   filter-for-file-prefix   --- used for demuxing the textprops output
 
 use pcp3;
+use em_constants;
+use checkargs;
 my %macro_name;
+my %macro_name_to_freevars;
+my %typedefs;
+my %functions;
 
 sub Startup {
   # Parse debugging (bison's yydebug variable) is on by default,
@@ -15,6 +20,7 @@ sub Startup {
   open(EXPAND,">expansions.listing") || die "Cannot open expansions.listing: $!";
   print STDERR "STARTUP...\n";
   $| = 1; # Turn on autoflush
+
 }
 
 sub Exit {
@@ -23,31 +29,72 @@ sub Exit {
 
 sub add_use {
   my ($mname,$fname, $expansion, $s_start, $s_end, $cbb) = @_;
-  print EXPAND "$fname: $mname, $s_start, $s_end, $cbb\n";
+  if ($cbb == 0) {
+    print EXPAND "$fname: $mname, $s_start, $s_end\n";
+    if (scalar(@{$macro_name_to_freevars{$mname}}) > 0) {
+      print EXPAND "#EXPN_FREE_VARS $mname: ", join(", ",@{$macro_name_to_freevars{$mname}}), "\n";
+    }
+  }
+}
+
+#from em_analyze
+# Note that "words" include literal numbers, etc.
+sub words_in ( $ )
+{
+  my ($text) = check_args(1, @_);
+  # \W+ is probably more efficient than \b for the split criterion.
+  # Without this, we can get an empty first component.
+  $text =~ s/^\W+//;
+  # \W+ in place of char class is wrong:  $ may appear in identifier.
+  return split(/[^a-zA-Z0-9_\$]+/,$text);
+}
+
+sub underscores_stripped ( $ )
+{
+  my ($text) = @_;
+  if ($text =~ /^__(.*)__$/o) {
+    $text = $1;
+  }
+}
+
+#from em_analyze
+# NOTE: I added the check against reserved words here! --04/01/98 gjb
+sub identifiers_in ( $ )
+{
+  my ($text) = check_args(1, @_);
+  return grep { $_ =~ /$identifier_re/o &&
+		$_ !~ /$reserved_word_re/o &&
+		$_ !~ /__(extension|attribute)__/o && 
+		underscores_stripped($_) !~ /${reserved_word_re}/o } words_in($text);
 }
 
 
+sub FreeVarsFromSimplifiedExpn {
+  my ($simp_expn) = @_;
+  my @a = grep { ! exists $typedefs{$_} && 
+		 ! exists $functions{$_} &&
+		 ! exists $macro_name_to_freevars{$_} } identifiers_in($simp_expn);
+  return [ @a ];
+}
 
-sub create_predef {
-  my ($name, $expn, $nargs, $simp_expn, $file, $line, 
+
+sub create_def {
+  my ($s_start, $s_end, $mname, $expn, $nargs, $simp_expn, $file, $line,
       $backward_argnames_string, $def_flags,
       @currpat) = @_;
-  my $old = select;
-  select CPP;
-  print "PREDEF for \"$name\": \"$expn\"\n";
-  print "nargs = ", $nargs, "\n";
-  print "simp_expn = \"", $simp_expn, "\"", "\n";
-  @argnames = reverse split (/, /,$backward_argnames_string);
-  print "argnames = ", join(', ', @argnames), "\n";
-  print "file = ", $file, "\n";
-  print "line = ", $line, "\n";
-  print "predefined = ", is_set($def_flags,$PREDEFINED), "\n";
-  print "restargs = ", is_set($def_flags,$RESTARGS), "\n";
-  while ($#currpat >= 2) {
-    print "$argnames[$currpat[0]], $currpat[1], $currpat[2]\n";
-    splice(@currpat,0,3);
-  }
-  select $old;
+  my $fname = pcp3::Fname();
+
+  $macro_name_to_freevars{$mname} = FreeVarsFromSimplifiedExpn($simp_expn);
+
+}
+
+# pre definitions never have free variables
+sub create_predef {
+  my ($mname, $expn, $nargs, $simp_expn, $file, $line, 
+      $backward_argnames_string, $def_flags,
+      @currpat) = @_;
+
+  $macronames{$mname} = $true;
 }
 
 sub cpp_out {
@@ -340,7 +387,8 @@ sub done_include_file {
 
 sub do_function {
   my ($szName,$fStatic) = @_;
-  print "Function: $szName", $fStatic?" (static)":"", "\n";
+#  print "Function: $szName", $fStatic?" (static)":"", "\n";
+  $functions{$szName} = $true;
 }
 
 sub do_func_call {
@@ -352,6 +400,7 @@ sub do_typedef {
   my ($name) = @_;
   my $offset  = pcp3::CchOffset();
   my $fname = pcp3::Fname();
+  $typedefs{$name} = $true;
   print TYPES "Typedef: $fname, $name, $offset\n";
 }
 
@@ -371,7 +420,7 @@ AddHook("STARTUP",\&Startup);
 #AddHook("DO_DEFINE",\&do_define);
 #AddHook("HANDLE_DIRECTIVE",\&handle_directive);
 #AddHook("CREATE_PREDEF",\&create_predef);
-#AddHook("CREATE_DEF",\&create_def);
+AddHook("CREATE_DEF",\&create_def);
 #AddHook("DO_UNDEF",\&do_undef);
 #AddHook("PRE_DO_UNDEF",\&pre_do_undef);
 #AddHook("DELETE_DEF",\&delete_def);
@@ -396,10 +445,10 @@ AddHook("EXPAND_MACRO",\&expand_macro);
 #AddHook("ADD_IMPORT",\&add_import);
 #AddHook("INCLUDE_FILE",\&include_file);
 #AddHook("DONE_INCLUDE_FILE",\&done_include_file);
-#AddHook("EXIT",\&Exit);
+AddHook("EXIT",\&Exit);
 #AddHook("TOKEN",\&Got_token);
 #AddHook("TOKEN",\&Got_token2);
-#AddHook("FUNCTION",\&do_function);
+AddHook("FUNCTION",\&do_function);
 #AddHook("FUNC_CALL",\&do_func_call);
 #AddHook("ANNOTATE",\&annotate);
 #AddHook("POP_BUFFER",\&pop_buffer);
