@@ -4,9 +4,10 @@ BEGIN {
 # in synch w/ macros-make-subset-categorizations-from-mac script
 print '
 %\usepackage{graphics}
-\newcommand{\black}{\ensuremath{\blacksquare}}
+%\newcommand{\black}{\ensuremath{\blacksquare}}
+\newcommand{\black}{\vrule height5.5pt depth0.5pt width6pt}
 \begin{tabular}{|r|*{22}{c|}}\hline
-\rotatebox{90}{\# Occurences} &
+\rotatebox{90}{\# Occurrences} &
 \rotatebox{90}{failed categorization} &
 \rotatebox{90}{null define} &
 \rotatebox{90}{expression} &
@@ -56,7 +57,7 @@ while (<>) {
 
   if (100*$count/$sum >= 0.05) {
     if ($pct == 0) {
-      print "$count &"; 
+      print "$count &";
     } else {
       printf "%6.02g\\% &",100*$count/$sum;
     }
