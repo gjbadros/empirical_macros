@@ -400,9 +400,10 @@ YYPushDupTopStackState()
 bool
 YYFCompareTopStackState()
 	CODE:
-	RETVAL = TRUE;
-	if (!fShouldParse) return;
+        RETVAL = TRUE;
+	if (!fShouldParse) goto done;
 	RETVAL = FCompareTopStackState();
+	done:
 	OUTPUT:
 	RETVAL
 
@@ -417,14 +418,15 @@ FLookupSymbol(szSymbol)
 	symentry_t *se;
 	CODE:
 	RETVAL = FALSE;
-	if (!fShouldParse) return;
+	if (!fShouldParse) goto done; 
 	pstr = nmelook(szSymbol,strlen(szSymbol));
 	if (!ParseStack || !ParseStack->contxt) {
 	   RETVAL = FALSE;
-           return;
+	} else {
+	  se = symtab_lookup(ParseStack->contxt->syms,
+			     pstr);
+	  RETVAL = (se != NULL);
 	}
-	se = symtab_lookup(ParseStack->contxt->syms,
-			   pstr);
-        RETVAL = (se != NULL);
+	done:
 	OUTPUT:
 	RETVAL
