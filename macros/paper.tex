@@ -35,20 +35,21 @@ Seattle, WA  98195-2350\\
 \begin{abstract}
 
 The C programming language is intimately connected to its macro
-preprocessor.  This relationship affects the tools (compilers,
-debuggers, call graph extractors, etc.) built to engineer C programs,
-and it affects the ease of translation to other languages such as C++.
-In this paper we analyze over 20 packages comprising 1.5 million lines
-of C code from the GNU distribution, determining the ways in which the
-preprocessor is used in practice.  We developed a framework for
-analyzing preprocessor usage, using it to extract information
-including: the percentage of preprocessor directives in C programs,
+preprocessor.  This relationship affects, indeed generally hinders,
+both the tools (compilers, debuggers, call graph extractors, etc.)
+built to engineer C programs and also the ease of translating to other
+languages such as C++.  In this paper we analyze over 20 packages
+comprising 1.5 million lines of publicly available C code, determining
+the ways in which the preprocessor is used in practice.  We developed
+a framework for analyzing preprocessor usage, using it to extract
+information the percentage of preprocessor directives in C programs,
 about the frequency of use of defined macros, about the relationship
 between C functions and their use of macros, and about the macros that
-could not be easily replaced in a conversion to a language such as
-C++.  We report on the analysis, in particular illustrating data that
-are material when considering the definition of tools for C or
-translators to C++.  
+are difficult to express in terms of other C or C++ language features.
+We report on the analysis, in particular illustrating data that are
+material when considering the definition of tools for C or translators
+to C++.  We present how the results (and the supporting framework) lay
+the foundation for developing a tool to translate from C to C++.
 
 \end{abstract}
 
@@ -57,38 +58,119 @@ translators to C++.
 \section{Introduction}
 
 The C programming language~\cite{kr,ansi} is intimately connected to
-its macro preprocessor [any cites?].  That is, nobody writes programs
-in ``pure'' C; facilities of the preprocessor such as including other
-files, defining constants and macros, conditional compilation,
-etc. are present in essentially every program.  This relationship
-between the C language and the preprocessor has a number of
-consequences, many of which were probably not anticipated by the
-original designers.  
+its macro preprocessor, Cpp [any cites?].  That is, nobody writes
+programs in ``pure'' C; facilities of the preprocessor such as
+including other files, defining constants and macros, conditional
+compilation, etc. are present in essentially every program.  This
+relationship between the C language and the preprocessor has a number
+of consequences, many of which were probably not anticipated by the
+original designers.
 
-[Includes motivation, how we ran the ``experiment'', etc.]
+Stroustrup puts the consequences of this relationship in perspective:
+\begin{quote}
+Occasionally, even the most extreme uses of Cpp are useful, but its
+facilites are so unstructured and intrusive that they are a constant
+problem to programmers, maintainers, people porting code, and tool
+builders~\cite[p.~424]{Stroustrup-DesignEvolution}.
+\end{quote}
+
+As one example, source-level debuggers either map information back to
+the original source code or else leave this task to the programmer.
+As another related example, call graph extractors generally work in
+terms of the postprocessed code, even when a human programmer---as
+opposed to an optimizing compiler, for example---is the intended
+consumer of the call graph~\cite{Murphy-icse18}.  Handling the mapping
+between the original and the postprocessed source is not easy for many
+tools, often leading to situations in which the programmer is
+responsible for implicitly handling the mapping, which is an
+undesirable and error-prone situation.
+
+A related consequence is the difficulty that the preprocessor adds in
+translating programs from C to C++.  For example, Siff and Reps have
+described a technique that uses type inferencing to produce C++
+function templates from C; however, the input is restricted to be ``a
+C program component that $\ldots$ has been pre-processed so that all
+include files are incorporated and all macros
+expanded~\cite[p.~145]{Siff-fse96}.''  O'Callahan and Jackson also use
+type inference, although for program understanding rather than
+translation; they, too, apply their techniques to postprocessed
+code~\cite{OCallahan-icse97}. 
+
+Stroustrup also stated the following:
+\begin{quote}
+I'd like to see Cpp abolished.  However, the only realistic and
+responsible way of doing that is first to make it redundant, then
+encourage people to use the better alternatives, and {\em
+then\/}---years later---banish Cpp into the program development
+environment with the other extra-linguistic tools where it
+belongs~\cite[p.~426]{Stroustrup-DesignEvolution}.
+\end{quote}
+
+As a step in this direction, we performed an empirical analysis of the
+ways in which the preprocessor is used in a large collection of C
+programs; we analyzed nearly 30 packages that comprise well over one
+million lines of code.  The intent of the analysis is to build a
+better understanding of how the preprocessor is used.  In turn, this
+will help us to build a C to C++ conversion tool with two attractive
+properties: one, it will take as input C programs complete with
+preprocessor directives; and two, it will map many---preferably most
+or even all---uses of directives into C++ language features.  The
+framework we developed for analyzing preprocessor usage appears to
+provide a basis for the development of such a conversion tool.
+
+In this paper, we report on several specific analyses that we
+performed.  
+\begin{itemize}
+
+\item We computed the percentage of original C source code lines that
+were preprocessor directives, including a breakdown of the frequency
+of specific directives (such as \verb+#define+).  It was not unusual
+to find C programs in which over 10\% of the total lines were
+preprocessor directives.
+
+\item We computed which macros were defined, how often they were
+defined, how often they were undefined, and the number of times they
+were invoked both from other preprocessor directives and also from
+true C source code.  [pithy observation goes here]
+
+\item We categorized defined macros according to their usage; for
+example, we determined which macros simply defined a preprocessor
+symbol, which defined constants, etc.  We were particularly interested
+in determining which, if any, macros are defined in a way that is
+difficult to convert to other language features.  [pithy observation
+goes here]
+
+\end{itemize}
+
+Overall, our analysis confirms that the C preprocessor is used in
+exceptionally broad and diverse ways, complicating the development of
+C programming support tools and of converters to C++.  On the other
+hand, the analysis also convinces us that, by extending our analysis
+framework with some class type inferencing techniques (similar to
+those used by Siff and Reps~\cite{Siff-fse96}, O'Callahan and
+Jackson~\cite{OCallahan-icse97}, and others), we can take significant
+steps towards a tool that usefully converts a high percentage of C
+code into C++.  [Two important points to address: C code almost *is*
+C++ code, so what do we gain from a ``conversion''?  If we can't get
+all the code, can we identify the parts we can't get?]
 
 \section{Related Work}\label{sec:related}
 
 \section{Gathering and Analyzing the Data}\label{sec:gathering}
 
+[We may not need this section.]
+
 A number of our analyses refer to the ``number of lines'' in a
-program.  We distinguish three ways of counting lines:
+program.  We distinguish two ways of counting lines:
 \begin{itemize}
 
 \item {\em Physical} lines refers to the actual numbers of lines in
 the file; in Unix terms, this is the number of newline characters plus
-one.  
-
-\item {\em Logical} lines merges lines logically continued onto the
-next physical line using a continuation character.  This count is at
-most as large at the physical line count. [Question: I'm assuming that
-you do this for the lines that the preprocessor eats and those that
-the C compiler ultimately gets.]
+one.
 
 \item {\em Non-comment/Non-blank (NCNB)} lines eliminates any lines
 that contain only comments or that are blank lines (consisting only of
-whitespace).  [Question: Again, I'm assuming this holds across all
-lines in the file.]
+whitespace).
 
 \end{itemize}
 
@@ -101,27 +183,85 @@ The top bars shows the percentage of lines (split into the three
 categories discussed above) coming from all preprocessor directives;
 the remaining bars show the percentages of each specific directive as
 labeled.  (The \verb+#endif+ directive has been eliminated since it is
-the sum of the \verb+#if#+, \verb+#ifdef#+ and \verb+#ifndef#+ directives;
+the sum of the \verb+#if+, \verb+#ifdef+ and \verb+#ifndef+ directives;
 the line counts were also reduced by this amount.)
 
 Perhaps the most surprising information here is the percentage of the
 program lines that are preprocessor directives: under any of our
 interpretations of lines, at least 11\% of the program consists of
-preprocessor directives.  Of these, about half are \verb+#define#
+preprocessor directives.  Of these, about half are \verb+#define+
 directives.  [We'll want to insert a breakdown of what kinds of
 defines these are.]
 
-[This will be I and II.]
-
 \section{Frequency of Defined Macro Usage}\label{sec:usage}
 
-[This will be III, IIIa, and IIIb,]
+The second question we asked was: where and how often are macros
+defined and used in practice?  Specifically, for each macro we
+determined:
+\begin{itemize}
+
+\item How many times it was \verb+#define+d.
+\item How many times it was \verb+#undef+ined.
+\item How many arguments (if any) it defined.
+\item How many times it was mentioned in C source code.
+\item How many times it was mentioned in other preprocessor
+directives.
+
+\end{itemize}
 
 \section{Categorization}\label{sec:categorization}
 
-[I'm not entirely sure about this; it might be just IV (evil or
-essential macros and related issues) or it might also include Mike's
-manual breakdown into categories for gzip.]
+The third question we asked was: how are the macros used in practice?
+In contrast to the earlier analyses, this requires a analysis and
+categorization of the bodies of the macros to determine how they can
+be used.  This analysis depends in part on some heuristics we defined
+to interpret the bodies of the macros; by studying our analyses, we
+have refined (and continue to refine) the heuristics to do a better
+job of categorization.  (This improvement is important in helping us
+produce the C to C++ translation tool we have mentioned.)
+
+The specific categories that our analysis tool identifies are:
+\begin{itemize}
+
+\item {\em Constants\/}, where the \verb+#define+ gives only an
+identifier name and a value.\footnote{In anticipation of the
+translator tool, the analysis tool infers types; this is in the early
+stages, however, and we do not report on the intermediate results in
+this paper.}  
+
+\item {\em Null defines\/}, where the \verb+#define+ gives only an
+identifier name.
+
+\item {\em Functions\/}, where the \verb+#define+ has one or more
+parameters.  The functions are broken down into several subcategories:
+\begin{itemize}
+
+\item {\em Functions/Cpp\/}, where the body of the macro invokes one
+or more other macros.  [This is currently ``function, macro as
+function'', I think.]
+
+\item {\em Functions/C-expression\/}, where the body of the macro is
+defined as a well-defined C expression.  [This is currently
+``function, some constant'', I think.]
+
+\item {\em Functions/Essential\/}, [bad name?] where the body of the
+macro is not defined as a C expression; specific reasons include
+...
+
+These are of special interest with respect to translation.  Some of
+them, for instance ones that define C statements rather than
+expressions, might yield to translation if further analysis shows that
+they are used in particular, disciplined ways.
+
+\end{itemize}
+
+\item {\em Uncategorized\/}, where we could not characterize the macro
+as any of the above categories.
+
+\end{itemize}
+
+[Should this also include Mike's manual breakdown into categories for
+gzip.]
 
 \section{Discussion}\label{sec:discussion}
 
