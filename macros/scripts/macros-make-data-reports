@@ -14,5 +14,4 @@ cd $STATEFILESDIR
 for i in *.state(.); do
   echo $i
   em_reports -s $i -t -d $TM:${i%%.*}
-  popd
 done
