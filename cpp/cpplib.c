@@ -862,8 +862,11 @@ macro_cleanup (cpp_buffer *pbuf, cpp_reader *pfile, cpp_expand_info *pcei)
     macro->type = T_MACRO;
   if (macro->type != T_MACRO || pbuf->buf != macro->value.defn->expansion)
     free (pbuf->buf);
-  gjb_call_hooks_macro_cleanup(CPP_OPTIONS(pfile),HI_MACRO_CLEANUP,
-			       macro->name,ichSourceStart,ichSourceEnd,pcei);
+  /*  if (macro->type != T_SPEC_DEFINED) { */
+  if (macro->type == T_MACRO) {
+    gjb_call_hooks_macro_cleanup(CPP_OPTIONS(pfile),HI_MACRO_CLEANUP,
+				 macro->name,ichSourceStart,ichSourceEnd,pcei);
+  }
   
   //  free(pbuf->args);
   //  pbuf->args = 0;
@@ -1978,6 +1981,7 @@ cpp_pop_buffer (cpp_reader *pfile, cpp_expand_info *pcei)
   (*buf->cleanup) (buf, pfile, pcei);
   CPP_BUFFER (pfile) = next_buf;
   free (buf);
+  gjb_call_hooks_void(CPP_OPTIONS(pfile),HI_POP_BUFFER);
   return next_buf;
 #endif
 }
@@ -4136,6 +4140,8 @@ do_undef (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *lim
   SKIP_WHITE_SPACE (buf);
   sym_length = check_macro_name (pfile, buf, "macro");
 
+  gjb_call_hooks_i_i_szl(CPP_OPTIONS(pfile),HI_PRE_DO_UNDEF,cchOffsetStart,cchOffsetEnd,
+			 buf,sym_length);
   while ((hp = cpp_lookup (pfile, buf, sym_length, -1)) != NULL)
     {
       /* If we are generating additional info for debugging (with -g) we
@@ -4487,6 +4493,7 @@ do_xifdef (pfile, keyword, unused1, unused2)
   U_CHAR *pchEndExpr = NULL;
   U_CHAR *pchEndGarbage = NULL;
   char *szConditionalClause = NULL;
+  int s_start;
 
   /* Detect a #ifndef at start of file (not counting comments).  */
   if (ip->fname != 0 && keyword->type == T_IFNDEF)
@@ -4550,14 +4557,15 @@ do_xifdef (pfile, keyword, unused1, unused2)
       }
 #endif
 
+  s_start = CchOffset_internal(pfile) + 2;
   conditional_skip (pfile, skip, T_IF, control_macro, szConditionalClause);
   /* This will call DO_XIFDEF hook and either DO_IFDEF or DO_IFNDEF hook */
-  gjb_call_hooks_sz_szlx3_i(CPP_OPTIONS(pfile),HI_DO_XIFDEF,
-			   keyword->type == T_IFDEF? "IFDEF": "IFNDEF",
-			   pchStartExpr,pchEndExpr-pchStartExpr,
-			   pchEndExpr,pchEndGarbage-pchEndExpr,
-			   pchEndGarbage,CPP_BUFFER(pfile)->cur-pchEndGarbage,
-			   skip);
+  gjb_call_hooks_sz_szlx3_i_i(CPP_OPTIONS(pfile),HI_DO_XIFDEF,
+			      keyword->type == T_IFDEF? "IFDEF": "IFNDEF",
+			      pchStartExpr,pchEndExpr-pchStartExpr,
+			      pchEndExpr,pchEndGarbage-pchEndExpr,
+			      pchEndGarbage,CPP_BUFFER(pfile)->cur-pchEndGarbage,
+			      skip,s_start);
   if (keyword->type == T_IFDEF)
     gjb_call_hooks_szlx3_i(CPP_OPTIONS(pfile),HI_DO_IFDEF,
 			      pchStartExpr,pchEndExpr-pchStartExpr,
@@ -4785,6 +4793,7 @@ do_else (pfile, keyword, buf, limit)
   cpp_buffer *ip = CPP_BUFFER (pfile);
   U_CHAR *pchStartGarbage = ip->cur+1;
   U_CHAR *pchEndGarbage = NULL;
+  int skip = 0;
 
   if (CPP_PEDANTIC (pfile))
     validate_else (pfile, "#else");
@@ -4793,10 +4802,11 @@ do_else (pfile, keyword, buf, limit)
 
   if (pfile->if_stack == CPP_BUFFER (pfile)->if_stack) {
     cpp_error (pfile, "`#else' not within a conditional");
-    gjb_call_hooks_sz_szl_szl(CPP_OPTIONS(pfile),HI_DO_ELSE,
-			      "@NONE@",
-			      pchStartGarbage,pchEndGarbage-pchStartGarbage,
-			      "", 0);
+    gjb_call_hooks_sz_szl_szl_i(CPP_OPTIONS(pfile),HI_DO_ELSE,
+				"@NONE@",
+				pchStartGarbage,pchEndGarbage-pchStartGarbage,
+				"", 0,
+				skip);
     return 0;
   } else {
     /* #ifndef can't have its special treatment for containing the whole file
@@ -4813,16 +4823,17 @@ do_else (pfile, keyword, buf, limit)
     pfile->if_stack->type = T_ELSE;
   }
 
-  if (pfile->if_stack->if_succeeded)
+  if (pfile->if_stack->if_succeeded) {
     skip_if_group (pfile, 0);
-  else {
+    skip = 1;
+  } else {
     ++pfile->if_stack->if_succeeded;	/* continue processing input */
     output_line_command (pfile, 1, same_file);
   }
-  gjb_call_hooks_sz_szl_szl(CPP_OPTIONS(pfile),HI_DO_ELSE,
-			    DEF_STR(pfile->if_stack->szConditionalClause,"@??@"),
-			    pchStartGarbage,pchEndGarbage-pchStartGarbage,
-			    pchEndGarbage,ip->cur-pchEndGarbage);
+  gjb_call_hooks_sz_szl_szl_i(CPP_OPTIONS(pfile),HI_DO_ELSE,
+			      DEF_STR(pfile->if_stack->szConditionalClause,"@??@"),
+			      pchStartGarbage,pchEndGarbage-pchStartGarbage,
+			      pchEndGarbage,ip->cur-pchEndGarbage, skip);
   return 0;
 }
 
