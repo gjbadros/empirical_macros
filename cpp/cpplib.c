@@ -1316,8 +1316,10 @@ collect_expansion (cpp_reader *pfile, U_CHAR *buf, U_CHAR *limit,
      thru the arg list on every potential symbol.  Profiling might say
      that something smarter should happen. */
 
-  if (limit < buf)
+  if (limit < buf) {
+    fprintf(stderr,"ABORT: limit < buf\n");
     abort ();
+  }
 
   /* Find the beginning of the trailing whitespace.  */
   p = buf;
@@ -1549,8 +1551,10 @@ collect_expansion (cpp_reader *pfile, U_CHAR *buf, U_CHAR *limit,
   defn->length = exp_p - defn->expansion;
 
   /* Crash now if we overrun the allocated size.  */
-  if (defn->length + 1 > maxsize)
+  if (defn->length + 1 > maxsize) {
+    fprintf(stderr,"ABORT: defn->length + 1 > maxsize\n");
     abort ();
+  }
 
 #if 0
 /* This isn't worth the time it takes.  */
@@ -2063,8 +2067,10 @@ cpp_expand_to_buffer (cpp_reader *pfile, U_CHAR *buf, int length,
   int odepth = indepth;
 #endif
 
-  if (length < 0)
+  if (length < 0) {
+    fprintf(stderr,"ABORT: length < 0\n");
     abort ();
+  }
 
   /* Set up the input on the input stack.  */
 
@@ -3105,7 +3111,7 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
 		  arg->stringified_length
 		    = CPP_WRITTEN (pfile) - arg->stringified;
 		}
-	      xbuf_len += args[ap->argno].stringified_length;
+	      xbuf_len += args[ap->argno].stringified_length + 1; 
 	    }
 	  else if (ap->raw_before || ap->raw_after || CPP_TRADITIONAL (pfile))
 	    {
@@ -3160,7 +3166,10 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
 	  for (i = 0; i < ap->nchars; i++, offset++)
 	    xbuf[totlen++] = exp[offset];
 
-	  args[ap->argno].dchUsesStart[args[ap->argno].iuse] = totlen;
+          if (args[ap->argno].iuse < MAX_USES_TRACKED)
+            args[ap->argno].dchUsesStart[args[ap->argno].iuse] = totlen;
+          else
+            fprintf(stderr,"More uses of argument %d than we can track -- Max of %d\n",ap->argno,MAX_USES_TRACKED);
 
 	  /* If followed by an empty rest arg with concatenation,
 	     delete the last run of nonwhite chars.  */
@@ -3255,9 +3264,18 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
 		}
 	    }
 
-	  args[ap->argno].dchUsesEnd[args[ap->argno].iuse++] = totlen;
-	  if (totlen > xbuf_len)
+          if (args[ap->argno].iuse < MAX_USES_TRACKED)
+            args[ap->argno].dchUsesEnd[args[ap->argno].iuse] = totlen;
+          else {
+            /* warning message is already output above */
+          }
+          args[ap->argno].iuse++;
+
+	  if (totlen > xbuf_len) {
+            fprintf(stderr,"totlen (%ld) > xbuf_len (%ld)\n",totlen,xbuf_len);
+            fprintf(stderr,"xbuf: %s\n",xbuf);
 	    abort ();
+          }
       }
 
       /* if there is anything left of the definition
@@ -6407,8 +6425,9 @@ push_parse_file (pfile, fname)
 	value = past_name;
 	while (*value && (*value == ' ' || *value == '\t'))
 	  value++;
-	if (*value++ != '(')
+	if (*value++ != '(') {
 	  abort ();
+        }
 	while (*value && (*value == ' ' || *value == '\t'))
 	  value++;
 	past_value = value;
