@@ -93,6 +93,13 @@ my $char_literal_re = "L?'" . $char_literal_contents_re . "'";
 
 
 ###########################################################################
+### Variables
+###
+
+my $current_file;
+
+
+###########################################################################
 ### Symbol table
 ###
 
@@ -111,6 +118,11 @@ sub is_unknown ($)
   return ($arg eq 'unknown');
 }
 
+sub is_nonfalse ($)
+{ my ($arg) = check_args(1, @_);
+  return (is_unknown($arg) || ($arg ne $false));
+}
+
 # Returns a textual substitution for "defined($symbol)"; result is one of
 # "1", "0", or "defined($symbol)" itself (if the definedness is unknown).
 sub eval_defined ($)
@@ -126,7 +138,7 @@ sub eval_defined ($)
 sub eval_all_defined ($)
 { my ($string) = check_args(1, @_);
   if ($debug_cppp) { print "eval_all_defined <= $string\n"; }
-  $string =~ s/\bdefined\(\w+\)/eval_defined($MATCH)/ge;
+  $string =~ s/\bdefined\((\w+)\)/eval_defined($1)/ge;
   if ($debug_cppp) { print "eval_all_defined => $string\n"; }
   return $string;
 }
@@ -205,7 +217,8 @@ sub evaluate_conditional ($)
       my $post = $POSTMATCH;
       my $close_paren_pos = find_close_paren($post);
       if (!$close_paren_pos)
-	{ die "No close paren found to match function call in $exp"; }
+	{ print "File: $current_file\n";
+	  die "No close paren found to match function call in $exp"; }
       $exp = $preexp . substr($post, $close_paren_pos+1); }
 
   if ($debug_cppp) { print "conditional expression: $exp\n"; }
@@ -215,6 +228,7 @@ sub evaluate_conditional ($)
 
 
 # Expression should contain only numbers, operators, and symbols (= unknown).
+# Each conditional evaluates to one of three values:  $true, $false, or $unknown
 sub eval_substituted_conditional ($)
 { my ($exp) = check_args(1, @_);
 
@@ -223,13 +237,45 @@ sub eval_substituted_conditional ($)
     while (-1 != ($rparen_pos = index($exp, ")")))
       { my $lparen_pos = rindex($exp, "(", $rparen_pos);
 	if ($lparen_pos == -1)
-	  { die "Right paren at $rparen_pos but no preceding left paren: $exp"; }
-	$exp = substr($exp, 0, $lparen_pos-1)
-	  . eval_substituted_conditional(substr($exp, $lparen_pos+1, $rparen_pos-$lparen_pos-1))
-	    . substr($exp, $rparen_pos+1); } }
-  # No more parentheses; attack operators in order
+	  { print "File: $current_file\n";
+	    die "Right paren at $rparen_pos but no preceding left paren: $exp"; }
+	if ($debug_cppp)
+	  { print "left paren at $lparen_pos, right paren at $rparen_pos\n"; }
+	my $pre = ($lparen_pos == 0) ? "" : substr($exp, 0, $lparen_pos-1);
+	my $parenthesized = substr($exp, $lparen_pos+1, $rparen_pos-$lparen_pos-1);
+	my $post = substr($exp, $rparen_pos+1);
+	if ($debug_cppp)
+	  { print "evaluating $parenthesized in $pre<<<>>>$post\n"; }
+	$exp = $pre . eval_substituted_conditional($parenthesized) . $post; } }
 
-  if ($exp =~ /\|\|/)
+  # No more parentheses; attack operators in increasing precedence order
+  if ($exp =~ /\?/)
+    { # Conditional expressions ( ?: ) are officially forbidden, but do occur.
+      my $guard = $PREMATCH;
+      my $then_and_else = $POSTMATCH;
+      my $then_pending = "";
+      my $question_mark_depth = 0;
+      while ($then_and_else =~ /[\?:]/)
+	{ if (($MATCH eq ':') && ($question_mark_depth == 0))
+	    { my $then_exp = $then_pending . $PREMATCH;
+	      my $else_exp = $POSTMATCH;
+	      my $gval = eval_substituted_conditional($guard);
+	      my $tval = eval_substituted_conditional($then_exp);
+	      my $elval = eval_substituted_conditional($else_exp);
+	      if (is_unknown($gval))
+		{ if (is_unknown($tval) || is_unknown($elval)
+		      || ($tval ne $elval))
+		    { return $unknown; }
+		  else
+		    { return $tval; } }
+	      else
+		{ return ($gval ? $tval : $elval); } }
+	  else
+	    { $question_mark_depth += ($MATCH eq '?') ? 1 : -1;
+	      $then_pending .= $PREMATCH . $MATCH;
+	      $then_and_else = $POSTMATCH; } }
+      die "Insufficient : or too many ? in $exp"; }
+  elsif ($exp =~ /\|\|/)
     { my $left = $PREMATCH;
       my $right = $POSTMATCH;
       my $lval = eval_substituted_conditional($left);
@@ -295,7 +341,8 @@ sub eval_substituted_conditional ($)
       elsif ($op eq "!=")
 	{ return ($lval != $rval); }
       else
-	{ die "impossible"; } }
+	{ print "File: $current_file\n";
+	  die "impossible"; } }
   elsif ($exp =~ /\b\s*[<>]=?/)
     { my $left = $PREMATCH;
       my $op = $MATCH;
@@ -314,7 +361,8 @@ sub eval_substituted_conditional ($)
       elsif ($op eq ">=")
 	{ return ($lval >= $rval); }
       else
-	{ die "impossible"; } }
+	{ print "File: $current_file\n";
+	  die "impossible"; } }
   elsif ($exp =~ /<<|>>/)
     { my $left = $PREMATCH;
       my $op = $MATCH;
@@ -328,7 +376,8 @@ sub eval_substituted_conditional ($)
       elsif ($op eq ">>")
 	{ return ($lval >> $rval); }
       else
-	{ die "impossible"; }
+	{ print "File: $current_file\n";
+	  die "impossible"; }
     }
   # Use \b to avoid capturing unary plus and minus
   elsif ($exp =~ /\b\s*[-+]\s*\b/)
@@ -345,7 +394,8 @@ sub eval_substituted_conditional ($)
       elsif ($op eq "-")
 	{ return ($lval - $rval); }
       else
-	{ die "impossible"; }
+	{ print "File: $current_file\n";
+	  die "impossible"; }
     }
   elsif ($exp =~ /[*\/]/)
     { my $left = $PREMATCH;
@@ -360,7 +410,8 @@ sub eval_substituted_conditional ($)
       elsif ($op eq "/")
 	{ return int($lval / $rval); }
       else
-	{ die "impossible"; }
+	{ print "File: $current_file\n";
+	  die "impossible"; }
     }
   # Skip unary +,-
   elsif ($exp =~ /^\s*([~!])/)
@@ -374,16 +425,19 @@ sub eval_substituted_conditional ($)
       elsif ($op eq "!")
 	{ return !$val; }
       else
-	{ die "impossible"; }
+	{ print "File: $current_file\n";
+	  die "impossible"; }
     }
   elsif ($exp =~ /[~!]/)
-    { die "Should only find [~!] at beginning of expression: $exp"; }
+    { print "File: $current_file\n";
+      die "Should only find [~!] at beginning of expression: $exp"; }
   elsif ($exp =~ /^\s*[-+]?[0-9]+\s*$/)
     { return int($exp); }
   elsif ($exp =~ /^\s*[_A-Za-z]\w*\s*$/)
     { return $unknown; }
   else
-    { die "What expression? $exp"; }
+    { print "File: $current_file\n";
+      die "What expression? $exp"; }
 }
 
 
@@ -459,6 +513,7 @@ exit(0);
 # Edits argument in-place after making a backup copy.
 sub process_file ($)
 { my ($file) = check_args(1, @_);
+  $current_file = $file;
   my $backup = $file . ".nocppp";
   if (-e $backup)
     { die "Backup file $backup already exists; do something clever here"; }
@@ -471,15 +526,26 @@ sub process_file ($)
 				# each is $true, $false, or $unknown
   my @condition_value_stack = ($true); # the AND of @condition_stack
   my $current_condition_value = $true; # the top of @condition_value_stack
+  my @elif_needs_endif = ();	# set when if unknown elif known endif
 
   while ($true)
     { my ($raw, $simple, $phys_lines, $ncnb_lines) = get_spliced_cline(\*INPUT);
       if (!$raw)
 	{ last; }
 
-      # For debugging only
-      if (!($current_condition_value == $condition_value_stack[$#condition_value_stack]))
-	{ die "bad current_condition_value, condition_value_stack: $current_condition_value; @condition_value_stack"; }
+      # For debugging.  (Should this code be unconditionally executed?)
+      if ($debug_cppp)
+	{ if (!($current_condition_value == $condition_value_stack[$#condition_value_stack]))
+	    { print "File: $current_file\n";
+	      die "bad current_condition_value, condition_value_stack: $current_condition_value; @condition_value_stack"; }
+	  if (scalar(@condition_stack) != scalar(@condition_value_stack)-1)
+	    { print "File: $current_file\n";
+	      die "bad sizes for condition_stack (", scalar(@condition_stack),
+	      "), condition_value_stack (", scalar(@condition_value_stack), ")"; }
+	  if (scalar(@condition_stack) != scalar(@elif_needs_endif))
+	    { print "File: $current_file\n";
+	      die "bad sizes for condition_stack (", scalar(@condition_stack),
+	          "), elif_needs_endif (", scalar(@elif_needs_endif), ")"; } }
 
       if ($simple =~ /^\#\s*(if(n?def)?|el(se|if)|endif)\b/)
 	{ $simple =~ s/^\#\s*//;
@@ -487,16 +553,17 @@ sub process_file ($)
 	    { print "simple preprocessor line: $simple"; }    # ends in newline
 	  if ($simple =~ /^endif\b/)
 	    { my $thisvalue = pop(@condition_stack);
+	      my $needs_endif = pop(@elif_needs_endif);
 	      pop(@condition_value_stack);
 	      $current_condition_value = $condition_value_stack[$#condition_value_stack];
-	      if (is_unknown($thisvalue) && ($current_condition_value ne $false))
+	      if (($needs_endif || is_unknown($thisvalue)) && is_nonfalse($current_condition_value))
 		{ print OUTPUT $raw; }
 	    }
 	  elsif ($simple =~ /^else\b/)
 	    { my $thisvalue = $condition_stack[$#condition_stack];
 	      pop(@condition_value_stack);
 	      $current_condition_value = $condition_value_stack[$#condition_value_stack];
-	      if (is_unknown($thisvalue) && ($current_condition_value ne $false))
+	      if (is_unknown($thisvalue) && is_nonfalse($current_condition_value))
 		{ print OUTPUT $raw; }
 	      if (!is_unknown($thisvalue))
 		{ $thisvalue = !$thisvalue;
@@ -504,8 +571,65 @@ sub process_file ($)
 	      $current_condition_value = combine_conditional($current_condition_value, $thisvalue);
 	      push(@condition_value_stack, $current_condition_value); }
 	  elsif ($simple =~ /^elif\b/)
-	    { # do something here
-	      die "elif NYI"; }
+	    { my $ifarg = $POSTMATCH;
+	      $ifarg =~ s/^\s+//;
+	      $ifarg =~ s/\s+$//;
+	      my $oldvalue = $condition_stack[$#condition_stack];
+	      my $thisvalue = evaluate_conditional($ifarg);
+	      my $old_current_condition_value = $current_condition_value;
+	      my $prev_current_condition_value =
+		$condition_value_stack[$#condition_value_stack - 1];
+
+	      # Replace the top of condition_stack according to:
+	      #   if true elif **** => if false
+	      #   if false elif **** => if ****
+	      #   if unknown elif **** => if ****
+	      # (and recompute condition_value_stack).
+
+	      # If **** = false, this omits the #endif
+	      #   if unknown elif **** => if ****
+	      # but this includes extraneous text
+	      #   if unknown elif **** => if unknown
+	      # so we need separate conditions for the text and the endif.
+
+		{ $condition_stack[$#condition_stack] =
+		    ((!is_unknown($oldvalue)) && $oldvalue) ? $false : $thisvalue;
+		  $elif_needs_endif[$#elif_needs_endif] |= is_unknown($oldvalue);
+		  pop(@condition_value_stack);
+		  $current_condition_value =
+		    combine_conditional($condition_value_stack[$#condition_value_stack], $condition_stack[$#condition_stack]);
+		  push(@condition_value_stack, $current_condition_value);
+		}
+
+	      # If doing output, use the following instead of the elif line:
+	      #   if true elif **** => no output
+	      #   if false elif true => no output
+	      #   if false elif false => no output
+	      #   if false elif <unknown> => if <unknown>
+	      #   if unknown elif true => else
+	      #   if unknown elif false => no output
+	      #   if unknown elif <unknown> => elif <unknown>
+
+	      # We do output approximately if we did for the #if line:
+	      #   (is_unknown($thisvalue) && is_nonfalse($old_condition_value))
+
+
+	      if (is_nonfalse($prev_current_condition_value))
+		{ # We might perform output for this line.
+		  if (is_unknown($oldvalue))
+		    { if (is_unknown($thisvalue))
+			{ print OUTPUT $raw; }
+		      elsif ($thisvalue)
+			{ my $output_raw = $raw;
+			  chop $output_raw; # remove newline
+			  $output_raw =~ s/\*\//* /;
+			  print OUTPUT "#else\t/* cppp replaced: $output_raw */\n"; } }
+		  elsif (!$oldvalue)
+		    { if (is_unknown($thisvalue))
+			{ my $output_raw = $raw;
+			  chop $output_raw; # remove newline;
+			  $output_raw =~ s/^(\#\s*)el/$1/; # change elif to if
+			  print OUTPUT "$output_raw\t/* cppp replaced: elif */\n"; } } } }
 	  elsif ($simple =~ /^if(n?def)?\b/)
 	    { my $iftype = $1;
 	      my $ifarg = $POSTMATCH;
@@ -516,7 +640,8 @@ sub process_file ($)
 		{ # ifdef or ifndef, not plain if
 		  my $is_ndef = ($iftype eq "ndef");
 		  if ($ifarg =~ /\s/)
-		    { die "Embedded space in if$iftype: $simple"; }
+		    { print "File: $current_file\n";
+		      die "Embedded space in if$iftype: $simple"; }
 		  my $definedness = cpp_macro_definedness($ifarg);
 		  $thisvalue = is_unknown($definedness) ? $unknown
 		    : $is_ndef ? !$definedness : $definedness; }
@@ -529,17 +654,19 @@ sub process_file ($)
 		= combine_conditional($current_condition_value, $thisvalue);
 	      push(@condition_stack, $thisvalue);
 	      push(@condition_value_stack, $current_condition_value);
+	      push(@elif_needs_endif, $false);
 
 	      if ($debug_cppp)
 		{ print "After $ifarg:\n";
 		  print "  condition_stack = @condition_stack\n";
 		  print "  condition_value_stack = @condition_value_stack\n"; }
 
-	      if (is_unknown($thisvalue) && ($old_condition_value ne $false))
+	      if (is_unknown($thisvalue) && is_nonfalse($old_condition_value))
 		{ print OUTPUT $raw; }
 	    }
 	  else
-	    { die "What cpp conditional directive? $simple"; } }
+	    { print "File: $current_file\n";
+	      die "What cpp conditional directive? $simple"; } }
       else
 	{ # Not a cpp conditional directive
 	  if (is_unknown($current_condition_value)
@@ -549,10 +676,3 @@ sub process_file ($)
   close(INPUT);
   close(OUTPUT);
 }
-
-
-
-
-
-
-
