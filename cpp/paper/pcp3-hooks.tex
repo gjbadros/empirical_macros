@@ -252,6 +252,10 @@ so use the POP\_\-BUFFER hook to handle those events.
 Called once after an entire function is parsed.  Arguments
 give the name of the newly defined function, and \$fStatic is non-zero
 iff the function was declared to be static (i.e. not global).
+\hook{FUNC\_\-PROTO}{\$name}
+Called once after an function prototype (declaration) is parsed.  Argument
+gives the name of the newly defined function.  This hook is not called
+for complete function definitions -- see HI\_\-FUNCTION for that hook.
 \hook{FUNC\_\-CALL}{\$name}
 Called once after each function call is parsed.  Only argument is
 the name of the function being called.
