@@ -1,8 +1,0 @@
-#!/bin/sh
-# Count the total number of macro uses for a given package.
-# Use .use-* files.
-# usage:
-#  macros-count-uses-in-package zsh
-
-(for i in $1.use-*; do awk <$i 'BEGIN { old = 0 } NR > 1 && $2 > 0{ if ($2 != old) { sum += ($2-old) * $1; old = $2}} END {print sum;}'; done )|\
-awk '{sum += $1} END {print sum}'

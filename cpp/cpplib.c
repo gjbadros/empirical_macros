@@ -1,11 +1,3 @@
-// $Id$
-// Modified CPP library
-// By Greg J. Badros
-// Modifications call perl hooks on various events,
-// extend mapping between source and post-preprocessor code
-// and annotate cpp tokens better
-// Also cleaned up the code a bit so it compiles nicer w/ -Wall
-
 /* CPP Library.
    Copyright (C) 1986, 87, 89, 92, 93, 94, 1995 Free Software Foundation, Inc.
    Written by Per Bothner, 1994-95.
@@ -30,20 +22,9 @@ Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  You are forbidden to forbid anyone else to use, share and improve
  what you give them.   Help stamp out software-hoarding!  */
 
-#include "pcpp.h"
-#include <string.h>
-#include <unistd.h>
-#include <assert.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-
-/* #define VERBOSE_RETURN_VALUES */
-
 #ifdef EMACS
 #define NO_SHORTNAMES
 #include "../src/config.h"
-
 #ifdef open
 #undef open
 #undef read
@@ -74,7 +55,6 @@ Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #endif /* 0 */
 
 #include "cpplib.h"
-#include "cpphook.h"
 #include "cpphash.h"
 
 #ifndef STDC_VALUE
@@ -108,11 +88,6 @@ Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 /* This defines "errno" properly for VMS, and gives us EACCES. */
 #include <errno.h>
 
-#ifdef USE_DMALLOC
-#include <dmalloc.h>
-#endif
-
-
 extern char *index ();
 extern char *rindex ();
 
@@ -124,8 +99,6 @@ extern char *rindex ();
 #undef MAX
 #define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
 #define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
-
-#define DEF_STR(s,d) ((s)?(char *)(s):(d))
 
 /* Find the largest host integer type and set its size and type.  */
 
@@ -274,32 +247,34 @@ struct cpp_pending {
 
 /* Forward declarations.  */
 
+extern char *xmalloc ();
+
 static void add_import ();
 static void append_include_chain ();
-// static void make_undef ();
+static void make_undef ();
 static void make_assertion ();
 static void path_include ();
 static void initialize_builtins ();
 static void initialize_char_syntax ();
-// static void dump_arg_n ();
-// static void dump_defn_1 ();
+static void dump_arg_n ();
+static void dump_defn_1 ();
 extern void delete_macro ();
-// static void trigraph_pcp ();
+static void trigraph_pcp ();
 static int finclude ();
 static void validate_else ();
 static int comp_def_part ();
 extern void fancy_abort ();
-// static void pipe_closed ();
-// static void print_containing_files ();
+static void pipe_closed ();
+static void print_containing_files ();
 static int lookup_import ();
 static int redundant_include_p ();
-static int is_system_include ();
+static is_system_include ();
 static struct file_name_map *read_name_map ();
 static char *read_filename_string ();
 static int open_include_file ();
-// static int check_preconditions ();
-// static void pcfinclude ();
-// static void pcstring_used ();
+static int check_preconditions ();
+static void pcfinclude ();
+static void pcstring_used ();
 static int check_macro_name ();
 static int compare_defs ();
 static int compare_token_lists ();
@@ -311,15 +286,13 @@ static struct arglist *read_token_list ();
 static void free_token_list ();
 static int safe_read ();
 static void push_macro_expansion PARAMS ((cpp_reader *,
-					  U_CHAR*, int, HASHNODE*, 
-					  struct argdata *args,
-					  cpp_expand_info *pcei,
-					  long, long));
+					  U_CHAR*, int, HASHNODE*));
 static struct cpp_pending *nreverse_pending PARAMS ((struct cpp_pending*));
+extern char *xrealloc ();
+extern char *xcalloc ();
 static char *savestring ();
 
-static void conditional_skip (cpp_reader *pfile, int skip, enum node_type type, 
-			      U_CHAR *control_macro, char *szConditionalClause);
+static void conditional_skip ();
 static void skip_if_group ();
 
 /* Last arg to output_line_command.  */
@@ -333,11 +306,6 @@ extern char *getenv ();
 extern FILE *fdopen ();
 extern char *version_string;
 extern struct tm *localtime ();
-
-char szCompileFileName[200] = "@UNSET@";
-
-/* FIXGJBNOW */
-/* #define free(x) */
 
 /* These functions are declared to return int instead of void since they
    are going to be placed in a table and some old compilers have trouble with
@@ -475,7 +443,6 @@ U_CHAR is_idstart[256];
 U_CHAR is_hor_space[256];
 /* table to tell if c is horizontal or vertical space.  */
 static U_CHAR is_space[256];
-
 
 /* Initialize syntactic classifications of characters.  */
 
@@ -626,7 +593,6 @@ cpp_define (pfile, str)
     *q = 0;
   }
   
-  gjb_call_hooks_sz(CPP_OPTIONS(pfile),HI_CMD_LINE_DEF,buf);
   do_define (pfile, NULL, buf, buf + strlen (buf));
 }
 
@@ -640,7 +606,7 @@ make_assertion (pfile, option, str)
      U_CHAR *str;
 {
   cpp_buffer *ip;
-  /*  struct directive *kt; */
+  struct directive *kt;
   U_CHAR *buf, *p, *q;
 
   /* Copy the entire option so we can modify it.  */
@@ -671,9 +637,9 @@ make_assertion (pfile, option, str)
     return;
   }
   
-  ip = cpp_push_buffer (pfile, buf, strlen (buf), FALSE);
+  ip = cpp_push_buffer (pfile, buf, strlen (buf));
   do_assert (pfile, NULL, NULL, NULL);
-  cpp_pop_buffer (pfile,0);
+  cpp_pop_buffer (pfile);
 }
 
 /* Append a chain of `struct file_name_list's
@@ -836,56 +802,40 @@ init_parse_options (opts)
   opts->warn_comments = 0;
   opts->warn_import = 1;
   opts->warnings_are_errors = 0;
-
-  opts->fWarnMissingHooks = 1;
-  opts->call_perl_hooks = 1;
 }
 
-inline cpp_annotated_token *
-PcatNew()
-{
-  cpp_annotated_token *pcat = calloc(1,sizeof(cpp_annotated_token));
-  return pcat;
-}
-
-cpp_annotated_token *
+enum cpp_token
 null_underflow (pfile)
      cpp_reader *pfile;
 {
-  cpp_annotated_token *pcat = PcatNew();
-  pcat->id = CPP_EOF;
-  return pcat;
+  return CPP_EOF;
 }
 
 int
-null_cleanup (cpp_buffer *pbuf, cpp_reader *pfile, cpp_expand_info *pcei)
+null_cleanup (pbuf, pfile)
+     cpp_buffer *pbuf;
+     cpp_reader *pfile;
 {
   return 0;
 }
 
 int
-macro_cleanup (cpp_buffer *pbuf, cpp_reader *pfile, cpp_expand_info *pcei)
+macro_cleanup (pbuf, pfile)
+     cpp_buffer *pbuf;
+     cpp_reader *pfile;
 {
-  int ichSourceStart = pbuf->ichSourceStart;
-  int ichSourceEnd = pbuf->ichSourceEnd;
   HASHNODE *macro = (HASHNODE*)pbuf->data;
   if (macro->type == T_DISABLED)
     macro->type = T_MACRO;
   if (macro->type != T_MACRO || pbuf->buf != macro->value.defn->expansion)
     free (pbuf->buf);
-  /*  if (macro->type != T_SPEC_DEFINED) { */
-  if (macro->type == T_MACRO) {
-    gjb_call_hooks_macro_cleanup(CPP_OPTIONS(pfile),HI_MACRO_CLEANUP,
-				 ichSourceStart,ichSourceEnd,macro->name,pcei);
-  }
-  
-  //  free(pbuf->args);
-  //  pbuf->args = 0;
   return 0;
 }
 
 int
-file_cleanup (cpp_buffer *pbuf, cpp_reader *pfile, cpp_expand_info *pcei)
+file_cleanup (pbuf, pfile)
+     cpp_buffer *pbuf;
+     cpp_reader *pfile;
 {
   if (pbuf->buf)
     {
@@ -895,9 +845,9 @@ file_cleanup (cpp_buffer *pbuf, cpp_reader *pfile, cpp_expand_info *pcei)
   return 0;
 }
 
-#if 0
 static void
-newline_fix (cpp_reader *pfile)
+newline_fix (pfile)
+     cpp_reader *pfile;
 {
 #if 1
   NEWLINE_FIX;
@@ -928,7 +878,6 @@ newline_fix (cpp_reader *pfile)
   }
 #endif
 }
-#endif
 
 /* Assuming we have read '/'.
    If this is the start of a comment (followed by '*' or '/'),
@@ -942,16 +891,10 @@ skip_comment (pfile, linep)
      long *linep;
 {
   int c;
-  unsigned char *pchStart = CPP_BUFFER(pfile)->cur+1;
-  long lineStart = linep? *linep:0; // CPP_BUFFER(pfile)->lineno;
-  long linep_dummy = 0;
-  int cchOffsetStart = CchOffset_internal(pfile);
-  if (linep == NULL)
-    linep = &linep_dummy;
-
   while (PEEKC() == '\\' && PEEKN(1) == '\n')
     {
-      (*linep)++;
+      if (linep)
+	(*linep)++;
       FORWARD(2);
     }
   if (PEEKC() == '*')
@@ -965,19 +908,13 @@ skip_comment (pfile, linep)
 	    return EOF;
 	  while (c == '\\' && PEEKC() == '\n')
 	    {
-              (*linep)++;
+	      if (linep)
+		(*linep)++;
 	      FORWARD(1), c = GETC();
 	    }
-	  if (prev_c == '*' && c == '/') 
-	    {
-	    /* drop the closing delimiter when computing the length */
-	    gjb_call_hooks_i_i_szl_sz_i(CPP_OPTIONS(pfile),HI_COMMENT,
-					cchOffsetStart,CchOffset_internal(pfile)+1,
-					pchStart,CPP_BUFFER(pfile)->cur-2-pchStart,
-					"*/",(*linep)-lineStart+1);
+	  if (prev_c == '*' && c == '/')
 	    return ' ';
-	    }
-	  if (c == '\n')
+	  if (c == '\n' && linep)
 	    (*linep)++;
 	}
     }
@@ -988,29 +925,18 @@ skip_comment (pfile, linep)
 	{
 	  c = GETC ();
 	  if (c == EOF)
-	    {
-	    /* note that you need to use -lang-c++ for these to be recognized */
-	    gjb_call_hooks_i_i_szl_sz_i(CPP_OPTIONS(pfile),HI_COMMENT,
-					cchOffsetStart,CchOffset_internal(pfile)+1,
-					pchStart,CPP_BUFFER(pfile)->cur-pchStart,
-					"EOF",(*linep)-lineStart+1);
 	    return ' '; /* Allow // to be terminated by EOF. */
-	    }
 	  while (c == '\\' && PEEKC() == '\n')
 	    {
 	      FORWARD(1);
 	      c = GETC();
-	      (*linep)++;
+	      if (linep)
+		(*linep)++;
 	    }
 	  if (c == '\n')
 	    {
-	      /* note that you need to use -lang-c++ for these to be recognized */
 	      /* Don't consider final '\n' to be part of comment. */
 	      FORWARD(-1);
-	      gjb_call_hooks_i_i_szl_sz_i(CPP_OPTIONS(pfile),HI_COMMENT,
-					  cchOffsetStart,CchOffset_internal(pfile)+1,
-					  pchStart,CPP_BUFFER(pfile)->cur-pchStart,
-					  "nl",(*linep)-lineStart+1);
 	      return ' ';
 	    }
 	}
@@ -1059,7 +985,8 @@ cpp_skip_hspace (pfile)
    The line is appended to PFILE's output buffer. */
 
 void
-copy_rest_of_line (cpp_reader *pfile)
+copy_rest_of_line (pfile)
+     cpp_reader *pfile;
 {
   struct cpp_options *opts = CPP_OPTIONS (pfile);
   for (;;)
@@ -1097,7 +1024,7 @@ copy_rest_of_line (cpp_reader *pfile)
 	  goto end_directive;
 	scan_directive_token:
 	  FORWARD(-1);
-	  cpp_get_token (pfile,0,0);
+	  cpp_get_token (pfile);
 	  continue;
 	}
       CPP_PUTC (pfile, c);
@@ -1107,7 +1034,8 @@ copy_rest_of_line (cpp_reader *pfile)
 }
 
 void
-skip_rest_of_line (cpp_reader *pfile)
+skip_rest_of_line (pfile)
+     cpp_reader *pfile;
 {
   long old = CPP_WRITTEN (pfile);
   copy_rest_of_line (pfile);
@@ -1118,14 +1046,14 @@ skip_rest_of_line (cpp_reader *pfile)
    '#' has already been read.  */
 
 int
-handle_directive (cpp_reader *pfile)
+handle_directive (pfile)
+     cpp_reader *pfile;
 { int c;
   register struct directive *kt;
   int ident_length;
-  long after_ident = 0;
+  long after_ident;
   U_CHAR *ident, *line_end;
   long old_written = CPP_WRITTEN (pfile);
-  struct cpp_options *opts = CPP_OPTIONS (pfile);
 
   cpp_skip_hspace (pfile);
 
@@ -1135,8 +1063,7 @@ handle_directive (cpp_reader *pfile)
       /* Handle # followed by a line number.  */
       if (CPP_PEDANTIC (pfile))
 	cpp_pedwarn (pfile, "`#' followed by integer");
-      if (gjb_call_hooks_sz(opts,HI_HANDLE_DIRECTIVE,ident))
-        do_line (pfile, NULL);
+      do_line (pfile, NULL);
       goto done_a_directive;
     }
 
@@ -1150,9 +1077,6 @@ handle_directive (cpp_reader *pfile)
       /* A line of just `#' becomes blank.  */
       goto done_a_directive;
     }
-
-  if (!gjb_call_hooks_sz(opts,HI_HANDLE_DIRECTIVE,ident))
-    goto done_a_directive;
 
 #if 0
   if (ident_length == 0 || !is_idstart[*ident]) {
@@ -1298,8 +1222,11 @@ struct arglist {
    have already been deleted from the argument.  */
 
 static DEFINITION *
-collect_expansion (cpp_reader *pfile, U_CHAR *buf, U_CHAR *limit,
-		   int nargs, struct arglist *arglist)
+collect_expansion (pfile, buf, limit, nargs, arglist)
+     cpp_reader *pfile;
+     U_CHAR *buf, *limit;
+     int nargs;
+     struct arglist *arglist;
 {
   DEFINITION *defn;
   register U_CHAR *p, *lastp, *exp_p;
@@ -1316,10 +1243,8 @@ collect_expansion (cpp_reader *pfile, U_CHAR *buf, U_CHAR *limit,
      thru the arg list on every potential symbol.  Profiling might say
      that something smarter should happen. */
 
-  if (limit < buf) {
-    fprintf(stderr,"ABORT: limit < buf\n");
+  if (limit < buf)
     abort ();
-  }
 
   /* Find the beginning of the trailing whitespace.  */
   p = buf;
@@ -1551,10 +1476,8 @@ collect_expansion (cpp_reader *pfile, U_CHAR *buf, U_CHAR *limit,
   defn->length = exp_p - defn->expansion;
 
   /* Crash now if we overrun the allocated size.  */
-  if (defn->length + 1 > maxsize) {
-    fprintf(stderr,"ABORT: defn->length + 1 > maxsize\n");
+  if (defn->length + 1 > maxsize)
     abort ();
-  }
 
 #if 0
 /* This isn't worth the time it takes.  */
@@ -1583,7 +1506,10 @@ static char rest_extension[] = "...";
 /* Create a DEFINITION node from a #define directive.  Arguments are 
    as for do_define. */
 static MACRODEF
-create_definition (U_CHAR *buf, U_CHAR *limit, cpp_reader *pfile, int predefinition)
+create_definition (buf, limit, pfile, predefinition)
+     U_CHAR *buf, *limit;
+     cpp_reader *pfile;
+     int predefinition;
 {
   U_CHAR *bp;			/* temp ptr into input buffer */
   U_CHAR *symname;		/* remember where symbol name starts */
@@ -1591,12 +1517,9 @@ create_definition (U_CHAR *buf, U_CHAR *limit, cpp_reader *pfile, int predefinit
   int rest_args = 0;
   long line, col;
   char *file = CPP_BUFFER (pfile) ? CPP_BUFFER (pfile)->nominal_fname : "";
-  struct cpp_options *opts = CPP_OPTIONS (pfile);
   DEFINITION *defn;
   int arglengths = 0;		/* Accumulate lengths of arg names
 				   plus number of args.  */
-  int cchOffsetStart = pfile->buffer->prev - pfile->buffer->buf + 1;
-  int cchOffsetEnd = pfile->buffer->cur - pfile->buffer->buf + 1;
   MACRODEF mdef;
   cpp_buf_line_and_col (CPP_BUFFER (pfile), &line, &col);
 
@@ -1747,12 +1670,6 @@ create_definition (U_CHAR *buf, U_CHAR *limit, cpp_reader *pfile, int predefinit
   mdef.symnam = symname;
   mdef.symlen = sym_length;
 
-  if (predefinition)
-    gjb_call_hooks_szl_sz_defn(opts,HI_CREATE_PREDEF,mdef.symnam,mdef.symlen,bp,defn);
-  else
-    gjb_call_hooks_i_i_szl_sz_defn(opts,HI_CREATE_DEF,cchOffsetStart,cchOffsetEnd,
-				   mdef.symnam,mdef.symlen,bp,defn);
-
   return mdef;
 
  nope:
@@ -1871,27 +1788,20 @@ KEYWORD is the keyword-table entry for #define,
 or NULL for a "predefined" macro.  */
 
 static int
-do_define (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *limit)
+do_define (pfile, keyword, buf, limit)
+     cpp_reader *pfile;
+     struct directive *keyword;
+     U_CHAR *buf, *limit;
 {
   int hashcode;
   MACRODEF mdef;
   HASHNODE *hp;
-  struct cpp_options *opts = CPP_OPTIONS (pfile);
-  int cchOffsetStart = pfile->buffer->prev - pfile->buffer->buf + 1;
-  int cchOffsetEnd = pfile->buffer->cur - pfile->buffer->buf + 1;
-  if (pfile->buffer->fFromPerl) 
-    {
-    cchOffsetStart += pfile->buffer->ichSourceStart - 2;
-    cchOffsetEnd +=  pfile->buffer->ichSourceStart - 2;
-    }
 
 #if 0
   /* If this is a precompiler run (with -pcp) pass thru #define commands.  */
   if (pcp_outfile && keyword)
     pass_thru_directive (buf, limit, pfile, keyword);
 #endif
-  // give ($s_start, $s_end, $name_args_and_body)
-  gjb_call_hooks_i_i_sz(opts,HI_DO_DEFINE,cchOffsetStart,cchOffsetEnd,buf);
 
   mdef = create_definition (buf, limit, pfile, keyword == NULL);
   if (mdef.defn == 0)
@@ -1958,15 +1868,27 @@ nope:
    `stringified_length' is the length the argument would have
    if stringified.
    `use_count' is the number of times this macro arg is substituted
-   into the macro. [ If the actual use count exceeds 10, 
-   the value stored is 10. --obsoleted -- I let this grow w/o bound --09/18/97 gjb ] */
+   into the macro.  If the actual use count exceeds 10, 
+   the value stored is 10. */
 
 /* raw and expanded are relative to ARG_BASE */
 #define ARG_BASE ((pfile)->token_buffer)
 
+struct argdata {
+  /* Strings relative to pfile->token_buffer */
+  long raw, expanded, stringified;
+  int raw_length, expand_length;
+  int stringified_length;
+  char newlines;
+  char use_count;
+};
+
 
 cpp_buffer*
-cpp_push_buffer (cpp_reader *pfile, U_CHAR *buffer, long length, int fFromPerl)
+cpp_push_buffer (pfile, buffer, length)
+     cpp_reader *pfile;
+     U_CHAR *buffer;
+     long length;
 {
 #ifdef STATIC_BUFFERS
   register cpp_buffer *buf = CPP_BUFFER (pfile);
@@ -1986,36 +1908,22 @@ cpp_push_buffer (cpp_reader *pfile, U_CHAR *buffer, long length, int fFromPerl)
   buf->underflow = null_underflow;
   buf->buf = buf->cur = buffer;
   buf->alimit = buf->rlimit = buffer + length;
-  buf->ichSourceStart = buf->ichSourceEnd = -1;
-  buf->args = 0;
-  buf->fFromPerl = fFromPerl;
   
   return buf;
 }
 
 cpp_buffer*
-cpp_pop_buffer (cpp_reader *pfile, cpp_expand_info *pcei)
+cpp_pop_buffer (pfile)
+     cpp_reader *pfile;
 {
   cpp_buffer *buf = CPP_BUFFER (pfile);
 #ifdef STATIC_BUFFERS
-  (*buf->cleanup) (buf, pfile, pcei);
-  gjb_call_hooks_i(CPP_OPTIONS(pfile),HI_POP_BUFFER,CbuffersDeep(pfile)-1);
-  if (buf->fFromPerl) {
-    gjb_call_hooks_i(CPP_OPTIONS(pfile),HI_POP_PERL_BUFFER,CbuffersDeep(pfile)-1);
-  }
-  ++CPP_BUFFER (pfile);
-  if (buf->fFromPerl) {
-     pfile->only_seen_white = 1;
-  }
-  return CPP_BUFFER(pfile);
+  (*buf->cleanup) (buf, pfile);
+  return ++CPP_BUFFER (pfile);
 #else
   cpp_buffer *next_buf = CPP_PREV_BUFFER (buf);
-  next_buf->prior_args = buf->args;
-  (*buf->cleanup) (buf, pfile, pcei);
+  (*buf->cleanup) (buf, pfile);
   CPP_BUFFER (pfile) = next_buf;
-  gjb_call_hooks_i(CPP_OPTIONS(pfile),HI_POP_BUFFER,CbuffersDeep(pfile)-1);
-  if (buf->fFromPerl)
-    gjb_call_hooks_i(CPP_OPTIONS(pfile),HI_POP_PERL_BUFFER,CbuffersDeep(pfile)-1);
   free (buf);
   return next_buf;
 #endif
@@ -2025,23 +1933,21 @@ cpp_pop_buffer (cpp_reader *pfile, cpp_expand_info *pcei)
    Pop the buffer when done. */
 
 void
-cpp_scan_buffer (cpp_reader *pfile, cpp_expand_info *pcei, struct argdata *pad)
+cpp_scan_buffer (pfile)
+     cpp_reader *pfile;
 {
   cpp_buffer *buffer = CPP_BUFFER (pfile);
-  cpp_annotated_token *pcat = 0;
   for (;;)
     {
-      pcat = cpp_get_token (pfile,pcei,pad);
-      if (pcat->id == CPP_EOF) /* Should not happen ... */
+      enum cpp_token token = cpp_get_token (pfile);
+      if (token == CPP_EOF) /* Should not happen ... */
 	break;
-      if (pcat->id == CPP_POP && CPP_BUFFER (pfile) == buffer)
+      if (token == CPP_POP && CPP_BUFFER (pfile) == buffer)
 	{
-	  cpp_pop_buffer (pfile, pcei);
+	  cpp_pop_buffer (pfile);
 	  break;
 	}
-      free(pcat); pcat = 0;
     }
-  free(pcat);
 }
 
 /*
@@ -2054,23 +1960,21 @@ cpp_scan_buffer (cpp_reader *pfile, cpp_expand_info *pcei, struct argdata *pad)
  */
 
 static void
-cpp_expand_to_buffer (cpp_reader *pfile, U_CHAR *buf, int length,
-		      cpp_expand_info *pcei,struct argdata *pad)
+cpp_expand_to_buffer (pfile, buf, length)
+     cpp_reader *pfile;
+     U_CHAR *buf;
+     int length;
 {
   register cpp_buffer *ip;
-#if 0
   cpp_buffer obuf;
-#endif
   U_CHAR *limit = buf + length;
   U_CHAR *buf1;
 #if 0
   int odepth = indepth;
 #endif
 
-  if (length < 0) {
-    fprintf(stderr,"ABORT: length < 0\n");
+  if (length < 0)
     abort ();
-  }
 
   /* Set up the input on the input stack.  */
 
@@ -2084,13 +1988,14 @@ cpp_expand_to_buffer (cpp_reader *pfile, U_CHAR *buf, int length,
   }
   buf1[length] = 0;
 
-  ip = cpp_push_buffer (pfile, buf1, length, FALSE);
+  ip = cpp_push_buffer (pfile, buf1, length);
   ip->has_escapes = 1;
 #if 0
   ip->lineno = obuf.lineno = 1;
 #endif
+
   /* Scan the input, create the output.  */
-  cpp_scan_buffer (pfile,pcei,pad);
+  cpp_scan_buffer (pfile);
 
 #if 0
   if (indepth != odepth)
@@ -2200,12 +2105,12 @@ output_line_command (pfile, conditional, file_change)
      int conditional;
      enum file_change_code file_change;
 {
-  //  int len;
-  //  char *line_cmd_buf, *line_end;
+  int len;
+  char *line_cmd_buf, *line_end;
   long line, col;
   cpp_buffer *ip = CPP_BUFFER (pfile);
 
-  if (ip->fname == NULL || ip->nominal_fname == NULL || CPP_OPTIONS (pfile)->no_output) {
+  if (ip->fname == NULL || CPP_OPTIONS (pfile)->no_output) {
     return;
   }
 
@@ -2252,7 +2157,7 @@ output_line_command (pfile, conditional, file_change)
     CPP_PUTS_Q (pfile, sharp_line, sizeof(sharp_line)-1);
   }
 
-  sprintf (CPP_PWRITTEN (pfile), "%ld ", line);
+  sprintf (CPP_PWRITTEN (pfile), "%d ", line);
   CPP_ADJUST_WRITTEN (pfile, strlen (CPP_PWRITTEN (pfile)));
 
   quote_string (pfile, ip->nominal_fname); 
@@ -2282,25 +2187,24 @@ output_line_command (pfile, conditional, file_change)
  * Return nonzero to indicate a syntax error.
  */
 
-static cpp_annotated_token *
-macarg (cpp_reader *pfile, int rest_args, cpp_expand_info *pcei)
+static enum cpp_token
+macarg (pfile, rest_args)
+     cpp_reader *pfile;
+     int rest_args;
 {
   int paren = 0;
-  cpp_annotated_token *pcat;
-  //  long arg_start = CPP_WRITTEN (pfile);
+  enum cpp_token token;
+  long arg_start = CPP_WRITTEN (pfile);
   char save_put_out_comments = CPP_OPTIONS (pfile)->put_out_comments;
-  CPP_OPTIONS (pfile)->put_out_comments = 1; /* was 0, but test23.c shows
-                                                the need for comments to be
-                                                copied to the expansion buffer
-                                                --01/13/99 gjb */
+  CPP_OPTIONS (pfile)->put_out_comments = 0;
 
   /* Try to parse as much of the argument as exists at this
      input stack level.  */
   pfile->no_macro_expand++;
   for (;;)
     {
-      pcat = cpp_get_token (pfile,pcei,0);
-      switch (pcat->id)
+      token = cpp_get_token (pfile);
+      switch (token)
 	{
 	case CPP_EOF:
 	  goto done;
@@ -2330,14 +2234,13 @@ macarg (cpp_reader *pfile, int rest_args, cpp_expand_info *pcei)
 	  goto done;
       default: ;
 	}
-      free(pcat);
     }
 
  done:
   CPP_OPTIONS (pfile)->put_out_comments = save_put_out_comments;
   pfile->no_macro_expand--;
 
-  return pcat;
+  return token;
 }
 
 /* Turn newlines to spaces in the string of length LENGTH at START,
@@ -2409,7 +2312,7 @@ special_symbol (hp, pfile)
      cpp_reader *pfile;
 {
   char *buf;
-  int len;
+  int i, len;
   int true_indepth;
   cpp_buffer *ip = NULL;
   struct tm *timebuf;
@@ -2423,8 +2326,6 @@ special_symbol (hp, pfile)
 	       "Predefined macro `%s' used inside `#if' during precompilation",
 	       hp->name);
 #endif
-
-  gjb_call_hooks_sz_i(CPP_OPTIONS(pfile),HI_SPECIAL_SYMBOL,hp->name,hp->type);
     
   for (ip = CPP_BUFFER (pfile); ; ip = CPP_PREV_BUFFER (ip))
     {
@@ -2513,7 +2414,7 @@ special_symbol (hp, pfile)
 	adjust_position (CPP_LINE_BASE (ip), ip->cur, &line, &col);
 
 	buf = (char *) alloca (10);
-	sprintf (buf, "%ld", line);
+	sprintf (buf, "%d", line);
       }
       break;
 
@@ -2542,7 +2443,7 @@ special_symbol (hp, pfile)
 
       if (!is_idstart[*ip->cur])
 	goto oops;
-      if ((hp = cpp_lookup (pfile, ip->cur, -1, -1)))
+      if (hp = cpp_lookup (pfile, ip->cur, -1, -1))
 	{
 #if 0
 	  if (pcp_outfile && pcp_inside_if
@@ -2621,20 +2522,7 @@ initialize_builtins (pfile)
     install ("__OBJC__", -1, T_CONST, 1, 0, -1);
 /*  This is supplied using a -D by the compiler driver
     so that it is present only when truly compiling with GNU C.  */
-  /* FIXGJB these should just be turned on by an option */
-  install ("__GNUC__", -1, T_CONST, 2, 0, -1);
-
-
-  /* compared cpp -dM </dev/null 's predefines
-     with those from:
-     touch foo.c && gcc -E -dM foo.c
-     these are what the latter had that the former did not */
-  install ("__i386__", -1, T_CONST, 2, 0, -1);
-  install ("__i386", -1, T_CONST, 2, 0, -1);
-  install ("__unix", -1, T_CONST, 2, 0, -1);
-  install ("__unix__", -1, T_CONST, 2, 0, -1);
-  install ("__linux", -1, T_CONST, 2, 0, -1);
-  install ("__linux__", -1, T_CONST, 2, 0, -1);
+/*  install ("__GNUC__", -1, T_CONST, 2, 0, -1);  */
 
   if (CPP_OPTIONS (pfile)->debug_output)
     {
@@ -2743,115 +2631,6 @@ unsafe_chars (c1, c2)
   return 0;
 }
 
-/* Search for what argument of the macro with cargs args must have
-   expanded to character offset ich using the argdata given */ 
-int
-IargWithOffset(int ich, int cargs, struct argdata *args)
-{
-  int iargdata = 0;
-  if (cargs < 0) return -2;
-  while (args && iargdata < cargs)
-    {
-    int iuse = 0;
-    while (iuse < args[iargdata].iuse)
-      {
-      if (ich > args[iargdata].dchUsesStart[iuse] && 
-	  ich <= args[iargdata].dchUsesEnd[iuse])
-	return iargdata;
-      iuse++;
-      }
-    iargdata++;
-    }
-  return -1;
-}
-
-int
-CbuffersDeep(cpp_reader *pfile)
-{
-  cpp_buffer *buffer = pfile->buffer;
-  int cbuffersDeep = 0;
-  while (buffer != CPP_NULL_BUFFER(pfile)) 
-    {
-    if (buffer->nominal_fname) 
-      break;
-    else
-      {
-      cbuffersDeep++;
-      buffer = CPP_PREV_BUFFER(buffer);
-      }
-    }
-  return cbuffersDeep;
-}
-
-int
-CchBufferOffset(cpp_reader *pfile)
-{
-  cpp_buffer *buffer = CPP_BUFFER(pfile);
-  int cbuffersDeep = 0;
-  int retval = 0;
-  while (buffer != CPP_NULL_BUFFER(pfile)) 
-    {
-    if (buffer->nominal_fname) 
-      break;
-    else
-      {
-      cbuffersDeep++;
-      buffer = CPP_PREV_BUFFER(buffer);
-      }
-    }
-  if (buffer->fFromPerl)
-    retval += buffer->ichSourceStart - 1;
-  return retval;
-}
-
-
-int 
-CchSumPceiOffsets(cpp_expand_info *pcei)
-{
-  int cch = 0;
-  while (pcei) {
-    cch += pcei->offset;
-    pcei=pcei->pceiPrior;
-  }
-  return cch;
-}
-
-int
-CchOffset_internal(cpp_reader *pfile)
-{
-  cpp_buffer *buffer = CPP_BUFFER(pfile);
-  int cbuffersDeep = 0;
-  int retval = 0;
-  while (buffer != CPP_NULL_BUFFER(pfile)) 
-    {
-    if (buffer->nominal_fname) 
-      break;
-    else
-      {
-      cbuffersDeep++;
-      buffer = CPP_PREV_BUFFER(buffer);
-      }
-    }
-  retval = buffer->cur - buffer->buf;
-  if (buffer->fFromPerl)
-    retval += buffer->ichSourceStart - 1;
-  return retval;
-}
-
-int
-CExpansionsDeep(cpp_expand_info *pcei)
-{
-  int cdeep = 0;
-  while (pcei)
-    {
-    cdeep++;
-    pcei=pcei->pceiPrior;
-    }
-  return cdeep;
-}
-
-
-
 /* Expand a macro call.
    HP points to the symbol that is the macro being called.
    Put the result of expansion onto the input stack
@@ -2861,26 +2640,22 @@ CExpansionsDeep(cpp_expand_info *pcei)
    an argument list follows; arguments come from the input stack.  */
 
 static void
-macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
-	     cpp_expand_info *pcei, struct argdata *pad)
+macroexpand (pfile, hp)
+     cpp_reader *pfile;
+     HASHNODE *hp;
 {
   int nargs;
-  unsigned char *pchRawCall;
   DEFINITION *defn = hp->value.defn;
   register U_CHAR *xbuf;
   long start_line, start_column;
   int xbuf_len;
-  struct argdata *args = 0;
+  struct argdata *args;
   long old_written = CPP_WRITTEN (pfile);
 #if 0
   int start_line = instack[indepth].lineno;
 #endif
   int rest_args, rest_zero;
-  register int i;
-  int ichSourceStart = 0;
-  int cchRawCall = 0;
-  int cchOffsetInternal = 0;
-  cpp_buffer *pbuf = NULL;
+      register int i;
 
 #if 0
   CHECK_DEPTH (return;);
@@ -2897,29 +2672,12 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
   cpp_buf_line_and_col (cpp_file_buffer (pfile), &start_line, &start_column);
 
   nargs = defn->nargs;
-  pbuf = CPP_BUFFER(pfile);
-  pchRawCall = pbuf->cur;
-  cchRawCall = pbuf->cur - pchAfterMacroName;
-
-  /* test15.c tickles this case */
-  if (cchRawCall < 0)
-    cchRawCall = -1;
-
-  cchOffsetInternal = CchOffset_internal(pfile);
-  if (pcei) {
-    char *pchStartSearch = pbuf->cur - strlen(hp->name) - cchRawCall - 1;
-    int ichMacroOffset = (int) ((long) strstr(pchStartSearch, hp->name) - (long) pbuf->buf);
-    /*    ichSourceStart = CchBufferOffset(pfile) + CchSumPceiOffsets(pcei) + pbuf->cur - pbuf->buf - strlen(hp->name) + 1; --12/12/98 gjb */
-    ichSourceStart = CchBufferOffset(pfile) + CchSumPceiOffsets(pcei) + ichMacroOffset + 1;
-  } else {
-    ichSourceStart = cchOffsetInternal - cchRawCall - strlen(hp->name) + 1;
-  }
 
   if (nargs >= 0)
     {
-      cpp_annotated_token *pcat = 0;
+      enum cpp_token token;
 
-      args = (struct argdata *) calloc ((nargs + 1),sizeof (struct argdata));
+      args = (struct argdata *) alloca ((nargs + 1) * sizeof (struct argdata));
 
       for (i = 0; i < nargs; i++)
 	{
@@ -2927,7 +2685,6 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
 	  args[i].raw_length = 0; 
 	  args[i].expand_length = args[i].stringified_length = -1;
 	  args[i].use_count = 0;
-	  args[i].iuse = 0;
 	}
 
       /* Parse all the macro args that are supplied.  I counts them.
@@ -2942,30 +2699,26 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
 	{
 	  if (rest_args)
 	    continue;
-	  args[i].raw = CPP_WRITTEN (pfile);
-	  args[i].offset = CPP_BUFFER(pfile)->cur - CPP_BUFFER(pfile)->buf;
 	  if (i < nargs || (nargs == 0 && i == 0))
 	    {
 	      /* if we are working on last arg which absorbs rest of args... */
 	      if (i == nargs - 1 && defn->rest_args)
 		rest_args = 1;
-	      pcat = macarg (pfile, rest_args, pcei);
+	      args[i].raw = CPP_WRITTEN (pfile);
+	      token = macarg (pfile, rest_args);
+	      args[i].raw_length = CPP_WRITTEN (pfile) - args[i].raw;
+	      args[i].newlines = 0; /* FIXME */
 	    }
-	  else {
-	    assert(rest_args==0);
-	    pcat = macarg (pfile, 0, pcei);
-	  }
-	  args[i].raw_length = CPP_WRITTEN (pfile) - args[i].raw;
-	  args[i].newlines = 0; /* FIXME */
-	  if (pcat->id == CPP_EOF || pcat->id == CPP_POP)
+	  else
+	    token = macarg (pfile, 0);
+	  if (token == CPP_EOF || token == CPP_POP)
 	    {
 	      cpp_error_with_line (pfile, start_line, start_column,
 				   "unterminated macro call");
-	      // free(args);
 	      return;
 	    }
 	  i++;
-	} while (pcat->id == CPP_COMMA);
+	} while (token == CPP_COMMA);
 
       /* If we got one arg but it was just whitespace, call that 0 args.  */
       if (i == 1)
@@ -3049,9 +2802,8 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
 		  int need_space = -1;
 		  i = 0;
 		  arg->stringified = CPP_WRITTEN (pfile);
-		  if (!CPP_TRADITIONAL (pfile)) {
+		  if (!CPP_TRADITIONAL (pfile))
 		    CPP_PUTC (pfile, '\"'); /* insert beginning quote */
-		  }
 		  for (; i < arglen; i++)
 		    {
 		      c = (ARG_BASE + arg->raw)[i];
@@ -3111,31 +2863,22 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
 		  arg->stringified_length
 		    = CPP_WRITTEN (pfile) - arg->stringified;
 		}
-	      xbuf_len += args[ap->argno].stringified_length + 1; 
+	      xbuf_len += args[ap->argno].stringified_length;
 	    }
 	  else if (ap->raw_before || ap->raw_after || CPP_TRADITIONAL (pfile))
-	    {
 	    /* Add 4 for two newline-space markers to prevent
 	       token concatenation.  */
 	    xbuf_len += args[ap->argno].raw_length + 4;
-	    }
 	  else
 	    {
 	      /* We have an ordinary (expanded) occurrence of the arg.
 		 So compute its expansion, if we have not already.  */
 	      if (args[ap->argno].expand_length < 0)
 		{
-		  cpp_expand_info *pceiNew = calloc(1,sizeof(cpp_expand_info));
-		  pceiNew->argno = ap->argno;
-		  pceiNew->hp  = hp;
-		  pceiNew->pceiPrior = pcei;
-		  pceiNew->offset = args[ap->argno].offset;
-		  pceiNew->length = args[ap->argno].raw_length;
 		  args[ap->argno].expanded = CPP_WRITTEN (pfile);
 		  cpp_expand_to_buffer (pfile,
 					ARG_BASE + args[ap->argno].raw,
-					args[ap->argno].raw_length,
-					pceiNew,args + ap->argno);
+					args[ap->argno].raw_length);
 
 		  args[ap->argno].expand_length
 		    = CPP_WRITTEN (pfile) - args[ap->argno].expanded;
@@ -3145,7 +2888,8 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
 		 token concatenation.  */
 	      xbuf_len += args[ap->argno].expand_length + 4;
 	    }
-	  args[ap->argno].use_count++;
+	  if (args[ap->argno].use_count < 10)
+	    args[ap->argno].use_count++;
 	}
 
       xbuf = (U_CHAR *) xmalloc (xbuf_len + 1);
@@ -3165,11 +2909,6 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
 	  /* Add chars to XBUF.  */
 	  for (i = 0; i < ap->nchars; i++, offset++)
 	    xbuf[totlen++] = exp[offset];
-
-          if (args[ap->argno].iuse < MAX_USES_TRACKED)
-            args[ap->argno].dchUsesStart[args[ap->argno].iuse] = totlen;
-          else
-            fprintf(stderr,"More uses of argument %d than we can track -- Max of %d\n",ap->argno,MAX_USES_TRACKED);
 
 	  /* If followed by an empty rest arg with concatenation,
 	     delete the last run of nonwhite chars.  */
@@ -3264,18 +3003,8 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
 		}
 	    }
 
-          if (args[ap->argno].iuse < MAX_USES_TRACKED)
-            args[ap->argno].dchUsesEnd[args[ap->argno].iuse] = totlen;
-          else {
-            /* warning message is already output above */
-          }
-          args[ap->argno].iuse++;
-
-	  if (totlen > xbuf_len) {
-            fprintf(stderr,"totlen (%ld) > xbuf_len (%ld)\n",totlen,xbuf_len);
-            fprintf(stderr,"xbuf: %s\n",xbuf);
+	  if (totlen > xbuf_len)
 	    abort ();
-          }
       }
 
       /* if there is anything left of the definition
@@ -3297,53 +3026,10 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
     }
 
   pfile->output_escapes--;
-  {
-  cpp_buffer *pbuf = CPP_BUFFER(pfile);
-  /*  int cchRawCall = pbuf->cur - pchAfterMacroName; */
-  int cbuffersDeep = CbuffersDeep(pfile);
-  /*  int ichSourceStart = pbuf->ichSourceStart; */
-  /*  int ichSourceEnd = ichSourceStart + cchRawCall + strlen(hp->name); --12/13/98 gjb */
-  int ichSourceEnd = ichSourceStart + strlen(hp->name);
-  cpp_buffer *prev_buffer = CPP_PREV_BUFFER(pfile->buffer);
-  if (CExpansionsDeep(pcei) > 1 && prev_buffer != CPP_NULL_BUFFER(pfile) 
-      && prev_buffer->prev != 0 && prev_buffer->ichSourceStart >= 0) {
-    if (!pbuf->fFromPerl) {
-      ichSourceStart += prev_buffer->ichSourceStart - 1;
-      ichSourceEnd += prev_buffer->ichSourceStart - 1;
-    }
-  }
 
-  if (cbuffersDeep == 0 || CPP_BUFFER(pfile)->has_escapes || CPP_BUFFER(pfile)->fFromPerl) 
-    {
-    if (pfile->fGettingDirective) 
-      {
-      gjb_call_hooks_expansion(pfile,HI_IFDEF_MACRO,
-			       ichSourceStart, ichSourceEnd,
-			       hp->name,xbuf+2,xbuf_len-4,xbuf_len-4,
-			       pchAfterMacroName,cchRawCall,
-			       CPP_BUFFER(pfile)->has_escapes,cbuffersDeep,
-			       pcei, nargs<0?0:nargs,
-			       args);
-      }
-    else
-      {
-        if (cchRawCall >= 0) {
-          gjb_call_hooks_expansion(pfile,HI_EXPAND_MACRO,
-                                   ichSourceStart,ichSourceEnd,
-                                   hp->name,xbuf+2,xbuf_len-4,xbuf_len-4,
-                                   pchAfterMacroName,cchRawCall,
-                                   CPP_BUFFER(pfile)->has_escapes,cbuffersDeep,
-                                   pcei, nargs<0?0:nargs,
-                                   args);
-        }
-      }
-    }
-  
   /* Now put the expansion on the input stack
      so our caller will commence reading from it.  */
-  push_macro_expansion (pfile, xbuf, xbuf_len, hp, args, pcei, 
-			ichSourceStart, ichSourceEnd);
-  }
+  push_macro_expansion (pfile, xbuf, xbuf_len, hp);
   CPP_BUFFER (pfile)->has_escapes = 1;
 
   /* Pop the space we've used in the token_buffer for argument expansion. */
@@ -3358,16 +3044,15 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
 }
 
 static void
-push_macro_expansion (cpp_reader *pfile, U_CHAR *xbuf, int xbuf_len, 
-		      HASHNODE *hp, struct argdata *args, cpp_expand_info *pcei,
-		      long ichSourceStart, long ichSourceEnd)
+push_macro_expansion (pfile, xbuf, xbuf_len, hp)
+     cpp_reader *pfile;
+     register U_CHAR *xbuf;
+     int xbuf_len;
+     HASHNODE *hp;
 {
-  register cpp_buffer *mbuf = cpp_push_buffer (pfile, xbuf, xbuf_len,FALSE);
+  register cpp_buffer *mbuf = cpp_push_buffer (pfile, xbuf, xbuf_len);
   mbuf->cleanup = macro_cleanup;
   mbuf->data = hp;
-  mbuf->args = args;
-  mbuf->ichSourceStart = ichSourceStart;
-  mbuf->ichSourceEnd = ichSourceEnd;
 
   /* The first chars of the expansion should be a "@ " added by
      collect_expansion.  This is to prevent accidental token-pasting
@@ -3396,42 +3081,31 @@ push_macro_expansion (cpp_reader *pfile, U_CHAR *xbuf, int xbuf_len,
 /* Like cpp_get_token, except that it does not read past end-of-line.
    Also, horizontal space is skipped, and macros are popped.  */
 
-static cpp_annotated_token *
-get_directive_token (cpp_reader *pfile)
+static enum cpp_token
+get_directive_token (pfile)
+     cpp_reader *pfile;
 {
-  cpp_annotated_token *pcat = 0;
-  pfile->fGettingDirective++;
-  //  fprintf(stderr,"INCd to %d\n",pfile->fGettingDirective);
   for (;;)
     {
       long old_written = CPP_WRITTEN (pfile);
+      enum cpp_token token;
       cpp_skip_hspace (pfile);
       if (PEEKC () == '\n')
-	  {
-	  pcat = PcatNew();
-	  pcat->id = CPP_VSPACE;
-	  goto RETURN;
-	  }
-      pcat = cpp_get_token (pfile,0,0);
-      switch (pcat->id)
+	  return CPP_VSPACE;
+      token = cpp_get_token (pfile);
+      switch (token)
       {
       case CPP_POP:
 	  if (! CPP_IS_MACRO_BUFFER (CPP_BUFFER (pfile)))
-	      goto RETURN;
+	      return token;
 	  /* ... else fall though ... */
-      case CPP_HSPACE:  
-      case CPP_COMMENT:
+      case CPP_HSPACE:  case CPP_COMMENT:
 	  CPP_SET_WRITTEN (pfile, old_written);
 	  break;
       default:
-	  goto RETURN;
+	  return token;
       }
-      free(pcat);
     }
- RETURN:
-  pfile->fGettingDirective--;
-  //  fprintf(stderr,"Decd to %d\n",pfile->fGettingDirective);
-  return pcat;
 }
 
 /* Handle #include and #import.
@@ -3441,9 +3115,6 @@ get_directive_token (cpp_reader *pfile)
    CPP_WRITTEN, and will get overwritten by output_line_command.
    I.e. in input file specification has been popped by handle_directive.
    This is safe. */
-
-/* FIXGJB: all the gjb_call_XXX's here need to be tested better,
-   and perhaps abstracted out */
 
 static int
 do_include (pfile, keyword, unused1, unused2)
@@ -3455,10 +3126,9 @@ do_include (pfile, keyword, unused1, unused2)
   int skip_dirs = (keyword->type == T_INCLUDE_NEXT);
   char *fname;		/* Dynamically allocated fname buffer */
   char *pcftry;
+  char *pcfname;
   U_CHAR *fbeg, *fend;		/* Beginning and end of fname */
-  cpp_annotated_token *pcat;
-  int cchOffsetStart = CchOffset_internal(pfile);
-  int cchOffsetEnd = -1;
+  enum cpp_token token;
 
   /* Chain of dirs to search */
   struct file_name_list *search_start = CPP_OPTIONS (pfile)->include;
@@ -3470,15 +3140,13 @@ do_include (pfile, keyword, unused1, unused2)
 
   int f;			/* file number */
 
-  int angle_brackets = 0;	/* 0 for "...", 1 for <...> */
-  char *pcfbuf;
-  int pcfnum;
-#if 0
-  int pcf = -1;
-  char *pcfbuflimit;
   int retried = 0;		/* Have already tried macro
 				   expanding the include line*/
-#endif
+  int angle_brackets = 0;	/* 0 for "...", 1 for <...> */
+  int pcf = -1;
+  char *pcfbuf;
+  char *pcfbuflimit;
+  int pcfnum;
   f= -1;			/* JF we iz paranoid! */
 
   if (importing && CPP_OPTIONS (pfile)->warn_import
@@ -3500,10 +3168,10 @@ do_include (pfile, keyword, unused1, unused2)
     }
 
   pfile->parsing_include_directive++;
-  pcat = get_directive_token (pfile);
+  token = get_directive_token (pfile);
   pfile->parsing_include_directive--;
 
-  if (pcat->id == CPP_STRING)
+  if (token == CPP_STRING)
     {
       /* FIXME - check no trailing garbage */
       fbeg = pfile->token_buffer + old_written + 1;
@@ -3561,7 +3229,7 @@ do_include (pfile, keyword, unused1, unused2)
 	}
     }
 #ifdef VMS
-  else if (pcat->id == CPP_NAME)
+  else if (token == CPP_NAME)
     {
       /*
        * Support '#include xyz' like VAX-C to allow for easy use of all the
@@ -3580,30 +3248,21 @@ do_include (pfile, keyword, unused1, unused2)
 #endif
   else
     {
-      CPP_SET_WRITTEN (pfile, old_written);
-      skip_rest_of_line (pfile);
-      cchOffsetEnd = pfile->buffer->cur - pfile->buffer->buf + 1;
-      gjb_call_hooks_i_i_sz_sz_3flags(CPP_OPTIONS(pfile),HI_DO_INCLUDE,
-				      cchOffsetStart,cchOffsetEnd,
-				      fbeg,"@BADNAME@",
-				      angle_brackets,skip_dirs,importing);
       cpp_error (pfile,
 		 "`#%s' expects \"FILENAME\" or <FILENAME>", keyword->name);
+      CPP_SET_WRITTEN (pfile, old_written);
+      skip_rest_of_line (pfile);
       return 0;
     }
 
   *fend = 0;
 
-  free(pcat);
-  pcat = get_directive_token (pfile);
-  if (pcat->id != CPP_VSPACE)
+  token = get_directive_token (pfile);
+  if (token != CPP_VSPACE)
     {
       cpp_error (pfile, "junk at end of `#include'");
-      while (pcat->id != CPP_VSPACE && pcat->id != CPP_EOF && pcat->id != CPP_POP)
-	{
-	free(pcat);
-	pcat = get_directive_token (pfile);
-	}
+      while (token != CPP_VSPACE && token != CPP_EOF && token != CPP_POP)
+	token = get_directive_token (pfile);
     }
 
   /* For #include_next, skip in the search path
@@ -3627,15 +3286,9 @@ do_include (pfile, keyword, unused1, unused2)
   CPP_SET_WRITTEN (pfile, old_written);
 
   flen = fend - fbeg;
-  cchOffsetEnd = pfile->buffer->cur - pfile->buffer->buf + 1;
 
   if (flen == 0)
     {
-      gjb_call_hooks_i_i_sz_sz_3flags(CPP_OPTIONS(pfile),HI_DO_INCLUDE,
-				      cchOffsetStart,cchOffsetEnd,
-				      fbeg,"@NULLLENGTH@",
-				      angle_brackets,skip_dirs,importing);
-
       cpp_error (pfile, "empty file name in `#%s'", keyword->name);
       return 0;
     }
@@ -3657,13 +3310,8 @@ do_include (pfile, keyword, unused1, unused2)
       f = lookup_import (pfile, fname, NULL_PTR);
     else
       f = open_include_file (pfile, fname, NULL_PTR);
-    if (f == -2) {
-      gjb_call_hooks_i_i_sz_sz_3flags(CPP_OPTIONS(pfile),HI_DO_INCLUDE,
-				      cchOffsetStart,cchOffsetEnd,
-				      fbeg,"@ALREADY_INCLUDED@",
-				      angle_brackets,skip_dirs,importing);
+    if (f == -2)
       return 0;		/* Already included this file */
-    }
   } else {
     /* Search directory path, trying to open the file.
        Copy each filename tried into FNAME.  */
@@ -3702,24 +3350,13 @@ do_include (pfile, keyword, unused1, unused2)
 	 of redundant include files: #import, #pragma once, and
 	 redundant_include_p.  It would be nice if they were unified.  */
       if (redundant_include_p (pfile, fname))
-	{
-	gjb_call_hooks_i_i_sz_sz_3flags(CPP_OPTIONS(pfile),HI_DO_INCLUDE,
-					cchOffsetStart,cchOffsetEnd,
-					fbeg,"@REDUNDANT_INCLUDE@",
-					angle_brackets,skip_dirs,importing);
 	return 0;
-	}
       if (importing)
 	f = lookup_import (pfile, fname, searchptr);
       else
 	f = open_include_file (pfile, fname, searchptr);
-      if (f == -2){
-	gjb_call_hooks_i_i_sz_sz_3flags(CPP_OPTIONS(pfile),HI_DO_INCLUDE,
-					cchOffsetStart,cchOffsetEnd,
-					fbeg,"@ALREADY_INCLUDED@",
-					angle_brackets,skip_dirs,importing);
+      if (f == -2)
 	return 0;			/* Already included this file */
-      }
 #ifdef EACCES
       else if (f == -1 && errno == EACCES)
 	cpp_warning (pfile, "Header file %s exists, but is not readable",
@@ -3787,11 +3424,6 @@ do_include (pfile, keyword, unused1, unused2)
 	cpp_error_from_errno (pfile, fname);
       else
 	cpp_error (pfile, "No include path in which to find %s", fname);
-
-      gjb_call_hooks_i_i_sz_sz_3flags(CPP_OPTIONS(pfile),HI_DO_INCLUDE,
-				      cchOffsetStart,cchOffsetEnd,
-				      fbeg,"@NOTFOUND@",
-				      angle_brackets,skip_dirs,importing);
     }
   else {
     /* Check to see if this include file is a once-only include file.
@@ -3801,10 +3433,6 @@ do_include (pfile, keyword, unused1, unused2)
 
     for (ptr = pfile->dont_repeat_files; ptr; ptr = ptr->next) {
       if (!strcmp (ptr->fname, fname)) {
-	gjb_call_hooks_i_i_sz_sz_3flags(CPP_OPTIONS(pfile),HI_DO_INCLUDE,
-					cchOffsetStart,cchOffsetEnd,
-					fbeg,"@ONCED_FILE@",
-					angle_brackets,skip_dirs,importing);
 	close (f);
         return 0;				/* This file was once'd. */
       }
@@ -3837,8 +3465,8 @@ do_include (pfile, keyword, unused1, unused2)
     if (CPP_OPTIONS(pfile)->print_include_names)
       {
 	cpp_buffer *buf = CPP_BUFFER (pfile);
-	while ((buf = CPP_PREV_BUFFER (buf)) != CPP_NULL_BUFFER(pfile))
-	  putc (' ', stderr);
+	while ((buf = CPP_PREV_BUFFER (buf)) != NULL)
+	  putc ('.', stderr);
 	fprintf (stderr, "%s\n", fname);
       }
 
@@ -3849,13 +3477,12 @@ do_include (pfile, keyword, unused1, unused2)
 
     /* Record file on "seen" list for #import. */
     add_import (pfile, f, fname);
-    gjb_call_hooks_sz_i(CPP_OPTIONS(pfile),HI_ADD_IMPORT,fname,f);
 
-#if 0
     pcftry = (char *) alloca (strlen (fname) + 30);
     pcfbuf = 0;
     pcfnum = 0;
 
+#if 0
     if (!no_precomp)
       {
 	struct stat stat_f;
@@ -3889,31 +3516,18 @@ do_include (pfile, keyword, unused1, unused2)
 	} while (pcf != -1 && !pcfbuf);
       }
 #endif
-    if (gjb_call_hooks_i_i_sz_sz_3flags(CPP_OPTIONS(pfile),HI_DO_INCLUDE,
-                                        cchOffsetStart,cchOffsetEnd,
-                                        fbeg,fname,
-                                        angle_brackets,skip_dirs,importing))
+    
+    /* Actually process the file */
+    cpp_push_buffer (pfile, NULL, 0);
+    if (finclude (pfile, f, fname, is_system_include (pfile, fname),
+		  searchptr != dsp ? searchptr : SELF_DIR_DUMMY))
       {
-      /* Actually process the file */
-      cpp_push_buffer (pfile, NULL, 0, FALSE);
-      gjb_call_hooks_sz_i(CPP_OPTIONS(pfile),HI_INCLUDE_FILE,fname,
-                          is_system_include(pfile,fname));
-      if (finclude (pfile, f, fname, is_system_include (pfile, fname),
-                    searchptr != dsp ? searchptr : SELF_DIR_DUMMY))
-        {
 	output_line_command (pfile, 0, enter_file);
 	pfile->only_seen_white = 2;
-        }
-      
-      if (angle_brackets)
-        pfile->system_include_depth--;
       }
-    else
-      {
-#ifdef VERBOSE_RETURN_VALUES
-      fprintf(stderr,"Skipping inclusion of %s, since DO_INCLUDE hook returned 0\n",fname);
-#endif
-      }
+
+    if (angle_brackets)
+      pfile->system_include_depth--;
   }
   return 0;
 }
@@ -3948,13 +3562,11 @@ redundant_include_p (pfile, name)
    for which C++ should (on most systems) assume `extern "C"'.  */
 
 static int
-is_system_include (cpp_reader *pfile, char *filename)
+is_system_include (pfile, filename)
+     cpp_reader *pfile;
+     register char *filename;
 {
   struct file_name_list *searchptr;
-
-  /* gjb added this special case to avoid core dump */
-  if (CPP_OPTIONS(pfile) == 0)
-    return 0;
 
   for (searchptr = CPP_OPTIONS (pfile)->first_system_include; searchptr;
        searchptr = searchptr->next)
@@ -4043,7 +3655,8 @@ assertion_lookup (pfile, name, len, hash)
 }
 
 static void
-delete_assertion (ASSERTION_HASHNODE *hp)
+delete_assertion (hp)
+     ASSERTION_HASHNODE *hp;
 {
   struct tokenlist_list *tail;
   if (hp->prev != NULL)
@@ -4127,11 +3740,12 @@ do_line (pfile, keyword)
   int new_lineno;
   long old_written = CPP_WRITTEN (pfile);
   enum file_change_code file_change = same_file;
-  cpp_annotated_token *pcat = 0;
+  enum cpp_token token;
+  int i;
 
-  pcat = get_directive_token (pfile);
+  token = get_directive_token (pfile);
 
-  if (pcat->id != CPP_NUMBER
+  if (token != CPP_NUMBER
       || !isdigit(pfile->token_buffer[old_written]))
     {
       cpp_error (pfile, "invalid format `#line' command");
@@ -4155,10 +3769,9 @@ do_line (pfile, keyword)
   }
 #endif
 
-  free(pcat);
-  pcat = get_directive_token (pfile);
+  token = get_directive_token (pfile);
 
-  if (pcat->id == CPP_STRING) {
+  if (token == CPP_STRING) {
     U_CHAR *fname = pfile->token_buffer + old_written;
     U_CHAR *end_name;
     static HASHNODE *fname_table[FNAME_HASHSIZE];
@@ -4179,14 +3792,13 @@ do_line (pfile, keyword)
     fname_length = end_name - fname;
 
     num_start = CPP_WRITTEN (pfile);
-    free(pcat);
-    pcat = get_directive_token (pfile);
-    if (pcat->id != CPP_VSPACE && pcat->id != CPP_EOF && pcat->id != CPP_POP) {
+    token = get_directive_token (pfile);
+    if (token != CPP_VSPACE && token != CPP_EOF && token != CPP_POP) {
       p = pfile->token_buffer + num_start;
       if (CPP_PEDANTIC (pfile))
 	cpp_pedwarn (pfile, "garbage at end of `#line' command");
 
-      if (pcat->id != CPP_NUMBER || *p < '0' || *p > '4' || p[1] != '\0')
+      if (token != CPP_NUMBER || *p < '0' || *p > '4' || p[1] != '\0')
       {
 	cpp_error (pfile, "invalid format `#line' command");
 	goto bad_line_directive;
@@ -4201,15 +3813,13 @@ do_line (pfile, keyword)
 	ip->system_header_p = 2;
 
       CPP_SET_WRITTEN (pfile, num_start);
-      free(pcat);
-      pcat = get_directive_token (pfile);
+      token = get_directive_token (pfile);
       p = pfile->token_buffer + num_start;
-      if (pcat->id == CPP_NUMBER && p[1] == '\0' && (*p == '3' || *p== '4')) {
+      if (token == CPP_NUMBER && p[1] == '\0' && (*p == '3' || *p== '4')) {
 	ip->system_header_p = *p == 3 ? 1 : 2;
-	free(pcat);
-	pcat = get_directive_token (pfile);
+	token = get_directive_token (pfile);
       }
-      if (pcat->id != CPP_VSPACE) {
+      if (token != CPP_VSPACE) {
 	cpp_error (pfile, "invalid format `#line' command");
 	goto bad_line_directive;
       }
@@ -4234,7 +3844,7 @@ do_line (pfile, keyword)
       bcopy (fname, hp->value.cpval, fname_length);
     }
   }
-  else if (pcat->id != CPP_VSPACE && pcat->id != CPP_EOF) {
+  else if (token != CPP_VSPACE && token != CPP_EOF) {
     cpp_error (pfile, "invalid format `#line' command");
     goto bad_line_directive;
   }
@@ -4254,14 +3864,14 @@ do_line (pfile, keyword)
  */
 
 static int
-do_undef (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *limit)
+do_undef (pfile, keyword, buf, limit)
+     cpp_reader *pfile;
+     struct directive *keyword;
+     U_CHAR *buf, *limit;
 {
   int sym_length;
   HASHNODE *hp;
   U_CHAR *orig_buf = buf;
-  int cDeletes = 0;
-  int cchOffsetStart = pfile->buffer->prev - pfile->buffer->buf + 1;
-  int cchOffsetEnd;
 
 #if 0
   /* If this is a precompiler run (with -pcp) pass thru #undef commands.  */
@@ -4270,33 +3880,18 @@ do_undef (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *lim
 #endif
 
   SKIP_WHITE_SPACE (buf);
-  cchOffsetEnd = pfile->buffer->cur - pfile->buffer->buf + 1;
   sym_length = check_macro_name (pfile, buf, "macro");
 
-  if (gjb_call_hooks_i_i_szl(CPP_OPTIONS(pfile),HI_PRE_DO_UNDEF,cchOffsetStart,cchOffsetEnd,
-                             buf,sym_length))
+  while ((hp = cpp_lookup (pfile, buf, sym_length, -1)) != NULL)
     {
-    while ((hp = cpp_lookup (pfile, buf, sym_length, -1)) != NULL)
-      {
       /* If we are generating additional info for debugging (with -g) we
 	 need to pass through all effective #undef commands.  */
       if (CPP_OPTIONS (pfile)->debug_output && keyword)
 	pass_thru_directive (orig_buf, limit, pfile, keyword);
       if (hp->type != T_MACRO)
 	cpp_warning (pfile, "undefining `%s'", hp->name);
-      delete_macro (pfile,hp);
-      cDeletes++;
-      break; /* FIXGJB: Why is this in a loop, anyway?
-                it appears that subsequent redefs of a normal
-                macro replace that macro in the hash table; they don't
-                make new entries; so at any given time there is at
-                most one entry for a given identifier in the hash table
-                Thus, a single delete is plenty --10/14/97 gjb */
-      }
-    gjb_call_hooks_i_i_szl_i(CPP_OPTIONS(pfile),HI_DO_UNDEF,cchOffsetStart,cchOffsetEnd,
-                             buf,sym_length,cDeletes);
+      delete_macro (hp);
     }
-  
 
   if (CPP_PEDANTIC (pfile)) {
     buf += sym_length;
@@ -4388,6 +3983,7 @@ do_ident (pfile, keyword, buf, limit)
      U_CHAR *buf, *limit;
 {
 /*  long old_written = CPP_WRITTEN (pfile);*/
+  int len;
 
   /* Allow #ident in system headers, since that's not user's fault.  */
   if (CPP_PEDANTIC (pfile) && !CPP_BUFFER (pfile)->system_header_p)
@@ -4498,37 +4094,13 @@ do_sccs (pfile, keyword, buf, limit)
  */
 
 static int
-do_if (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *limit)
+do_if (pfile, keyword, buf, limit)
+     cpp_reader *pfile;
+     struct directive *keyword;
+     U_CHAR *buf, *limit;
 {
-  HOST_WIDE_INT value;
-  int cchOffsetStart = pfile->buffer->prev - pfile->buffer->buf + 1;
-  int cchOffsetEnd = pfile->buffer->cur - pfile->buffer->buf + 1;
-  char *szConditionalClause;
-  int cchConditionalClause;
-  int cchOffsetBranchStart = 0;
-  U_CHAR *pchStartExpr = CPP_BUFFER(pfile)->cur+1;
-  U_CHAR *pchEndExpr = NULL;
-  U_CHAR *pchRealEnd = NULL;
-  pfile->fGettingDirective++; // FIXGJB: better flag?
-  value = eval_if_expression (pfile, buf, limit - buf);
-  pfile->fGettingDirective--;
-  pchEndExpr = CPP_BUFFER(pfile)->cur;
-  pchRealEnd = strchr(pchStartExpr,'\n');
-#if 0
-  if (pchEndExpr > pchRealEnd) { /* FIXGJB */
-    fprintf(stderr,"Using pchRealEnd, since pchEndExpr > pchRealEnd by %ld\n",pchEndExpr-pchRealEnd);
-  }
-#endif
-  cchConditionalClause = pchRealEnd - pchStartExpr - 1; /* don't want the newline */
-  szConditionalClause = (char *) xmalloc(cchConditionalClause + 2);
-  strncpy(szConditionalClause,pchStartExpr,cchConditionalClause);
-  szConditionalClause[cchConditionalClause] = '\0';
-  cchOffsetBranchStart = CchOffset_internal(pfile) + 2;
-  conditional_skip (pfile, value == 0, T_IF, NULL_PTR,szConditionalClause);
-  gjb_call_hooks_i_i_szl_szl_i_i(CPP_OPTIONS(pfile),HI_DO_IF,cchOffsetStart,cchOffsetEnd,
-                                 pchStartExpr,pchRealEnd-pchStartExpr,
-                                 pchEndExpr,CPP_BUFFER(pfile)->cur-pchEndExpr-1,
-                                 value,cchOffsetBranchStart);
+  HOST_WIDE_INT value = eval_if_expression (pfile, buf, limit - buf);
+  conditional_skip (pfile, value == 0, T_IF, NULL_PTR);
   return 0;
 }
 
@@ -4538,22 +4110,13 @@ do_if (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *limit)
  */
 
 static int
-do_elif (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *limit)
+do_elif (pfile, keyword, buf, limit)
+     cpp_reader *pfile;
+     struct directive *keyword;
+     U_CHAR *buf, *limit;
 {
-  U_CHAR *pchStartExpr = CPP_BUFFER(pfile)->cur+1;
-  U_CHAR *pchEndExpr = NULL;
-  int fSkip_IfWasTrue = 0;
-  int cchOffsetStart = pfile->buffer->prev - pfile->buffer->buf + 1;
-  int cchOffsetEnd = pfile->buffer->cur - pfile->buffer->buf + 1;
-  int cchOffsetBranchStart = 0;
-  HOST_WIDE_INT value;
-
-
   if (pfile->if_stack == CPP_BUFFER (pfile)->if_stack) {
-    cchOffsetBranchStart = CchOffset_internal(pfile) + 2;
     cpp_error (pfile, "`#elif' not within a conditional");
-    gjb_call_hooks_i_i_i_sz_sz_i_i(CPP_OPTIONS(pfile),HI_DO_ELIF,cchOffsetStart,cchOffsetEnd,fSkip_IfWasTrue,
-			   "@BAD@","@BAD@",value, cchOffsetBranchStart);
     return 0;
   } else {
     if (pfile->if_stack->type != T_IF && pfile->if_stack->type != T_ELIF) {
@@ -4571,18 +4134,9 @@ do_elif (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *limi
   }
 
   if (pfile->if_stack->if_succeeded)
-    {
-    /* Eval it anyway, for the hook */
-    value = eval_if_expression (pfile, buf, limit - buf); /* FIXNOWGJB: may need to remove this */
-    pchEndExpr = CPP_BUFFER(pfile)->cur;
-    cchOffsetBranchStart = CchOffset_internal(pfile) + 2;
     skip_if_group (pfile, 0);
-    fSkip_IfWasTrue = 1;
-    }
   else {
-    value = eval_if_expression (pfile, buf, limit - buf);
-    pchEndExpr = CPP_BUFFER(pfile)->cur;
-    cchOffsetBranchStart = CchOffset_internal(pfile) + 2;
+    HOST_WIDE_INT value = eval_if_expression (pfile, buf, limit - buf);
     if (value == 0)
       skip_if_group (pfile, 0);
     else {
@@ -4590,21 +4144,18 @@ do_elif (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *limi
       output_line_command (pfile, 1, same_file);
     }
   }
-  gjb_call_hooks_i_i_i_szl_szl_i_i(CPP_OPTIONS(pfile),HI_DO_ELIF,cchOffsetStart,cchOffsetEnd,
-                                   fSkip_IfWasTrue,pchStartExpr,pchEndExpr-pchStartExpr-1,
-                                   pchEndExpr,CPP_BUFFER(pfile)->cur-pchEndExpr-1,
-                                   value,cchOffsetBranchStart);
   return 0;
 }
 
 /*
  * evaluate a #if expression in BUF, of length LENGTH,
- * FIXGJB: This does not appear to use buf nor length, and instead
- * just parses out of pfile->buffer->cur until the end of the expression --gjb
  * then parse the result as a C expression and return the value as an int.
  */
 static HOST_WIDE_INT
-eval_if_expression (cpp_reader *pfile, U_CHAR *buf, int length)
+eval_if_expression (pfile, buf, length)
+     cpp_reader *pfile;
+     U_CHAR *buf;
+     int length;
 {
   HASHNODE *save_defined;
   HOST_WIDE_INT value;
@@ -4615,7 +4166,7 @@ eval_if_expression (cpp_reader *pfile, U_CHAR *buf, int length)
 
   value = cpp_parse_expr (pfile);
   pfile->pcp_inside_if = 0;
-  delete_special_macro (save_defined);	/* clean up special symbol */
+  delete_macro (save_defined);	/* clean up special symbol */
 
   CPP_SET_WRITTEN (pfile, old_written); /* Pop */
 
@@ -4629,58 +4180,47 @@ eval_if_expression (cpp_reader *pfile, U_CHAR *buf, int length)
  */
 
 static int
-do_xifdef (cpp_reader *pfile, struct directive *keyword, 
-	   U_CHAR *unused1, U_CHAR *unused2)
+do_xifdef (pfile, keyword, unused1, unused2)
+     cpp_reader *pfile;
+     struct directive *keyword;
+     U_CHAR *unused1, *unused2;
 {
   int skip;
   cpp_buffer *ip = CPP_BUFFER (pfile);
   U_CHAR* ident;
   int ident_length;
-  cpp_annotated_token *pcat = 0;
+  enum cpp_token token;
   int start_of_file = 0;
   U_CHAR *control_macro = 0;
   int old_written = CPP_WRITTEN (pfile);
-  U_CHAR *pchStartExpr = CPP_BUFFER(pfile)->cur+1;
-  U_CHAR *pchEndExpr = NULL;
-  U_CHAR *pchEndGarbage = NULL;
-  char *szConditionalClause = NULL;
-  int cchOffsetBranchStart;
-  int cchOffsetStart = CchOffset_internal(pfile);
-  int cchOffsetEnd;
 
   /* Detect a #ifndef at start of file (not counting comments).  */
   if (ip->fname != 0 && keyword->type == T_IFNDEF)
     start_of_file = pfile->only_seen_white == 2;
 
   pfile->no_macro_expand++;
-  pcat = get_directive_token (pfile);
+  token = get_directive_token (pfile);
   pfile->no_macro_expand--;
 
   ident = pfile->token_buffer + old_written;
   ident_length = CPP_WRITTEN (pfile) - old_written;
   CPP_SET_WRITTEN (pfile, old_written); /* Pop */
 
-  if (pcat->id == CPP_VSPACE || pcat->id == CPP_POP || pcat->id == CPP_EOF)
+  if (token == CPP_VSPACE || token == CPP_POP || token == CPP_EOF)
     {
       skip = (keyword->type == T_IFDEF);
       if (! CPP_TRADITIONAL (pfile))
 	cpp_pedwarn (pfile, "`#%s' with no argument", keyword->name);
     }
-  else if (pcat->id == CPP_NAME)
+  else if (token == CPP_NAME)
     {
       HASHNODE *hp = cpp_lookup (pfile, ident, ident_length, -1);
-
-      gjb_call_hooks_szl_i(CPP_OPTIONS(pfile),HI_IFDEF_LOOKUP_MACRO,
-			   ident,ident_length,(hp!=NULL));
-      
       skip = (hp == NULL) ^ (keyword->type == T_IFNDEF);
       if (start_of_file && !skip)
 	{
 	  control_macro = (U_CHAR *) xmalloc (ident_length + 1);
 	  bcopy (ident, control_macro, ident_length + 1);
 	}
-      szConditionalClause = (char *) xmalloc (ident_length + 1);
-      bcopy(ident,szConditionalClause,ident_length +1);
     }
   else
     {
@@ -4696,10 +4236,7 @@ do_xifdef (cpp_reader *pfile, struct directive *keyword,
       if (c != EOF && c != '\n')
 	cpp_pedwarn (pfile, "garbage at end of `#%s' argument", keyword->name);
     }
-  pchEndExpr = CPP_BUFFER(pfile)->cur;
   skip_rest_of_line (pfile);
-  pchEndGarbage = CPP_BUFFER(pfile)->cur;
-  cchOffsetEnd = pfile->buffer->cur - pfile->buffer->buf + 1;
 
 #if 0
     if (pcp_outfile) {
@@ -4715,28 +4252,7 @@ do_xifdef (cpp_reader *pfile, struct directive *keyword,
       }
 #endif
 
-  cchOffsetBranchStart = CchOffset_internal(pfile) + 2;
-  conditional_skip (pfile, skip, T_IF, control_macro, szConditionalClause);
-  /* This will call DO_XIFDEF hook and either DO_IFDEF or DO_IFNDEF hook */
-  if (keyword->type == T_IFDEF)
-    gjb_call_hooks_i_i_szlx3_i(CPP_OPTIONS(pfile),HI_DO_IFDEF,cchOffsetStart,cchOffsetEnd,
-			       pchStartExpr,pchEndExpr-pchStartExpr,
-			       pchEndExpr,pchEndGarbage-pchEndExpr,
-			       pchEndGarbage,CPP_BUFFER(pfile)->cur-pchEndGarbage,
-			       skip);
-  else
-    gjb_call_hooks_i_i_szlx3_i(CPP_OPTIONS(pfile),HI_DO_IFNDEF,cchOffsetStart,cchOffsetEnd,
-			       pchStartExpr,pchEndExpr-pchStartExpr,
-			       pchEndExpr,pchEndGarbage-pchEndExpr,
-			       pchEndGarbage,CPP_BUFFER(pfile)->cur-pchEndGarbage,
-			       skip);
-  gjb_call_hooks_i_i_sz_szlx3_i_i(CPP_OPTIONS(pfile),HI_DO_XIFDEF,
-				  cchOffsetStart,cchOffsetEnd,
-				  keyword->type == T_IFDEF? "IFDEF": "IFNDEF",
-				  pchStartExpr,pchEndExpr-pchStartExpr,
-				  pchEndExpr,pchEndGarbage-pchEndExpr,
-				  pchEndGarbage,CPP_BUFFER(pfile)->cur-pchEndGarbage,
-				  skip,cchOffsetBranchStart);
+  conditional_skip (pfile, skip, T_IF, control_macro);
   return 0;
 }
 
@@ -4746,8 +4262,11 @@ do_xifdef (cpp_reader *pfile, struct directive *keyword,
    Otherwise, CONTROL_MACRO is 0.  */
 
 static void
-conditional_skip (cpp_reader *pfile, int skip, enum node_type type, 
-		  U_CHAR *control_macro, char *szConditionalClause)
+conditional_skip (pfile, skip, type, control_macro)
+     cpp_reader *pfile;
+     int skip;
+     enum node_type type;
+     U_CHAR *control_macro;
 {
   IF_STACK_FRAME *temp;
 
@@ -4758,7 +4277,6 @@ conditional_skip (cpp_reader *pfile, int skip, enum node_type type,
 #endif
   temp->next = pfile->if_stack;
   temp->control_macro = control_macro;
-  temp->szConditionalClause = szConditionalClause;
   pfile->if_stack = temp;
 
   pfile->if_stack->type = type;
@@ -4778,16 +4296,19 @@ conditional_skip (cpp_reader *pfile, int skip, enum node_type type,
  * If ANY is nonzero, return at next directive of any sort.
  */
 static void
-skip_if_group (cpp_reader *pfile, int any)
+skip_if_group (pfile, any)
+     cpp_reader *pfile;
+     int any;
 {
   int c;
+  int at_beg_of_line = 1;
   struct directive *kt;
   IF_STACK_FRAME *save_if_stack = pfile->if_stack; /* don't pop past here */
 #if 0
   U_CHAR *beg_of_line = bp;
 #endif
   register int ident_length;
-  U_CHAR *ident;
+  U_CHAR *ident, *after_ident;
   struct parse_marker line_start_mark;
 
   parse_set_mark (&line_start_mark, pfile);
@@ -4905,15 +4426,11 @@ skip_if_group (cpp_reader *pfile, int any)
 	break;
       case '\"':
       case '\'':
-	{
-	cpp_annotated_token *pcat;
 	FORWARD(-1);
 	old = CPP_WRITTEN (pfile);
-	pcat = cpp_get_token (pfile,0,0);
-	free(pcat);
+	cpp_get_token (pfile);
 	CPP_SET_WRITTEN (pfile, old);
 	break;
-	}
       case '\\':
 	/* Char after backslash loses its special meaning.  */
 	if (PEEKC() == '\n')
@@ -4944,31 +4461,19 @@ skip_if_group (cpp_reader *pfile, int any)
  */
 
 static int
-do_else (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *limit)
+do_else (pfile, keyword, buf, limit)
+     cpp_reader *pfile;
+     struct directive *keyword;
+     U_CHAR *buf, *limit;
 {
   cpp_buffer *ip = CPP_BUFFER (pfile);
-  U_CHAR *pchStartGarbage = ip->cur+1;
-  U_CHAR *pchEndGarbage = NULL;
-  int skip = 0;
-  int cchOffsetStart = pfile->buffer->prev - pfile->buffer->buf + 1;
-  int cchOffsetEnd;
-  int cchOffsetBranchStart;
 
   if (CPP_PEDANTIC (pfile))
     validate_else (pfile, "#else");
   skip_rest_of_line (pfile);
-  cchOffsetEnd = pfile->buffer->cur - pfile->buffer->buf + 1;
-  pchEndGarbage = ip->cur+1;
-  cchOffsetBranchStart = CchOffset_internal(pfile) + 3;
 
   if (pfile->if_stack == CPP_BUFFER (pfile)->if_stack) {
     cpp_error (pfile, "`#else' not within a conditional");
-    gjb_call_hooks_i_i_sz_szl_szl_i_i(CPP_OPTIONS(pfile),HI_DO_ELSE,
-				      cchOffsetStart,cchOffsetEnd,
-				      "@NONE@",
-				      pchStartGarbage,pchEndGarbage-pchStartGarbage,
-				      "", 0,
-				      skip, cchOffsetBranchStart);
     return 0;
   } else {
     /* #ifndef can't have its special treatment for containing the whole file
@@ -4985,19 +4490,12 @@ do_else (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *limi
     pfile->if_stack->type = T_ELSE;
   }
 
-  if (pfile->if_stack->if_succeeded) {
+  if (pfile->if_stack->if_succeeded)
     skip_if_group (pfile, 0);
-    skip = 1;
-  } else {
+  else {
     ++pfile->if_stack->if_succeeded;	/* continue processing input */
     output_line_command (pfile, 1, same_file);
   }
-  gjb_call_hooks_i_i_sz_szl_szl_i_i(CPP_OPTIONS(pfile),HI_DO_ELSE,
-				    cchOffsetStart,cchOffsetEnd,
-				    DEF_STR(pfile->if_stack->szConditionalClause,"@??@"),
-				    pchStartGarbage,pchEndGarbage-pchStartGarbage,
-				    pchEndGarbage,ip->cur-pchEndGarbage, skip,
-				    cchOffsetBranchStart);
   return 0;
 }
 
@@ -5006,38 +4504,20 @@ do_else (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *limi
  */
 
 static int
-do_endif (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *limit)
+do_endif (pfile, keyword, buf, limit)
+     cpp_reader *pfile;
+     struct directive *keyword;
+     U_CHAR *buf, *limit;
 {
-  cpp_buffer *ip = CPP_BUFFER (pfile);
-  int cchOffsetStart = pfile->buffer->prev - pfile->buffer->buf + 1;
-  int cchOffsetEnd;
-  U_CHAR *pchStartGarbage = ip->cur+1;
-  U_CHAR *pchEndGarbage = NULL;
-  char *szConditionalClause = NULL;
-  int fUnbalanced = 0;
   if (CPP_PEDANTIC (pfile))
     validate_else (pfile, "#endif");
   skip_rest_of_line (pfile);
-  pchEndGarbage = ip->cur+1;
-  cchOffsetEnd = pfile->buffer->cur - pfile->buffer->buf + 1;
+
   if (pfile->if_stack == CPP_BUFFER (pfile)->if_stack)
-    {
     cpp_error (pfile, "unbalanced `#endif'");
-    fUnbalanced = 1;
-    }
   else
     {
       IF_STACK_FRAME *temp = pfile->if_stack;
-      if (temp->szConditionalClause != NULL) 
-	{
-	szConditionalClause = xmalloc(strlen(temp->szConditionalClause)+1);
-	strcpy(szConditionalClause,temp->szConditionalClause);
-	}
-      else
-	{
-	szConditionalClause = xmalloc(5);
-	strcpy(szConditionalClause,"@??@");
-	}
       pfile->if_stack = temp->next;
       if (temp->control_macro != 0)
 	{
@@ -5090,10 +4570,6 @@ FIXME!
       free (temp);
       output_line_command (pfile, 1, same_file);
     }
-  gjb_call_hooks_i_i_sz_szl(CPP_OPTIONS(pfile),HI_DO_ENDIF,cchOffsetStart,cchOffsetEnd,
-			    (fUnbalanced?"@UNBALANCED@":szConditionalClause),
-			    pchStartGarbage,pchEndGarbage-pchStartGarbage);
-  free(szConditionalClause);
   return 0;
 }
 
@@ -5102,7 +4578,9 @@ FIXME!
    the command name.  P points to the first char after the command name.  */
 
 static void
-validate_else (cpp_reader *pfile, char *directive)
+validate_else (pfile, directive)
+     cpp_reader *pfile;
+     char *directive;
 {
   int c;
   cpp_skip_hspace (pfile);
@@ -5112,56 +4590,19 @@ validate_else (cpp_reader *pfile, char *directive)
 		 "text following `%s' violates ANSI standard", directive);
 }
 
-static void
-AnnotatePcat(cpp_annotated_token *pcat, cpp_reader *pfile, cpp_expand_info *pcei,
-	     struct argdata *pad)
-{
-  if (pfile && pfile->buffer && pfile->buffer->data)
-    {
-    HASHNODE *macro = pfile->buffer->data;
-    int cargs_or_negative = -1;
-    pcat->szMnameFrom = macro->name;
-    if (macro->type == T_MACRO || macro->type == T_DISABLED)
-      cargs_or_negative = macro->value.defn->nargs;
-    pcat->from_what = 1 + IargWithOffset(pfile->buffer->cur - pfile->buffer->buf,
-					 cargs_or_negative, pfile->buffer->args);
-    pcat->args = pfile->buffer->args;
-    }
-  else
-    {
-    pcat->szMnameFrom = 0;
-    pcat->from_what = -1;
-    pcat->args = NULL;
-    }
-#if 0
-  //FIXGJB
-  if (pad)
-    {
-    gjb_call_hooks_sz_i_sz_i(CPP_OPTIONS(pfile),HI_ANNOTATE,
-			     pad->pcei?(pad->pcei->hp?(char *)pad->pcei->hp->name:""):"",
-			     CExpansionsDeep(pad->pcei),
-			     pcei?(pcei->hp?(char *)pcei->hp->name:""):"",
-			     CExpansionsDeep(pcei));
-    pad->pcei = pcei;
-    }
-#endif
-}
-
-
 /* Get the next token, and add it to the text in pfile->token_buffer.
    Return the kind of token we got. */
   
 
-cpp_annotated_token *
-cpp_get_token (cpp_reader *pfile, cpp_expand_info *pcei, struct argdata *pad)
+enum cpp_token
+cpp_get_token (pfile)
+     cpp_reader *pfile;
 {
   register int c, c2, c3;
   long old_written;
   long start_line, start_column;
-  cpp_annotated_token *pcat = PcatNew();
+  enum cpp_token token;
   struct cpp_options *opts = CPP_OPTIONS (pfile);
-  unsigned char *pchAfterMacroName;
-  int cchOffsetStart = -1;
   CPP_BUFFER (pfile)->prev = CPP_BUFFER (pfile)->cur;
  get_next:
   c = GETC();
@@ -5170,12 +4611,10 @@ cpp_get_token (cpp_reader *pfile, cpp_expand_info *pcei, struct argdata *pad)
     handle_eof:
       if (CPP_BUFFER (pfile)->seen_eof)
 	{
-	  if (cpp_pop_buffer (pfile,pcei) != CPP_NULL_BUFFER (pfile)) 
+	  if (cpp_pop_buffer (pfile) != CPP_NULL_BUFFER (pfile))
 	    goto get_next;
-	  else {
-	    pcat->id=CPP_EOF;
-	    return pcat;
-	  }
+	  else
+	    return CPP_EOF;
 	}
       else
 	{
@@ -5184,7 +4623,6 @@ cpp_get_token (cpp_reader *pfile, cpp_expand_info *pcei, struct argdata *pad)
 	  CPP_BUFFER (pfile)->seen_eof = 1;
 	  if (CPP_BUFFER (pfile)->nominal_fname && next_buf != 0)
 	    {
-	      char *fname = DEF_STR(CPP_BUFFER(pfile)->fname,"@TOP@");
 	      /* We're about to return from an #include file.
 		 Emit #line information now (as part of the CPP_POP) result.
 		 But the #line refers to the file we will pop to. */
@@ -5193,15 +4631,8 @@ cpp_get_token (cpp_reader *pfile, cpp_expand_info *pcei, struct argdata *pad)
 	      pfile->input_stack_listing_current = 0;
 	      output_line_command (pfile, 0, leave_file);
 	      CPP_BUFFER (pfile) = cur_buffer;
-	      gjb_call_hooks_sz(CPP_OPTIONS(pfile),HI_DONE_INCLUDE_FILE,
-				  fname);
-	      /* FIXGJB: Can't get the above to return 
-		 is_system_include(cur_buffer,fname));
-		 properly
-	       */
 	    }
-	  pcat->id = CPP_POP;
-	  return pcat;
+	  return CPP_POP;
 	}
     }
   else
@@ -5236,6 +4667,7 @@ cpp_get_token (cpp_reader *pfile, cpp_expand_info *pcei, struct argdata *pad)
 	  if (opts->put_out_comments)
 	    {
 	      cpp_buffer *pbuf = CPP_BUFFER (pfile);
+	      long dummy;
 	      U_CHAR *start = pbuf->buf + start_mark.position;
 	      int len = pbuf->cur - start;
 	      CPP_RESERVE(pfile, 1 + len);
@@ -5243,13 +4675,11 @@ cpp_get_token (cpp_reader *pfile, cpp_expand_info *pcei, struct argdata *pad)
 	      CPP_PUTS_Q (pfile, start, len);
 	      pfile->lineno += newlines;
 	      parse_clear_mark (&start_mark);
-	      pcat->id = CPP_COMMENT;
-	      return pcat;
+	      return CPP_COMMENT;
 	    }
 	  else if (CPP_TRADITIONAL (pfile))
 	    {
-	      pcat->id = CPP_COMMENT;
-	      return pcat;
+	      return CPP_COMMENT;
 	    }
 	  else
 	    {
@@ -5267,16 +4697,12 @@ cpp_get_token (cpp_reader *pfile, cpp_expand_info *pcei, struct argdata *pad)
 		      CPP_PUTC_Q (pfile, '\n');
 		      pfile->lineno++;
 		    }
-		  pcat->id = CPP_VSPACE;
-		  AnnotatePcat(pcat,pfile,pcei,pad);
-		  return pcat;
+		  return CPP_VSPACE;
 		}
 #endif
 	      CPP_RESERVE(pfile, 1);
 	      CPP_PUTC_Q (pfile, ' ');
-	      pcat->id = CPP_HSPACE;
-	      AnnotatePcat(pcat,pfile,pcei,pad);
-	      return pcat;
+	      return CPP_HSPACE;
 	    }
 #if 0
 	  if (opts->for_lint) {
@@ -5325,21 +4751,15 @@ cpp_get_token (cpp_reader *pfile, cpp_expand_info *pcei, struct argdata *pad)
 
 	  if (!pfile->only_seen_white)
 	    goto randomchar;
-	  if (handle_directive (pfile)) {
-	    pcat->id = CPP_DIRECTIVE;
-	    AnnotatePcat(pcat,pfile,pcei,pad);
-	    return pcat;
-	  }
+	  if (handle_directive (pfile))
+	    return CPP_DIRECTIVE;
 	  pfile->only_seen_white = 0;
-	  pcat->id = CPP_OTHER;
-	  AnnotatePcat(pcat,pfile,pcei,pad);
-	  return pcat;
+	  return CPP_OTHER;
 
 	case '\"':
 	case '\'':
 	  /* A single quoted string is treated like a double -- some
 	     programs (e.g., troff) are perverse this way */
-	  cchOffsetStart = CchOffset_internal(pfile);
 	  cpp_buf_line_and_col (cpp_file_buffer (pfile),
 				&start_line, &start_column);
 	  old_written = CPP_WRITTEN (pfile);
@@ -5359,7 +4779,7 @@ cpp_get_token (cpp_reader *pfile, cpp_expand_info *pcei, struct argdata *pad)
 			cpp_buffer *next_buf
 			    = CPP_PREV_BUFFER (CPP_BUFFER (pfile));
 			(*CPP_BUFFER (pfile)->cleanup)
-			    (CPP_BUFFER (pfile), pfile, pcei);
+			    (CPP_BUFFER (pfile), pfile);
 			CPP_BUFFER (pfile) = next_buf;
 			continue;
 		    }
@@ -5426,27 +4846,10 @@ cpp_get_token (cpp_reader *pfile, cpp_expand_info *pcei, struct argdata *pad)
 		}
 	    }
 	while2end:
-	  {
-	  int c_newlines = count_newlines (pfile->token_buffer + old_written,
+	  pfile->lineno += count_newlines (pfile->token_buffer + old_written,
 					   CPP_PWRITTEN (pfile));
-	  pfile->lineno += c_newlines;
 	  pfile->only_seen_white = 0;
-	  if (c!='\'')
-	    {
-	    /* NOTE: macro expansions containing string constants [or
-	       special symbols, like __FILE__] will call this hook;
-	       also note that this drops the delimiting double quotes */
-	    gjb_call_hooks_i_i_szl_i(CPP_OPTIONS(pfile),HI_STRING_CONSTANT,
-				     cchOffsetStart,CchOffset_internal(pfile)+1,
-				     pfile->token_buffer + old_written + 1,
-				     CPP_PWRITTEN(pfile)-
-				       (pfile->token_buffer+old_written+1)-1,
-				     c_newlines+1);
-	    }
-	  pcat->id = ( c == '\'' ? CPP_CHAR : CPP_STRING);
-	  AnnotatePcat(pcat,pfile,pcei,pad);
-	  return pcat;
-	  }
+	  return c == '\'' ? CPP_CHAR : CPP_STRING;
 
 	case '$':
 	  if (!opts->dollars_in_ident)
@@ -5522,9 +4925,7 @@ cpp_get_token (cpp_reader *pfile, cpp_expand_info *pcei, struct argdata *pad)
 		      break;
 		    }
 		}
-	      pcat->id = CPP_STRING;
-	      AnnotatePcat(pcat,pfile,pcei,pad);
-	      return pcat;
+	      return CPP_STRING;
 	    }
 	  /* else fall through */
 	case '>':
@@ -5544,9 +4945,7 @@ cpp_get_token (cpp_reader *pfile, cpp_expand_info *pcei, struct argdata *pad)
 	    CPP_PUTC_Q (pfile, GETC ());
 	  CPP_NUL_TERMINATE_Q (pfile);
 	  pfile->only_seen_white = 0;
-	  pcat->id = CPP_OTHER;
-	  AnnotatePcat(pcat,pfile,pcei,pad);
-	  return pcat;
+	  return CPP_OTHER;
 
 	case '@':
 	  if (CPP_BUFFER (pfile)->has_escapes)
@@ -5557,9 +4956,7 @@ cpp_get_token (cpp_reader *pfile, cpp_expand_info *pcei, struct argdata *pad)
 		  if (pfile->output_escapes)
 		    CPP_PUTS (pfile, "@-", 2);
 		  parse_name (pfile, GETC ());
-		  pcat->id = CPP_NAME;
-		  AnnotatePcat(pcat,pfile,pcei,pad);
-		  return pcat;
+		  return CPP_NAME;
 		}
 	      else if (is_space [c])
 		{
@@ -5567,17 +4964,13 @@ cpp_get_token (cpp_reader *pfile, cpp_expand_info *pcei, struct argdata *pad)
 		  if (pfile->output_escapes)
 		    CPP_PUTC_Q (pfile, '@');
 		  CPP_PUTC_Q (pfile, c);
-		  pcat->id = CPP_HSPACE;
-		  AnnotatePcat(pcat,pfile,pcei,pad);
-		  return pcat;
+		  return CPP_HSPACE;
 		}
 	    }
 	  if (pfile->output_escapes)
 	    {
 	      CPP_PUTS (pfile, "@@", 2);
-	      pcat->id = CPP_OTHER;
-	      AnnotatePcat(pcat,pfile,pcei,pad);
-	      return pcat;
+	      return CPP_OTHER;
 	    }
 	  goto randomchar;
 
@@ -5601,22 +4994,19 @@ cpp_get_token (cpp_reader *pfile, cpp_expand_info *pcei, struct argdata *pad)
 	      FORWARD (2);
 	      CPP_NUL_TERMINATE_Q (pfile);
 	      pfile->only_seen_white = 0;
-	      pcat->id = CPP_3DOTS;
-	      AnnotatePcat(pcat,pfile,pcei,pad);
-	      return pcat;
+	      return CPP_3DOTS;
 	    }
 	  goto randomchar;
 
 	op2:
-	  pcat->id = CPP_OTHER;
+	  token = CPP_OTHER;
 	  pfile->only_seen_white = 0;
         op2any:
 	  CPP_RESERVE(pfile, 3);
 	  CPP_PUTC_Q (pfile, c);
 	  CPP_PUTC_Q (pfile, GETC ());
 	  CPP_NUL_TERMINATE_Q (pfile);
-	  AnnotatePcat(pcat,pfile,pcei,pad);
-	  return pcat;
+	  return token;
 
 	case 'L':
 	  NEWLINE_FIX;
@@ -5649,9 +5039,7 @@ cpp_get_token (cpp_reader *pfile, cpp_expand_info *pcei, struct argdata *pad)
 	    }
 	  CPP_NUL_TERMINATE_Q (pfile);
 	  pfile->only_seen_white = 0;
-	  pcat->id = CPP_NUMBER;
-	  AnnotatePcat(pcat,pfile,pcei,pad);
-	  return pcat;
+	  return CPP_NUMBER;
 	case 'b': case 'c': case 'd': case 'h': case 'o':
 	case 'B': case 'C': case 'D': case 'H': case 'O':
 	  if (opts->chill && PEEKC () == '\'')
@@ -5682,18 +5070,14 @@ cpp_get_token (cpp_reader *pfile, cpp_expand_info *pcei, struct argdata *pad)
 		  CPP_RESERVE (pfile, 2);
 		  CPP_PUTC_Q (pfile, c);
 		  CPP_NUL_TERMINATE_Q (pfile);
-		  pcat->id = CPP_STRING;
-		  AnnotatePcat(pcat,pfile,pcei,pad);
-		  return pcat;
+		  return CPP_STRING;
 		}
 	      else
 		{
 		  FORWARD(-1);
 		chill_number_eof:
 		  CPP_NUL_TERMINATE (pfile);
-		  pcat->id = CPP_NUMBER;
-		  AnnotatePcat(pcat,pfile,pcei,pad);
-		  return pcat;
+		  return CPP_NUMBER;
 		}
 	    }
 	  else
@@ -5715,19 +5099,13 @@ cpp_get_token (cpp_reader *pfile, cpp_expand_info *pcei, struct argdata *pad)
 	    int ident_len;
 	    parse_name (pfile, c);
 	    pfile->only_seen_white = 0;
-	    if (pfile->no_macro_expand) {
-	      pcat->id = CPP_NAME;
-	      AnnotatePcat(pcat,pfile,pcei,pad);
-	      return pcat;
-	    }
+	    if (pfile->no_macro_expand)
+	      return CPP_NAME;
 	    ident = pfile->token_buffer + before_name_written;
 	    ident_len = CPP_PWRITTEN (pfile) - ident;
 	    hp = cpp_lookup (pfile, ident, ident_len, -1);
-	    if (!hp) {
-	      pcat->id = CPP_NAME;
-	      AnnotatePcat(pcat,pfile,pcei,pad);
-	      return pcat;
-	    }
+	    if (!hp)
+	      return CPP_NAME;
 	    if (hp->type == T_DISABLED)
 	      {
 		if (pfile->output_escapes)
@@ -5740,16 +5118,13 @@ cpp_get_token (cpp_reader *pfile, cpp_expand_info *pcei, struct argdata *pad)
 		    ident[0] = '@';
 		    ident[1] = '-';
 		  }
-		pcat->id = CPP_NAME;
-		AnnotatePcat(pcat,pfile,pcei,pad);
-		return pcat;
+		return CPP_NAME;
 	      }
 
 	    /* If macro wants an arglist, verify that a '(' follows.
 	       first skip all whitespace, copying it to the output
 	       after the macro name.  Then, if there is no '(',
 	       decide this is not a macro call and leave things that way.  */
-	    pchAfterMacroName = CPP_BUFFER(pfile)->cur;
 	    if (hp->type == T_MACRO && hp->value.defn->nargs >= 0)
 	    {
 	      struct parse_marker macro_mark;
@@ -5761,7 +5136,7 @@ cpp_get_token (cpp_reader *pfile, cpp_expand_info *pcei, struct argdata *pad)
 		  if (PEEKC () != EOF)
 		    break;
 		  next_buf = CPP_PREV_BUFFER (CPP_BUFFER (pfile));
-		  (*CPP_BUFFER (pfile)->cleanup) (CPP_BUFFER (pfile), pfile, pcei);
+		  (*CPP_BUFFER (pfile)->cleanup) (CPP_BUFFER (pfile), pfile);
 		  CPP_BUFFER (pfile) = next_buf;
 	        }
 	      parse_set_mark (&macro_mark, pfile);
@@ -5777,11 +5152,8 @@ cpp_get_token (cpp_reader *pfile, cpp_expand_info *pcei, struct argdata *pad)
 	      if (!is_macro_call)
 		parse_goto_mark (&macro_mark, pfile);
 	      parse_clear_mark (&macro_mark);
-	      if (!is_macro_call) {
-		pcat->id = CPP_NAME;
-		AnnotatePcat(pcat,pfile,pcei,pad);
-		return pcat;
-	      }
+	      if (!is_macro_call)
+		return CPP_NAME;
 	    }
 	    /* This is now known to be a macro call. */
 
@@ -5794,15 +5166,13 @@ cpp_get_token (cpp_reader *pfile, cpp_expand_info *pcei, struct argdata *pad)
 	      xbuf = (U_CHAR *) xmalloc (xbuf_len + 1);
 	      CPP_SET_WRITTEN (pfile, before_name_written);
 	      bcopy (CPP_PWRITTEN (pfile), xbuf, xbuf_len + 1);
-	      push_macro_expansion (pfile, xbuf, xbuf_len, hp, 0 /* no args */,
-				    pcei, CPP_WRITTEN(pfile)-strlen(hp->name),
-				    CPP_WRITTEN(pfile));
+	      push_macro_expansion (pfile, xbuf, xbuf_len, hp);
 	    }
 	    else
 	      {
 		/* Expand the macro, reading arguments as needed,
 		   and push the expansion on the input stack.  */
-		macroexpand (pfile, hp, pchAfterMacroName, pcei, pad);
+		macroexpand (pfile, hp);
 		CPP_SET_WRITTEN (pfile, before_name_written);
 	      }
 
@@ -5831,15 +5201,13 @@ cpp_get_token (cpp_reader *pfile, cpp_expand_info *pcei, struct argdata *pad)
 		break;
 	      FORWARD(1);
 	    }
-	  pcat->id = CPP_HSPACE;
-	  AnnotatePcat(pcat,pfile,pcei,pad);
-	  return pcat;
+	  return CPP_HSPACE;
 
         case '\\':
 	  c2 = PEEKC ();
 	  if (c2 != '\n')
 	    goto randomchar;
-	  pcat->id = CPP_HSPACE;
+	  token = CPP_HSPACE;
 	  goto op2any;
 
 	case '\n':
@@ -5848,40 +5216,38 @@ cpp_get_token (cpp_reader *pfile, cpp_expand_info *pcei, struct argdata *pad)
 	    pfile->only_seen_white = 1;
 	  pfile->lineno++;
 	  output_line_command (pfile, 1, same_file);
-	  pcat->id = CPP_VSPACE;
-	  AnnotatePcat(pcat,pfile,pcei,pad);
-	  return pcat;
+	  return CPP_VSPACE;
 
-	case '(': pcat->id = CPP_LPAREN;    goto char1;
-	case ')': pcat->id = CPP_RPAREN;    goto char1;
-	case '{': pcat->id = CPP_LBRACE;    goto char1;
-	case '}': pcat->id = CPP_RBRACE;    goto char1;
-	case ',': pcat->id = CPP_COMMA;     goto char1;
-	case ';': pcat->id = CPP_SEMICOLON; goto char1;
+	case '(': token = CPP_LPAREN;    goto char1;
+	case ')': token = CPP_RPAREN;    goto char1;
+	case '{': token = CPP_LBRACE;    goto char1;
+	case '}': token = CPP_RBRACE;    goto char1;
+	case ',': token = CPP_COMMA;     goto char1;
+	case ';': token = CPP_SEMICOLON; goto char1;
 
 	randomchar:
 	default:
-	  pcat->id = CPP_OTHER;
+	  token = CPP_OTHER;
 	char1:
 	  pfile->only_seen_white = 0;
 	  CPP_PUTC (pfile, c);
-	  AnnotatePcat(pcat,pfile,pcei,pad);
-	  return pcat;
+	  return token;
 	}
     }
 }
 
 /* Like cpp_get_token, but skip spaces and comments. */
-cpp_annotated_token *
-cpp_get_non_space_token (cpp_reader *pfile)
+enum cpp_token
+cpp_get_non_space_token (pfile)
+     cpp_reader *pfile;
 {
   int old_written = CPP_WRITTEN (pfile);
   for (;;)
     {
-      cpp_annotated_token *pcat = cpp_get_token (pfile,0,0);
-      if (pcat->id != CPP_COMMENT && pcat->id != CPP_POP
-	  && pcat->id != CPP_HSPACE && pcat->id != CPP_VSPACE)
-	return pcat;
+      enum cpp_token token = cpp_get_token (pfile);
+      if (token != CPP_COMMENT && token != CPP_POP
+	  && token != CPP_HSPACE && token != CPP_VSPACE)
+	return token;
       CPP_SET_WRITTEN (pfile, old_written);
     }
 }
@@ -6234,15 +5600,13 @@ finclude (pfile, f, fname, system_header_p, dirptr)
   long i;
   int length;
   cpp_buffer *fp;			/* For input stack frame */
-#if 0
   int missing_newline = 0;
-#endif
 
   if (file_size_and_mode (f, &st_mode, &st_size) < 0)
     {
       cpp_perror_with_name (pfile, fname);
       close (f);
-      cpp_pop_buffer (pfile,0);
+      cpp_pop_buffer (pfile);
       return 0;
     }
 
@@ -6374,7 +5738,7 @@ push_parse_file (pfile, fname)
 
   /* Do partial setup of input buffer for the sake of generating
      early #line directives (when -g is in effect).  */
-  fp = cpp_push_buffer (pfile, NULL, 0, FALSE);
+  fp = cpp_push_buffer (pfile, NULL, 0);
   if (opts->in_fname == NULL)
     opts->in_fname = "";
   fp->nominal_fname = fp->fname = opts->in_fname;
@@ -6425,9 +5789,8 @@ push_parse_file (pfile, fname)
 	value = past_name;
 	while (*value && (*value == ' ' || *value == '\t'))
 	  value++;
-	if (*value++ != '(') {
+	if (*value++ != '(')
 	  abort ();
-        }
 	while (*value && (*value == ' ' || *value == '\t'))
 	  value++;
 	past_value = value;
@@ -6640,9 +6003,9 @@ push_parse_file (pfile, fname)
 	      cpp_perror_with_name (pfile, pend->arg);
 	      return FATAL_EXIT_CODE;
 	    }
-	  cpp_push_buffer (pfile, NULL, 0, FALSE);
+	  cpp_push_buffer (pfile, NULL, 0);
 	  finclude (pfile, fd, pend->arg, 0, NULL_PTR);
-	  cpp_scan_buffer (pfile,0,0);
+	  cpp_scan_buffer (pfile);
 	}
     }
   opts->no_output--; pfile->no_record_file--;
@@ -6660,7 +6023,7 @@ push_parse_file (pfile, fname)
      inhibit compilation.  */
   if (opts->print_deps_missing_files
       && (opts->print_deps == 0 || !opts->no_output))
-    fatal ("-MG must be specified with one of -M or -MM",0);
+    fatal (pfile, "-MG must be specified with one of -M or -MM");
 
   /* Either of two environment variables can specify output of deps.
      Its value is either "OUTPUT_FILE" or "OUTPUT_FILE DEPS_TARGET",
@@ -6805,7 +6168,7 @@ push_parse_file (pfile, fname)
 	      cpp_perror_with_name (pfile, pend->arg);
 	      return FATAL_EXIT_CODE;
 	    }
-	  cpp_push_buffer (pfile, NULL, 0, FALSE);
+	  cpp_push_buffer (pfile, NULL, 0);
 	  finclude (pfile, fd, pend->arg, 0, NULL_PTR);
 	}
     }
@@ -6855,7 +6218,6 @@ init_parse_file (pfile)
   pfile->timebuf = NULL;
   pfile->only_seen_white = 1;
   pfile->buffer = CPP_NULL_BUFFER(pfile);
-  pfile->fGettingDirective = 0;
 }
 
 static struct cpp_pending *
@@ -6892,9 +6254,6 @@ push_pending (pfile, cmd, arg)
    Returns if an unrecognized option is seen.
    Returns number of handled arguments.  */
 
-
-extern char szHooksFile[];
-
 int
 cpp_handle_options (pfile, argc, argv)
      cpp_reader *pfile;
@@ -6905,80 +6264,14 @@ cpp_handle_options (pfile, argc, argv)
   struct cpp_options *opts = CPP_OPTIONS (pfile);
   for (i = 0; i < argc; i++) {
     if (argv[i][0] != '-') {
-      if (opts->out_fname != NULL) {
-        fprintf(stderr,"Usage: %s [switches] input output\n", argv[0]);
-        fprintf(stderr,"Doing nothing, but exiting with EXIT_SUCCESS so make can continue\n");
-        exit(0);
-      }
+      if (opts->out_fname != NULL)
+	fatal ("Usage: %s [switches] input output", argv[0]);
       else if (opts->in_fname != NULL)
 	opts->out_fname = argv[i];
-      else {
-        /* skip .o files, in case this is a link step */
-        if (strstr(argv[i],".o") || strstr(argv[i],".a"))
-          continue;
-        /* get the filename, but don't increment i */
-        strcpy(szCompileFileName,argv[i]);
+      else
 	opts->in_fname = argv[i];
-      }
     } else {
       switch (argv[i][1]) {
-      case '-':
-	if (strcmp(argv[i]+2,"yydebug") == 0)
-	  ct_yydebug = 1;
-	else if (strcmp(argv[i]+2,"noyydebug") == 0)
-	  ct_yydebug = 0;
-	else if (strcmp(argv[i]+2,"noparse") == 0)
-	  fShouldParse = 0;
-	else if (strcmp(argv[i]+2,"nooutput") == 0)
-	  opts->no_output = 1;
-	else if (strcmp(argv[i]+2,"hooks") == 0)
-	  {
-	  if (i + 1 == argc)
-	    fatal ("Filename missing after `%s' option", argv[i]);
-	  strcpy(szHooksFile,argv[i+1]);
-	  i++;
-	  }
-	else 
-	  fatal("Unrecognized option after --",0);
-	break;
-      case 'q':
-	opts->fWarnMissingHooks = FALSE;
-	break;
-      case 'c':
-        /* get the filename, increment i */
-        /*        strcpy(szCompileFileName,argv[++i]);
-                  opts->in_fname = argv[i]; */
-        break;
-
-      case 'L':
-        /* Just ignore -L option */
-        break;
-
-      case 'O':
-        /* Just ignore -O option */
-        break;
-
-      case 'a':
-        /* ignore -ansi option */
-        if (strcmp(argv[i],"-ansi") == 0) {
-          fprintf(stderr,"ignoring -ansi option\n");
-        }
-        break;
-
-      case 'r':
-        /* ignore -rXXXX options, e.g., -rdynamic */
-        fprintf(stderr,"ignoring -r option: %s\n", argv[i]);
-        break;
-
-      case 'm':
-        /* ignore -mXXXX options, e.g., -m486 */
-        fprintf(stderr,"ignoring -m option: %s\n", argv[i]);
-        break;
-
-      case 'f':
-        /* Just ignore -f options, e.g., -fno-strength-reduce */
-        fprintf(stderr,"ignoring -f option: %s\n",argv[i]);
-        break;
 
       case 'i':
 	if (!strcmp (argv[i], "-include")
@@ -6990,7 +6283,7 @@ cpp_handle_options (pfile, argc, argv)
 	}
 	if (!strcmp (argv[i], "-iprefix")) {
 	  if (i + 1 == argc)
-	    fatal ("Filename missing after `-iprefix' option",0);
+	    fatal ("Filename missing after `-iprefix' option");
 	  else
 	    opts->include_prefix = argv[++i];
 	}
@@ -7001,7 +6294,7 @@ cpp_handle_options (pfile, argc, argv)
 	  struct file_name_list *dirtmp;
 
 	  if (i + 1 == argc)
-	    fatal ("Filename missing after `-isystem' option",0);
+	    fatal ("Filename missing after `-isystem' option");
 
 	  dirtmp = (struct file_name_list *)
 	    xmalloc (sizeof (struct file_name_list));
@@ -7039,7 +6332,7 @@ cpp_handle_options (pfile, argc, argv)
 	  dirtmp->control_macro = 0;
 	  dirtmp->c_system_include_path = 0;
 	  if (i + 1 == argc)
-	    fatal ("Directory name missing after `-iwithprefix' option",0);
+	    fatal ("Directory name missing after `-iwithprefix' option");
 
 	  dirtmp->fname = (char *) xmalloc (strlen (argv[i+1])
 					    + strlen (prefix) + 1);
@@ -7074,7 +6367,7 @@ cpp_handle_options (pfile, argc, argv)
 	  dirtmp->control_macro = 0;
 	  dirtmp->c_system_include_path = 0;
 	  if (i + 1 == argc)
-	    fatal ("Directory name missing after `-iwithprefixbefore' option",0);
+	    fatal ("Directory name missing after `-iwithprefixbefore' option");
 
 	  dirtmp->fname = (char *) xmalloc (strlen (argv[i+1])
 					    + strlen (prefix) + 1);
@@ -7094,7 +6387,7 @@ cpp_handle_options (pfile, argc, argv)
 	  dirtmp->control_macro = 0;
 	  dirtmp->c_system_include_path = 0;
 	  if (i + 1 == argc)
-	    fatal ("Directory name missing after `-idirafter' option",0);
+	    fatal ("Directory name missing after `-idirafter' option");
 	  else
 	    dirtmp->fname = argv[++i];
 	  dirtmp->got_name_map = 0;
@@ -7109,9 +6402,9 @@ cpp_handle_options (pfile, argc, argv)
 
       case 'o':
 	if (opts->out_fname != NULL)
-	  fatal ("Output filename specified twice",0);
+	  fatal ("Output filename specified twice");
 	if (i + 1 == argc)
-	  fatal ("Filename missing after -o option",0);
+	  fatal ("Filename missing after -o option");
 	opts->out_fname = argv[++i];
 	if (!strcmp (opts->out_fname, "-"))
 	  opts->out_fname = "";
@@ -7294,7 +6587,7 @@ cpp_handle_options (pfile, argc, argv)
 	if (argv[i][2] != 0)
 	  push_pending (pfile, "-D", argv[i] + 2);
 	else if (i + 1 == argc)
-	  fatal ("Macro name missing after -D option",0);
+	  fatal ("Macro name missing after -D option");
 	else
 	  i++, push_pending (pfile, "-D", argv[i]);
 	break;
@@ -7306,7 +6599,7 @@ cpp_handle_options (pfile, argc, argv)
 	  if (argv[i][2] != 0)
 	    p = argv[i] + 2;
 	  else if (i + 1 == argc)
-	    fatal ("Assertion missing after -A option",0);
+	    fatal ("Assertion missing after -A option");
 	  else
 	    p = argv[++i];
 
@@ -7316,6 +6609,7 @@ cpp_handle_options (pfile, argc, argv)
 	       Let's include also any that were specified earlier
 	       on the command line.  That way we can get rid of any
 	       that were passed automatically in from GCC.  */
+	    int j;
 	    opts->inhibit_predefs = 1;
 	    for (ptr = &opts->pending; *ptr != NULL; )
 	      {
@@ -7339,7 +6633,7 @@ cpp_handle_options (pfile, argc, argv)
 	if (argv[i][2] != 0)
 	  push_pending (pfile, "-U", argv[i] + 2);
 	else if (i + 1 == argc)
-	  fatal ("Macro name missing after -U option",0);
+	  fatal ("Macro name missing after -U option");
 	else
 	  push_pending (pfile, "-U", argv[i+1]), i++;
 	break;
@@ -7378,7 +6672,7 @@ cpp_handle_options (pfile, argc, argv)
 	    if (argv[i][2] != 0)
 	      dirtmp->fname = argv[i] + 2;
 	    else if (i + 1 == argc)
-	      fatal ("Directory name missing after -I option",0);
+	      fatal ("Directory name missing after -I option");
 	    else
 	      dirtmp->fname = argv[++i];
 	    dirtmp->got_name_map = 0;
@@ -7448,29 +6742,21 @@ cpp_finish (pfile)
 	  if (opts->deps_file)
 	    {
 	      if (ferror (deps_stream) || fclose (deps_stream) != 0)
-		fatal ("I/O error on output",0);
+		fatal ("I/O error on output");
 	    }
 	}
     }
 }
 
-/* FIXGJB: this should go somewhere! */
-#if 0
-	  gjb_call_hooks_sz_i(CPP_OPTIONS(pfile),HI_DONE_INCLUDE_FILE,
-			      DEF_STR(CPP_BUFFER(pfile)->fname,"@TOP@"),
-			      (CPP_BUFFER(pfile)->fname?
-			       is_system_include(pfile,CPP_BUFFER(pfile)->fname):
-			       -1));
-#endif
-
 /* Free resources used by PFILE. */
 
 void
-cpp_cleanup (cpp_reader *pfile)
+cpp_cleanup (pfile)
+     cpp_reader *pfile;
 {
   int i;
   while ( CPP_BUFFER (pfile) != CPP_NULL_BUFFER (pfile))
-    cpp_pop_buffer (pfile, 0);
+    cpp_pop_buffer (pfile);
 
   if (pfile->token_buffer)
     {
@@ -7793,7 +7079,7 @@ read_token_list (pfile, error_flag)
     {
       struct arglist *temp;
       long name_written = CPP_WRITTEN (pfile);
-      int c;
+      int eofp = 0;  int c;
 
       cpp_skip_hspace (pfile);
 
@@ -7815,7 +7101,7 @@ read_token_list (pfile, error_flag)
       else if (c == '"' || c == '\'')
         {
 	  FORWARD(-1);
-	  cpp_get_token (pfile,0,0);
+	  cpp_get_token (pfile);
         }
       else if (c == '\n')
 	break;
@@ -7857,7 +7143,8 @@ read_token_list (pfile, error_flag)
 }
 
 static void
-free_token_list (struct arglist *tokens)
+free_token_list (tokens)
+     struct arglist *tokens;
 {
   while (tokens) {
     struct arglist *next = tokens->next;
@@ -7978,7 +7265,8 @@ parse_move_mark (pmark, pfile)
 }
 
 int
-cpp_read_check_assertion (cpp_reader *pfile)
+cpp_read_check_assertion (pfile)
+     cpp_reader *pfile;
 {
   int name_start = CPP_WRITTEN (pfile);
   int name_length, name_written;
@@ -8006,7 +7294,8 @@ cpp_read_check_assertion (cpp_reader *pfile)
 }
 
 void
-cpp_print_file_and_line (cpp_reader *pfile)
+cpp_print_file_and_line (pfile)
+     cpp_reader *pfile;
 {
   cpp_buffer *ip = cpp_file_buffer (pfile);
 
@@ -8020,27 +7309,20 @@ cpp_print_file_and_line (cpp_reader *pfile)
 }
 
 void
-cpp_error_nohook (cpp_reader *pfile, char *msg, char *arg1, char *arg2, char *arg3)
+cpp_error (pfile, msg, arg1, arg2, arg3)
+     cpp_reader *pfile;
+     char *msg;
+     char *arg1, *arg2, *arg3;
 {
   cpp_print_containing_files (pfile);
   cpp_print_file_and_line (pfile);
   cpp_message (pfile, 1, msg, arg1, arg2, arg3);
 }
 
-void
-cpp_error (cpp_reader *pfile, char *msg, char *arg1, char *arg2, char *arg3)
-{
-  cpp_buffer *ip = cpp_file_buffer (pfile);
-  gjb_call_hooks_sz_i_i_sprintf(CPP_OPTIONS(pfile),HI_CPP_ERROR,
-				ip?ip->nominal_fname:"@NONE@",
-				ip?ip->lineno:-1,-1,
-				msg, arg1, arg2, arg3);
-  cpp_error_nohook(pfile,msg,arg1,arg2,arg3);
-}
-
 /* Print error message but don't count it.  */
+
 void
-cpp_warning_nohook (pfile, msg, arg1, arg2, arg3)
+cpp_warning (pfile, msg, arg1, arg2, arg3)
      cpp_reader *pfile;
      char *msg;
      char *arg1, *arg2, *arg3;
@@ -8056,20 +7338,6 @@ cpp_warning_nohook (pfile, msg, arg1, arg2, arg3)
   cpp_message (pfile, 0, msg, arg1, arg2, arg3);
 }
 
-void
-cpp_warning (pfile, msg, arg1, arg2, arg3)
-     cpp_reader *pfile;
-     char *msg;
-     char *arg1, *arg2, *arg3;
-{
-  cpp_buffer *ip = cpp_file_buffer (pfile);
-  gjb_call_hooks_sz_i_i_sprintf(CPP_OPTIONS(pfile),HI_CPP_WARN,
-				ip?ip->nominal_fname:"@NONE@",
-				ip?ip->lineno:-1,-1,
-				msg, arg1, arg2, arg3);
-  cpp_warning_nohook(pfile,msg,arg1,arg2,arg3);
-}
-
 /* Print an error message and maybe count it.  */
 
 void
@@ -8078,21 +7346,20 @@ cpp_pedwarn (pfile, msg, arg1, arg2, arg3)
      char *msg;
      char *arg1, *arg2, *arg3;
 {
-  cpp_buffer *ip = cpp_file_buffer (pfile);
-  gjb_call_hooks_sz_i_i_sprintf(CPP_OPTIONS(pfile),HI_CPP_PEDWARN,
-				ip?ip->nominal_fname:"@NONE@",
-				ip?ip->lineno:-1,-1,
-				msg, arg1, arg2, arg3);
   if (CPP_OPTIONS (pfile)->pedantic_errors)
-    cpp_error_nohook (pfile, msg, arg1, arg2, arg3);
+    cpp_error (pfile, msg, arg1, arg2, arg3);
   else
-    cpp_warning_nohook (pfile, msg, arg1, arg2, arg3);
+    cpp_warning (pfile, msg, arg1, arg2, arg3);
 }
 
 void
-cpp_error_with_line_nohook (cpp_reader *pfile, int line, int column, char *msg,
-			    char *arg1, char *arg2, char *arg3)
+cpp_error_with_line (pfile, line, column, msg, arg1, arg2, arg3)
+     cpp_reader *pfile;
+     int line, column;
+     char *msg;
+     char *arg1, *arg2, *arg3;
 {
+  int i;
   cpp_buffer *ip = cpp_file_buffer (pfile);
 
   cpp_print_containing_files (pfile);
@@ -8103,25 +7370,14 @@ cpp_error_with_line_nohook (cpp_reader *pfile, int line, int column, char *msg,
   cpp_message (pfile, 1, msg, arg1, arg2, arg3);
 }
 
-void
-cpp_error_with_line (cpp_reader *pfile, int line, int column, char *msg, 
-		     char *arg1, char *arg2, char *arg3)
-{
-  cpp_buffer *ip = cpp_file_buffer (pfile);
-  gjb_call_hooks_sz_i_i_sprintf(CPP_OPTIONS(pfile),HI_CPP_ERROR,
-				ip?ip->nominal_fname:"@NONE@",
-				line,column,
-				msg, arg1, arg2, arg3);
-  cpp_error_with_line_nohook(pfile,line,column,msg,arg1,arg2,arg3);
-}
-
 static void
-cpp_warning_with_line_nohook (pfile, line, column, msg, arg1, arg2, arg3)
+cpp_warning_with_line (pfile, line, column, msg, arg1, arg2, arg3)
      cpp_reader *pfile;
      int line, column;
      char *msg;
      char *arg1, *arg2, *arg3;
 {
+  int i;
   cpp_buffer *ip;
 
   if (CPP_OPTIONS (pfile)->inhibit_warnings)
@@ -8140,21 +7396,6 @@ cpp_warning_with_line_nohook (pfile, line, column, msg, arg1, arg2, arg3)
   cpp_message (pfile, 0, msg, arg1, arg2, arg3);
 }
 
-static void
-cpp_warning_with_line (pfile, line, column, msg, arg1, arg2, arg3)
-     cpp_reader *pfile;
-     int line, column;
-     char *msg;
-     char *arg1, *arg2, *arg3;
-{
-  cpp_buffer *ip = cpp_file_buffer (pfile);
-  gjb_call_hooks_sz_i_i_sprintf(CPP_OPTIONS(pfile),HI_CPP_WARN,
-				ip?ip->nominal_fname:"@NONE@",
-				line,column,
-				msg, arg1, arg2, arg3);
-  cpp_warning_with_line_nohook(pfile,line,column,msg,arg1,arg2,arg3);
-}
-
 void
 cpp_pedwarn_with_line (pfile, line, column, msg, arg1, arg2, arg3)
      cpp_reader *pfile;
@@ -8162,11 +7403,6 @@ cpp_pedwarn_with_line (pfile, line, column, msg, arg1, arg2, arg3)
      char *msg;
      char *arg1, *arg2, *arg3;
 {
-  cpp_buffer *ip = cpp_file_buffer (pfile);
-  gjb_call_hooks_sz_i_i_sprintf(CPP_OPTIONS(pfile),HI_CPP_PEDWARN,
-				ip?ip->nominal_fname:"@NONE@",
-				line,column,
-				msg, arg1, arg2, arg3);
   if (CPP_OPTIONS (pfile)->pedantic_errors)
     cpp_error_with_line (pfile, column, line, msg, arg1, arg2, arg3);
   else
@@ -8184,10 +7420,6 @@ cpp_pedwarn_with_file_and_line (pfile, file, line, msg, arg1, arg2, arg3)
      char *msg;
      char *arg1, *arg2, *arg3;
 {
-  gjb_call_hooks_sz_i_i_sprintf(CPP_OPTIONS(pfile),HI_CPP_PEDWARN,
-				file,
-				line,-1,
-				msg, arg1, arg2, arg3);
   if (!CPP_OPTIONS (pfile)->pedantic_errors
       && CPP_OPTIONS (pfile)->inhibit_warnings)
     return;
@@ -8258,6 +7490,7 @@ cpp_error_from_errno (pfile, name)
      cpp_reader *pfile;
      char *name;
 {
+  int i;
   cpp_buffer *ip = cpp_file_buffer (pfile);
 
   cpp_print_containing_files (pfile);
@@ -8265,7 +7498,7 @@ cpp_error_from_errno (pfile, name)
   if (ip != NULL)
     cpp_file_line_for_message (pfile, ip->nominal_fname, ip->lineno, -1);
 
-  cpp_message (pfile, 1, "%s: %s", name, my_strerror (errno), "");
+  cpp_message (pfile, 1, "%s: %s", name, my_strerror (errno));
 }
 
 void

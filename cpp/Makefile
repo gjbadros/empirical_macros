@@ -1,32 +1,10 @@
-# $Id$
-# By Greg J. Badros, Aug 25, 1997
-
-#Ends up doing something like this
-#gcc -c  -Dbool=char -DHAS_BOOL -I/usr/local/include -O    -DVERSION=\"0.01\" -DXS_VERSION=\"0.01\" -fpic -I/uns/lib/perl5.004/arch/CORE  cpp.c
-
 CCCP=cccp
 BISON = bison
-CC=gcc2.7.2
-
-CFLAGS=-DYYDEBUG
-# -DDMALLOC_DISABLE
-
-GCC_CFLAGS=$(INTERNAL_CFLAGS) $(X_CFLAGS) $(T_CFLAGS) $(CFLAGS)
-# This is the variable actually used when we compile.
-ALL_CFLAGS = $(INTERNAL_CFLAGS) $(X_CFLAGS) $(T_CFLAGS) $(CFLAGS) $(XCFLAGS) -g -Wall
-
-# Use yyparse()!
-ALL_CFLAGS += -DGJB_PARSE -DCTGRAMMAR
-ALL_CFLAGS += -DUSE_CPP -DSHOW_TYPES -DCT_DEBUG
-# ALL_CFLAGS += -DUSE_DMALLOC
+CC=gcc
 
 # Directory where sources are, from where we are.
 srcdir = .
-PERLBASE = /uns/lib/perl5.004
-PERLARCHDIR = $(PERLBASE)/arch
-
-INCLUDES = -I/uns/include -I./include -I$(srcdir) -I$(srcdir)/config -I$(PERLARCHDIR)/CORE
-
+INCLUDES = -I. -I$(srcdir) -I$(srcdir)/config
 
 # Common prefix for installation directories.
 # NOTE: This directory must exist when you start installation.
@@ -42,10 +20,6 @@ exec_prefix = $(prefix)
 bindir = $(exec_prefix)/bin
 # Directory in which to put the directories used by the compiler.
 libdir = $(exec_prefix)/lib
-
-target=i386-linux
-version=2.7.2.1
-
 # Directory in which the compiler finds executables, libraries, etc.
 libsubdir = $(libdir)/gcc-lib/$(target)/$(version)
 # Directory in which the compiler finds g++ includes.
@@ -98,7 +72,7 @@ LIBGCC2 = libgcc2.a
 # -g1 causes output of debug info only for file-scope entities.
 # we use this here because that should be enough, and also
 # so that -g1 will be tested.
-LIBGCC2_CFLAGS = -g $(LIBGCC2_INCLUDES) $(GCC_CFLAGS) $(TARGET_LIBGCC2_CFLAGS) -g1
+LIBGCC2_CFLAGS = -O2 $(LIBGCC2_INCLUDES) $(GCC_CFLAGS) $(TARGET_LIBGCC2_CFLAGS) -g1
 
 # Additional options to use when compiling libgcc2.a.
 # Some targets override this to -Iinclude
@@ -212,116 +186,20 @@ HOST_ALLOCA=$(ALLOCA)
 HOST_MALLOC=$(MALLOC)
 HOST_OBSTACK=$(OBSTACK)
 
-
-# Output of "perl -M"ExtUtils::Embed" -e ccopts -e ldopts" running on uni --gjb
-PERLLIBS = -rdynamic  -L/usr/local/lib $(PERLBASE)/arch/auto/DynaLoader/DynaLoader.a -L$(PERLBASE)/arch/CORE -lperl -lgdbm -ldb -lm -lc
-
-## Other vars for configuring backcalls.{xs,c} to build properly
-## (Credit Ken Fox [kfox@ford.com])
-PERL=/uns/bin/perl
-PERL-EMBED = -MExtUtils::Embed
-PERL-EXTUTILS-DIR := $(shell $(PERL) -e 'use Config; print "$$Config{privlibexp}/ExtUtils";')
-PERL-XSUBPP := $(PERL) $(PERL-EXTUTILS-DIR)/xsubpp -typemap $(PERL-EXTUTILS-DIR)/typemap
-PERL-INCS := $(shell $(PERL) $(PERL-EMBED) -e ccopts)
-STANDARD-INCS += $(PERL-INCS)
-PERL-LINKAGE := $(shell $(PERL) $(PERL-EMBED) -e ldopts)
-STANDARD-LINKAGE += $(PERL-LINKAGE)
-C++-FLAGS := $(STANDARD-INCS) ...
-
-GRAMMAR_OBJECTS := ansi-c.tab.o ansi-c-lex.o
-
-PCP3_SOURCES := lexer.l gram.y pcpp.c pcpp.h cpplib.c cpplib.h cpphook.c cpphook.h \
-		cpphash.c cpphash.h cppalloc.c cpperror.c cppexp.c \
-		version.c backcalls.xs bison-stack.c bison-stack.h \
-		ct-heap.c ct-nmetab.c ct-prnttree.c \
-		ct-symtab.c ct-token.c  ct-tree.c \
-		ct-tree_stk.c globals.h heap.h identify.h macro.h nmetab.h \
-		tree.h tree_stk.h utype.h token.h prnttree.h ct-config.h \
-		perly-undefs.h
-
-CT_GRAMMAR_OBJECTS := lexer.o gram.tab.o ct-heap.o ct-nmetab.o ct-prnttree.o ct-symtab.o ct-token.o ct-tree.o ct-tree_stk.o
-
-NON_GRAMMAR_OBJECTS =pcpp.o cpplib.o cpphook.o cpphash.o cppalloc.o cpperror.o cppexp.o \
-  version.o backcalls.o bison-stack.o
-
-OBJECTS = $(NON_GRAMMAR_OBJECTS) $(GRAMMAR_OBJECTS)
-
-SD_OBJECTS = scan-decls.o cpplib.o cpphash.o cppalloc.o cpperror.o cppexp.o version.o backcalls.o cpphook.o
-
-all: pcp3 paper/backcalls.tex paper/pcp3-hooks.tex
-
-
-alllines: lines ctlines cpplines pcplines
-
-lines:	$(PCP3_SOURCES) cpphook.pm
-	wc -l $^ > lines
-	(echo "Backcalls:"; grep '\\backcall{' backcalls.xs | wc -l ) >> lines
-	(echo "Hooks:"; grep '\\hook{' paper/pcp3-hooks.tex | wc -l ) >> lines
-
-ctlines: lexer.l gram.y ct-heap.c ct-nmetab.c ct-prnttree.c \
-		ct-symtab.c ct-token.c ct-tree.c \
-		ct-tree_stk.c \
-		tree.h tree_stk.h utype.h token.h prnttree.h ct-config.h
-	cat $^ | c-remove-comments -s | wc -l > $@
-
-cpplines: cpplib.c cpplib.h cpphash.c cpphash.h cppalloc.c cpperror.c cppexp.c \
-		version.c  perly-undefs.h
-	cat $^ | c-remove-comments -s | wc -l > $@
-
-pcplines: bison-stack.c bison-stack.h  pcpp.c pcpp.h cpphook.c cpphook.h
-	cat $^ | c-remove-comments -s | wc -l > $@
-
-
-
-# Making the preprocessor/parser
-# PCP^3 == Perl-enhanced C PreProcessor and Parser
-# Used to be called pcppct (Perl-enhanced C Preprocesor and Parser using CTree)
-pcp3: $(NON_GRAMMAR_OBJECTS) $(CT_GRAMMAR_OBJECTS) hook_index_constants.pm
-	rm -f $@
-#	$(CC) $(ALL_CFLAGS) $(LDFLAGS) -o $@ $(filter-out hook_index_constants.pm,$^) $(LIBS) -L/uns/lib $(PERLLIBS)
-	$(CC) $(ALL_CFLAGS) $(LDFLAGS) -o $@ $(filter-out hook_index_constants.pm,$^) $(LIBS) $(PERLLIBS)
-
-pcpp.o: cpphook.h
-
-# This target is obsolete -- 
-pcpp: $(OBJECTS) cpphook.h
-	rm -f $@
-	$(CC) $(ALL_CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS) $(LIBS) $(PERLLIBS)
-
-cppmain: $(OBJECTS)
-	rm -f $@
-	$(CC) $(ALL_CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS) $(PERLLIBS)
-
-
-scandecls: $(SD_OBJECTS)
-	rm -f $@
-	$(CC) $(ALL_CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS) $(PERLLIBS)
-
-tags:
-	etags $(PCP3_SOURCES)
-
-clean:
-	rm -f *.o cppmain pcpp pcppct cpphook_names.h hook_index_constants.pm gram.tab.[ch] lexer.c
-
+# Making the preprocessor
 cpp: $(CCCP)
 	-rm -f cpp$(exeext)
 	ln $(CCCP)$(exeext) cpp$(exeext) > /dev/null 2>&1 \
 	 || cp $(CCCP)$(exeext) cpp$(exeext)
-cccp: cccp.o cexp.o version.o
+cccp: cccp.o cexp.o version.o $(LIBDEPS)
 	$(CC) $(ALL_CFLAGS) $(LDFLAGS) -o $@ cccp.o cexp.o \
 	  version.o $(LIBS)
-cexp.o: $(srcdir)/cexp.c $(CONFIG_H) cpphook.h
+cexp.o: $(srcdir)/cexp.c $(CONFIG_H)
 	$(CC) $(ALL_CFLAGS) $(ALL_CPPFLAGS) $(INCLUDES) -c $(srcdir)/cexp.c
 $(srcdir)/cexp.c: $(srcdir)/cexp.y
 	cd $(srcdir); $(BISON) -o cexp.c cexp.y
 
-# Always use -I$(srcdir)/config when compiling.
-.c.o:
-	$(CC) -c $(ALL_CFLAGS) $(ALL_CPPFLAGS) $(INCLUDES) $<
-
-cppmain.o: cppmain.c cpphook.h
-
-cccp.o: cccp.c $(CONFIG_H) pcp.h version.c config.status cpphook.h
+cccp.o: cccp.c $(CONFIG_H) pcp.h version.c config.status
 # The reason we use $(libdir)/g++-include rather than using libsubdir
 # is for compatibility with the current version of libg++.
 	$(CC) $(ALL_CFLAGS) $(ALL_CPPFLAGS) $(INCLUDES) \
@@ -332,7 +210,12 @@ cccp.o: cccp.c $(CONFIG_H) pcp.h version.c config.status cpphook.h
 	  -DTOOL_INCLUDE_DIR=\"$(tooldir)/include\" \
 	  -c `echo $(srcdir)/cccp.c | sed 's,^\./,,'`
 
-cpplib.o: cpplib.c $(CONFIG_H) cpplib.h cpphash.h config.status cpphook.h cpphook.h
+cppmain: cppmain.o cpplib.o cpphash.o cppalloc.o cpperror.o cppexp.o \
+  version.o $(LIBDEPS)
+	$(CC) $(ALL_CFLAGS) $(LDFLAGS) -o $@ cppmain.o cpplib.o cpphash.o \
+	  cppalloc.o cpperror.o cppexp.o version.o $(LIBS)
+
+cpplib.o: cpplib.c $(CONFIG_H) cpplib.h cpphash.h config.status
 	$(CC) $(ALL_CFLAGS) $(ALL_CPPFLAGS) $(INCLUDES) \
 	  -DGCC_INCLUDE_DIR=\"$(libsubdir)/include\" \
 	  -DGPLUSPLUS_INCLUDE_DIR=\"$(gxx_include_dir)\" \
@@ -341,83 +224,10 @@ cpplib.o: cpplib.c $(CONFIG_H) cpplib.h cpphash.h config.status cpphook.h cpphoo
 	  -DTOOL_INCLUDE_DIR=\"$(tooldir)/include\" \
 	  -c `echo $(srcdir)/cpplib.c | sed 's,^\./,,'`
 
-cpperror.o: cpperror.c $(CONFIG_H) cpplib.h cpphook.h
+cpperror.o: cpperror.c $(CONFIG_H) cpplib.h
 
-cppexp.o: cppexp.c $(CONFIG_H) cpplib.h cpphook.h
+cppexp.o: cppexp.c $(CONFIG_H) cpplib.h
 
-cpphash.o: cpphash.c cpplib.h cpphash.h cpphook.h
+cpphash.o: cpphash.c cpplib.h cpphash.h
 
-cppalloc.o: cppalloc.c $(CONFIG_H) cpphook.h
-
-cpphook.o: cpphook_names.h cpphook.h
-
-# Could use "-typemap typemap" w/ typemap file "typemap"
-backcalls.c: backcalls.xs cpphook.h
-	$(PERL-XSUBPP) $< > $@
-
-backcalls.o: backcalls.c pcpp.h
-
-hook_index_constants.pm: cpphook.h
-	(awk <$< '\
-BEGIN { print "#This file is automatically generated by make --- DO NOT EDIT!\n("; } \
-END { print ") = (0..1000);\n\n1;\n__END__" } \
-/^typedef enum hook_index_constants/ { f = 1; next } \
-/^} HOOK_INDEX;/ { exit } \
-f == 1 && $$0 ~ /^[ \t]*HI_/ { gsub("^ +HI_",""); print "\$$"$$0 }') > $@
-
-enum_node_type.pm: cpplib.h
-	./build-enum_node_type.pl <$< >$@
-
-cpphook_names.h: cpphook.h
-	(awk <$< '\
-BEGIN { print "//\$$Id\$$\n// This file is automatically generated by make --- DO NOT EDIT!\nchar *hook_names[] = {"; } \
-END { print "};\n" } \
-/^typedef enum hook_index_constants/ { f = 1; next } \
-/^} HOOK_INDEX;/ { exit } \
-f == 1 && $$0 ~ /^[ \t]*HI_/ { gsub("^ +HI_",""); gsub(",",""); print "\""$$0"\"," }') > $@
-
-## ANSI C grammar included w/ CTree but *not* used by it
-ansi-c-lex.c: ansi-c.l
-	flex -o$@ $^
-
-ansi-c.tab.c ansi-c.tab.h: ansi-c.y
-	$(BISON) -d $^
-
-bison-stack.o: bison-stack.c bison-stack.h lexer.h
-
-## The C Grammar used by CTree 0.05
-lexer.c: lexer.l
-	flex -Pct_yy -o$@ $^
-
-lexer.o: lexer.c cpphook.h
-
-gram.tab.o: gram.tab.c cpphook.h
-
-gram.tab.h: gram.y
-	$(BISON) -v -pct_yy -d $^
-
-gram.tab.c: gram.y
-	$(BISON) -v -pct_yy -d $^
-	cp $@ $@.orig
-	patch <gram.tab.c.patch
-
-gram.h: gram.tab.h
-	cp $< $@
-
-grammar: $(GRAMMAR_OBJECTS) grammar.o
-	gcc -g -o grammar $^ -lfl
-
-.PHONY: tags clean
-
-%.d: %.c
-	$(SHELL) -ec '$(CC) -MM $(CPPFLAGS) $(INCLUDES) $< \
-		| sed '\''s/$*\\.o[ :]*/& $@/g'\'' > $@'
-
-paper/backcalls.tex: backcalls.xs
-	extract-latex-comments <$< >$@
-
-paper/pcp3-hooks.tex: cpphook.h
-	extract-latex-comments <$< >$@
-
-SOURCES = $(wildcard *.c)
-include $(SOURCES:.c=.d)
+cppalloc.o: cppalloc.c $(CONFIG_H)

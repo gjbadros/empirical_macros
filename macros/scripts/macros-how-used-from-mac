@@ -1,5 +1,0 @@
-#!/uns/bin/zsh -
-# Process *.mac file, ignore heading lines starting with ^#,
-# and pull out the column listing the places where the name is
-# expanded, and create histogram for it
-awk < "$@"  'NR>1 && $0 !~ /^[%#]/ {print $8}' | sort | uniq -c

@@ -1,4 +1,0 @@
-#!/bin/sh -
-# This just gives us c/c++ source + headers
-# (Need it to be a shell script for other scripts, not just an alias)
-find . \( -name UNUSED -o -name CVS -o -name SCCS -o -name RCS \) -prune -o \( -name "*.[chCH]" -o -name "*.[cC][cC]" -o -name "*.[cC][pP][pP]" \) -print "$@"

@@ -24,8 +24,6 @@ Written by Per Bothner 1994. */
 
 /* Parse a C expression from text in a string  */
    
-#include <string.h>
-#include <stdlib.h>
 #include "config.h"
 #include "cpplib.h"
 
@@ -225,7 +223,7 @@ parse_number (pfile, start, olen)
     if (largest_digit < digit)
       largest_digit = digit;
     nd = n * base + digit;
-    overflow |= (ULONG_MAX_over_base < n) | (nd < n);
+    overflow |= ULONG_MAX_over_base < n | nd < n;
     n = nd;
   }
 
@@ -281,8 +279,9 @@ cpp_lex (pfile)
 cpp_reader *pfile;
 {
   register int c;
+  register int namelen;
   register struct token *toktab;
-  cpp_annotated_token *pcat;
+  enum cpp_token token;
   struct operation op;
   U_CHAR *tok_start, *tok_end;
   int old_written;
@@ -302,11 +301,11 @@ cpp_reader *pfile;
       return op;
     }
 
-  pcat = cpp_get_token (pfile,0,0);
+  token = cpp_get_token (pfile);
   tok_start = pfile->token_buffer + old_written;
   tok_end = CPP_PWRITTEN (pfile);
   pfile->limit = tok_start;
-  switch (pcat->id)
+  switch (token)
   {
     case CPP_EOF: /* Should not happen ... */
       op.op = 0;
@@ -363,7 +362,7 @@ cpp_reader *pfile;
 	  {
 	    if (c == '\\')
 	      {
-		c = cpp_parse_escape (pfile, (char **)&ptr);
+		c = cpp_parse_escape (pfile, &ptr);
 		if (width < HOST_BITS_PER_INT
 		  && (unsigned) c >= (1 << width))
 		    cpp_pedwarn (pfile,
@@ -975,7 +974,7 @@ cpp_parse_expr (pfile)
 	  int old_size = (char*)limit - (char*)stack;
 	  int new_size = 2 * old_size;
 	  if (stack != init_stack)
-	    new_stack = (struct operation*) xrealloc ((char *)stack, new_size);
+	    new_stack = (struct operation*) xrealloc (stack, new_size);
 	  else
 	    {
 	      new_stack = (struct operation*) xmalloc (new_size);

@@ -22,12 +22,8 @@ Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  You are forbidden to forbid anyone else to use, share and improve
  what you give them.   Help stamp out software-hoarding!  */
 
-#include <strings.h>
-#include <stdlib.h>
-#include <assert.h>
 #include "cpplib.h"
 #include "cpphash.h"
-#include "cpphook.h"
 
 extern char *xmalloc PARAMS ((unsigned));
 
@@ -41,12 +37,6 @@ extern char *xmalloc PARAMS ((unsigned));
 #define const
 #define volatile
 #endif
-
-
-static HASHNODE *hashtab[HASHSIZE];
-static HASHNODE **rghashtab[SIZE_HASHTAB_STACK] = { hashtab };
-static HASHNODE **phashtab = hashtab;
-static int chashtab = 1;
 
 /*
  * return hash function on name.  must be compatible with the one
@@ -77,7 +67,11 @@ hashf (name, len, hashsize)
  * Otherwise, compute the hash code.
  */
 HASHNODE *
-cpp_lookup (cpp_reader *pfile, const U_CHAR *name, int len, int hash)
+cpp_lookup (pfile, name, len, hash)
+     struct parse_file *pfile;
+     const U_CHAR *name;
+     int len;
+     int hash;
 {
   register const U_CHAR *bp;
   register HASHNODE *bucket;
@@ -91,7 +85,7 @@ cpp_lookup (cpp_reader *pfile, const U_CHAR *name, int len, int hash)
   if (hash < 0)
     hash = hashf (name, len, HASHSIZE);
 
-  bucket = phashtab[hash];
+  bucket = hashtab[hash];
   while (bucket) {
     if (bucket->length == len && strncmp (bucket->name, name, len) == 0)
       return bucket;
@@ -115,10 +109,9 @@ cpp_lookup (cpp_reader *pfile, const U_CHAR *name, int len, int hash)
    If #undef freed the DEFINITION, that would crash.  */
 
 void
-delete_macro (cpp_reader *pfile, HASHNODE *hp)
+delete_macro (hp)
+     HASHNODE *hp;
 {
-  if (pfile != NULL)  
-    gjb_call_hooks_sz(CPP_OPTIONS(pfile),HI_DELETE_DEF,hp->name);
 
   if (hp->prev != NULL)
     hp->prev->next = hp->next;
@@ -129,10 +122,6 @@ delete_macro (cpp_reader *pfile, HASHNODE *hp)
      the deleted guy was on points to the right thing afterwards. */
   if (hp == *hp->bucket_hdr)
     *hp->bucket_hdr = hp->next;
-
-  /* FIXGJB: don't do this when it's really a deep copy! */
-  if (chashtab != 0)
-    return;
 
   if (hp->type == T_MACRO)
     {
@@ -151,23 +140,11 @@ delete_macro (cpp_reader *pfile, HASHNODE *hp)
 
   free (hp);
 }
-
-
-/* install/delete-macro is used when evalling and #if expression
- * we do not want to call any hooks for that pseudo-undef
- */
-void
-delete_special_macro(HASHNODE *hp)
-{
-  delete_macro(NULL,hp);
-}
-  
 /*
  * install a name in the main hash table, even if it is already there.
  *   name stops with first non alphanumeric, except leading '#'.
  * caller must check against redefinition if that is desired.
  * delete_macro () removes things installed by install () in fifo order.
- * (or delete-special-macro --gjb)
  * this is important because of the `defined' special symbol used
  * in #if, and also if pushdef/popdef directives are ever implemented.
  *
@@ -203,9 +180,9 @@ install (name, len, type, ivalue, value, hash)
   i = sizeof (HASHNODE) + len + 1;
   hp = (HASHNODE *) xmalloc (i);
   bucket = hash;
-  hp->bucket_hdr = &phashtab[bucket];
-  hp->next = phashtab[bucket];
-  phashtab[bucket] = hp;
+  hp->bucket_hdr = &hashtab[bucket];
+  hp->next = hashtab[bucket];
+  hashtab[bucket] = hp;
   hp->prev = NULL;
   if (hp->next != NULL)
     hp->next->prev = hp;
@@ -225,44 +202,13 @@ install (name, len, type, ivalue, value, hash)
 }
 
 void
-cpp_hash_cleanup (cpp_reader *pfile)
+cpp_hash_cleanup (pfile)
+     cpp_reader *pfile;
 {
   register int i;
   for (i = HASHSIZE; --i >= 0; )
     {
-      while (phashtab[i])
-	delete_macro (pfile,phashtab[i]);
+      while (hashtab[i])
+	delete_macro (hashtab[i]);
     }
 }
-
-void
-cpp_deep_copy_hashtab(HASHNODE **dest, HASHNODE **src)
-{
-  /* FIXNOWGJB this does a shallow copy for now! */
-  int i = 0;
-  for ( ; i < HASHSIZE; i++) 
-    {
-    dest[i] = src[i];
-    }
-}
-
-void
-cpp_push_hashtab(cpp_reader *pfile)
-{
-  assert(chashtab < SIZE_HASHTAB_STACK);
-  rghashtab[chashtab] = malloc(sizeof(HASHNODE *) * HASHSIZE);
-  cpp_deep_copy_hashtab(rghashtab[chashtab],hashtab);
-  ++chashtab;
-  phashtab = rghashtab[chashtab-1];
-}
-
-void
-cpp_pop_hashtab(cpp_reader *pfile)
-{
-  assert(chashtab>1);
-  free(rghashtab[chashtab-1]);
-  rghashtab[chashtab-1] = 0;
-  --chashtab;
-  phashtab = rghashtab[chashtab-1];
-}
-

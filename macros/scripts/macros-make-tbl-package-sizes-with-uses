@@ -1,7 +1,0 @@
-#!/uns/bin/perl -naw
-# Uses tbl-directives-hist and tbl-package-sizes to create
-# tbl-package-sizes-with-uses (figure 9 in the 17 Nov 1997 version of paper)
-my $pkg = $F[0];
-next if $pkg =~ m/Total/i;
-print join("\t",@F), "\t";
-print `macros-count-uses-in-package $pkg`;

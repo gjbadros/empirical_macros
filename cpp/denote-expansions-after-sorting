@@ -1,4 +1,0 @@
-#!/uns/bin/zsh -f
-FORCE=""
-if [ "$1"="-f" ] ; then FORCE="-f"; shift; fi
-denote-expansions $FORCE  =(sort +2 -3n "$@")

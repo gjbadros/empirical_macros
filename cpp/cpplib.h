@@ -20,9 +20,6 @@ Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  You are forbidden to forbid anyone else to use, share and improve
  what you give them.   Help stamp out software-hoarding!  */
 
-#ifndef CPPLIB_H_
-#define CPPLIB_H_
-
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -40,7 +37,7 @@ typedef struct cpp_buffer cpp_buffer;
 typedef struct cpp_options cpp_options;
 typedef struct hashnode cpp_hashnode;
 
-enum cpp_token_id {
+enum cpp_token {
   CPP_EOF = -1,
   CPP_OTHER = 0,
   CPP_COMMENT = 1,
@@ -74,33 +71,16 @@ enum cpp_token_id {
   CPP_POP
 };
 
-
-typedef struct cpp_annotated_token {
-  enum cpp_token_id id;
-  char *szMnameFrom;  // NULL = program text
-  int from_what;  // 0 = macro body, n = macro argument n
-  struct cpp_annotated_token *pcatPrev;
-  struct argdata *args;
-} cpp_annotated_token;
-
-typedef struct cpp_expand_info {
-  int argno;
-  int offset;
-  int length;
-  cpp_hashnode *hp;
-  struct cpp_expand_info *pceiPrior;
-} cpp_expand_info;
-
-  //#ifndef PARAMS
-  //#ifdef __STDC
+#ifndef PARAMS
+#ifdef __STDC
 #define PARAMS(P) P
-  //#else
-  //#define PARAMS(P) ()
-  //#endif
-  //#endif /* !PARAMS */
+#else
+#define PARAMS(P) ()
+#endif
+#endif /* !PARAMS */
 
-typedef cpp_annotated_token * (*parse_underflow_t) PARAMS((cpp_reader*, cpp_expand_info *, struct argdata *));
-typedef int (*parse_cleanup_t) PARAMS((cpp_buffer *, cpp_reader*, cpp_expand_info *));
+typedef enum cpp_token (*parse_underflow_t) PARAMS((cpp_reader*));
+typedef int (*parse_cleanup_t) PARAMS((cpp_buffer *, cpp_reader*));
 
 /* A parse_marker indicates a previous position,
    which we can backtrack to. */
@@ -117,9 +97,9 @@ extern void parse_goto_mark PARAMS((struct parse_marker*, cpp_reader*));
 extern void parse_move_mark PARAMS((struct parse_marker*, cpp_reader*));
 
 extern int cpp_handle_options PARAMS ((cpp_reader*, int, char**));
-extern cpp_annotated_token *cpp_get_token PARAMS ((cpp_reader *, cpp_expand_info *pcei, struct argdata *pad));
+extern enum cpp_token cpp_get_token PARAMS ((struct parse_marker*));
 extern void cpp_skip_hspace PARAMS((cpp_reader*));
-extern cpp_annotated_token *cpp_get_non_space_token PARAMS ((cpp_reader *));
+extern enum cpp_token cpp_get_non_space_token PARAMS ((cpp_reader *));
 
 
 /* Maintain and search list of included files, for #import.  */
@@ -154,15 +134,12 @@ struct cpp_buffer {
   long line_base;
   long lineno; /* Line number at CPP_LINE_BASE. */
   long colno; /* Column number at CPP_LINE_BASE. */
-  long ichSourceStart;
-  long ichSourceEnd;
 #ifndef STATIC_BUFFERS
   cpp_buffer *chain;
 #endif
   parse_underflow_t underflow;
   parse_cleanup_t cleanup;
   void *data;
-  struct argdata *args;
   struct parse_marker *marks;
   /* Value of if_stack at start of this file.
      Used to prohibit unmatched #endif (etc) in an include file.  */
@@ -171,7 +148,6 @@ struct cpp_buffer {
   /* True if this is a header file included using <FILENAME>.  */
   char system_header_p;
   char seen_eof;
-  char fHandlingDirective;
 
   /* True if buffer contains escape sequences.
      Currently there are are only two kind:
@@ -181,7 +157,6 @@ struct cpp_buffer {
      "@@" means a normal '@'.
      (An '@' inside a string stands for itself and is never an escape.) */
   char has_escapes;
-  int fFromPerl;  /* bool saying whether this was pushed using PushBuffer */
 };
 
 struct cpp_pending;  /* Forward declaration - for C++. */
@@ -285,9 +260,6 @@ struct cpp_reader {
 
   /* Number of bytes since the last newline.  */
   int deps_column;
-
-  /* Whether we're on a directive line or not --09/16/97 gjb */
-  int fGettingDirective;
 };
 
 #define CPP_BUF_PEEK(BUFFER) \
@@ -516,14 +488,6 @@ struct cpp_options {
 
   /* Target-name to write with the dependency information.  */
   char *deps_target;
-
-  /* Non-zero if we are to call the perl hooks that have
-     been registered */
-  char call_perl_hooks;
-
-  /* Non-zero if we are to output a message about missing hooks */
-  char fWarnMissingHooks;
-
 };
 
 #define CPP_TRADITIONAL(PFILE) (CPP_OPTIONS(PFILE)-> traditional)
@@ -655,28 +619,9 @@ struct if_stack {
 				    has been passed through rescan */
   U_CHAR *control_macro;	/* For #ifndef at start of file,
 				   this is the macro name tested.  */
-  char *szConditionalClause;
   enum node_type type;		/* type of last directive seen in this group */
 };
 typedef struct if_stack IF_STACK_FRAME;
-
-#define MAX_USES_TRACKED 16
-
-struct argdata {
-  /* Strings relative to pfile->token_buffer */
-  long raw, expanded, stringified;
-  long offset;
-  int raw_length, expand_length;
-  int stringified_length;
-  char newlines;
-  char use_count;
-  int iuse;  /* this counts up the uses as an index into dcUses as we are making that
-		 array during the final expansion of the macro */
-  long dchUsesStart[MAX_USES_TRACKED];  /* beginning offset of each successive use */
-  long dchUsesEnd[MAX_USES_TRACKED];    /* ending offset of each successive use */
-  cpp_expand_info *pcei;
-};
-
 
 extern void cpp_buf_line_and_col PARAMS((cpp_buffer*, long*, long*));
 extern cpp_buffer* cpp_file_buffer PARAMS((cpp_reader*));
@@ -695,35 +640,12 @@ extern void cpp_pfatal_with_name ();
 
 extern void cpp_grow_buffer PARAMS ((cpp_reader*, long));
 extern int cpp_parse_escape PARAMS ((cpp_reader*, char**));
-extern cpp_buffer* cpp_push_buffer PARAMS ((cpp_reader *, U_CHAR*, long, int));
-extern cpp_buffer* cpp_pop_buffer PARAMS ((cpp_reader *, cpp_expand_info *pcei));
+extern cpp_buffer* cpp_push_buffer PARAMS ((cpp_reader *, U_CHAR*, long));
+extern cpp_buffer* cpp_pop_buffer PARAMS ((cpp_reader *));
 
 extern cpp_hashnode* cpp_lookup PARAMS ((cpp_reader*, const U_CHAR*,
 					 int, int));
 
-void init_parse_file (cpp_reader *pfile);
-void init_parse_options (struct cpp_options *opts);
-int push_parse_file (cpp_reader *pfile, char *fname);
-void cpp_finish (cpp_reader *pfile);
-int parse_name (cpp_reader *pfile, int c);
-
-int IargWithOffset(int ich, int cargs, struct argdata *args);
-void cpp_file_line_for_message (cpp_reader *pfile, char *filename, int line, int column);
-void cpp_print_containing_files (cpp_reader *pfile);
-void fatal (char *str, char *arg);
-int cpp_read_check_assertion (cpp_reader *pfile);
-void skip_rest_of_line (cpp_reader *pfile);
-void cpp_message (cpp_reader *pfile, int is_error, char *msg, 
-		  char *arg1, char *arg2, char *arg3);
-
-int CchOffset_internal(cpp_reader *pfile);
-
-int CbuffersDeep(cpp_reader *pfile);
-
-void cpp_print_file_and_line (cpp_reader *pfile);
-
 #ifdef __cplusplus
 }
-#endif
-
 #endif
