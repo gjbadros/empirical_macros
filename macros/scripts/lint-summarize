@@ -1,0 +1,89 @@
+#!/uns/bin/perl -wn
+# lint-summarize
+
+# Invoke like: lint-summarize *.lint
+
+use em_util;
+
+if (/^Total macro definitions not in libraries: ([0-9]+)$/)
+  { $defs += $1;
+    $defs_files++; }
+elsif (/^([0-9]+) \([0-9]+\.[0-9]+%\) Null body with args$/)
+  { $null_body += $1;
+    $null_body_files++; }
+elsif (/^([0-9]+) \([0-9]+\.[0-9]+%\) contains newline$/)
+  { $newline_body += $1;
+    $newline_body_files++; }
+elsif (/^([0-9]+) \([0-9]+\.[0-9]+%\) unparenthesized body$/)
+  { $unparen_body += $1;
+    $unparen_body_files++; }
+elsif (/^([0-9]+) \([0-9]+\.[0-9]+%\) swallows semicolon$/)
+  { $swallow_semi += $1;
+    $swallow_semi_files++; }
+elsif (/^([0-9]+) \([0-9]+\.[0-9]+%\) free variables$/)
+  { $free_var += $1;
+    $free_var_files++; }
+elsif (/^([0-9]+) \([0-9]+\.[0-9]+%\) bad formal name$/)
+  { $formal_name += $1;
+    $formal_name_files++; }
+elsif (/^([0-9]+) \([0-9]+\.[0-9]+%\) multiple formal uses$/)
+  { $formal_mult_use += $1;
+    $formal_mult_use_files++; }
+elsif (/^([0-9]+) \([0-9]+\.[0-9]+%\) adjacent formal uses$/)
+  { $formal_adjacent_use += $1;
+    $formal_adjacent_use_files++; }
+elsif (/^([0-9]+) \([0-9]+\.[0-9]+%\) unparenthesized formal uses$/)
+  { $formal_unparen_use += $1;
+    $formal_unparen_use_files++; }
+elsif (/^([0-9]+) \([0-9]+\.[0-9]+%\) side-effected formal$/)
+  { $formal_modified += $1;
+    $formal_modified_files++; }
+
+END
+{
+  if (($defs_files != $null_body_files)
+      || ($defs_files != $newline_body_files)
+      || ($defs_files != $unparen_body_files)
+      || ($defs_files != $swallow_semi_files)
+      || ($defs_files != $free_var_files)
+      || ($defs_files != $formal_name_files)
+      || ($defs_files != $formal_mult_use_files)
+      || ($defs_files != $formal_adjacent_use_files)
+      || ($defs_files != $formal_unparen_use_files)
+      || ($defs_files != $formal_modified_files))
+    { die "Inconsistent number of files with info: $defs_files $null_body_files $newline_body_files $unparen_body_files $swallow_semi_files $formal_name_files $formal_mult_use_files $formal_adjacent_use_files $formal_unparen_use_files $formal_modified_files"; }
+
+  # Lifted from em_reports
+  print "\n\n";
+  print "Total macro definitions not in libraries: $defs\n";
+  print "$null_body\t("
+    . sprintf("%2.2f",percent2($null_body,$defs))
+      . "%) Null body with args\n";
+  print "$newline_body\t("
+    . sprintf("%2.2f",percent2($newline_body,$defs))
+      . "%) contains newline\n";
+  print "$unparen_body\t("
+    . sprintf("%2.2f",percent2($unparen_body,$defs))
+      . "%) unparenthesized body\n";
+  print "$swallow_semi\t("
+    . sprintf("%2.2f",percent2($swallow_semi,$defs))
+      . "%) swallows semicolon\n";
+  print "$free_var\t("
+    . sprintf("%2.2f",percent2($free_var,$defs))
+      . "%) free variables\n";
+  print "$formal_name\t("
+    . sprintf("%2.2f",percent2($formal_name,$defs))
+      . "%) bad formal name\n";
+  print "$formal_mult_use\t("
+    . sprintf("%2.2f",percent2($formal_mult_use,$defs))
+      . "%) multiple formal uses\n";
+  print "$formal_adjacent_use\t("
+    . sprintf("%2.2f",percent2($formal_adjacent_use,$defs))
+      . "%) adjacent formal uses\n";
+  print "$formal_unparen_use\t("
+    . sprintf("%2.2f",percent2($formal_unparen_use,$defs))
+      . "%) unparenthesized formal uses\n";
+  print "$formal_modified\t("
+    . sprintf("%2.2f",percent2($formal_modified,$defs))
+      . "%) side-effected formal\n";
+}
