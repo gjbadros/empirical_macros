@@ -71,7 +71,7 @@ BEGIN {
 if (/^CATEGORIES_NI:/) {
   $fFoundLine = 1;
   $cNull = sum_meta_category(@mcat_NULL); $sNull += $cNull;
-  $cConst = sum_meta_category(@mcat_CONSTANT); $sConst += $cCons;
+  $cConst = sum_meta_category(@mcat_CONSTANT); $sConst += $cConst;
   $cExp = sum_meta_category(@mcat_NONCONSTANT_EXPRESSION); $sExp += $cExp;
   $cStm = sum_meta_category(@mcat_STATEMENT); $sStm += $cStm;
   $cSyntax = sum_meta_category(@mcat_SYNTAX); $sSyntax += $cSyntax;
