@@ -11,7 +11,7 @@ require Exporter;
  $catEXP $catEXPASSIGN $catEXPFREE $catLITERAL $catCONSTANT $catSOMECONSTANT
  $catFAILURE $catHASTYPEARG $catMACROFUN $catMACROTYPE $catUSESTYPEARG
  $catASM $catSYNTAX $catTYPE $catRESDWORD $catSTATEMENT $catRECURSIVE 
- $catMISMATCH $catPASTING $catSTRINGIZE
+ $catMISMATCH $catPASTING $catSTRINGIZE $catLast
  @categoryname 
  $typeFAIL $typeBOOL $typeCHAR $typeUCHAR $typeSCHAR $typeSHORT 
  $typeUSHORT $typeINT $typeUINT $typeLONG $typeULONG 
@@ -29,7 +29,8 @@ require Exporter;
  $i_usage_code $i_usage_macro $i_usage_cond 
  @i_usage_all
  @cond_category_name
- $ccatDEBUG $ccatPORT_LANLIB $ccatPORT_FEATURE $ccatPORT_MACHINE 
+ $ccatDEBUG $ccatPORT_LANLIB $ccatPORT_LANMACRO $ccatPORT_SYSMACRO
+ $ccatPORT_FEATURE $ccatPORT_MACHINE 
  $ccatCOMMENTING $ccatMI_PREVENTION
  $ccatREDEF_SUPPRESION $ccatMISC_SYSTEM $ccatOTHER $ccatMIXED
 );
@@ -109,6 +110,7 @@ $catMISMATCH  = 22;
 $catPASTING   = 23;
 $catSTRINGIZE = 24;
 
+$catLast = 24;
 
 @categoryname = (
 		    'uncategorized', 'being_categorized', 'never_defined',
@@ -129,7 +131,8 @@ $catSTRINGIZE = 24;
 		   );
 
 # Conditional Categories (for #if.* preprocessor directives)
-@cond_category_name = qw(debug portability_language_or_library portability_feature
+@cond_category_name = qw(debug portability_language_or_library portability_language_macro
+			 portability_system_macro portability_feature
 			 portability_machine commenting mi_prevention redef_suppression
 			 misc_system other mixed_categories);
 
@@ -137,6 +140,8 @@ $catSTRINGIZE = 24;
 (
 $ccatDEBUG, 
 $ccatPORT_LANLIB,
+$ccatPORT_LANMACRO,  #e.g. inline
+$ccatPORT_SYSMACRO,  #e.g. S_IFIFO, errno
 $ccatPORT_FEATURE,
 $ccatPORT_MACHINE,
 $ccatCOMMENTING,
