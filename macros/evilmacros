@@ -2,16 +2,6 @@
 # $Id$
 # evilmacros
 
-# Invoke like this:   evilmacros `find-c`
-# or like this:  find-c | evilmacros -i
-# Perhaps this should do the searching through subdirectories itself,
-# but that wouldn't be too hard.
-# Also permits it to be piped file names via standard in. (added by gjb)
-
-#Complex execution (use zsh):
-# ext=all; p=~/505/data; for i in *(/); do pushd $i; find-c | nice evilmacros -i -D$p/$i.def.$ext -e$p/$i.em.$ext -c$p/$i.cat.$ext -S$p/$i.stat.$ext > $p/$i.out.$ext 2> $p/$i.err.$ext; popd; done
-#
-
 # Report "evil" CPP macros:
 #  Illegal macros:
 #   Unterminated string
@@ -22,11 +12,39 @@
 #   Unbalanced parens, braces, and brackets
 #   Pasting via ##
 #   Stringization via #
+#   Arguments but no body
 #  Turned off testing for:
 #   Empty string
 
+# FIX: the options are non-orthogonal ... this is confusing
+sub usage {
+   die "@_\nUsage: $0 [-ihvDsS] <files>
+  -i  use files listed on stdin [one per line] in addition to any on cmd line
+  -h  display this help message
+  -v  be verbose and list files as they are processed to stderr
+  -D [file]  output the names of the macros (and number of times defined)
+  -S [file]  output the per directive statistics to file
+  -c [file]  show categorizations to file
+  -e [file]  send evil macros to file instead of stdout
+";
+}
+
+# Invoke like this:   evilmacros `find-c`
+# or like this:  find-c | evilmacros -i
+# Perhaps this should do the searching through subdirectories itself,
+# but that is easy to do from the shell.
+
+#Complex execution (use zsh):
+# ext=all; p=~/505/data; for i in *(/); do pushd $i; find-c | nice evilmacros -i -D$p/$i.def.$ext -e$p/$i.em.$ext -c$p/$i.cat.$ext -S$p/$i.stat.$ext > $p/$i.out.$ext 2> $p/$i.err.$ext; popd; done
+# alias find-c='find . \( -name UNUSED -o -name CVS -o -name SCCS -o -name RCS \) -prune -o \( -name "*.[chCH]" -o -name "*.[cC][cC]" -o -name "*.[cC][pP][pP]" \) -print'
+# ext=all; p=/tmp/mernst/data; for i in *(/); do pushd $i; find-c | nice /homes/rivers/mernst/research/notkin/macros/evilmacros-961223 -i -D$p/$i.def.$ext -e$p/$i.em.$ext -c$p/$i.cat.$ext -S$p/$i.stat.$ext > $p/$i.out.$ext 2> $p/$i.err.$ext; popd; done
+# For some reason, adding " >&! ../out-err" doesn't work.
+# Probably omit ">! ../out-out", too, so I can see output.
+# find-c | evilmacros -i -D../out-def -e../out-evil -c../out-cat -S../out-stat -v >! ../out-out
+# evilmacros -D../out-def -e../out-evil -c../out-cat -S../out-stat -v getopt.c
+
 # Harbison & Steele p. 53:
-#   ISO C reaffirms tht macro bodies must be sequences of well-formed tokens.
+#   ISO C reaffirms that macro bodies must be sequences of well-formed tokens.
 # For instance, no unterminated strings permitted.
 
 # Harbison & Steele p. 19 notes:
@@ -35,39 +53,353 @@
 #   commands.
 # However, continuation line pasting apparently occurs before comment removal.
 
-# To do:
-#  Add comments describing complex regular expressions
-#  Classify macros as expression-like (possibly subcategorize as function-like
-#	if expression-like and takes argument), statement-like, or neither
-#	(ie, that change the state of the parser)
-#    Check for the semicolon-swallowing problem.
-#    Check for multiple statements, like
-#        #define double(stmt)    stmt;stmt;
-#        double(i=5) =>   i=5;i=5;
-#  Perhaps warn about multi-line comments/strings in macro definitions.
-#	Presently getline() removes the newlines silently; it shouldn't warn
-#	since it is called for every line, not just those in macro defs.
-#  Warn about "#define foo(bar)"?  Probably legal, but probably a mistake.
-#  Give % #def/cpp-directives for .c files and .h files separately.
-#  Compute number of blank lines, comment lines, and code lines.  (Sum will
-#	be more than total, since lines can contain both comments and code,
-#	or both comments and preprocessor directives.)
-#  Recognize macros that build assembly code, and treat/report specially?
-#	(What % of interesting macros are such?)
-#  Perhaps extract some of the utility code into a library or separate file.
-#  Check for/recognize template-like macros (that take a type as an argument).
-#  Keep track of the current conditional compilation constraints
-#  Look for __XXX__ in the files
+
+###########################################################################
+### To do
+###
+
+## Temporarily moved into my notes-macros file.
+
 
 
 ###########################################################################
 ### Constants
 ###
 
+$scopemarker = "scope marker";	# contains space, as no real variable can
+
+### Boolean
+$true = (1 == 1);
+$false = (1 == 0);
+
+# some evilness (pasting, stringization) is independent of the others,
+# though it may not be able to be classified (actually, stringization
+# is pretty easy to classify, when we see that a macro argument follows #).
+# In this case evilness is more need-for-preprocessor.
+
+# Also note that some evilness has to do with whole files, or parsing,
+# while other has to do with macros that have to be macros.
+# Maybe rename the latter from "evil" to "macrofeature" or some such.
+
+# These should probably be merged into failure categories, below
 $OBSOLETE = 1;
 $DANGER = 2;
 $EVIL = 3;
 $ILLEGAL = 4;
+
+# Nonconstant: free var (var, function, etc), expression w/side effect,
+#	inconsistent types, etc.
+# Statement (??)
+# Other unclassifiable: give evilness reason, or name the free var,
+#	or do multiple of these.
+
+
+# Categories
+
+$catNOTYET = 0;			# shouldn't be used; should be undefined instead
+$catINPROCESS = 1;
+$catMULTIPLE = 2;
+$catNULLDEFINE = 3;
+# Expressions
+$catEXP = 4;
+$catEXPFREE = 5;		# expression with free variables
+$catLITERAL = 6;			# also specify the literal
+$catCONSTANT = 7;			# need to also specify the particular value, if possible
+$catSOMECONSTANT = 8;
+# Non-expressions
+$catFAILURE = 9;		# shouldn't have just one, should have many
+$catTYPEARG = 10;			# macro argument has a type
+# These shouldn't be failures
+$catMACROFUN = 11;
+$catMACROTYPE = 12;
+
+@categoryname = ('uncategorized', 'being categorized', 'multiply categorized', 'null define', 'expression', 'expression with free variables', 'literal', 'constant', 'some constant', 'failed categorization', 'has type argument', 'macro as function', 'macro as type');
+
+## Needs to be fixed.
+## Perhaps give actual constant, so it can be determined.
+sub category_lub
+{ my ($c1, $c2) = @_;
+  return (($c1 == $c2) ? $c1 : $catMULTIPLE);
+}
+
+
+###########################################################################
+### Regular expressions
+###
+
+# Use /o in matches for these, so interpolation/compilation occurs just once.
+# Use single, not  double, quotes so as not to lose the backslashes.
+# But note that \\ and \' are interpolated in single-quoted strings.
+# "\b" prevents two words from running up against one another
+# These regexps are intended not to include any leading or trailing space
+
+# FIX: this regexp is lame-- L,x,U needed for 0x80 << 1LU
+$constantexpregexp = '[-LxU0-9() \t<>+=*|&%!]+';	# note this matches whitespace
+
+# Types and declarations/definitions.
+$typespecifier = '\b\w+\b(\s+\b\w+\b)*'; # 1 group
+$typeregexp = '(' . $typespecifier . '(\s*(\*|\[\s*\]))*)'; # 4 groups
+$identregexp = '\b([a-zA-Z_]\w*)\b';
+# Use $typedeclarator instead.
+# $typeidentregexp = $typeregexp . '\s*' . $identregexp;
+
+# Declarators are actually rather more complicated than this:  see H&S p. 85.
+$typequalifier = '\b(const|volatile)\b';
+$pointerdeclaratorprefix = '\*(\s*' . $typequalifier . ')*'; # 2 groups
+$arraydeclaratorsuffix = '\[(' . $constantexpregexp . ')?\]';
+# $functiondeclaratorsuffix = ...;
+# declaratorsuffix = $arraydeclaratorsuffix plus $functiondeclaratorsuffix
+# 6 groups: $1 = pointerdeclarators, $4 = identifier, $5 = arraydeclarators
+$declarator = '(' . $pointerdeclaratorprefix . '\s*)*'
+  . $identregexp
+  . '(\s*' . $arraydeclaratorsuffix . ')*';
+# Use this in preference to $typeidentregexp
+# 8 groups: $1 = typespecifier, $3 = pointerdeclarators, $6 = identifier, $7 = arraydeclarators
+$typedeclarator = '(' . $typespecifier . ')\s*' . $declarator;
+
+# # This isn't going to work, because of looping.  Break it somehow.
+# $simpledeclarator = $identregexp;
+# $arraydeclarator = $directdeclarator . '\s*\[(' . $constantexpregexp . ')?\]';
+# $typequalifier = '\b(const|volatile)\b';
+# $directdeclarator = '(' . $arraydeclarator . '|' . $simpledeclarator . ')';
+# $pointerdeclarator = '\*(\s*' . $typequalifier . ')*\s*' . $directdeclarator;
+# $declarator = '(' . $pointerdeclarator . '|' . $directdeclarator . ')';
+# type plus identifier:  $1 = type, $5 = identifier
+
+# Numeric literals
+# floating-point number (two variants): $1 = exponent, $2 = suffix (fFlL)
+$floatlitwhole = '[-+]?\d+\.\d*([eE][-+]?\d+)?([fFlL]?)'; # decimal 2.
+$floatlitfrac = '[-+]?\d*\.\d+([eE][-+]?\d+)?([fFlL]?)'; # fraction .2
+# integer regexp: $1 = number, $2 = suffix (uUlL)
+$hexlitregexp = '(0x[0-9a-fA-F]+)([uUlL]?[uUlL]?)';
+$decoctlitregexp = '(\d+)([uUlL]?[uUlL]?)';
+
+# Character and string literals
+$charlitcontents = '(\\\\?.|\\\\[0-7][0-7][0-7])'; # contents of char literal
+$charlit = "L?'" . $charlitcontents . "'"; # character literal
+$nonescdquote = '(^|[^\\\\])(\\\\\\\\)*\"'; # non-escaped double quote
+# PROBLEM:  .* matches too much skips over intervening quotes; .*? is non-greedy
+$stringlitregexp = 'L?\"(|.*?[^\\\\])(\\\\\\\\)*\"'; # string literal
+
+# Does not handle enum, struct, union, and function types
+$numerictypeword = '\b(short|signed|unsigned|long|int|char|float|double)\b';
+$numerictype = $numerictypeword . '(\s+' . $numerictypeword . ')*';
+$nonnumerictype = '\b(void)\b';
+$builtintype = "($numerictype|$nonnumerictype)";
+$typesuffix = '(\s*(\*|\[\d*\]))*'; # note contains leading whitespace
+$fullbuiltintype = $builtintype . $typesuffix;
+
+
+###########################################################################
+### Types
+###
+
+# Perhaps reserve 0 for unrecognized (non-built-in) type.
+# No, with new scheme it's important that it be 0
+$typeFAIL = 0;			# does not parse as a valid type
+$typeBOOL = 1;
+$typeCHAR = 2;			# ought to have typeWCHAR as well
+$typeUCHAR = 3;
+$typeSCHAR = 4;
+$typeSHORT = 5;
+$typeUSHORT = 6;
+$typeINT = 7;
+$typeUINT = 8;
+$typeLONG = 9;
+$typeULONG = 10;
+$typeFLOAT = 11;
+$typeDOUBLE = 12;
+$typeLDOUBLE = 13;
+$typeSTRING = 14;
+$typeUNKNOWN = 15;		# we know it's some type, but don't know which
+$typeUNSPECIFIED = 16;		# declared w/o a type (e.g., as function arg)
+
+%type_num = ('short', $typeSHORT, 'short int', $typeSHORT,
+	     'signed short', $typeSHORT, 'signed short int', $typeSHORT,
+	     'unsigned short', $typeUSHORT, 'unsigned short int', $typeUSHORT,
+	     'int', $typeINT, 'signed int', $typeINT, 'signed', $typeINT,
+	     'unsigned int', $typeUINT, 'unsigned', $typeUINT,
+	     'long', $typeLONG, 'long int', $typeLONG,
+	     'signed long', $typeLONG, 'signed long int', $typeLONG,
+	     'unsigned long', $typeULONG, 'unsigned long int', $typeULONG,
+	     'char', $typeCHAR,
+	     'unsigned char', $typeUCHAR,
+	     'signed char', $typeSCHAR,
+	     'float', $typeFLOAT,
+	     'double', $typeDOUBLE,
+	     'long double', $typeLDOUBLE,
+	     'char *', $typeSTRING, 'char*', $typeSTRING);
+
+@type_name_array = ('typeFAIL', 'bool',
+		    'char', 'unsigned char', 'signed char',
+		    'short', 'unsigned short',
+		    'int', 'unsigned int',
+		    'long', 'unsigned long',
+		    'float', 'double', 'long double',
+		    'char *',
+		    'TYPEunknown');
+
+# For determining whether a Perl variable has numeric type.
+# This is incredibly disgusting; do something about it.
+sub is_number
+{
+  my ($arg) = @_;
+  $arg =~ /^\d+$/;
+}
+
+sub type_name
+{
+  my ($type) = @_;
+  if (is_number($type))
+    { return $type_name_array[$type]; }
+  else
+    { return $type; }
+}
+
+sub type_to_num
+{
+  my ($type) = @_;
+  # print "type = $type; type_num{type} = $type_num{$type} \n";
+  $type =~ s/( [ \t]+|\t[ \t]*)//og; # compress multiple spaces to just one
+  if (defined($type_num{$type}))
+    { return $type_num{$type}; }
+  else
+    { push(@parsetypes, $type);
+      return $type; }
+}
+
+
+### Numeric types
+
+# This doesn't yet do the right thing.
+sub infer_int_type
+{
+  my ($int) = @_;
+  if ($int =~ /^0[xX]/)
+    # Hex
+    { # return first of ($typeUINT $typeLONG $typeULONG) in which the number fits
+      return $typeUINT; }
+  elsif ($int =~ /^0/)
+    { return $typeINT; }	# was unsigned int in non-ANSI C.
+  else
+    { # return first of ($typeINT $typeLONG $typeULONG) in which the number fits
+      return $typeINT; }
+}
+
+sub type_integral_p
+{ my ($type) = @_;
+  return (($type == $typeBOOL)
+	  || ($type == $typeCHAR) || ($type == $typeUCHAR) || ($type == $typeSCHAR)
+	  || ($type == $typeSHORT) || ($type == $typeUSHORT)
+	  || ($type == $typeINT) || ($type == $typeUINT)
+	  || ($type == $typeLONG) || ($type == $typeULONG));
+}
+
+### Type manipulation: arrays, pointers, functions
+
+sub type_dereference
+{ my ($type) = @_;
+  if ($type == $typeSTRING)
+    { return $typeCHAR; }
+  if ($type =~ /(\*|\[\])\s*$/)
+    { return $`; }
+  return $typeUNKNOWN;
+}
+
+# A function type looks like ( ),( ),( )->( )
+# The full parentheses are necessary (but I don't think they are sufficient)
+# to avoid misparsing nested function types.  Maybe that doesn't happen...
+
+# sub type_apply
+
+
+### Type conversions
+
+# Perhaps these should be arrays instead.
+
+sub type_unsigned
+{
+  my ($type) = @_;
+  if (($type == $typeCHAR) || ($type == $typeSCHAR))
+    { return $typeUCHAR; }
+  elsif ($type == $typeSHORT)
+    { return $typeUSHORT; }
+  elsif ($type == $typeINT)
+    { return $typeUINT; }
+  elsif ($type == $typeLONG)
+    { return $typeULONG; }
+  else
+    { return $type; }
+}
+
+sub type_signed
+{
+  my ($type) = @_;
+  if (($type == $typeCHAR) || ($type == $typeUCHAR))
+    { return $typeSCHAR; }
+  elsif ($type == $typeUSHORT)
+    { return $typeSHORT; }
+  elsif ($type == $typeUINT)
+    { return $typeINT; }
+  elsif ($type == $typeULONG)
+    { return $typeLONG; }
+  else
+    { return $type; }
+}
+
+sub type_long
+{
+  my ($type) = @_;
+  if ($type == $typeCHAR)
+    { return $typeLONG; }
+  elsif ($type == $typeUCHAR)
+    { return $typeULONG; }
+  elsif ($type == $typeSCHAR)
+    { return $typeLONG; }
+  elsif ($type == $typeSHORT)
+    { return $typeLONG; }
+  elsif ($type == $typeUSHORT)
+    { return $typeULONG; }
+  elsif ($type == $typeINT)
+    { return $typeLONG; }
+  elsif ($type == $typeUINT)
+    { return $typeULONG; }
+  elsif ($type == $typeLONG)
+    { return $typeLONG; }
+  elsif ($type == $typeULONG)
+    { return $typeULONG; }
+  else
+    { return $type; }
+}
+
+# The "usual binary conversions"; H&S p. 176
+# except that if types are identical, it returns them.
+# Can also return short, ushort.
+sub type_lub
+{ my ($t1, $t2) = @_;
+  # This test works whether $t1, $t2 are numbers or strings
+  if ($t1 eq $t2)
+    { return $t1; }
+  if (!is_number($t1))
+    { $t1 = $typeUNKNOWN; }
+  if (!is_number($t2))
+    { $t2 = $typeUNKNOWN; }
+  if ($t1 > $t2)
+    { ($t1, $t2) = ($t2, $t1); }
+  # If either $t1 or $t2 is a string, its numeric equivalent is zero
+  if ($t1 == 0)			# 0 == $typeFAIL
+    { return $typeFAIL; }
+  if ($t2 == $typeUNKNOWN)
+    { return $typeUNKNOWN; }
+  if (($t2 == $typeLDOUBLE) || ($t2 == $typeDOUBLE) || ($t2 == $typeFLOAT)
+      || ($t2 = $typeULONG) || ($t2 = $typeLONG)
+      || ($t2 == $typeUINT) || ($t2 == $typeINT)
+      || ($t2 == $typeUSHORT)  || ($t2 == $typeSHORT))
+    { return $t2; }
+  # Otherwise, differing char types.
+  return $typeSHORT;
+}
+
 
 ###########################################################################
 ### Variables
@@ -75,96 +407,100 @@ $ILLEGAL = 4;
 
 ## Integers:
 $lines = 0;			# count of lines; line continuation doesn't increment
-$macrodefs = 0;
-$cEvil = 0;			# count of number of evil macros
-$cObsoleted = 0;		# count of number of obsoleted macros
-$cDanger = 0;			# count of number of dangerous macros
-$cIllegal = 0;			# count of number of illegal macros
-$cpp_cmds = 0;			# total preprocessor commands, including macro defs
-## Strings: 
+$cpp_cmds = 0;			# total preprocessor commands
+$symtab_scopes = 0;		# the number of scopes, less the global scope
+## Strings:
 $line = "";			# current line
-$lastline = "";			# the prior line
-$currentfile = 0;
-$mname = 0;
-$margs = 0;
-$mdef = 0;
+# $lastline = "";			# the prior line
+# $currentfile = 0;
+# $mname = 0;
+# $margs = 0;
+# $mdef = 0;
 ## Boolean:
 $incomment = 0;			# in /* */ style comment
 $instring = 0;
+$commaop = 1;			# whether commas should be operators or not
+				# (they shouldn't in arglists, initializers)
 # Shouldn't be in a character constant across lines.
 # $incharconst = 0;
+## Arrays
+# %cppcmdcount: number of uses of each cpp command
+# %files: contains each file processed
 
-# Though this would work:
-#foreach $v (values %macroCommands) {
-#  $$v = 0;
-#}
-# We need to suppress warnings about vars used only once:
-$cAssert = 0;  $cCpu = 0;
-$cDefine = 0;  $cElif = 0;
-$cElse = 0;    $cError = 0;
-$cIdent = 0;   $cIf = 0;
-$cIfdef = 0;   $cIfndef = 0;
-$cImport = 0;  $cInclude = 0;
-$cLine = 0;    $cMachine = 0;
-$cPragma = 0;  $cSystem = 0;
-$cUnassert = 0;$cUndef = 0;
-$cWarning = 0;
+# perhaps make %macros proper just index into other arrays.
 
-%macroCommands = 
-  ( "assert" => \$cAssert,
-    "cpu" => \$cCpu,
-    "define" => \$cDefine,
-    "elif" => \$cElif,
-    "else" => \$cElse,
-    "error" => \$cError,
-    "ident" => \$cIdent,
-    "if" => \$cIf,
-    "ifdef" => \$cIfdef,
-    "ifndef" => \$cIfndef,
-    "import" => \$cImport,
-    "include" => \$cInclude,
-    "line" => \$cLine,
-    "machine" => \$cMachine,
-    "pragma" => \$cPragma,
-    "system" => \$cSystem,
-    "undef" => \$cUndef,
-    "unassert" => \$cUnassert,
-    "warning" => \$cWarning,
-  );
-
-## Categorizations of #define-s
-# Maybe keep a list of these, too, @lNullDefine, etc.
-$cNullDefine = 0;		# e.g. #define DEBUG
-$cSimpleConstantWithDefault = 0; # e.g. #ifndef LEN\n#define LEN 64
-$cSimpleConstant = 0;	        # e.g. #define NULL 0
-$cSimpleStrConstant = 0;        # e.g. #define font "6x13"
-$cSimpleExpression = 0;         # e.g. #define COUNT (1024*256)+5
-$cCastedConstant = 0;         # e.g. #define Meta ((char) 0x83)
-# cPreventMI is just a null DEFINE with #ifndef just prior
-$cPreventMI = 0;		# e.g. #ifndef BLAH, #define BLAH
-$cWithNullArgs=0;               # e.g. #define getch()
-$cWithArgs=0;                   # e.g. #define sqr(x) ((x)*(x))
-$cUncategorized=0;
+# %macros = for each macro, list of indexes for info about it
+# Also want to have summary info true about all definitions...
+#  @mname @margs @mbody @mfile @mline
+#  @mbody_noc @mfreevars @mfreefuns
+#  @mdependenton @mtype @mcategory @mevilness
+# These are for aggregate information.  Keep it for all macros, or just
+# those multiply defined?  Or put it in the other arrays?  (No.)
+#  %mntype %
 
 
 ###########################################################################
-### Usage
+### Testing
 ###
 
-# FIX: the options are non-orthogonal ... this is confusing
+# print "<<" . parse_expression ("(uch)get_byte()") . "\n";
+# print "<<" . parse_expression ("get_byte()") . "\n";
+# print "<<" . parse_expression ("(uch)get_byte") . "\n";
+# print "<<" . parse_expression ("(strcmp((s1),(s2)) == 0)") . "\n";
+# print "<<" . parse_expression ("strcmp((s1),(s2))") . "\n";
+# print "<<" . parse_expression ("((s1),(s2))") . "\n";
+# print "<<" . parse_expression ("(s1),(s2)") . "\n";
+# print "<<" . parse_expression ("(s1)") . "\n";
+# print "<<" . parse_expression ("s1,s2") . "\n";
+# print "<<" . parse_expression ("strcmp(s1,s2)") . "\n";
+# print "<<" . parse_expression ("'\\'") . "\n";
+# print "<<" . parse_expression ("(1L << (n))") . "\n";
+# print "<<" . parse_expression ("(1 << (n))") . "\n";
+# print "<<" . parse_expression ("(1 << n)") . "\n";
+# print "<<" . parse_expression ("(unsigned)(1<<HASH_BITS)") . "\n";
+# print "<<" . parse_expression ("(1<<HASH_BITS)") . "\n";
+# print "<<" . parse_expression ("\"foo\"") . ">>\n";
+# print "<<" . testcategorizeMacro("\"\\037\\235\"") . ">>\n";
+# print "<<" . testcategorizeMacro("\"\037\235\"") . ">>\n";
+# if (parse_expression ("\"foo\"")) { print "FOO is true "; } else { print "false"; }
+# if (0) { print "ZERO is true "; } else { print "false"; }
+# print type_name(parse_expression("0400")) . "\n";
+# print type_name(parse_expression("0x8000")) . "\n";
+# print type_name(parse_expression("33 ? 55 : 0x8000")) . "\n";
+# print type_name(parse_expression("tab_prefix[i]")) . "\n";
+# print defined($type_num["foo"]);
+# print "foo" + 0;
+# print type_name(1);
+# print type_name(parse_expression("flush_block(block_start >= 0L ? (char*)&window[(unsigned)block_start] :  (char*)NULL, (long)strstart - block_start, (eof))")) . "\n";
+# print type_name(parse_expression("(block_start >= 0L ? (char*)&window[(unsigned)block_start] :  (char*)NULL, (long)strstart - block_start, (eof))")) . "\n";
+# print type_name(parse_expression("block_start >= 0L")) . "\n";
+# print type_name(parse_expression("(char*)&window[(unsigned)block_start]")) . "\n";
+# print type_name(parse_expression("(char*)NULL, (long)strstart - block_start, (eof)")) . "\n";
+# print type_name(parse_expression("&window")) . "\n";
+# print type_name(parse_expression("(char*)NULL")) . "\n";
+# print type_name(parse_expression("NULL")) . "\n";
+# print type_name(parse_expression("(long)strstart - block_start")) . "\n";
+# print type_name(parse_expression("(eof)")) . "\n";
+# print type_name(parse_expression("(uch)get_byte()")) . "\n";
+# testcategorizeMacro("(uch)get_byte()");
+# print type_name(parse_expression("memset ((voidp)(s), 0, (n))")) . "\n";
+# print type_name(parse_expression("((char_type *)(&d_buf[DIST_BUFSIZE-1]))")) . "\n";
+# print type_name(parse_expression("((ush)(uch)((p)[0]) | ((ush)(uch)((p)[1]) << 8))")) . "\n";
+# print type_name(parse_expression("((ulg)(SH(p)) | ((ulg)(SH((p)+2)) << 16))")) . "\n";
+# print type_name(parse_expression("malloc((size_t)(items)*(size_t)(size))")) . "\n";
+# testcategorizeMacro("memset ((voidp)(s), 0, (n))");
+# testcategorizeMacro("((char_type *)(&d_buf[DIST_BUFSIZE-1]))");
+# testcategorizeMacro("((ush)(uch)((p)[0]) | ((ush)(uch)((p)[1]) << 8))");
+# testcategorizeMacro("((ulg)(SH(p)) | ((ulg)(SH((p)+2)) << 16))");
+# testcategorizeMacro("malloc((size_t)(items)*(size_t)(size))");
+# $foo = "x"; $foo =~ /x/; print defined($'), defined($'), defined($'), "\n";
+# exit;
 
-# Updated by gjb
-sub usage {
-   die "@_\nUsage: $0 [-ihvDsS] <files>
--i use files listed on stdin [one per line] in addition to any on cmd line
--h display this help message
--v be verbose and list files as they are processed to stderr
--D [file] dump the names of the macros upon conclusion
--S [file] Output the per directive statistics to file
--c [file] Show categorizations to file
--e [file] Send evil macros to file instead of stdout
-";
-}
+# { my $argdecls = "int argc;char **argv;{";
+#   if ($argdecls =~ /^\s*$typedeclarator\s*([,;])/)
+#     { print "$1|$3|$7|$9|$'\n"; } }
+# exit;
+
 
 
 ###########################################################################
@@ -192,128 +528,219 @@ if ($opt_i) {
   }
 }
 
-if ($opt_e) {
-  open(EVIL,">$opt_e") || die "Failed opening $opt_e";
-} else {
-  open(EVIL,">-") || die "Failed opening stdout!";
-}
-
-if ($opt_S) {
-  open(STATS,">$opt_S") || die "Failed opening $opt_S";
-}
-
-if ($opt_D) {
-  open(DEFINES,">$opt_D") || die "Failed opening $opt_D";
-}
-
-if ($opt_c) {
-  open(CATEG,">$opt_c") || die "Failed opening $opt_c";
-}
+if ($opt_e) { open(EVIL,">$opt_e") || die "Failed opening $opt_e"; }
+  else { open(EVIL,">-") || die "Failed opening stdout!"; }
+if ($opt_S) { open(STATS,">$opt_S") || die "Failed opening $opt_S"; }
+if ($opt_D) { open(DEFINES,">$opt_D") || die "Failed opening $opt_D"; }
+if ($opt_c) { open(CATEG,">$opt_c") || die "Failed opening $opt_c"; }
 
 
 $fDebugCmdProcessing && print "@ARGV";
 
-foreach $file (@ARGV)
-{ if ($opt_v)
-    { print STDERR $file . "\n"; }
-  $currentfile = $file;
-  open(INPUT,$file) or next;	# skip to next file if open fails
-  $incomment = 0;
-  $instring = 0;
-  # $incharconst = 0;
- LINELOOP:
-  while ($line = getline())
-    {
-      # check for macros
-      if ($line =~ m/^\#[ \t]*define[ \t]*/)
-	{ $macrodefs++;
-	  $cDefine++;
-	  $line = $';
-	  # remove trailing newline
-	  chop($line);
-	  # print $line, "\n";
-	  ($mname, $margs, $mdef) = macroparse($line);
-	  # if (!defined($margs)) { $margs = ""; } # avoid uninitialized variable warning
-	  # print "parsed: |$mname|$margs|$mdef|\n";
+if (0)
+{ test_typedecl_regexp();
+  exit(); }
 
-	  # save the name of the macro and its args and definitions
-	  # FIX: want to do something about checking whether the
-	  # macro has been redefined, or whatever
-	  $macros{$mname}[0] = $margs;
-	  $macros{$mname}[1] = $mdef;
-	  # let [2] count the number of times we've seen this macro define-d
-	  if (defined($macros{$mname}[2])) {
-	    $macros{$mname}[2]++;
-	  } else {
-	    $macros{$mname}[2]=1;
-	  }
 
-	  categorizeMacro($mname,$margs,$mdef);
+find_preprocessor_commands();
 
-	  # Nothing to check if this is just making the macro defined w/o a body.
-	  if (defined($mdef) && ($flags = checkmacrobody($mdef)) != 0) {
-	    $cEvil++ if $flags & $EVIL;
-	    $cIllegal++ if $flags & $ILLEGAL;
-	    $cObsoleted++ if $flags & $OBSOLETE;
-	    $cDanger++ if $flags & $DANGER;
+# Print number of definitions for each macro
+# for $name (keys %macros)
+# { print "$name $macros{$name}[0]\n"; }
+
+get_macro_call_types();
+
+### All the files have been read; now process the macros
+print "Processing " . $cppcmdcount{"define"} . " macros\n";
+for $index (0..$cppcmdcount{"define"}-1)
+{ # print "$index:  . "" . $mbody[$index] . "\n";
+#   print &parse_expression($mbody[$index]) . ": ";
+#   foreach $var (keys(%parsevars)) { print $var . " "; }
+#   print "\n  $mname[$index]";
+#   if (defined($margs[$index])) { print $margs[$index]; }
+#   print " $mbody[$index]\n";
+  categorizeMacro($index);
+}
+
+# 	  
+# 
+# 	  # Nothing to check if this is just making the macro defined w/o a body.
+# 	  if (defined($mdef) && ($flags = checkmacrobody($mdef)) != 0) {
+# 	    $cEvil++ if $flags & $EVIL;
+# 	    $cIllegal++ if $flags & $ILLEGAL;
+# 	    $cObsoleted++ if $flags & $OBSOLETE;
+# 	    $cDanger++ if $flags & $DANGER;
+# 	  }
+
+output_stats();
+
+exit();
+
+
+###########################################################################
+### Main loop routines
+###
+
+### Read files, save info about macros
+sub find_preprocessor_commands
+{
+
+  foreach $file (@ARGV)
+    { if ($opt_v)
+	{ print STDERR $file . "\n"; }
+      open(INPUT,$file) or next; # skip to next file if open fails
+      # Commented out to quiet compiler
+      # $files{$file} = 1;
+      # Could use undef instead...
+      @dependenton = ();
+      while ($line = getline())
+	{
+	  # [^ \t] instead of \w picks up too much: includes trailing newline
+	  if ($line =~ m/^\#\s*$identregexp\s*/o) {
+	    $cpp_cmd = $1;
+	    $line = $';
+	    chop($line);	# remove trailing newline
+	    # print "#$cpp_cmd $line\n";
+	    $cppcmdcount{$cpp_cmd}++;
+	    $cpp_cmds++;
+	    if ($cpp_cmd eq "if")
+	      { push(@dependenton, $line); }
+	    if ($cpp_cmd eq "ifdef")
+	      { push(@dependenton, "defined($line)"); }
+	    if ($cpp_cmd eq "ifndef")
+	      { push(@dependenton, "!defined($line)"); }
+	    elsif ($cpp_cmd eq "endif")
+	      { pop(@dependenton); }
+	    elsif ($cpp_cmd eq "else")
+	      { my $last = pop(@dependenton);
+		push(@dependenton, "!($last)"); }
+	    elsif ($cpp_cmd eq "elif")
+	      { my $last = pop(@dependenton);
+		push(@dependenton, "(!($last)) && ($line)"); }
+	    elsif ($cpp_cmd eq "define")
+	      { my ($name, $args, $body) = macroparse($line);
+		if (!defined($args)) { $args = ""; }
+		# print "parsed: |$name|$args|$body|\n";
+		my ($thisnum) = $cppcmdcount{$cpp_cmd}-1;
+		($macros{$name}[0])++;
+		$macros{$name}[$macros{$name}[0]] = $thisnum;
+		# print "def number $macros{$name}[0]:";
+		# for ($i = 1; $i <= $macros{$name}[0]; $i++)
+		#   { print " $macros{$name}[$i]"; }
+		# print "\n";
+		$mname[$thisnum] = $name;
+		$margs[$thisnum] = $args;
+		$mbody[$thisnum] = $body;
+		$mdependenton[$thisnum] = @dependenton;
+		$mfile[$thisnum] = $file;
+		$mline[$thisnum] = $.;
+	      }
 	  }
 	}
-      elsif ($line =~ m/^\#[ \t]*([^ ]*)\b/) {
-	$ {$macroCommands{$1}}++ if exists $macroCommands{$1}; 
-	$cpp_cmds++;
+      # Not needed if use a more sophisticated test for default value
+      #   continue {
+      #     $lastline = $line;
+      #   }
+      close(INPUT);
+    }
+}
+
+
+sub output_stats
+{
+
+  if ($lines == 0) {
+    print STDERR "No lines read! Perhaps you meant to use the -i option?\n";
+  } else {
+    if ($opt_S) {
+      # Dump statistics on frequencies of directives
+      printf STATS "DIRECTIVES#: ";
+      while ( ($h,$v) = each(%cppcmdcount) ) {
+	print STATS "$h ";
+      }
+      print STATS "\n";
+      printf STATS "DIRECTIVES: ";
+      while ( ($h,$v) = each(%cppcmdcount) ) {
+	print STATS "$v ";
+      }
+      print STATS "\n";
+      printf STATS "DIRECTIVES%: ";
+      while ( ($h,$v) = each(%cppcmdcount) ) {
+	printf STATS "%2.2f ", (100*$v/$lines);
+      }
+      print STATS "\n";
+
+      printf STATS "GLOBAL: $cppcmdcount{'define'} define-s (%2.2f%), " . ($cpp_cmds - $cppcmdcount{"define"}) . " other (%2.2f%), $lines lines (%2.2f%), %d files\n",
+      100*$cppcmdcount{"define"}/$lines, 100*($cpp_cmds - $cppcmdcount{"define"})/$lines,
+      100*($cpp_cmds)/$lines, $#ARGV+1;
+      printf STATS "EVILSTATS: $cObsoleted obsoleted (%2.2f%), $cDanger dangerous (%2.2f%), $cEvil evil (%2.2f%), $cIllegal illegal (%2.2f%)\n",
+      pct($cObsoleted), pct($cDanger), pct($cEvil), pct($cIllegal);
+
+      # Show categorization
+      print STATS "CATEGORIZATION:";
+      foreach $catname (@categoryname)
+	{ print STATS "\t$catname"; }
+      print STATS "\n";
+      print STATS "CATEGORIZATION#:";
+      # Need to count up total numbers for each categorization.
+      # print STATS "CATEGORIZATION: $cppcmdcount{"define"} $cNullDefine $cPreventMI $cSimpleConstant $cSimpleConstantWithDefault $cSimpleStrConstant $cCastedConstant $cSimpleExpression $cWithNullArgs $cWithArgs $cUncategorized\n";
+      print STATS "\n";
+      print STATS "CATEGORIZATION%:";
+      # Need to count up percentages for each categorization.
+      #     printf STATS "CATEGORIZATION%: %2.2f %2.2f %2.2f %2.2f %2.2f %2.2f %2.2f %2.2f %2.2f %2.2f %2.2f\n",
+      #     pct($cppcmdcount{"define"}),pct($cNullDefine),pct($cPreventMI),pct($cSimpleConstant),
+      #     pct($cSimpleConstantWithDefault),pct($cSimpleStrConstant),pct($cCastedConstant),
+      #     pct($cSimpleExpression),pct($cWithNullArgs),pct($cWithArgs),pct($cUncategorized);
+      print STATS "\n";
+    }
+
+    # -D = dump the defines
+    if ($opt_D) {
+      foreach $name (keys %macros) {
+	# Could also print number of times it's defined.
+	print DEFINES "$name\n";
       }
     }
-  continue {
-    $lastline = $line;
-  }
-  close(INPUT);
-}
-if ($lines == 0) {
-  # This is useful for testing, I guess.
-  print STDERR "No lines read! Perhaps you meant to use the -i option?\n"; 
-} else {
-  if ($opt_S) {
-    # Dump statistics on frequencies of directives
-    printf STATS "DIRECTIVES#: ";
-    while ( ($h,$v) = each(%macroCommands) ) {
-      print STATS "$h ";
-    }
-    print STATS "\n";
-    printf STATS "DIRECTIVES: ";
-    while ( ($h,$v) = each(%macroCommands) ) {
-      print STATS "$$v ";
-    }
-    print STATS "\n";
-    printf STATS "DIRECTIVES%: ";
-    while ( ($h,$v) = each(%macroCommands) ) {
-      printf STATS "%2.2f ", (100*$$v/$lines);
-    }
-    print STATS "\n";
-
-    printf STATS "GLOBAL: $macrodefs define-s (%2.2f%) , $cpp_cmds other (%2.2f%) , $lines lines (%2.2f%) , %d files\n", 
-    100*$macrodefs/$lines, 100*$cpp_cmds/$lines, 
-      100*($macrodefs+$cpp_cmds)/$lines, $#ARGV+1;
-    printf STATS "EVILSTATS: $cObsoleted obsoleted (%2.2f%) , $cDanger dangerous (%2.2f%) , $cEvil evil (%2.2f%) , $cIllegal illegal (%2.2f%)\n",
-    pct($cObsoleted), pct($cDanger), pct($cEvil), pct($cIllegal);
-    print STATS "CATEGORIZATION#: Total NullDefine PreventMI SimpleConstant SimpleConstantWithDefault SimpleStrConstant CastedConstant SimpleExpression WithNullArgs WithArgs Uncategorized\n";
-    print STATS "CATEGORIZATION: $macrodefs $cNullDefine $cPreventMI $cSimpleConstant $cSimpleConstantWithDefault $cSimpleStrConstant $cCastedConstant $cSimpleExpression $cWithNullArgs $cWithArgs $cUncategorized\n";
-    printf STATS "CATEGORIZATION%: %2.2f %2.2f %2.2f %2.2f %2.2f %2.2f %2.2f %2.2f %2.2f %2.2f %2.2f\n",
-    pct($macrodefs),pct($cNullDefine),pct($cPreventMI),pct($cSimpleConstant),
-    pct($cSimpleConstantWithDefault),pct($cSimpleStrConstant),pct($cCastedConstant),
-    pct($cSimpleExpression),pct($cWithNullArgs),pct($cWithArgs),pct($cUncategorized);
-  }
-
-  # -D = dump the defines
-  if ($opt_D) {
-    foreach $mname (keys %macros) {
-      print DEFINES "$mname $macros{$mname}[2]\n";
-    }
   }
 }
+
+# pct(x) returns a percentage of macros defined
+sub pct {
+  my ($x) = $_[0];
+  if (!defined($x))
+    { return; }
+  if ($x < 0 || $x > $cppcmdcount{"define"}) {
+    print STDERR "Percentage out of range: $x / $cppcmdcount{'define'}\n";
+  }
+  return (100*$x/$cppcmdcount{"define"});
+}
+
+sub test_typedecl_regexp
+{
+  foreach $file (@ARGV)
+    { if ($opt_v)
+	{ print STDERR $file . "\n"; }
+      open(INPUT,$file) or next; # skip to next file if open fails
+      # Commented out to quiet compiler
+      # $files{$file} = 1;
+      # Could use undef instead...
+      @dependenton = ();
+      while ($line = getline())
+	{ if ($line =~ /^$typespecifier/o)
+	    { print "ts: <<$&>> $line"; }
+	  if ($line =~ /^$typedeclarator/o)
+	    { print "td: <<$&>> $line"; }
+	  if ($line =~ /^$typedeclarator\s*[,=;\(]/o)
+	    { print "td+: $line"; }
+	}
+      close(INPUT);
+    }
+}
+
 
 
 ###########################################################################
-### Subroutines
+### Parsing
 ###
 
 # Read the next logical line from <INPUT>, until no continuation char
@@ -321,6 +748,8 @@ if ($lines == 0) {
 # Result ends with newline.
 sub getline
 { my $result;
+  if (not (($instring == 0) && ($incomment == 0)))
+    { die "Bad instring $instring or incomment $incomment\n"; }
   if (not ($result = <INPUT>))
     { return $result; }
   $lines++;
@@ -333,22 +762,22 @@ sub getline
       # splice lines
       while ($result =~ m/\\$/)
 	{ # block to localize match data
-	  { if ($result =~ m/\\\Z(?!\n)/)
-	      { print EVIL "$currentfile:$.: evil: file ends with backslash (no newline)\n"; } }
+	  { if ($result =~ m/\\\Z(?!\n)/) # backslash, end of string, no newline
+	      { print EVIL "$file:$.: evil: file ends with backslash (no newline)\n"; } }
 	  $result = $`;		# remove backslash and possibly newline
 	  my $nextline;
 	  if ($nextline = <INPUT>)
 	    { &updateinvars($nextline);
 	      $result = appendlines($result, $nextline);
 	      # The appendlines trims trailing spaces, prettying the message.
-	      if ($nextline =~ m/^[ \t]*$/)
+	      if ($nextline =~ m/^\s*$/)
 		{ # No \n at end: $result ends in a newline
-		  print EVIL "$currentfile:$.: dangerous: blank line follows continuation character:\n    $result"; }
+		  print EVIL "$file:$.: dangerous: blank line follows continuation character:\n    $result"; }
 	    }
 	  else
 	    # Already removed backslash and newline from result.
 	    # (Should I add them back?)
-	    { print EVIL "$currentfile:$.: dangerous: file ends with continuation character:\n    $result\n"; } }
+	    { print EVIL "$file:$.: dangerous: file ends with continuation character:\n    $result\n"; } }
 
       while ($incomment)
 	{ my $nextline;
@@ -357,7 +786,7 @@ sub getline
 	      updateinvars($nextline);
 	      $result = appendlines($result, $nextline); }
 	  else
-	    { print EVIL "$currentfile:$.: dangerous: file ends in comment:\n    $result";
+	    { print EVIL "$file:$.: dangerous: file ends in comment:\n    $result";
 	      $incomment = 0; } }
 
       # Not "while ($instring) ..." because processing continuation lines
@@ -367,9 +796,13 @@ sub getline
 	  if ($nextline = <INPUT>)
 	    { $lines++;
 	      updateinvars($nextline);
-	      $result = appendlines($result, $nextline); }
+	      # Strict ANSI C does not permit newlines in string constants;
+	      # perhaps warn.
+	      # Not "$result = appendlines($result, $nextline);" because in string.
+	      $result = $result . $nextline;
+ }
 	  else
-	    { print EVIL "$currentfile:$.: dangerous: file ends in string:\n    $result\n";
+	    { print EVIL "$file:$.: dangerous: file ends in string:\n    $result\n";
 	      $instring = 0; } }
     }
 
@@ -380,7 +813,7 @@ sub getline
 sub updateinvars
 {
   my $remaining = $_[0];
-  
+
   while ($remaining)
     { if ($incomment)
 	{ if ($remaining =~ /\*\//)
@@ -390,22 +823,22 @@ sub updateinvars
 	    { return; } }
       elsif ($instring)
 	{ # print "in string, processing $remaining";
-	  if ($remaining =~ m/(^|[^\\])(\\\\)*\"/)
+	  if ($remaining =~ m/$nonescdquote/o)
+	    # Found a non-escaped double quote
 	    { $remaining = $';
 	      $instring = 0; }
 	  else
-	    { # print "$currentfile:$.: in string after line $_[0]";
+	    { # print "$file:$.: in string after line $_[0]";
 	      return; } }
       # If not instring, I think \" suffices instead of the more complicated
       # regexp that checks for leading backslashes.
-      elsif ($remaining =~ m/\/[\*\/]|['\"]/) #'FIXCOLOR
-	{ if ($& eq "'")
-	    { if (($' =~ m/^\\''/) || (($' =~ m/'/) && (length($`) < 5))) #'FIXCOLOR
+      elsif ($remaining =~ m/\/[\*\/]|[\'\"]/) #'FIXCOLOR
+	{ if ($& eq "\'")
+	    { if ($' =~ m/^$charlitcontents\'/o)
 		{ $remaining = $'; }
 	      else
                 # No newline, since $_[0] has one.
-                # Also, don't die: let processing proceed.
-		{ # die "$currentfile:$.: (bad character constant) $&\n    in $_[0]";
+		{ print EVIL "$file:$.: bad character constant $&\n    in $_[0]";
                   $remaining = $'; } }
 	  elsif ($& eq "\"")
 	    { $remaining = $';
@@ -413,17 +846,157 @@ sub updateinvars
 	  elsif ($& eq "//")
 	    { return; }
 	  elsif ($& eq "/*")
-	    { $remaining = $'; 
+	    { $remaining = $';
 	      $incomment = 1; }
 	  else
-	    { die "What match?  $& in $_[0]\n"; } }
+	    { die "$file:$.: updateinvars: what match?  $& in $_[0]\n"; } }
       else
 	{ return; }
     }
 }
 
+# Should merge with updateinvars.  It's more inefficient, but then the code
+# appears just once.  (I just hate to do it for every line instead of just
+# macro definition bodies.)
 
-# This pretties things up but changes contents of line-spanning strings
+# All backslash line continuations have already been processed; no
+# nonterminated strings, comments, or character constants.
+# Result does NOT end in newline
+sub remove_comments
+{
+  my $remaining = $_[0];
+  my $result = "";
+
+  # Check for character constants to avoid processing " in one.
+
+  # If not instring, I think \" suffices instead of the more complicated
+  # regexp that checks for leading backslashes.
+  while ($remaining =~ m/\/[\*\/]|[\"]|\'\\?[\"\']\'/) #'FIXCOLOR
+    { $result = $result . $`;
+      if (($& eq "'\"'") || ($& eq "'\\\"'") || ($& eq "'\\''"))
+	{ $result .= $&; }
+      elsif ($& eq "\"")
+	{ $result .= $&;
+	  $remaining = $';
+	  if ($remaining =~ m/$nonescdquote/o)
+	    # Found a non-escaped double quote
+	    { $result .= $` . $&;
+	      $remaining = $'; }
+	  else
+	    { die "Didn't find string terminator."; } }
+      elsif ($& eq "//")
+	{ $remaining = ""; }
+      elsif ($& eq "/*")
+	{ $remaining = $';
+	  { if ($remaining =~ /\*\//)
+	      { $remaining = $'; }
+	    else
+	      { die "Didn't find comment terminator in '$remaining' after '$`$&'"; } } }
+      else
+	{ die "$file:$.: remove_comments: what match?  $& in $_[0]\n"; } }
+  # This removes trailing newline, as well as other leading and trailing space
+  return trim_whitespace($result . $remaining);
+}
+
+# Assumes no comments
+sub has_token
+{
+  my ($token, $line) = @_;
+  if (!defined($token)) { die "undefined token, line $line\n"; }
+  if (!defined($line)) { die "undefined line, token $token\n"; }
+
+  # Check for character constants to avoid processing " in one.
+
+  # If not instring, I think \" suffices instead of the more complicated
+  # regexp that checks for leading backslashes.
+  while (($line =~ m/[\"\']/) #'FIXCOLOR
+	 # should regexp-quote $token
+	 || ($line =~ m/\Q$token\E/))
+    { my $match = $&;
+      $line = $';
+      print "has_token($token) matched $match before $line\n";
+      if ($match eq $token)
+	{ return $true; }
+      elsif ($match eq "\"")
+	{ if ($line =~ /$nonescdquote/o)
+	    { $line = $'; }
+	  else
+	    { die "Didn't find end of string literal $line.\n"; } }
+      elsif ($match eq "'")
+	{ if ($line =~ /$charlitcontents\'/o)
+	    { $line = $'; }
+	  else
+	    { die "Didn't find end of character literal $line.\n"; } }
+      else
+	{ die "What match $match in $line\n"; } }
+  return $false;
+}
+
+
+# Stopgap version
+sub simplify_line
+{ my ($line) = @_;
+  if ($line =~ /^\#/)
+    { return "\n"; }
+  else
+    { return remove_comments($line); }
+}
+
+
+
+## More repeated code that ought to be merged in elsewhere.
+## All backslash line continuations have already been processed; no
+## nonterminated strings, comments, or character constants.
+#sub simplify_line
+#{
+#  my $remaining = $_[0];
+#  my $result = "";
+#  
+#  # Check for character constants to avoid processing " in one.
+#
+#  # If not instring, I think \" suffices instead of the more complicated
+#  # regexp that checks for leading backslashes.
+#  while ($remaining =~ m/\/[\*\/]|[\"]|\'\\?[\"\']\'/) #'FIXCOLOR
+#    { $result = $result . $`;
+#      if (($& eq "'\"'") || ($& eq "'\\\"'") || ($& eq "'\\''"))
+#	{ $result .= $&; }
+#      elsif ($& eq "\"")
+#	{ $result .= $&;
+#	  $remaining = $';
+#	  if ($remaining =~ m/$nonescdquote/o)
+#	    # Found a non-escaped double quote
+#	    { $result .= $` . $&;
+#	      $remaining = $'; }
+#	  else
+#	    { die "Didn't find string terminator."; } }
+#      elsif ($& eq "//")
+#	{ $remaining = ""; }
+#      elsif ($& eq "/*")
+#	{ $remaining = $';
+#	  { if ($remaining =~ /\*\//)
+#	      { $remaining = $'; }
+#	    else
+#	      { die "Didn't find comment terminator."; } } }
+#      else
+#	{ die "$file:$.: remove_comments: what match?  $& in $_[0]\n"; } }
+#  return trim_whitespace($result . $remaining);
+#}
+
+
+sub trim_whitespace
+{
+  my ($result) = @_;
+  $result =~ s/^\s+//;
+  $result =~ s/\s+$//;
+  # if ($result =~ /^\s+(.*)$/) { $result = $1; }
+  # # (.*)\s+ only gets rid of last space
+  # if ($result =~ /^(.*[^\s])\s+$/) { $result = $1; }
+  return $result;
+}
+
+
+# This pretties things up but changes contents of line-spanning strings,
+# so don't call it if ARG1 ends inside a string.
 sub appendlines
 {
   my ($arg1, $arg2) = @_;
@@ -434,129 +1007,1308 @@ sub appendlines
   $arg1 . $arg2;
 }
 
-
-
-###########################################################################
-### Parse and check macros
-###
-
-# Return an array of three elements: name, args, def
+# Return an array of three elements: name, args, def.
+# None have leading or trailing whitespace
 sub macroparse
 { if ($#_ != 0) { die "Wrong number of arguments to macrobody."; }
   # print "macroparse $_[0]\n";
   # Match zero or more, not one or more, spaces before definition.
   # (Perhaps warn if zero are matched.)
-  my @result = ($_[0] =~ m/^([a-zA-Z_0-9]+)(\([^\)]*\))?[ \t]*(.*)$/);
-  if ($#result != 2)		# $# = 2 => 3 elements
+  my @result = ($_[0] =~ m/^(\w+)(\([^\)]*\))?\s*(.*)\s*$/);
+  if ($#result != 2)		# ($# == 2) => 3 elements
     { die "Problem parsing macro $_[0]\n"; }
   @result;
 }
 
-# FIsNumConst(string)  returns 1 iff string matches a numeric const regexp
-sub FIsNumConst {
-  my $str = $_[0];
-  if ($str =~ /^\(?-?\d+\.?\d*\)?$/ || # decimal 2.
-      $str =~ /^\(?-?\d*\.?\d+\)?$/ || # fraction .2
-      $str =~ /^0x[\d|a-f|A-F]+$/ ||   # hex
-	 $str =~ /^-?\d+L$/) {         # trailing L for long
-    return 1;
-  } else {
-    return 0;
-  }
+
+# Recursive descent?  Something simpler?
+#   exp = (exp) | num | var | exp op exp     -- no functions
+# To tokenize, just split at word beginning and end and at number beginning
+# 	and end (which may be a bit tricky to tease apart from operator, with
+#	leading +/-, but standard says literals have no leading sign -- it's
+#       a unary operator).
+
+
+# Side-effects %parsevars, %parsefuns, %parsetypes
+
+# Arguments: string
+# Returns: type (or 0 if unsuccessful parse)
+#          remaining string?
+# Side-effects: @parsevars, @parsefuns, @parsetypes
+
+# Should check @parsexxxs for reserved words; if we find any, I misparsed.
+
+sub parse_expression
+{
+  my ($exp) = $_[0];
+  # Could use undef instead...
+  @parsevars = ();
+  @parsefuns = ();
+  @parsetypes = ();
+  # print "parse_expression $exp\n";
+  my ($type, $remaining) = parse_exp(remove_comments($exp));
+  # print "parse_expression $remaining\n";
+  if ($remaining =~ /^\s*$/)
+    { return $type; }
+  else
+    { return $typeFAIL; }
 }
 
-# pct(x) returns a percentage of macros defined
-sub pct {
-  $x = $_[0];
-  if ($x < 0 || $x > $macrodefs) {
-    print STDERR "Percentage out of range: $x / $macrodefs\n";
-  }
-  return (100*$x/$macrodefs);
+
+sub parse_exp_nocommaop
+{
+  my ($exp, $ignoretypes) = @_;
+  #   if ((!defined($ignoretypes)) || !$ignoretypes)
+  #     { print "parse_exp_nocommaop $exp\n"; }
+  #   else
+  #     { print "parse_exp_nocommaop (ignore types) $exp\n"; }
+  my $oldcommaop = $commaop;
+  $commaop = $false;
+  my ($type, $remaining) = parse_exp($exp, $ignoretypes);
+  $commaop = $oldcommaop;
+  #  print "parse_exp_nocommaop returning ($type) $remaining\n";
+  return ($type, $remaining);
 }
 
-# Update globals $cXXXX, @lXXXX based on what we can tell about
-# this macro
-# FIX: need to update @l vars
-# Uses $lastline global, too
+sub parse_exp_commaop
+{
+  my ($exp, $ignoretypes) = @_;
+  my $oldcommaop = $commaop;
+  $commaop = $true;
+  my ($type, $remaining) = parse_exp($exp, $ignoretypes);
+  $commaop = $oldcommaop;
+  return ($type, $remaining);
+}
+
+# Takes a
+# Like parse_expression, but doesn't reset @parsexxxs.
+# Returns two values:  the expression's type and the remaining string.
+# Every call should be followed by   "if (!$type) { return($typeFAIL,$exp); }"
+# See H&S p. 181.
+sub parse_exp
+{
+  my ($exp, $ignoretypes) = @_;
+  if (!defined($ignoretypes))
+    { $ignoretypes = $false; }
+  # If ignoretypes is set, then we don't try to infer types, look up types
+  # of unknown functions, or set symbol tables.  We do still compute types
+  # for literals and return a type, I think.
+
+  # Perhaps remember length of @parsexxxs, so we can restore them if failure.
+  # But right now we never fail unless everything fails, so never mind...
+
+  # First, cope with open parens
+
+  # Cast
+  if ($exp =~ /^\s*\(\s*($fullbuiltintype)\s*\)/)
+    { # print "Found cast $1\n";
+      my ($casttype) = $1;
+      my ($type, $remaining) = parse_exp($');
+      if (!$type) { return($typeFAIL,$exp); }
+      return parse_exp_follower(type_to_num($casttype),$remaining); }
+  # ($exp =~ /^\s*\(\(\s*$typeregexp\s*\)\s*(.*)\)/ && FIsNumConst($3))
+  # Type in parens followed by (what looks like) paren, number, or identifier
+  if ($exp =~ /^\s*\(\s*$typeregexp\s*\)\s*([0-9a-z\(])/)
+    { my ($casttype) = $1;
+      push(@parsetypes, $casttype);
+      # print "Found cast $1 $5\n";
+      my ($type, $remaining) = parse_exp($5 . $');
+      if (!$type) { return($typeFAIL,$exp); }
+      return parse_exp_follower($casttype,$remaining); }
+
+  # Parens as grouping
+  if ($exp =~ m/^\s*\(/)
+    { my ($type, $remaining) = parse_exp_commaop($');
+      if (!$type) { return($typeFAIL,$exp); }
+      if ($remaining =~ m/^\s*\)/)
+	{ return parse_exp_follower($type, $'); }
+      else
+	{ return($typeFAIL,$exp); } }
+
+  # Unary prefix operators
+  if ($exp =~ /^\s*(\+\+|--|[-~!+&*])/)
+    { my ($type, $remaining) = parse_exp($');
+      if (!$type) { return($typeFAIL,$exp); }
+      return parse_exp_follower($type,$remaining); }
+  # [^\)] was [ \ta-zA-Z0-9*]
+  if ($exp =~ /^\s*sizeof\s*\(\s*([^\)]+)\)/)
+    { my $sizeoftype = $1;
+      $sizeoftype =~ s/\s+$//;
+      my $remaining = $';
+      if (!($sizeoftype =~ /^$typeregexp$/o))
+	{ die "sizeof($sizeoftype) doesn't look like a type.\n"; }
+      return parse_exp_follower(type_to_num($sizeoftype),$remaining); }
+
+  # Literals
+  $exp =~ s/^\s+//;		# remove leading space
+
+  # Literal string
+  if ($exp =~ /^$stringlitregexp/)
+    # String contains no non-escaped double-quote
+    # Should look for a following string, to concatenate the two.
+    # Perhaps special-case:  look for symbol (which is macro with typeSTRING)
+    # or literal string.
+    { return ($typeSTRING, $'); }
+
+  # Literal character
+  if ($exp =~ /^$charlit/o)
+    { return parse_exp_follower($typeCHAR, $'); }
+
+  # Literal floating-point
+  # This precedes integer because an integer matches the first part of a float
+  if (($exp =~ /^$floatlitwhole/o)
+      || ($exp =~ /^$floatlitfrac/o))
+    { my ($type) = $typeDOUBLE;
+      if (($2 eq "f") || ($2 eq "F"))
+	{ $type = $typeFLOAT; }
+      elsif (($2 eq "l") || ($2 eq "L"))
+	{ $type = $typeLDOUBLE; }
+      return parse_exp_follower($type,$'); }
+
+  # Literal integer (octal)
+  # Don't need leading [-+]? because they are always unary operators, never
+  # part of the literal itself.
+  if (($exp =~ /^$hexlitregexp/o)  # hex (regexp failed with \d for 0-9)
+      # hex precedes octal/decimal because the "0" looks like a leading integer
+      || ($exp =~ /^$decoctlitregexp/o)) # octal or decimal
+    { # print "Found integer $1\n";
+      my ($remaining) = $';
+      my ($type) = infer_int_type($1);
+      # print "inferred type ", type_name($type), "\n";
+      if ($2 =~ /[uU]/)
+	{ $type = type_unsigned($type); }
+      if ($2 =~ /[lL]/)
+	{ $type = type_long($type); }
+      # print "parse_exp_follower($type,$remaining)\n";
+      return parse_exp_follower($type,$remaining); }
+
+  # Variable
+  elsif ($exp =~ /^$identregexp/o)
+    { my ($var) = $1;
+      my ($remaining) = $';
+      categorizeMacroName($var);
+      my $vartype = $mntype{$var};
+      if (!defined($vartype))
+	# Need to do a MUCH better job here; in particular, infer a type.
+	# Perhaps return a negative number, an index into a list of things
+	# whose types need to be inferred.
+	{ $vartype = $typeUNKNOWN; }
+      # Perhaps do something different if the categorization was successful.
+      if ($remaining =~ /^\s*\(/)
+	{ push(@parsefuns, $var);
+	  return parse_arglist($vartype, $');
+	}
+      else
+	{ push(@parsevars, $var);
+	  return parse_exp_follower($vartype, $remaining); }
+    }
+  else
+    { # print "Couldn't match $exp\n";
+      return ($typeFAIL, $exp); }
+}
+
+
+# $arglist already has leading paren stripped.
+sub parse_arglist
+{
+  my ($ftype, $arglist) = @_;
+
+  # Need a notation for function types; maybe just -> in front.
+  while (!($arglist =~ /^\s*\)/))
+    { my ($thisargtype, $comma) = parse_exp_nocommaop($arglist);
+      if (!$thisargtype) { return($typeFAIL, $arglist); }
+      # push $thisargtype somewhere
+      if ($comma =~ /^\s*,/)
+	{ $arglist = $'; }
+      elsif ($comma =~ /^\s*\)/)
+	{ $arglist = $comma; }
+      else
+	{ die "Neither comma nor close paren followed well-formed arg $arglist\n";
+	  return($typeFAIL, $exp); } }
+  return parse_exp_follower($ftype,$');
+}
+
+# $initializer already has leading brace stripped
+sub parse_array_initializer
+{
+  my ($initlist) = @_;
+
+  print "parse_array_initializer $initlist\n";
+
+  while (!($initlist =~ /^\s*\}/))
+    { my ($thisinittype, $comma);
+      print "current initlist = $initlist\n";
+      if ($initlist =~ /^\s*\{/)
+	{ ($thisinittype, $comma) = parse_array_initializer($');
+	  # transform subinittype from array to scalar type
+	}
+      else
+	{ ($thisinittype, $comma) = parse_exp_nocommaop($initlist);
+	  # print "parse_exp_nocommaop returned ($thisinittype) $comma\n";
+	}
+      if (!$thisinittype) { return($typeFAIL, $initlist); }
+      # push $thisinittype somewhere
+      if ($comma =~ /^\s*,/)
+	{ $initlist = $'; }
+      elsif ($comma =~ /^\s*\}/)
+	{ return ($thisinittype, $'); }
+      else
+	{ die "Neither comma nor close brace followed well-formed init $initlist\n";
+	  return($typeFAIL, $exp); } }
+  # don't call parse_exp_follower
+  return ($typeUNKNOWN,$');
+}
+
+# Side-effects the global arrays @argnames @argtypes
+# Returns a success boolean, and the post-closeparen string
+sub parse_function_decl_args
+{
+  my ($argdecls) = @_;
+  my $remaining = $argdecls;
+  @argnames = ();
+  @argtypes = ();
+
+  while (!($argdecls =~ /^\)/))
+    { my $remaining = $argdecls;
+      print "parsing next arg decl in $argdecls\n";
+      while (!($remaining =~ /^\s*[,\)]/))
+	{ my ($thisargtype, $stillremaining) = parse_exp_nocommaop($remaining, "ignore types");
+	  if ($stillremaining eq $remaining)
+	    { die "Didn't find arg decl in $remaining\n"; }
+	  if (!$thisargtype)
+	    { die "Parse failed; shouldn't get to here.\n";
+	      # The parse failed; this wasn't a function declaration after all
+	      # Try again starting after the first close paren.
+	      if ($remaining =~ /\)/)
+		{ $remaining = $'; }
+	      else
+		{ $remaining = ""; }
+	      return ($false, $remaining); }
+	  $remaining = $stillremaining; }
+      # Now $remaining is $argdecls less the argument
+      # thisdecl has no leading or trailing whitespace
+      my $thisdecl = substr($argdecls,0,length($argdecls)-length($remaining));
+      if ($thisdecl =~ /^\s*$/)
+	{ die "Didn't find a function decl arg in $remaining\n"; }
+      print "parsing function arg declarator $thisdecl\n";
+      if ($thisdecl =~ /^$identregexp$/o)
+	{ push(@argnames, $thisdecl);
+	  push(@argtypes, $typeUNSPECIFIED); }
+      elsif ($thisdecl =~ /^$typedeclarator$/o)
+	{ my $typespec = $1;
+	  my $ptrdecls = $3;
+	  my $identifier = $6;
+	  my $arraydecls = $7;
+	  push(@argnames, $identifier);
+	  push(@argtypes, $typespec . $ptrdecls . $arraydecls); }
+      else
+	{ die "Couldn't parse function arg declarator $thisdecl\n"; }
+      if ($remaining =~ /^\s*,/)
+	{ $remaining = $'; }
+      $argdecls = $remaining;
+      $argdecls =~ s/^\s+//;	# remove leading whitespace
+    }
+  print "match: $`|$&|$'\n";
+  if (!defined($'))
+    { die "postmatch not defined.\n"; }
+  my $postmatch = $';
+  if (!defined($postmatch))
+    { die "postmatch not defined.\n"; }
+  return ($true, $');
+}
+
+# Side effects global %argnametype;
+# Return an associative array of names to types and the remaining string
+# after the open brace.
+sub parse_KandR_function_arg_decls
+{
+  my ($argdecls) = @_;
+  %argnametype = ();
+  while (!($argdecls =~ /^\s*\{/))
+    { print "parsing K&R function arg decls $argdecls\n";
+      if (!($argdecls =~ /^\s*$typedeclarator\s*([,;])/))
+	{ die "Couldn't parse K&R-style type declarator $argdecls\n"; }
+      my $typespec = $1;
+      if (!(defined($typespec))) { die "undefined typespec for $argdecls"; }
+      my $ptrdecls = $3;
+      if (!(defined($ptrdecls))) { $ptrdecls = ""; }
+      my $arraydecls = $7;
+      if (!(defined($arraydecls))) { $arraydecls = ""; }
+      my $identifier = $6;
+      if (!(defined($identifier))) { die "undefined identifier for $argdecls"; }
+      my $nextchar = $9;
+      if (!(defined($nextchar))) { die "undefined nextchar for $argdecls"; }
+      $argdecls = $';
+      $argnametype{$identifier} = $typespec . $ptrdecls . $arraydecls;
+      while ($nextchar eq ",")
+	{ if (!($argdecls =~ /^\s*$declarator\s*([,;])/))
+	    { die "Couldn't parse declarator following comma after '$typespec $ptrdecl $identifier $arraydecl $nextchar': $argdecls\n"; }
+	  $ptrdecl = $1;
+	  $identifier = $4;
+	  $arraydecl = $5;
+	  $nextchar = $7;
+	  $argdecls = $';
+	  $argnametype{$identifier} = $typespec . $ptrdecls . $arraydecls; } }
+  print "after K&R, remainder $'\n";
+  return $';
+}
+
+
+sub parse_exp_follower
+{
+  my ($type, $follow) = @_;
+  $follow =~ s/^\s+//;		# remove leading space
+
+  if (!defined($type)) { die "type undefined $follow\n"; }
+
+  # Should this be eq to avoid failing when $type is a string?
+  if ($type eq $typeFAIL)
+    # This isn't quite right since the failure occurred earlier.
+    # Perhaps die in this case instead.
+    { return($type, $follow); }
+
+  # Array subscript
+  if ($follow =~ /^\[/)
+    { my $subscript = $';
+      my ($subscrtype, $closebracket) = parse_exp($subscript);
+      if (!$subscrtype) { return($typeFAIL,$exp); }
+      if (!(type_integral_p($subscrtype) || ($subscrtype == $typeUNKNOWN)))
+	# This shouldn't happen; perhaps die instead.
+	{ die "Non-integral type ", type_name($subscrtype), " in subscript\n";
+	  return ($typeFAIL, $follow); }
+      if ($closebracket =~ /\s*\]/)
+	{ my ($remaining) = $';
+	  return parse_exp_follower(type_dereference($type), $remaining); }
+      else
+	{ return ($typeFAIL, $follow); } }
+
+  # Function call (might this be some other use of parens??)
+  if ($follow =~ /^\(/)
+    { return parse_arglist($type, $'); }
+
+  # Unary postfix operators
+  if ($follow =~ /^(\+\+|--)/)
+    { return parse_exp_follower($type, $'); }
+  # Structure selectors
+  if ($follow =~ /^\s*(\.|->)\w+\b/)
+    { return parse_exp_follower($typeUNKNOWN, $'); }
+
+  # Binary operators:  multi-char operators must precede single-char ones
+  if (($follow =~ /^(<<|>>|[<=>!]=|&&|\|\||[-*\/%+&^|<>])/)
+      || ($commaop && ($follow =~ /^(,)/)))
+    { my $op = $1;
+      my $arg2 = $';
+      if ($op eq ",")
+	{ print "found a comma operator, commaop = $commaop\n"; }
+      my ($type2, $remaining) = parse_exp($arg2);
+      if (!$type2) { return ($typeFAIL, $arg2); }
+      if (bool_op_p($op))
+	{ return parse_exp_follower($typeBOOL, $remaining); }
+      elsif ($op eq ",")
+	{ return parse_exp_follower($type2, $remaining); }
+      else
+	{ return parse_exp_follower(type_lub($type, $type2), $remaining); } }
+
+  # Ternary operator ?:
+  if ($follow =~ /^\?/)
+    { my $then = $';
+      my ($thentype, $colon) = parse_exp($then);
+      if (!$thentype) { return ($typeFAIL, $then); }
+      if (!($colon =~ /^\s*:/)) { return ($typeFAIL, $colon); }
+      my ($elsetype, $remaining) = parse_exp($');
+      if (!$elsetype) { return ($typeFAIL, $colon); }
+      return (type_lub($thentype, $elsetype), $remaining); }
+
+  return ($type, $follow);
+}
+
+sub bool_op_p
+{
+  my ($op) = @_;
+  return ($op =~ /[<=>!]=|&&|\|\||<|>/);
+}
+
+
+# More involved non-recursive version.
+# # This fails for:
+# #  * array subscript []
+# #  * function call through pointer (*foo)(3)
+# #  * ternary operators: ?:
+# #  * assignment (intentionally; would have to keep track of lhs or use ref vars)
+# #	= + - * / % << >> & ^ |
+# It would probably be better to write this recursively...
+# # Side-effects %parsevars, %parsefuns, %parsetypes
+# # return an array of free variables;
+# # also maybe how many characters were read (or current input pos)
+# # Should check the array for reserved words; if we find any, I misparsed.
+# # 0 if not an expression, otherwise list of variables
+# # Doesn't check types.
+# sub parse_expression
+# {
+#   # get-expression =
+#   #   if looking at paren,
+#   #     get paren, get-expression, get paren
+#   #   else get num or var
+#   #   while looking at op,
+#   #     get op, get-expression
+#   my ($remaining) = $_[0];
+#   my ($parens) = 0;
+#   # Could use undef instead...
+#   %parsevars = ();
+#   %parsefuns = ();
+#   %parsetypes = ();
+#   # print "parse_expression $remaining\n";
+#   $remaining = remove_comments($remaining);
+#   # print "parse_expression $remaining\n";
+# 
+#  EXPSTART:
+#   # Open parens
+#   # First, cope with casts
+#   # print "expstart: $parens $remaining\n";
+#   if ($remaining =~ /^\s*\(\((\w+)(\s+\**)?\)\s*(.*)\)/ && FIsNumConst($3))
+#     { $remaining = $';
+#       $parsetypes{$1} = 1;
+#       # print "Found cast $1 $2 $3\n";
+#       goto EXPDONE; }
+#   if ($remaining =~ /^\s*\((\w+)(\s+\**)?\)\s*([0-9a-z\(])/)
+#     { # print "found suspected cast $3$'\n";
+#       $remaining = $3 . $';
+#       $parsetypes{$1} = 1;
+#       # print "Found cast $1 $2 $3\n";
+#       goto EXPSTART; }
+#   if ($remaining =~ /^\s*\(((short|signed|unsigned|long|int|char|float|double)\s*)\)/)
+#     { $remaining = $';
+#       goto EXPSTART; }
+# 
+#   if ($remaining =~ m/^\s*\(/)
+#     { $parens++;
+#       $remaining = $';
+#       goto EXPSTART; }
+# 
+#   # Unary prefix operators
+#   if ($remaining =~ /^\s*(\+\+|--|[~!\-+&*])/)
+#     { $remaining = $';
+#       goto EXPSTART; }
+#   # Watch out: the type might be a macro argument.  Check it??
+#   if ($remaining =~ /^\s*sizeof\s*\([ \ta-zA-Z0-9*]+\)/)
+#     { $remaining = $';
+#       goto EXPDONE; }
+# 
+#   # Variable or numeric literal
+#   if ($remaining =~ /^\s+/) { $remaining = $'; }
+#   # Check for number precedes word because digits are word constitutents
+#   if ($remaining =~ /^-?\d+\.\d*/ || # decimal 2.
+#       $remaining =~ /^-?\d*\.\d+/ || # fraction .2
+#       $remaining =~ /^0x[0-9a-fA-F]+[ulUL]?/ ||   # hex (regexp failed with \d for 0-9)
+#       $remaining =~ /^-?\d+[ulUL]?/ || # integer
+#       $remaining =~ /^'(\\?.|\\[0-7][0-7][0-7])'/) # character
+#     { $remaining = $'; }
+#   elsif ($remaining =~ /^(\w+)\b/)
+#     { my ($var) = $1;
+#       $remaining = $';
+#       if ($remaining =~ /^\s*\(/)
+# 	{ $parsefuns{$var} = 1;
+# 	  $remaining = $';
+# 	  if ($remaining =~ /^\s*\)/)
+# 	    { $remaining = $';
+# 	      goto EXPDONE; }
+# 	  else
+# 	    { $parens++;
+# 	      goto EXPSTART; } }
+#       else
+# 	{ $parsevars{$var} = 1; }
+#       # print "Added $1; $remaining\n";
+#       # print "Parsevars: ";
+#       # foreach $var (keys(%parsevars)) { print $var . " "; }
+#       # print '\n';
+#     }
+#   else
+#     { # print "Couldn't match $remaining\n";
+#       return $false; }
+# 
+#  EXPDONE:
+#   # Close parens
+#   while ($remaining =~ m/^\s*\)/)
+#     { $parens--;
+#       # print "decremented parens $parens\n";
+#       if ($parens < 0)
+# 	{ # print "negative parens\n";
+# 	  return $false; }
+#       $remaining = $'; }
+#   # Unary postfix operators
+#   if ($remaining =~ /^\s*(\+\+|--|(\.|->)\w+)/)
+#     { $remaining = $';
+#       goto EXPDONE; }
+# 
+#   # Binary operators:  multi-char operators must precede single-char ones
+#   if ($remaining =~ /^\s*(<<|>>|[<=>!]=|&&|\|\||[*\/%+\-&^|,<>])/)
+#     { $remaining = $';
+#       goto EXPSTART; }
+# 
+#   # print "returning $parens '$remaining'\n";
+#   return (($parens == 0) && ($remaining =~ /^\s*$/));
+# }
+
+
+
+# Non-recursive version
+# sub parse_expression
+# {
+#   # get-expression =
+#   #   if looking at paren,
+#   #     get paren, get-expression, get paren
+#   #   else get num or var
+#   #   while looking at op,
+#   #     get op, get-expression
+#   my ($remaining) = $_[0];
+#   my ($parens) = 0;
+#   %parsevars = ();
+#   while (!($remaining =~ /^\s*$/))
+#     { # Open parens
+#       while ($remaining =~ m/^\s*\(/)
+# 	{ $parens++;
+# 	  $remaining = $'; }
+# 
+#       # Variable or numeric literal
+#       if ($remaining =~ /^\s+/) { $remaining = $'; }
+#       if ($remaining =~ /^\w+\b/)
+# 	{ $vars{$1} = 1;
+# 	  $remaining = $'; }
+#       elsif (($remaining =~ /^-?\d+\.?\d*/ || # decimal 2.
+# 	      $remaining =~ /^-?\d*\.?\d+/ || # fraction .2
+# 	      $remaining =~ /^0x[\d|a-f|A-F]+/ ||   # hex
+# 	      $remaining =~ /^-?\d+[ulUL]/))
+# 	{ $remaining = $'; }
+#       else
+# 	{ return $false; }
+# 
+#       # Close parens
+#       while ($remaining =~ m/^\s*\(/)
+# 	{ $parens--;
+# 	  if ($parens < 0)
+# 	    { return $false; }
+# 	  $remaining = $'; }
+# 
+#       # Optional operator
+#       if ($remaining =~ /^\s+/) { $remaining = $'; }
+# 
+#       # Postfix operators: (\.|->)\w+\b|
+#       # 
+# 
+#       # Binary operators:
+#       if ($remaining =~ /^([*/%+-&^|,<>]|<<|>>|[<=>!]=|&&|\|\|)
+# 
+# \s+/) { $remaining = $'; }
+# 
+# 
+# 
+#       (L|x|\d|\(|\s|\)|\<|\>|\+|\-|\=|\*|\||\&|\%|\!)*$/) {
+# 
+# 
+#     }
+#   return ($parens == 0);
+# }
+
+### Get types for macro calls
+
+# This is a bit disappointing because it's so heuristic; my inclination is
+# really to get it right rather than approximate.
+
+# Find all uses of a macro, to determine types of its arguments.
+# (If it isn't used, it can be eliminated -- this will be true of many in
+# standard header files, perhaps.)
+# Do a rough parse of each file:
+#  recognize binding forms:
+#     variable declarations, function definitions, function declarations
+#     Can use etags to find function defintiions, but it doesn't find
+#	global variables.
+#  recognize function calls, check whether they are macros
+# Cope with macro definitions like "#define local static" and with
+#    typedefs like "typedef unsigned long  ulg;" (the latter not to use
+#    the raw type, but to permit type_lub to do a better job, maybe).
+
+sub get_macro_call_types
+{
+  # Perhaps should use %files instead of @ARGV
+  foreach $file (@ARGV)
+    { if ($opt_v)
+	{ print STDERR $file . "\n"; }
+      open(INPUT,$file) or next; # skip to next file if open fails
+      # Commented out to quiet compiler
+      # $files{$file} = 1;
+      # # Could use undef instead...
+      # @dependenton = ();
+      # Perhaps I should use a variant of getline that insists that parens
+      # are balanced, too; that might let me more reasonably cope with
+      # breaks across lines.
+      if ($symtab_scopes != 0)
+	{ die "Bad brace depth $symtab_scopes.\n"; }
+      while ($fullline = getline())
+	{
+	  if ($opt_v)
+	    { print STDERR $. . "\n"; }
+# PROCESSLINE:
+	  if ((!($fullline =~ /^\s*$/)) && (!($fullline =~ m/^\#/)))
+	    { # not empty or a preprocessor line
+	      chop($fullline);	# remove trailing newline
+	      if ((!($fullline =~ m/^(\s|\}|\/[\/\*])/)) && ($symtab_scopes != 0))
+		# Perhaps permit labels to be non-indented.
+		{ die "Non-indented line $fullline at bracedepth $symtab_scopes.\n"; }
+	      my $line = simplify_line($fullline);
+
+	      # Look for:  typedef,
+	      #   function definition/declaration (only at symtab_scopes == 0)
+	      #   variable definition/declaration,
+	      #   function call (of a macro),
+	      #   brackets (to keep track of scopes),
+	      #   string/char literals (to avoid catching too much).
+	      # These can span multiple lines, especially function definitions.
+
+PROCESSSIMPLELINE:
+	      if (!defined($line))
+		{ die "processsimpleline: line undefined.\n"; }
+	      print "processsimpleline $line\n";
+	      if ($line =~ /^\s*$/)
+		{ # do nothing
+		  # print "empty line $.\n";
+		}
+	      if ($line =~ /^\s*typedef\s+/)
+		{ # process typedefs
+		  print "typedef line $.\n";
+		}
+	      elsif (($line =~ /^\s*$typedeclarator\s*([,=;\(])/o)
+		     && ($1 ne "return") # "return foo;"
+		     && ($1 ne "else") # "else if (...)"
+		     # fail if the function is actually a macro
+		     && (!(($9 eq "(") && $macros{$6})))
+		{
+		  # print "matched typedeclarator <$1><$2><$3><$4><$5><$6><$7><$8><$9>\n";
+		  my $basetype = $1;
+		  if (!(defined($basetype))) { die "undefined basetype"; }
+		  my $pointerdecls = $3;
+		  if (!(defined($pointerdecls))) { $pointerdecls = ""; }
+		  my $arraydecls = $7;
+		  if (!(defined($arraydecls))) { $arraydecls = ""; }
+		  my $identifier = $6;
+		  if (!(defined($identifier))) { die "undefined identifier"; }
+		  my $nextchar = $9;
+		  if (!(defined($nextchar))) { die "undefined nextchar"; }
+		  my $remaining = $';
+		  if (($symtab_scopes == 0) && ($line =~ /^\s/))
+		    { die "Indented line at top level: $line\n"; }
+		  # print "found type '$basetype$pointerdecls$arraydecls' identifier '$identifier' nextchar '$nextchar' remaining '$remaining' on line $.\n";
+		  # If no semicolon, then the definition must span lines.
+		  if (($nextchar ne ";") && ($nextchar ne "("))
+		    # Only really need to check the new stuff, not the whole thing.
+		    { my $has_semi = has_token(";", $remaining);
+		      while (!$has_semi)
+			{ print "no semicolon, so appending a line to $remaining\n";
+			  my $nextline = simplify_line(getline());
+			  $has_semi = has_token(";", $nextline);
+			  $remaining = appendlines($remaining, $nextline); } }
+		  print "found semicolon (or nextchar is open paren) in $remaining\n";
+		  if ($nextchar eq "(")
+		    { # found (start of) function definition or prototype
+		      if ($symtab_scopes != 0)
+			{ die "Function definition or prototype $& at bracedepth $symtab_scopes.\n"; }
+		      # Only really need to check the new stuff, not the whole thing.
+		      # Maybe has_token is overkill, but there can be parens in
+		      # the types.
+		      { my $has_closeparen = has_token(")", $remaining);
+			while (!$has_closeparen)
+			  { print "no close paren, so appending a line to $remaining\n";
+			    my $nextline = simplify_line(getline());
+			    $has_closeparen = has_token(")", $nextline);
+			    $remaining = appendlines($remaining, $nextline); } }
+		      if (!($remaining =~ /\)/))
+			{ die "There must be a close paren.\n"; }
+		      print "found function $identifier; remaining $remaining\n";
+		      # process the args:  create the scope, eat the following
+		      # open brace, etc.  $remaining includes everything after
+		      # the original open paren.
+		      # Three possibilities:
+		      #   function declaration (K&R or ANSI)
+		      #   K&R-style function definition
+		      #   ANSI-style function definition
+		      my ($success, $remaining) = parse_function_decl_args($remaining);
+		      if (!defined($remaining))
+			{ die "remaining not defined after parse_function_decl_args => @argnames | @argtypes\n"; }
+		      if (!$success)
+			{ $line = $remaining;
+			  goto PROCESSSIMPLELINE; }
+		      # $remaining is what follows the close paren
+		      while ($remaining =~ /^\s*$/)
+			{ print "no semi or brace, so appending a line to $remaining\n";
+			  my $nextline = simplify_line(getline());
+			  $remaining = appendlines($remaining, $nextline); }
+		      # $remaining is nonempty; if first character is
+		      # semicolon, then this is a declaration, else a definition
+		      if ($remaining =~ /^\s*;/)
+			{ # declaration
+			  # enter this in the global symbol table, perhaps
+			  # (to be done)
+			  $remaining = $';
+			}
+		      else
+			{ # definition
+			  print "found function definition $identifier; remaining $remaining\n";
+			  if ($remaining =~ /^\s*\{/)
+			    { # ANSI-style definition
+			      $remaining = $';
+			    }
+			  else
+			    {	# K&R-style definition
+			      if (!($remaining =~ /^\s*$typedeclarator\s*([,;])/))
+				{ die "Didn't find first type+declarator in K&R-style $remaining\n"; }
+			      { my $argtype;
+				for $argtype (@argtypes)
+				  { if ($argtype != $typeUNSPECIFIED)
+				      { die "K&R-style definition, but a type is specified as " . type_name($argtype) . ".\n"; } } }
+			      { my $has_brace = has_token("{", $remaining);
+				while (!$has_brace)
+				  { print "no brace, so appending a line to $remaining\n";
+				    my $nextline = simplify_line(getline());
+				    $has_brace = has_token("{", $nextline);
+				    $remaining = appendlines($remaining, $nextline); } }
+			      $remaining = parse_KandR_function_arg_decls($remaining);
+			      # Make sure that the argument list matches the declarators
+			      { my $index;
+				foreach $index (0..$#argnames)
+				  { # print "argname: ", @argname, "\nargtype: ", @argtype, "\n";
+				    my $thistype = $argnametype{$argnames[$index]};
+				    if (!defined($thistype))
+				      { die "No K&R-style declarator for $argname[$index]\n"; }
+				    $argtype[$index] = $thistype;
+				    delete $argnametype{$argnames[$index]};
+				  }
+				# argnametype should be empty now
+				for $name (keys %argnametype)
+				  { die "K&R-style declarator, but no argument, for $name $argnametype{$name}\n"; }
+			      }
+			    }
+			  # function definition: $remaining is everything after
+			  # the open brace, and @argnames and @argtypes are set.
+			  # Two things to do:
+			  #  1. add function's type to the global symbol table
+			  #  2. enter a scope
+
+			  # 1. add function's type to the global symbol table
+			  # (to be done).  Actually, this should be easy since
+			  # we are at global scope now.  Perhaps have separate
+			  # tables for guesses and for what we know for sure.
+			  # We'll have declarations for everything but macros.
+			  # Watch out that it isn't already in the global
+			  # symbol table (make sure it is compatible if so).
+
+			  # 2. enter a scope
+			  enter_scope();
+			  for $index (0..$#argnames)
+			    { symtab_add($argnames[$index], $argtypes[$index]); }
+
+			  # Done with function definition
+			}
+
+		      # We just coped with a function definition or declaration.
+		      # Process the rest of the line (if def, this is anything
+		      # after the open brace).
+		      $line = $remaining;
+		      goto PROCESSSIMPLELINE;
+		    }
+		  else
+		    {
+PROCESSVARDEF:
+		      # variable definition or declaration
+		      print "variable definition or declaration <<$identifier>> $basetype$pointerdecls$arraydecls\n";
+		      # $nextchar = "," or "=" or ";"
+
+		      my $fulltype = $basetype . $pointerdecls . $arraydecls;
+		      # This should logically happen here, but hold off
+		      # in case there is trouble.
+		      # symtab_add($identifier, $fulltype);
+		      if ($nextchar eq ";")
+			{ symtab_add($identifier, $fulltype);
+			  $line = $remaining;
+			  goto PROCESSSIMPLELINE; }
+		      elsif ($nextchar eq ",")
+			{
+ATCOMMA:
+			  if ($remaining =~ /^\s*$declarator\s*([,=;])/o)
+			    { symtab_add($identifier, $fulltype);
+			      $identifier = $4;
+			      if (!(defined($identifier))) { die "undefined identifier"; }
+			      $pointerdecls = $1;
+			      if (!(defined($pointerdecls))) { $pointerdecls = ""; }
+			      $arraydecls = $5;
+			      if (!(defined($arraydecls))) { $arraydecls = ""; }
+			      $nextchar = $7;
+			      if (!(defined($nextchar))) { die "undefined nextchar"; }
+			      $remaining = $';
+			      goto PROCESSVARDEF; }
+			  elsif ($remaining =~ /^\s*$typedeclarator\s*([,\)])/o)
+			    { # We're in the middle of a function declarator
+			      # Skip to next brace or semicolon
+			      $remaining = $';
+			      if ($remaining =~ /[\{;]/)
+				{ if ($& eq ";")
+				    { $remaining = $'; }
+				  else
+				    { $remaining = $& . $'; } }
+			      elsif ($remaining =~ /\)/)
+				{ $remaining = $'; }
+			      else
+				{ die "No semicolon or brace after function declarator?  It can't be!\n"; }
+			      $line = $remaining;
+			      goto PROCESSSIMPLELINE; }
+			  else
+			    { die "Found '$basetype $identifier' ($nextchar) on line $. but no following var in $remaining\n"; } }
+		      elsif ($nextchar eq "=")
+			{ # Skip over an expression and continue processing from there.
+			  print "skipping expression $remaining\n";
+			  my $postexp = skip_expression_nocommaop($remaining);
+			  if ($postexp eq "")
+			    { # do nothing; done with this line, because
+			      # parsing of the expression failed
+			      die "Failed to parse initializer $remaining\n"; }
+			  elsif ($postexp =~ /\s*;/)
+			    { $line = $';
+			      goto PROCESSSIMPLELINE; }
+			  elsif ($postexp =~ /\s*,/)
+			    { $remaining = $';
+			      goto ATCOMMA; }
+			  else
+			    { die "After skipping well-formed initializer, didn't find comma or semicolon.\n"; } }
+		      else
+			{ die "Bad nextchar $nextchar.\n"; } }
+		}
+	      # Line didn't match $typedeclarator
+	      # Parse it looking for:
+	      #  * open and close braces to keep track of scopes
+	      #  * strings and chars so we can skip over them
+	      #    (or maybe simplify_line will do away with them).
+	      #  * open parens, because maybe they indicate a function call
+	      #  * semicolon: try again
+	      while ($line =~ m/[\({}\"\';]/) #'FIXCOLOR
+		# Found brace, open paren, quote, comment, or semicolon
+		{ # print "Found brace, open paren, quote, comment, or semicolon: $&$'\n";
+		  my $match = $&;
+		  $line = $';
+		  if ($match eq "{")
+		    { enter_scope();
+		      goto PROCESSSIMPLELINE; }
+		  elsif ($match eq "}")
+		    { exit_scope();
+		      goto PROCESSSIMPLELINE; }
+		  elsif ($match eq ";")
+		    { goto PROCESSSIMPLELINE; }
+		  elsif ($match eq "(")
+		    { if ($` =~ /$identregexp\s*$/o)
+			{ # found something that looks like a function call
+			  # process it
+			}
+		      else
+			{ # This paren doesn't represent a function call;
+			  # look for another brace, open paren, quote, comment
+			}
+		    }
+		  elsif ($match eq "\"")
+		    { if ($line =~ /$nonescdquote/o)
+			{ $line = $'; }
+		      else
+			{ die "Didn't find end of string literal $line.\n"; } }
+		  elsif ($match eq "'")
+		    { if ($line =~ /$charlitcontents\'/o)
+			{ $line = $'; }
+		      else
+			{ die "Didn't find end of character literal $line.\n"; } }
+		  else
+		    { die "What match '$match' '$line'?\n"; } }
+	    }
+	  # done with this line; get another
+	}
+      # done with this file; read another
+      close(INPUT);
+    }
+}
+
+# Returns two values the remaining string, or the empty string if failure.
+# This is actually for skipping initializers.
+sub skip_expression_nocommaop
+{
+  my ($input) = @_;
+  my ($type, $remaining);
+
+  # print "skipping expression $input\n";
+
+  if ($input =~ /^\s*\{/)
+    { ($type, $remaining) = parse_array_initializer($');
+      # print "parse_array_initializer returned $type $remaining\n";
+    }
+  else
+    { ($type, $remaining) = parse_exp_nocommaop($input, "ignore types"); }
+  if (!$type)
+    { return ""; }
+  else
+    { return $remaining; }
+}
+
+
+### Symbol table
+
+# The symbol table is two parallel arrays:  @identifiers @types
+# A scope is indicated by the value $scopemarker in the @identifiers array.
+
+# Perhaps have a different structure (an associative array?) for the global
+# level and only use this for nested scopes.
+
+sub show_symtab
+{
+  my ($text) = @_;
+  if ($#identifiers != $#types)
+    { die "identifiers and types arrays have different lengths ($#identifiers != $#types)\n"; }
+  print "{SYMBOL TABLE $text at line $.:\n";
+  # perhaps print out in opposite direction
+  my $i;
+  for ($i = $#identifiers; $i >= 0; $i--)
+    { if ($identifiers[$i] eq $scopemarker)
+	{ print " --------\n"; }
+      else
+	{ print " ", $identifiers[$i], "\t", type_name($types[$i]), "\n"; }
+    }
+  print "}\n";
+}
+
+sub enter_scope
+{
+  push(@identifiers, $scopemarker);
+  push(@types, 0);
+  $symtab_scopes++;
+  show_symtab("entered scope $symtab_scopes");
+}
+
+sub exit_scope
+{
+  # exit a scope
+  show_symtab("exiting scope $symtab_scopes");
+  if ($#identifiers == -1)
+    { die "Trying to exit scope at line $., but empty identifiers array at beginning.\n"; }
+  while ($scopemarker ne pop(@identifiers))
+    { pop(@types);
+      if ($#identifiers == -1)
+	{ die "Trying to exit scope at line $., but didn't find scopemarker.\n"; } }
+  pop(@types);
+  if ($#identifiers == -1)
+    { die "Trying to exit scope at line $., this can't happen."; }
+  show_symtab("exited scope $symtab_scopes");
+  $symtab_scopes--;
+}
+
+# sub symtab_scopes
+# {
+#   my $result = 1;
+#   my $id;
+#   for $id (@identifiers)
+#     { if ($id eq $scopemarker)
+# 	{ $result++; } }
+#   return $result;
+# }
+
+sub symtab_add
+{
+  my ($identifier, $type) = @_;
+  if (!defined($identifier))
+    { die "symtab_add: undefined identifier, type $type"; }
+  if (!defined($type))
+    { die "symtab_add: undefined type, identifier $identifier"; }
+  push (@identifiers, $identifier);
+  push (@types, $type);
+}
+
+sub symtab_lookup
+{
+  my ($var) = @_;
+  for ($index = $#identifiers; $index >= 0; $index--)
+    { if ($var eq $identifiers[$index])
+	{ return $types[$index]; } }
+  return $typeFAIL;
+}
+
+
+
+###########################################################################
+### Check and categorize macros
+###
+
+# Need a routine that assigns a type to a literal.
+# (Useful for turning macros into const variables.)
+
+# # FIsNumConst(string)  returns 1 iff string matches a numeric const regexp
+# sub FIsNumConst {
+#   my $str = $_[0];
+#   if ($str =~ /^\(?-?\d+\.?\d*\)?$/ || # decimal 2.
+#       $str =~ /^\(?-?\d*\.?\d+\)?$/ || # fraction .2
+#       $str =~ /^0x[\d|a-f|A-F]+$/ ||   # hex
+#       $str =~ /^-?\d+[ulUL]$/) {       # trailing L for long, U for unsigned
+#     return 1;
+#   } else {
+#     return 0;
+#   }
+# }
+
+sub testcategorizeMacro
+{ my ($body) = @_;
+  $mbody[1000] = $body;
+  $mname[1000] = "dummy";
+  $margs[1000] = "(arg)";
+  undef $mcategory[1000];
+  categorizeMacro(1000);
+  print $categoryname[$mcategory[1000]] . "\n";
+}
+
+# Takes macro name as argument; categorizes each of the macro's definitions
+sub categorizeMacroName
+{ my ($name) = @_;
+  if (defined($mntype{$name}))
+    { return; }
+  my $numdefs = $macros{$name}[0];
+  if (!defined($numdefs))
+    { # We called this on a non-macro (we try for every name in a definition).
+      return; }
+  my $type;
+  my $category;
+  { my $i;
+    for ($i = 1; $i <= $numdefs; $i++)
+      { if (!defined($mcategory[$macros{$name}[$i]]))
+	  { categorizeMacro($macros{$name}[$i]);
+	    if (!defined($type))
+	      { $type = $mtype[$i];
+		$category = $mcategory[$i]; }
+	    else
+	      { $type = type_lub($type, $mtype[$i]);
+		$category = category_lub($category, $mcategory[$i]); } } } }
+  $mntype{$name} = $type;
+  $mncategory{$name} = $category;
+}
+
+
+# Takes index into macro arrays as argument
 sub categorizeMacro
-{ (my $name, my $args, my $fullbody) = @_;
-  if ($fullbody =~ m!^\s*(.*?)\s*(/\*.*\*/\s*)*(//.*)?$!) {
-    # $1 matches non-commented part w/ leading,trailing ws removed
-    $body = $1;
-  } else {
-    $body = $fullbody;
-  }
-  $fDebugCommentRemoval && print STDERR "fullbody = '$fullbody'\nbody = '$body'\n";
-  if (defined($args)) {
-    if ($args =~ /^\s*\(\s*\)\s*$/) {
-      $cWithNullArgs++;
-      $fShowCategorization && 
-	print CATEG "$currentfile:$.: WithNullArgs: $name $args $fullbody\n";
-    } else {
-      $cWithArgs++;
-      $fShowCategorization && 
-	print CATEG "$currentfile:$.: WithRealArgs: $name $args $fullbody\n";
+{ my ($index) = @_;
+
+  print "Categorizing $index $mname[$index]$margs[$index] $mbody[$index]\n";
+
+  if (defined($mcategory[$index]))
+    { print "Already categorized! $mcategory[$index] $categoryname[$mcategory[$index]]\n";
+      return; }
+  $mcategory[$index] = $catINPROCESS;
+
+  my $body = remove_comments($mbody[$index]);
+  $mbody_noc[$index] = $body;
+  $fDebugCommentRemoval && print STDERR "body = '$mbody[$index]'\nbody_noc = '$body'\n";
+
+  my $category;
+  my $type;
+  if ($body eq "")
+    # Null define
+    { $category = $catNULLDEFINE; }
+#!    elsif ($body =~ /^\".*\"$/)
+#!      # String
+#!      { # print "found string";
+#!        $category = $catLITERAL;
+#!        $type = $typeSTRING; }
+  else
+    { my $remaining;
+      ($type, $remaining) = parse_exp($body);
+      # print "type = $type; remaining = $remaining\n";
+      # $type was ($type != $typeFAIL)
+      if ($type && ($remaining =~ /^\s*$/))
+	# Expression
+	{ $category = $catEXP;
+	  # print "category = $category; found expression $body\n";
+	  foreach $arg (split(/[\(, \t]*/, $margs[$index]))
+	    { delete $parsevars{$arg};
+	      if (defined($parsetypes{$arg}))
+		{ $category = $catTYPEARG;
+		  goto CATEGORIZED; }
+	      delete $parsefuns{$arg}; }
+	  # print "category postargs = $category\n";
+	  # Assume the functions and types are well-defined if not macros
+	  # If they are macros, should check 'em, not just fail.
+	  foreach $fun (keys %parsefuns)
+	    { if (defined $macros{$fun})
+		# This is actually fine most of the time; fix later.
+		{ $category = $catMACROFUN;
+		  goto CATEGORIZED; } }
+	  # print "category postfun = $category\n";
+	  foreach $type (keys %parsetypes)
+	    { if (defined($macros{$type}))
+		# This may be fine; fix later.
+		{ $category = $catMACROTYPE;
+		  goto CATEGORIZED; } }
+	  # print "category posttype = $category\n";
+	  # For each free variable, check its type.
+	  foreach $var (keys %mfreevars)
+	    { print "examining free var $var ($mname[$index])\n";
+	      if (defined($macros{$var}))
+		{ my $varclass;
+		  foreach $i ($macros{$var})
+		    { if ($mcategory[$i] == $catNOTYET)
+			{ categorizeMacro($i); }
+		      if (!defined($varclass))
+			{ $varclass = $mcategory[$i]; }
+		      elsif ((($mcategory[$i] == $catLITERAL)
+			      || ($mcategory[$i] == $catCONSTANT)
+			      || ($mcategory[$i] == $catSOMECONSTANT))
+			     && (($varclass == $catLITERAL)
+				 || ($varclass == $catCONSTANT)
+				 || ($varclass == $catSOMECONSTANT)))
+			{ $varclass = $catSOMECONSTANT; }
+		      elsif ($varclass != $mcategory[$i])
+			{ $category = $catFAILURE;
+			  goto CATEGORIZED; }
+		      else
+			{ die "Huh?"; } }
+		  if (!(($varclass == $catLITERAL)
+			|| ($varclass == $catCONSTANT)
+			|| ($varclass == $catSOMECONSTANT)))
+		    { $category = $catFAILURE; # should be more specific here
+		      goto CATEGORIZED; } }
+	      else
+		# This is a free variable.  Should check whether it is a global
+		# (which would be OK; a local would be bad).
+		{ $category = $catEXPFREE; # should be more specific here
+		  goto CATEGORIZED; }
+	    }
+	  # print "category postfree = $category\n";
+	  $category = $catSOMECONSTANT;
+	  # print "category = $category\n";
+	}
+      else
+	# Should do some evilness processing here, to justify the failed
+	# categorization.
+	{ # Not an expression, apparently
+	  $category = $catFAILURE;
+	}
     }
-  }
-  # Must not have had args
-  elsif (!defined($body) || $body eq "") {
-    if ($lastline =~ /^\#[ \t]*ifndef[ \t]* $name$/) {
-      $cPreventMI++;
-      $fShowCategorization && 
-	print CATEG "$currentfile:$.: PreventMI: $name\n";
-    }
-    else {
-      $cNullDefine++;
-      $fShowCategorization && 
-	print CATEG "$currentfile:$.: NullDefine: $name\n";
-    }
-  }
-  # Must have a body
-  elsif ($body =~ /^\".*\"$/) {
-    $cSimpleStrConstant++;
-    $fShowCategorization && 
-      print CATEG "$currentfile:$.: SimpleStrConstant: $name $fullbody\n";
-  }
-  elsif ($body =~ /^\(\s*\(\w+(\s+\**)?\)\s*(.*)\)$/ && FIsNumConst($2)) {
-      $cCastedConstant++;
-      $fShowCategorization && 
-	print CATEG "$currentfile:$.: CastedConstant: $name $fullbody\n";
-    }    
-  #FIX: these regexps could be better
-  elsif (FIsNumConst($body) ||
-	 $body =~ /^'(\\?.|\\\d\d\d)'$/) {	           # single character constant 'g'
-    # is it just a number, possibly like "(4.566)" or "7" or "0x5FaB" or 'g'
-    if ($lastline =~ /^\#[ \t]*ifndef[ \t]* $name$/) {
-      $cSimpleConstantWithDefault++;
-      $fShowCategorization && 
-	print CATEG "$currentfile:$.: SimpleConstantWithDefault: $name $fullbody\n";
-    }
-    else {
-      $cSimpleConstant++;
-      $fShowCategorization && 
-	print CATEG "$currentfile:$.: SimpleConstant: $name $fullbody\n";
-    }
-  }
-  elsif ($body =~ /^(L|x|\d|\(|\s|\)|\<|\>|\+|\-|\=|\*|\||\&|\%|\!)*$/) {
-    # FIX: this regexp is lame-- L,x needed for 0x80 << 3 or 1L << 25
-    # is it a numeric expression?
-    $cSimpleExpression++;
-    $fShowCategorization && 
-      print CATEG "$currentfile:$.: SimpleExpression: $name $fullbody\n";
-  }
-  else {
-    $cUncategorized++;
-    $fShowCategorization && 
-      print CATEG "$currentfile:$.: Uncategorized: $name $fullbody\n";
-  }
+
+ CATEGORIZED:
+  print "category = $category $categoryname[$category]\n";
+  if ($fShowCategorization)
+    { # print "$mfile[$index]:$mline[$index]: $category = $categoryname[$category]: $mname[$index]$margs[$index] $mbody[$index]\n";
+      print CATEG "$mfile[$index]:$mline[$index]: $categoryname[$category]";
+      if (($category == $catEXP)
+	  || ($category == $catEXPFREE)
+	  || ($category == $catLITERAL)
+	  || ($category == $catCONSTANT)
+	  || ($category == $catSOMECONSTANT))
+	{ print CATEG "(", type_name($type), ")"; }
+      print CATEG ": $mname[$index]$margs[$index] $mbody[$index]\n"; }
+  $mcategory[$index] = $category;
+
+
+#   if (defined($args)) {
+#     if ($args =~ /^\(\s*\)$/) {
+#       $cWithNullArgs++;
+#       $fShowCategorization &&
+# 	print CATEG "$file:$.: WithNullArgs: $name $args $fullbody\n";
+#     } else {
+#       $cWithArgs++;
+#       $fShowCategorization &&
+# 	print CATEG "$file:$.: WithRealArgs: $name $args $fullbody\n";
+#     }
+#   }
+#   # Must not have had args
+#   elsif (!defined($body) || $body eq "") {
+#     if ($lastline =~ /^\#[ \t]*ifndef[ \t]* $name$/) {
+#       $cPreventMI++;
+#     }
+#     else {
+#       $cNullDefine++;
+#       $fShowCategorization &&
+# 	print CATEG "$file:$.: NullDefine: $name\n";
+#     }
+#   }
 }
+
+# # Uses $lastline global, too
+# sub categorizeMacro
+# { my ($name, $args, $fullbody) = @_;
+#   if ($fullbody =~ m!^(.*?)\s*(/\*.*\*/\s*)*(//.*)?$!) {
+#     # $1 matches non-commented part w/ leading,trailing ws removed
+#     $body = $1;
+#   } else {
+#     $body = $fullbody;
+#   }
+#   $fDebugCommentRemoval && print STDERR "fullbody = '$fullbody'\nbody = '$body'\n";
+#   if (defined($args)) {
+#     if ($args =~ /^\(\s*\)$/) {
+#       $cWithNullArgs++;
+#       $fShowCategorization &&
+# 	print CATEG "$file:$.: WithNullArgs: $name $args $fullbody\n";
+#     } else {
+#       $cWithArgs++;
+#       $fShowCategorization &&
+# 	print CATEG "$file:$.: WithRealArgs: $name $args $fullbody\n";
+#     }
+#   }
+#   # Must not have had args
+#   elsif (!defined($body) || $body eq "") {
+#     if ($lastline =~ /^\#[ \t]*ifndef[ \t]* $name$/) {
+#       $cPreventMI++;
+#       $fShowCategorization &&
+# 	print CATEG "$file:$.: PreventMI: $name\n";
+#     }
+#     else {
+#       $cNullDefine++;
+#       $fShowCategorization &&
+# 	print CATEG "$file:$.: NullDefine: $name\n";
+#     }
+#   }
+#   # Must have a body
+#   elsif ($body =~ /^\".*\"$/) {
+#     $cSimpleStrConstant++;
+#     $fShowCategorization &&
+#       print CATEG "$file:$.: SimpleStrConstant: $name $fullbody\n";
+#   }
+#   # If the type contains a trailing *, the constant is usually (not always!) 0
+#   elsif ($body =~ /^\(\(\w+(\s+\**)?\)\s*(.*)\)$/ && FIsNumConst($2)) {
+#       $cCastedConstant++;
+#       $fShowCategorization &&
+# 	print CATEG "$file:$.: CastedConstant: $name $fullbody\n";
+#     }
+#   #FIX: these regexps could be better
+#   elsif (FIsNumConst($body) ||
+# 	 $body =~ /^'(\\?.|\\[0-7][0-7][0-7])'$/) { # single character constant 'g'
+#     # is it just a number, possibly like "(4.566)" or "7" or "0x5FaB" or "'g'"
+#     if ($lastline =~ /^\#[ \t]*ifndef[ \t]* $name$/) {
+#       $cSimpleConstantWithDefault++;
+#       $fShowCategorization &&
+# 	print CATEG "$file:$.: SimpleConstantWithDefault: $name $fullbody\n";
+#     }
+#     else {
+#       $cSimpleConstant++;
+#       $fShowCategorization &&
+# 	print CATEG "$file:$.: SimpleConstant: $name $fullbody\n";
+#     }
+#   }
+#   elsif ($body =~ /^(L|x|\d|\(|\s|\)|\<|\>|\+|\-|\=|\*|\||\&|\%|\!)*$/) {
+#     # FIX: this regexp is lame-- L,x needed for 0x80 << 3 or 1L << 25
+#     # is it a numeric expression?
+#     $cSimpleExpression++;
+#     $fShowCategorization &&
+#       print CATEG "$file:$.: SimpleExpression: $name $fullbody\n";
+#   }
+#   else {
+#     $cUncategorized++;
+#     $fShowCategorization &&
+#       print CATEG "$file:$.: Uncategorized: $name $fullbody\n";
+#   }
+# }
 
 # arguments are in @_, that is $_[0], $_[1], etc.
 sub checkmacrodef
-{ 
+{
 }
- 
-# Should also give file, line in error message.
+
 # returns zero if it was ok
 # otherwise $EVIL $DANGER $OBSOLETE $ILLEGAL
 # (each individual bits)
@@ -569,62 +2321,65 @@ sub checkmacrobody
   my $insquote = 0;
   my $incomment = 0;
   my @nesting = ();
-  while ($body =~ m![\]\[(){}\"'#]|//|/\*|\*/!) #'FIXCOLOR
-    { $match = $&;
-      $body = $';
+  while ($body =~ m/[\]\[(){}\"\'\#]|\/\/|\/\*|\*\//) #'FIXCOLOR
+    # Found paren, quote, cpp directive, or comment
+    { my $match = $&;
+      my $body = $';
       # print "$match ||| $body\n";
       if ($match =~ /[\[\(\{]/)
         { push(@nesting,$match); }
       elsif ($match =~ /[\]\)\}]/)
 	{ if ($#nesting == -1)
 	    { $result |= $DANGER;
-	      print EVIL "$currentfile:$.: dangerous: close $match without open in $mname\n    $_[0]\n"; }
+	      print EVIL "$file:$.: dangerous: close $match without open in $mname\n    $_[0]\n"; }
 	  else
 	    { my $popped = pop(@nesting);
 	      if ((($match eq "\]") && ($popped ne "\["))
 		  || (($match eq "\)") && ($popped ne "\("))
 		  || (($match eq "\}") && ($popped ne "\{")))
 		{ $result |= $DANGER;
-		  print EVIL "$currentfile:$.: dangerous: $popped matched by $match in $mname:\n    $_[0]\n"; } } }
+		  print EVIL "$file:$.: dangerous: $popped matched by $match in $mname:\n    $_[0]\n"; } } }
       elsif ($match eq "\"")
-	# Does this test cope with "foo\\"?
-        { if ($body =~ m/(^|[^\\])(\\\\)*\"/)
+        { if ($body =~ m/$nonescdquote/o)
             # Empty string OK only if that is the entire body.
-            { if ((1 == 0)	# turn off the test for now
+            { if ($false	# turn off the test for now
 		  && ((length($`) + length($1) + length($2)) == 0)
 		  && (length($_[0]) > 2))
                 { $result |= $DANGER;
-		  print EVIL "$currentfile:$.: dangerous: empty string in $mname:\n    $_[0]\n"; }
+		  print EVIL "$file:$.: dangerous: empty string in $mname:\n    $_[0]\n"; }
               $body = $'; }
           else
            { $result |= $ILLEGAL;
-	     print EVIL "$currentfile:$.: illegal: unterminated string $& in $mname:\n    $_[0]\n"; } }
+	     print EVIL "$file:$.: illegal: unterminated string $& in $mname:\n    $_[0]\n"; } }
       elsif ($match eq "\'")
         { if (($body =~ m/^\\''/) || ($body =~ m/\'/))
 	    { # do this first because we're going to do more matching
 	      $body = $';
 	      my $char = $` . $&;
               chop($char);	# remove trailing '
-	      if (! ($char =~ m/.|\\.|\\[0-7][0-7][0-7]/))
+	      # Perhaps don't bother with this test; getline already checked
+	      # for illegal character constants.
+	      if (! ($char =~ m/$charlitcontents/o))
 	        { $result |= $ILLEGAL;
-		  print EVIL "$currentfile:$.: illegal: bad character constant $char in $mname:\n    $_[0]\n"; }
+		  print EVIL "$file:$.: illegal: bad character constant $char in $mname:\n    $_[0]\n"; }
     	       }
           else
             { $result |= $ILLEGAL;
-	      print EVIL "$currentfile:$.: illegal: unterminated character constant $& in $mname:\n    $_[0]\n";
+	      print EVIL "$file:$.: illegal: unterminated character constant $& in $mname:\n    $_[0]\n";
               $body = ""; } }
       elsif ($match eq "#")
 	{ if (substr($', 0, 1) eq "#")
 	    { $result |= $DANGER;
-	      print EVIL "$currentfile:$.: dangerous: ## pasting in $mname:\n    $_[0]\n";
+	      print EVIL "$file:$.: dangerous: ## pasting in $mname:\n    $_[0]\n";
 	      $body = substr($body, 1); }
 	  # This list from GNU C preprocessor manual
-	  elsif ($' =~ m/(assert|cpu|define|elif|else|error|ident|if|ifdef|ifndef|import|include|include_next|line|machine|pragma|pragm|system|unassert|warning)\b/)
+	  # It's not complete, since #assert introduces new preprocessor commands.
+	  elsif ($' =~ m/(assert|cpu|define|elif|else|error|ident|if|ifdef|ifndef|import|include|include_next|line|machine|pragma|system|unassert|warning)\b/)
 	    { $result |= $DANGER;
-	      print EVIL "$currentfile:$.: dangerous: preprocessor directive #$& in $mname:\n    $_[0]\n"; }
+	      print EVIL "$file:$.: dangerous: preprocessor directive #$& in $mname:\n    $_[0]\n"; }
 	  else
 	    { $result |= $DANGER;
-	      print EVIL "$currentfile:$.: dangerous: stringization in $mname:\n    $_[0]\n"; } }
+	      print EVIL "$file:$.: dangerous: stringization in $mname:\n    $_[0]\n"; } }
       elsif ($match eq "/*")
 	# This test probably fails for a/**//**/b.  Oh, well.
         { my $postmatch = $';
@@ -638,7 +2393,7 @@ sub checkmacrobody
 		}
 	      else
 		{ $result |= $EVIL;
-		  print EVIL "$currentfile:$.: evil: unterminated comment in $mname:\n    $_[0]\n";
+		  print EVIL "$file:$.: evil: unterminated comment in $mname:\n    $_[0]\n";
 		  $body = "";
 		  $postmatch = ""; } }
 	  # print "Setting $body to $'; $`; $&.\n";
@@ -647,21 +2402,21 @@ sub checkmacrobody
 	  $postmatch =~ m/\*\//;
 	  $body = $';
 	  if ($precedingabuts && ($body =~ m/^\w/))
-	    { $result |= $OBSOLETE; 
-	      print EVIL "$currentfile:$.: obsoleted: comment pasting in $mname:\n    $_[0]\n"; } }
+	    { $result |= $OBSOLETE;
+	      print EVIL "$file:$.: obsoleted: comment pasting in $mname:\n    $_[0]\n"; } }
       elsif ($match eq "//")
-        { # print "$currentfile:$.: evil: //-style comment in $mname:\n    $_[0]\n";
+        { # print "$file:$.: evil: //-style comment in $mname:\n    $_[0]\n";
           $body = ""; }
       elsif ($match eq "*/")
 	# $_[0] doesn't give me the whole thing; why?  ($body only contains
 	#   what follows the match at this point.)
         { $result |= $EVIL;
-	  print EVIL "$currentfile:$.: evil: comment terminator */ not in comment in $mname:\n    $_[0]\n"; }
+	  print EVIL "$file:$.: evil: comment terminator */ not in comment in $mname:\n    $_[0]\n"; }
       else
-        { die "$currentfile:$.: ???: match = $match before $body in $mname:\n    $_[0]\n"; }
+        { die "$file:$.: ???: match = $match before $body in $mname:\n    $_[0]\n"; }
         }
   if ($#nesting != -1)
-    { $result |= $EVIL; 
-      print EVIL "$currentfile:$.: evil: no match for ", @nesting, " in $mname:\n    $_[0]\n"; }
+    { $result |= $EVIL;
+      print EVIL "$file:$.: evil: no match for ", @nesting, " in $mname:\n    $_[0]\n"; }
   return $result;
 }
