@@ -8,6 +8,8 @@ CCCP=cccp
 BISON = bison
 CC=gcc
 
+CFLAGS=-DYYDEBUG
+
 GCC_CFLAGS=$(INTERNAL_CFLAGS) $(X_CFLAGS) $(T_CFLAGS) $(CFLAGS) -I./include
 # This is the variable actually used when we compile.
 ALL_CFLAGS = $(INTERNAL_CFLAGS) $(X_CFLAGS) $(T_CFLAGS) $(CFLAGS) $(XCFLAGS) -g #-Wall
@@ -219,6 +221,8 @@ C++-FLAGS := $(STANDARD-INCS) ...
 OBJECTS = cppmain.o cpplib.o cpphook.o cpphash.o cppalloc.o cpperror.o cppexp.o \
   version.o backcalls.o
 
+SD_OBJECTS = scan-decls.o cpplib.o cpphash.o cppalloc.o cpperror.o cppexp.o version.o backcalls.o cpphook.o
+
 # Making the preprocessor
 pcpp: cppmain hook_index_constants.pm
 	cp $< $@
@@ -226,6 +230,10 @@ pcpp: cppmain hook_index_constants.pm
 cppmain: $(OBJECTS) $(LIBDEPS)
 	rm -f $@
 	$(CC) $(ALL_CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS) $(LIBS) $(PERLLIBS)
+
+scandecls: $(SD_OBJECTS) $(LIBDEPS)
+	rm -f $@
+	$(CC) $(ALL_CFLAGS) $(LDFLAGS) -o $@ $(SD_OBJECTS) $(LIBS) $(PERLLIBS)
 
 tags:
 	etags cppmain.[ch] cpplib.[ch] cpphash.[ch] cppalloc.[ch] cpperror.[ch] cppexp.[ch] version.c pcp.h tm.h 
@@ -305,6 +313,15 @@ END { print "};\n" } \
 /^typedef enum hook_index_constants/ { f = 1; next } \
 /^} HOOK_INDEX;/ { exit } \
 f == 1 { gsub("^ +",""); gsub(",",""); print "\""$$0"\"," }') > $@
+
+ansi-c-lex.c: ansi-c.l
+	flex -o$@ $^
+
+ansi-c.tab.c ansi-c.tab.h: ansi-c.y
+	bison -d $^
+
+grammar: ansi-c.tab.o ansi-c-lex.o grammar.o
+	gcc -g -o grammar $^ -lfl
 
 .PHONY: tags clean
 

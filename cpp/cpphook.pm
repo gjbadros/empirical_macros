@@ -78,6 +78,11 @@ sub create_predef {
   }
 }
 
+sub cpp_out {
+  my ($sz) = @_;
+  print STDOUT "@"; # just print a separator
+}
+
 sub cpp_error {
   my ($file,$line,$col,$msg) = @_;
   print "cpp_error: $file:$line:$col, $msg\n";
@@ -176,7 +181,7 @@ sub done_include_file {
 
 # Token's come a lot, so redirect this output somewhere else
 sub Got_token {
-  my ($token) = @_;
+  my ($token,$sz) = @_;
   print TOKEN substr($token,4),"\n";
 }
 
@@ -189,6 +194,7 @@ AddHook($CREATE_DEF,\&create_def);
 AddHook($DO_UNDEF,\&do_undef);
 AddHook($DELETE_DEF,\&delete_def);
 AddHook($CPP_ERROR,\&cpp_error);
+AddHook($CPP_OUT,\&cpp_out);
 AddHook($EXPAND_MACRO,\&expand_macro);
 AddHook($SPECIAL_SYMBOL,\&special_symbol);
 AddHook($COMMENT,\&comment);

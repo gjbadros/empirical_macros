@@ -211,19 +211,25 @@ main (int argc, char **argv, char **env)
   else if (! freopen (opts->out_fname, "w", stdout))
     cpp_pfatal_with_name (&parse_in, opts->out_fname);
 
+#ifndef GJB_PARSE
   for (;;)
     {
       enum cpp_token kind;
+      kind = cpp_get_token (&parse_in);
       if (! opts->no_output)
 	{
 	  fwrite (parse_in.token_buffer, 1, CPP_WRITTEN (&parse_in), stdout);
 	}
-      parse_in.limit = parse_in.token_buffer;
-      kind = cpp_get_token (&parse_in);
-      gjb_call_hooks_sz(opts,TOKEN,SzFromToken(kind));
+      gjb_call_hooks_szl(opts,CPP_OUT,parse_in.token_buffer,CPP_WRITTEN(&parse_in));
+      gjb_call_hooks_sz_szl(opts,TOKEN,SzFromToken(kind),parse_in.token_buffer,
+			    CPP_WRITTEN(&parse_in));
       if (kind == CPP_EOF)
 	break;
+      parse_in.limit = parse_in.token_buffer;
     }
+#else
+  yy_parse();
+#endif
 
   cpp_finish (&parse_in);
 

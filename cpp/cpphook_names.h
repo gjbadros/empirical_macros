@@ -24,6 +24,7 @@ char *hook_names[] = {
 "CPP_ERROR",
 "CPP_WARN",
 "CPP_PEDWARN",
+"CPP_OUT",
 "ADD_IMPORT",
 "INCLUDE_FILE",
 "DONE_INCLUDE_FILE",
