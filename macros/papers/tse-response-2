@@ -1,16 +1,24 @@
-Attached is a point-by-point response to Reviewer 3's comments.  Section
-numbers and pages refer to the revision unless otherwise noted.  While we
-carefully and seriously considered each suggestion and implemented most of
-them, in some cases we chose not to make changes.  This was due to one of
+Attached is a point-by-point response to Reviewer 3's comments.  (We also
+direct your attention to our March 31 cover letter, which addresses many of
+the high-level points.)  Section numbers and pages refer to the revision
+unless otherwise noted.
+
+While we carefully and seriously considered each suggestion and implemented
+most of them, in some cases we chose not to make changes.  This was due to
 two factors.  First, this reviewer asked questions about a specific set of
-points; as we note in our cover letter, we were asked to expand each
+points.  As we note in our cover letter, we were asked to expand each
 section of the paper by at least one reader, and we do not have room to
 accommodate all these requests in the current paper.  Second, in some cases
-when only one reader was unclear about a point, while all the others
-understood it, we chose not to make changes (though in many cases we still
-modified the text for additional clarity).
+when only one reader was unclear about a point, while all the others (not
+just the reviewers) understood it, we chose not to make changes (though in
+many cases we still modified the text for additional clarity).
 
-> We are not really
+> This paper presents an experimental study of the use of the C
+> preprocessor.  The paper makes two contributions: it presents a
+> taxonomy of ways the preprocessor may be used, and it reports on
+> experimental measurements of the frequency with which different taxons
+> are used.  (It also reports some other properties, like dependencies.)
+> The presentation of both contributions is flawed.  We are not really
 > shown the development of this taxonomy, and no effort is made to
 > convince us that this is a good taxonomy or to show us that this
 > taxonomy can be put to some practical use.  The paper pounds away at
@@ -25,13 +33,13 @@ modified the text for additional clarity).
 > supported by the empirical work; they seem disconnected from the rest
 > of the paper.
 
-Section 1 now provides a more complete motivation.  This, in turn,
-provides a better background for the taxonomy and helps to 
-connect sections 8 and 9.  We also reference the empirical data in
-sections 8 and 9, further connecting them to the rest of the paper.
-
-In section 5.1 (p.7), we explain the methodology more precisely and
-thoroughly.
+Most of these points are addressed either in our cover letter or later in
+this document (where in many cases the criticisms are made more specific).
+Briefly, Section 1 now provides a more complete motivation.  This, in turn,
+provides a better background for the taxonomy and helps to connect Sections
+8 and 9.  We also reference the empirical data in Sections 8 and 9, further
+connecting them to the rest of the paper.  In Section 5.1 (page 7), we
+explain the methodology more precisely and thoroughly.
 
 > It may be that the most valuable contribution of your work will come
 > not from your measurements but from your taxonomy.  Certainly the
@@ -51,7 +59,9 @@ thoroughly.
 > but measurements showed otherwise, so we consider X only as it forms
 > part of Y.''
 
-[[***** TO DO *****]]
+These general points, too, are addressed elsewhere or in our cover letter.
+The paper generally comments on these issues where they arise rather than
+dumping it all in one place.
 
 > It's hard to tell from your paper if your taxonomy is flat.  For
 > example, is ``extra-linguistic'' a taxon that is divided into other
@@ -833,7 +843,10 @@ We truncated it, added absolute numbers, and expanded the caption.
 > would constitute perfect accuracy?  How many instances did you spot
 > check?  How did you select them?
 
-[[***** TO DO *****]]
+We checked between high dozens and low hundreds of instances to determine
+whether any conditions with the properties we mentioned were used other
+than for macro redefinition.  We found very few exceptions.  However, since
+we don't have a formal statement of this, we have omitted the sentence.
 
 > Page 20:
 > 
