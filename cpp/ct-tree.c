@@ -315,6 +315,12 @@ leafnode *find_typedef_name(treenode *n)
 		n = n->rnode;
 		break;
 
+            case TN_PARAM_LIST:
+              fprintf(stderr,
+                      "find_typedef_name: got TN_PARAM_LIST\n");
+              return 0;
+              break;
+              
 	    default:
 		fprintf(stderr,
                     "Internal error: "
@@ -375,6 +381,13 @@ leafnode *find_ident_name(treenode *n, treenode **rest)
 		n = n->rnode;
 		break;
 
+            case TN_EMPTY:
+              fprintf(stderr,
+                      "find_ident_name -- got TN_EMPTY\n");
+              return 0;
+              break;
+              
+                
 	    default:
 		fprintf(stderr,
                     "Internal error: "
