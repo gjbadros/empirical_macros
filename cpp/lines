@@ -1,19 +1,19 @@
     881 lexer.l
-   1506 gram.y
-    260 pcpp.c
+   1512 gram.y
+    266 pcpp.c
      19 pcpp.h
-   8085 cpplib.c
-    726 cpplib.h
-   1217 cpphook.c
-    468 cpphook.h
-    226 cpphash.c
-     41 cpphash.h
+   8096 cpplib.c
+    727 cpplib.h
+   1287 cpphook.c
+    515 cpphook.h
+    264 cpphash.c
+     48 cpphash.h
      64 cppalloc.c
     122 cpperror.c
     998 cppexp.c
       1 version.c
-    429 backcalls.xs
-    217 bison-stack.c
+    469 backcalls.xs
+    218 bison-stack.c
      42 bison-stack.h
     216 ct-heap.c
     162 ct-nmetab.c
@@ -22,4 +22,9 @@
     414 ct-token.c
     467 ct-tree.c
     312 ct-tree_stk.c
-  18787 total
+    654 cpphook.pm
+  19668 total
+Backcalls:
+     26
+Hooks:
+     41
