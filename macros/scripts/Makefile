@@ -198,18 +198,18 @@ tbl-subset-categories: $(MAC)
 	macros-make-subset-metacateg-from-mac -m $^ | sort | uniq -c -w12 | sort -nr > $@
 
 tbl-subset-categories.tex: tbl-subset-categories
-	cat $< | latexify-meta-mark-table `sum-column 1 <$^` > $@
-#	head -50 $< | latexify-meta-mark-table `sum-column 1 <$^` > $@
+	cat $< | latexify-meta-mark-table `sum-column 1 <$<` > $@
+#	head -50 $< | latexify-meta-mark-table `sum-column 1 <$<` > $@
 # the head -50 chooses how many lines to include in the latex table
 
 tbl-subset-properties.tex: tbl-properties-percents tbl-properties-subset
 	macros-make-subset-prop-tbl > $@
 
 tbl-lint.tex: tbl-lint
-	macros-make-lint-table < $^ > $@
+	macros-make-lint-table < $< > $@
 
 tbl-lint:	$(LINT)
-	lint-summarize < $^ > $@
+	lint-summarize $^ > $@
 
 # tbl-lint-warnings: $(LINT)
 # 	combine-histogram -p'\) ' -s '^Total.*: (.*)' $^ > $@
