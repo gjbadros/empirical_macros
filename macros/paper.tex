@@ -93,12 +93,12 @@ include files are incorporated and all macros
 expanded~\cite[p.~145]{Siff-fse96}.''  O'Callahan and Jackson also use
 type inference, although for program understanding rather than
 translation; they, too, apply their techniques to post-processed
-code~\cite{OCallahan-icse97}. 
+code~\cite{OCallahan-icse97}.  
 
 Having tools use post-processed source code increases the dissonance
-between what the programmer sees and what the tools analyze.  There are
-several ways to try to reduce this problem; Stroustrup suggests the
-following:
+between what the programmer sees and what the tools analyze.  There
+are several ways to try to reduce this problem; Stroustrup suggests
+the following:
 
 \begin{quote}
 I'd like to see Cpp abolished.  However, the only realistic and
@@ -112,16 +112,16 @@ belongs~\cite[p.~426]{Stroustrup-DesignEvolution}.
 As a step in this direction, we performed an empirical analysis of the
 ways in which the preprocessor is used in a large collection of C
 programs; we analyzed nearly 30 packages that comprise well over one
-million lines of code.  The intent of the analysis is to build a better
-understanding of how the preprocessor is used.  In turn, this will help
-us to build a C to C++ conversion tool with two attractive properties:
-one, it will take as input C programs complete with preprocessor
-directives; and two, it will map many---preferably most\footnote{It is
-  not practical to eliminate all uses of Cpp since C++ currently
-  provides no replacement for the \verb+#include# directive.}---uses of
-directives into C++ language features.  The framework we developed for
-analyzing preprocessor usage provides a basis for the development of
-such a conversion tool.
+million lines of code.  The intent of the analysis is to build a
+better understanding of how the preprocessor is used.  In turn, this
+will help us to build a C to C++ conversion tool with two attractive
+properties: one, it will take as input C programs complete with
+preprocessor directives; and two, it will map many---preferably
+most---uses of directives into C++ language features.\footnote{It is
+not practical to eliminate all uses of Cpp since C++ currently
+provides no replacement for the \verb+\#include+ directive.}  The
+framework we developed for analyzing preprocessor usage provides a
+basis for the development of such a conversion tool.
 
 In this paper, we report on several specific analyses that we
 performed.  
@@ -161,23 +161,59 @@ we can't get?]
 
 \section{Related Work}\label{sec:related}
 
-\section{Gathering and Analyzing the Data}\label{sec:gathering}
+\section{The Data}\label{sec:gathering}
 
-[We may not need this section.]
+We analyzed 30 C packages, primarily (exclusively?) taken from the GNU
+distribution.  Figure~\ref{fig:packages} shows the packages along with
+their sizes.  The size of each package is given in terms of both the
+physical line count---the actual numbers of lines in the file (in Unix
+terms, this is the number of newline characters plus one)---and also
+the non-comment/non-blank (NCNB) line count, which eliminates any
+lines that contain only comments or that are blank lines (consisting
+only of whitespace).  Throughout the remainder of the analysis, we use
+only the NCNB length, since that seems to focus more clearly on the
+essential source text of a package.
 
-A number of our analyses refer to the ``number of lines'' in a
-program.  We distinguish two ways of counting lines:
-\begin{itemize}
+\begin{figure}
+%\epsfxsize 6in
+%\centerline{\epsfbox{mc.eps}}
+\begin{tabular}{|l|r|r|}\\\hline
+C Package & Physical Lines & NCNB Lines\\\hline\hline
+bc & 7438 & 5177\\\hline
+gzip & 9076 & 5787\\\hline
 
-\item {\em Physical} lines refers to the actual numbers of lines in
-the file; in Unix terms, this is the number of newline characters plus
-one.
+Total & big & num\\\hline
+\end{tabular}
 
-\item {\em Non-comment/Non-blank (NCNB)} lines eliminates any lines
-that contain only comments or that are blank lines (consisting only of
-whitespace).
+\caption{Analyzed Packages and Sizes\label{fig:packages}}
+\end{figure}
 
-\end{itemize}
+[If we could also list the platforms for which each can compile, that
+would be great, but I doubt the benefit is worth the effort right
+now.]
+
+\section{Occurrence of Preprocessor Directives}\label{sec:directives}
+
+The first question we asked was a simple one: how often do
+preprocessor directives appear in C programs?
+Figure~\ref{fig:directives} shows the data for the packages we
+analyzed.  There are five rows in the figure, each of which has a
+separate bar for each of the packages we analyzed.  The topmost row
+shows the total percentage of lines in the package that represent
+preprocessor directives.  The rows below the topmost one show the
+percentage of lines in the package attributed to a subset of
+preprocessor directives: (a) \verb+#undef+ is the next row down, (b)
+\verb+#include+ is the next row down, (c) \verb+#define+ is the next
+row down, (d) the conditional compilation directives (\verb+#ifdef+,
+\verb+#ifndef+, \verb+#if+, \verb+#endif+, \verb+#else+, and
+\verb+#elif+ are combined into a single group shown in the next row,
+and (e) any other directives in the bottom row. 
+
+\begin{figure}
+goes here
+
+\caption{Percentages of Directives\label{fig:directives}}
+\end{figure}
 
 \section{Occurrence of Preprocessor Directives}\label{sec:directives}
 
@@ -186,17 +222,15 @@ directives appear in C programs?  Figure~\ref{fig:gzip_directives} shows
 the data for the gzip package.  The top bars shows the percentage of
 lines (split into the three categories discussed above) coming from all
 preprocessor directives; the remaining bars show the percentages of each
-specific directive as labeled.  (The \verb+#endif+ directive has been
-eliminated since it is the sum of the \verb+#if+, \verb+#ifdef+ and
-\verb+#ifndef+ directives; the line counts were also reduced by this
-amount.)
+specific directive as labeled. 
 
 Perhaps the most surprising information here is the percentage of the
-program lines that are preprocessor directives: under any of our
-interpretations of lines, at least 11\% of the program consists of
-preprocessor directives.  Of these, about half are \verb+#define+
-directives.  [We'll want to insert a breakdown of what kinds of
-defines these are.]
+program lines that are preprocessor directives: the number varies by
+at least a factor of three across packages [FIX: get this number
+right], but in some cases over 11\% [FIX: this number, too] of the
+total NCNB lines in a file are preprocessor directives.  Of these,
+about half are \verb+#define+ directives; more information about the
+breakdown of the \verb+#define+s is given below.
 
 \section{Frequency of Defined Macro Usage}\label{sec:usage}
 
@@ -208,11 +242,49 @@ determined:
 \item How many times it was \verb+#define+d.
 \item How many times it was \verb+#undef+ined.
 \item How many arguments (if any) it defined.
-\item How many times it was mentioned in C source code.
-\item How many times it was mentioned in other preprocessor
-directives.
+\item How many times (and where) it was mentioned in C source code.
+\item How many times (and where) it was mentioned in other
+preprocessor directives.
 
 \end{itemize}
+
+We display some of these data here, in several different forms.
+Figure~\ref{fig:define_count} shows a histogram with cumulative
+percentages of the number of times each identifier is \verb+define+d
+in each of the packages.  The leftmost column lists the number of
+times an identifier is \verb+define+d, with the one through ten counts
+listed explicitly and all counts greater than ten collapsed into a
+single bin.  For example, looking at the \verb+bc+ package, 98.72\% of
+the identifiers were \verb+#define+d between one and six times.
+
+\begin{figure}
+goes here
+
+\caption{Frequency of Definition\label{fig:define_count}}
+\end{figure}
+
+The \verb+#undef+ counts are generally extremely low; the maximum
+number of undefines seen in any package was [fill in here].
+
+Figure~\ref{fig:use_count} is structured as the last figure, but it
+represents the number of times that a defined name is used in either C
+code or preprocessor code.
+
+\begin{figure}
+goes here
+
+\caption{Frequency of Use\label{fig:use_count}}
+\end{figure}
+
+Figure~\ref{fig:define_usage} shows the percentage of defined macros
+that are used in C code, in cpp code
+
+\begin{figure}
+goes here
+
+\caption{Use of Defined Macros\label{fig:define_usage}}
+\end{figure}
+
 
 \section{Categorization}\label{sec:categorization}
 
