@@ -3,7 +3,7 @@
 # (Using the macros-* scripts)
 
 PKG_DIR := /tmp/mernst/packages
-
+COMMON_DIR := /tmp/mernst
 # FIX: These files should be generated from the directory names under PKG_DIR
 
 # "make data" makes these files.
@@ -56,12 +56,12 @@ tbl-package_sizes: $(STAT)
 tbl-def_frequency: $(MAC)
 	macros-make-def-frequency-tbl-from-mac $^
 	# -n12 arg to xargs for latex
-	echo $(patsubst %.mac,%.freqdef,$^) | xargs paste /homes/gws/gjb/macros/freqdef.buckets >> $@
+	echo $(patsubst %.mac,%.freqdef,$^) | xargs paste $(COMMON_DIR)/freqdef.buckets >> $@
 
 tbl-use_frequency: $(MAC)
 	macros-make-use-frequency-tbl-from-mac $^
 	# -n12 arg to xargs for latex
-	echo $(patsubst %.mac,%.frequse,$^) | xargs paste /homes/gws/gjb/macros/frequse.buckets >> $@
+	echo $(patsubst %.mac,%.frequse,$^) | xargs paste $(COMMON_DIR)/frequse.buckets >> $@
 
 tbl-how_used_ni: $(MAC)
 	macros-make-how-used-ni-tbl-from-mac $^ > $@
