@@ -20,3 +20,16 @@ Neither defined
 #define foo(x,y)  x y x x y testing
 
 #undef foo
+
+"Here is a string constant with \t embedded \n\r escapes"
+
+__FILE__
+
+#define STRING "A String"
+
+STRING
+
+'c'
+
+'ch'
+

@@ -1,6 +1,6 @@
 #line 4
 
-int FnFoo(int a) {
+static int FnFoo(int a) {
   return a+1;
 }
 
