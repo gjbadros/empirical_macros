@@ -61,6 +61,10 @@ sub Startup {
   open(VARS,">$prefix.vars") || die "Cannot open $prefix.vars: $!";
   open(TYPES,">$prefix.types") || die "Cannot open $prefix.types: $!";
   open(EXPAND,">$prefix.exps") || die "Cannot open $prefix.exps: $!";
+  #EXPNEG will hold expansions with bogus offsets, so denote-expansions
+  # does not unnecessarily complain -- they are innocuous in my recent
+  # experience --12/13/98 gjb
+  open(EXPNEG,">$prefix.exps-neg") || die "Cannot open $prefix.exps-neg: $!";
   open(CMDLNDEFS,">$prefix.defgjbmde") || die "Cannot open $prefix.defgjbmde: $!";
 #  open(EXP_CL,">$prefix.expcl") || die "Cannot open $prefix.expcl: $!";
 #  open(TOKEN,">$prefix.tokens") || die "Could not open $prefix.tokens: $!";
@@ -83,7 +87,12 @@ sub add_use {
   my ($mname,$fname, $expansion, $s_start, $s_end, $cbb) = @_;
   # test16.c tickles this bug
   if ($cbb <= 1) {
-    print EXPAND "$fname: $mname, $s_start, $s_end\n";
+    if ($s_start < 0 || $s_end < 0 || $s_start > $s_end) {
+      # bad, but probably not a severe problem
+      print EXPNEG "$fname: $mname, $s_start, $s_end\n";
+    } else {
+      print EXPAND "$fname: $mname, $s_start, $s_end\n";
+    }
   }
 }
 
