@@ -29,7 +29,7 @@ EXTRA_ANALYZE_FLAGS := -v
 EXTRA_REPORTS_FLAGS := -v
 #EXTRA_ANALYZE_FLAGS := -v -g14 -F$(FAST_DIR)
 
-include Makefile.user
+include Makefile.$(USER)
 
 SCRIPTS := em_analyze em_reports em_constants.pm em_depend.pm em_util.pm cline.pm paren.pm
 SCRIPTSPATH := $(addprefix $(USER_PREFIX)/,$(SCRIPTS))
@@ -55,6 +55,7 @@ SDEPEND_BY_MACRO  := $(addsuffix .bymacro,$(SDEPEND))
 USECUM  := $(addsuffix .frequse_cum,$(PKGS))
 DEFCUM  := $(addsuffix .freqdef_cum,$(PKGS))
 DDFCUM  := $(addsuffix .freqddf_cum,$(PKGS))
+NUMARG  := $(addsuffix .numarg,$(PKGS))
 CATUSECUM  := cat-*.frequse_cum
 CATDEFCUM  := cat-*.freqdef_cum
 CATDDFCUM  := cat-*.freqdef_cum
@@ -79,7 +80,8 @@ TEXT_TABLES :=	tbl-package-sizes \
 		tbl-expansion-dependences-by-macro \
 		tbl-def-categories \
 		tbl-directives-breakdown \
-		tbl-lint
+		tbl-lint \
+		tbl-cat-numargs
 
 RAW_TABLES := tbl-directives-hist tbl-subset-categories
 
@@ -193,7 +195,7 @@ tbl-def-categories: $(STAT)
 	macros-make-categories-tbl-from-stat.pl -t -p $^ > $@
 
 tbl-subset-categories: $(MAC)
-	macros-make-subset-metacateg-from-mac -m $^ | sort | uniq -c -w21 | sort -nr > $@
+	macros-make-subset-metacateg-from-mac -m $^ | sort | uniq -c -w12 | sort -nr > $@
 
 tbl-subset-categories.tex: tbl-subset-categories
 	cat $< | latexify-meta-mark-table `sum-column 1 <$^` > $@
@@ -218,9 +220,13 @@ tbl-properties-subset: $(PROP)
 tbl-properties-percents: $(PROP)
 	combine-histogram -p'\)' -s'#.*percentages: total defs = (.*)' -e '^#' $^ > $@
 
+# Be sure to not count lines in c-files-listing that start with #
+# also, be sure that either the c-files-listing links are updated to point
+# to the current files, or that both gjb and mernst are cvs-updated after
+# changes get made to a c-files-listing files
 package_num_files:
 	cd $(USER_PREFIX)/packages; \
-	wc -l *c-files-listing | awk -F- '{print $$1}' | awk '{print $$2 "\t" $$1}' > $(ANALYZE_OUTPUT_DIR)/$@
+	(for i in *c-files-listing; do echo -n $${i%%-*} && grep -v '^\#' < $$i | wc -l; done ) | awk '{print $$1 "\t" $$2; sum += $$2} END {print "total\t" sum}' > $(ANALYZE_OUTPUT_DIR)/$@
 
 
 tbl-inclusion-dependences-by-line: $(SDEPEND)
@@ -231,6 +237,9 @@ tbl-any-dependences-by-line: $(SDEPEND)
 
 tbl-expansion-dependences-by-line: $(SDEPEND)
 	macros-make-dependences-by-line Expansion `only-non-empty-files $^` > $@
+
+%.numarg: %.catg
+	macros-make-numarg-from-catg $< >$@
 
 %.sdepend: %.depend
 	awk '/======================================================================/,/^  thislinewontmatchanything  $$/' < $< > $@
@@ -250,6 +259,23 @@ tbl-expansion-dependences-by-macro: $(SDEPEND_BY_MACRO)
 sdepend: $(SDEPEND)
 
 sdepend_bymacro: $(SDEPEND_BY_MACRO)
+
+catnumargs: $(NUMARG)
+	awk '{print $$1" "$$3}' $^ | demux-macro-categories-to-file
+
+CATNUMARGS := catnumarg-not_c_code catnumarg-constant catnumarg-expression \
+	 catnumarg-syntactic catnumarg-null_define catnumarg-other catnumarg-statement \
+	 catnumarg-type_related catnumarg-failure catnumarg-unknown_symbol
+
+$(CATNUMARGS): $(NUMARG)
+	awk '{print $$1" "$$3}' $^ | demux-macro-categories-to-file
+
+catnumarg-Mean:  $(CATNUMARGS)
+	cat $^ | sort -n > $@
+
+tbl-cat-numargs: catnumarg-Mean $(CATNUMARGS)
+	@ -rm -f catnumarg-\#category 
+	macros-make-tbl-cat-numargs $^ > tbl-cat-numargs
 
 ###########################################################################
 ### Etc.
@@ -292,4 +318,4 @@ fast:	$(SCRIPTSPATH)
 # *.stat file
 .PRECIOUS: %.state
 
-.PHONY: all clean showvars text_tables data_analyze data_reports raw copy fast sdepend sdepend_bymacro
+.PHONY: all clean showvars text_tables data_analyze data_reports raw copy fast sdepend sdepend_bymacro catnumargs
