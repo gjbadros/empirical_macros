@@ -337,6 +337,13 @@ typedef enum hook_index_constants {
 ///% give the name of the newly defined function, and $fStatic is non-zero
 ///% iff the function was declared to be static (i.e. not global).
 
+  HI_FUNC_PROTO,
+///% {$name}
+///% Called once after an function prototype (declaration) is parsed.  Argument
+///% gives the name of the newly defined function.  This hook is not called
+///% for complete function definitions -- see HI_FUNCTION for that hook.
+
+
   HI_FUNC_CALL,
 ///% {$name}
 ///% Called once after each function call is parsed.  Only argument is
