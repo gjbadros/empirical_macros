@@ -34,6 +34,13 @@ How To Use Pcp3 To Preprocess A Package
     but do search for "**", which marks a pcp3 error.
 
 5) cd to the top level directory
+5b) double check that no .exps files are broken (usually resulting from
+    an abnormal termination of pcp3):
+
+for i in **/*.exps; do { tail -n1 $i | grep -q '[^0-9]$' } && echo $i; done
+find . -name "core" -print
+
+(report core files to Greg)
 
 6) pcp3-compare-exps-vs-c
    pcp3-compare-exps-vs-c-files-listing
