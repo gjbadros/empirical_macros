@@ -6,80 +6,69 @@
   function to) a symbol which is not a formal argument, a variable defined
   in the macro body, or a function, macro, typedef, or reserved word.  Such
   symbols are typically local or global variables.  Uses of global
-  variables are generally innocuous; uses of local variables (in whidh the
-  local definition in scope at the point of use capatures the free variable
+  variables are generally innocuous; uses of local variables (in which the
+  local definition in scope at the point of use captures the free variable
   in the macro body) can be used to achieve dynamic scoping, which C does
-  not directly support.  In this work, we did not separately analyze global
-  and local free variables, though this distinction is key to understanding
-  the macro uses.
-
-  [[We didn't analyze whether the free variables are globals or locals,
-          which could substantially impact understanding/translation.]]
+  not directly support.  We did not separately analyze global and local
+  free variables.
 
 \item[Assignment]
   The macro body side-effects state via assignment (of the form {\tt =},
   {\tt {\em op}=}, {\tt -{}-}, or {\tt ++}).  We did not look for calls to
-  functions or macros that might have side effect.
+  functions or macros that might have side effect, nor did we discount side
+  effects to variables local to the macro body.  
+  
+  Macros containing assignment operators have potentially unexpected
+  results (doubly so for those with no arguments, whose invocations look
+  like variable uses, not function calls).  A macro argument that is
+  assigned to is similar to a pass-by-reference function argument and need
+  only be noted in the macro's documentation.  A macro that assigns a
+  global variable also presents no difficulties in understanding or
+  translation into a C++ inline function.  Assignment to other variables
+  free in the macro body demands that such a variable exist wherever the
+  macro is invoked, and assigns to different variables at different
+  invocations.\footnote{[[To related work?: By contrast, LCLint considers
+    assignment to a macro argument dangerous but does not appear to check
+    for assignments to local variables.~\cite{Evans:LCLint}]]} Such a macro
+  implements a restricted form of dynamic scoping by capturing the instance
+  of a variable visible at the point of macro invocation.
 
-  One effect of this is that a macro may return different values even if
-  the invocation looks like an ordinary variable use.  This may be desired
-  and intended, but can be used more freely than in base C or C++.
-
-Assignment operators have potentially unexpected results.  A macro argument
-that is assigned to is similar to a pass-by-reference function argument and
-need only be noted in the macro's documentation.  A macro that assigns a
-global variable also presents no difficulties in understanding or
-translation into a C++ inline function.  Assignment to a local variable
-that is free in the macro body, however, demands that such a variable exist
-wherever the macro is invoked, and assigns to different variables at
-different invocations.\footnote{By contrast, LCLint considers assignment to
-  a macro argument dangerous but does not appear to check for assignments
-  to local variables.~\cite{Evans:LCLint}} Such a macro implements a
-restricted form of dynamic scoping by capturing the instance of a variable
-visible at the point of macro invocation.
-
-  [[Should this even be here?  Assignment isn't extra-linguistic!]]
+[[IMPORTANT:  Should this even be here?  Assignment isn't extra-linguistic!]]
 
 \item[Use macro as type]
   In this macro's body, the result of another macro invocation is used as a
-  type.  This does not include all invocations of macros which are
-  identified as types, only those uses which are certainly in a context
-  where a type is required.
-
-  C cannot simulate this behavior, because its types are not first class.
-
-  As before, we identify only those uses which are completely unambiguous
-  and must fall into a single category.  
+  type\,---\,for instance, in a declaration or a type cast.  C cannot
+  simulate this behavior, because its types are not first class; they may
+  not be passed to functions, returned as results, or otherwise
+  manipulated.
 
 \item[Pass type as argument]
-  In this macro's body, a literal type is passed to
-  another macro, as in {\tt \#define PTRBITS \verb|__BITS|(char*)}.
+  In this macro's body, a literal type is passed to another macro, as in
+  {\tt \#define PTRBITS \verb|__BITS|(char*)}.  Like using a macro result
+  as a type, this is impossible in C\@.
 
 \item[Pasting]
   The body uses symbol pasting ({\tt \#\#}), which treats its arguments not
   as tokens but as strings, constructing a new token out of their
-  concatenation.  The resulting symbol might appear literally, or only as a
-  pasted symbol, at its other uses.  One example is {\tt \#define
-  \verb|_SIZEOF|(x) \verb|sz_|\#\#x}.
-
-%% Also:  {\tt \#define \verb|__CONCAT|(x,y) x \#\# y}.
+  concatenation, as in {\tt \#define \verb|_SIZEOF|(x) \verb|sz_|\#\#x}.
+  The resulting symbol might appear literally, or only as a pasted symbol,
+  at its other uses.  Since pasting is often abstracted out into a separate
+  macro\,---\,such as {\tt \#define \verb|__CONCAT|(x,y) x \#\#
+  y}\,---\,the incidence of pasting is higher than the direct uses
+  reflected by this statistic.
 
 \item[Use argument as type]
   This macro uses one of its arguments as a type.  Not all uses can be
   unambiguously identified lexically.  For instance, the macro 
-\begin{verbatim}
-#define MAKE_DECL(type, name) type name;
-\end{verbatim}
+  {\tt \#define \verb|MAKE_DECL|(type, name) type name;}
   is not identified as necessarily using its first argument as a type, for
   it might be invoked as {\tt \verb|MAKE_DECL|(printf, ("hello
-  world\verb|\|n"))} or as {\tt \verb|MAKE_DECL|(x =, y+z)}.  Thus, like
-elsewhere in this paper, the number reported is a lower bound on the actual
-incidence of use.
+  world\verb|\|n"))} or as {\tt \verb|MAKE_DECL|(x =, y+z)}.
+  Like using a macro result
+  as a type, this is impossible in C\@.
 
 \item[Self-referential]
-  The body refers to its own name, as in
-  {\tt \#define LBIT vcat(LBIT)}.
-  
+  The body refers to its own name, as in {\tt \#define LBIT vcat(LBIT)}.
   This feature is used when building a wrapper around an existing function
   or variable.  Since the ISO C preprocessor performs only one level of
   expansion on such recursively defined macros,\footnote{Pre-ANSI
@@ -92,9 +81,9 @@ incidence of use.
   argument from a token stream into a string.  Examples include {\tt
   \#define spam1(OP,DOC) \verb|{|\#OP, OP, 1, DOC\verb|}|,} (the comma is
 part of the macro body) and {\tt \#define REG(xx) register long int xx asm
-(\#xx)}.  No C or C++ language mechanism can replace such macros.  This is
-  particularly useful in debugging, in order to print or record the exact
-  operations being performed.
+(\#xx)}.  No C or C++ language mechanism can replace such macros.  This
+feature is particularly useful in debugging, in order to print or record
+the exact operations being performed.
 
 \end{description}
 
