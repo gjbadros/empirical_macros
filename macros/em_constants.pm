@@ -326,20 +326,20 @@ sub category_lub ( $$ )
   elsif ((($c1 == $catSTATEMENT) && ($c2 == $catSTATEMENTS))
 	 || (($c1 == $catSTATEMENT_SANS_SEMI) && ($c2 == $catSTATEMENTS_SANS_SEMI))
 	 || (($c1 == $catPARTIAL_STATEMENT) && ($c2 == $catPARTIAL_STATEMENTS)))
-    { $return $c2; }
+    { return $c2; }
   elsif ((($c2 == $catSTATEMENT) && ($c1 == $catSTATEMENTS))
 	 || (($c2 == $catSTATEMENT_SANS_SEMI) && ($c1 == $catSTATEMENTS_SANS_SEMI))
 	 || (($c2 == $catPARTIAL_STATEMENT) && ($c1 == $catPARTIAL_STATEMENTS)))
-    { $return $c1; }
+    { return $c1; }
   # if one is statement[s]_sans_semi, choose the other if it's partial_statement[s]
   elsif ((($c1 == $catSTATEMENT_SANS_SEMI)
 	  && (($c2 == $catPARTIAL_STATEMENT) || ($c2 == $catPARTIAL_STATEMENTS)))
 	 || (($c1 == $catSTATEMENTS_SANS_SEMI) && ($c2 == $catPARTIAL_STATEMENTS)))
-    { $return $c2; }
+    { return $c2; }
   elsif ((($c2 == $catSTATEMENT_SANS_SEMI)
 	  && (($c1 == $catPARTIAL_STATEMENT) || ($c1 == $catPARTIAL_STATEMENTS)))
 	 || (($c2 == $catSTATEMENTS_SANS_SEMI) && ($c1 == $catPARTIAL_STATEMENTS)))
-    { $return $c1; }
+    { return $c1; }
   # if one is
   elsif ((($c1 == $catSTATEMENTS_SANS_SEMI) && ($c2 == $catPARTIAL_STATEMENT))
 	 || (($c2 == $catSTATEMENTS_SANS_SEMI) && ($c1 == $catPARTIAL_STATEMENT)))
