@@ -1,5 +1,5 @@
 #!/uns/bin/zsh -
-# run on *.mac files
+# run on *.mac files; produces .freq_def_hist and .freqdef files
 for i in "$@"; do
   SUM=`awk < $i '$0 !~ /^[%#]/ \
 && $NF ~ /FromStdin/ { print $2 }' | sort -n | uniq -c | tee /tmp/$i.$$ | awk '{sum += ($1 * $2)} END {print sum}'`
