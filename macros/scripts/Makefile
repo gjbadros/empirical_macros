@@ -39,6 +39,7 @@ EVIL := $(addsuffix .evil,$(PKGS))
 FNLN := $(addsuffix .fnln,$(PKGS))
 FUNC := $(addsuffix .func,$(PKGS))
 LINT := $(addsuffix .lint,$(PKGS))
+PROP := $(addsuffix .prop,$(PKGS))
 MAC  := $(addsuffix .mac,$(PKGS))
 CCD  := $(addsuffix .ccd,$(PKGS))
 USECUM  := $(addsuffix .frequse_cum,$(PKGS))
@@ -167,6 +168,12 @@ tbl-subset-categories.tex: tbl-subset-categories
 
 tbl-lint-warnings: $(LINT)
 	combine-histogram -p'\) ' -s '^Total.*: (.*)' $^ > $@
+
+tbl-properties-subset: $(PROP)
+	combine-histogram -s'#.*histogram: total defs = (.*)' -e '^#' $^ > $@
+
+tbl-properties-percents: $(PROP)
+	combine-histogram -p'\)' -s'#.*percentages: total defs = (.*)' -e '^#' $^ > $@
 
 package_num_files:
 	cd $(PKG_DIR); \
