@@ -4853,7 +4853,7 @@ do_endif (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *lim
       if (temp->szConditionalClause != NULL) 
 	{
 	szConditionalClause = xmalloc(strlen(temp->szConditionalClause)+1);
-	strcpy(szConditionalClause,temp->control_macro);
+	strcpy(szConditionalClause,temp->szConditionalClause);
 	}
       else
 	{
