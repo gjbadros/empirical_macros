@@ -1,19 +1,19 @@
 #!/uns/bin/perl -w
 # cppp -- Partial CPP (expands specified C preprocessor macros)
 # Michael Ernst <mernst@cs.washington.edu>
-# Time-stamp: <1999-01-28 13:28:41 mernst>
+# Time-stamp: <1999-10-09 11:07:43 mernst>
 
-# This program simplifies the conditional compilation structure (#if, etc.)
-# of a C file by eliminating all those that it can, based on the values of
-# preprocessor macros specified by the user.  If those specified macros are
-# insufficient to fully evaluate a conditional, it is left as is.
-# Occurrences of macros are not expanded (in code, macro definitions, or
-# conditional compilation lines), and it makes use of macro definitions
-# only on its command line, not #define directives in the input files.
-# This is similar to the unifdef Unix program (which I did not know about
-# when I wrote cppp, and which only operates on #ifdef lines).
+# This program simplifies the conditional compilation structure (#if,
+# #ifdef, etc.) of a C file by eliminating CPP conditional directives,
+# based on the values of preprocessor macros specified by the user.  If
+# those specified macros are insufficient to fully evaluate a conditional,
+# it is left as is.  Occurrences of macros are not expanded (in code, macro
+# definitions, or conditional compilation lines), and this program makes
+# use of macro definitions only on its command line, not #define directives
+# in the input files.  This is similar to the unifdef Unix program (which
+# only operates on #ifdef lines).
 
-# Call the program by specifying file names on the command line.
+# Call this program by specifying file names on the command line.
 # Files are modified in place after being backed up with extension ".nocppp".
 
 

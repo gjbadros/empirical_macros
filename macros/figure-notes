@@ -52,7 +52,9 @@ Excel importation notes
        rehash
        excel-ps-to-eps *.ps
   c) Fix up the bounding box lines (also on a Linux machine):
+       zsh
        for i in *.eps; do echo $i && gv =(bbfig $i); done
+       exit
      and edit the postscript for each file as it appears.
 
 ===========================================================================
