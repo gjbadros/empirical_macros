@@ -5719,9 +5719,37 @@ sub SaveMacroAnalysisState
   $Data::Dumper::Indent = 1;
 #  $Data::Dumper::Purity = 1;
 
-  open(OUTSTATE, ">$output_filename");
-  print OUTSTATE Data::Dumper->Dumpxs([\%macros,\%macros_c_undefs,\%macros_uses,\%macros_file_line_uses,\%macros_used_in_functions,\@mdef_name,\@mdef_args,\@mdef_body,\@mdef_body_noc,\@mdef_file,\@mdef_line,\@mdef_physical_lines,\@mdef_physical_ncnb_lines,\@mdef_freefuns,\@mdef_dependenton,\@mdef_expansion_uses,\@mdef_type,\@mdef_category,\@mdef_evilness,\%mdef_freevars,\%mntype,\%mncategory,\@rg_cppcmdcounts,\@rg_category_counts,\@rg_physical_lines,\@rg_ncnb_lines,\@rg_cpp_phys_lines,\@rg_cpp_phys_ncnb_lines,\@rg_cpp_cmds,\@rg_category_counts,\%file_inclusion_method,\%function_name_to_macros_it_uses,\%files_lines,\%function_to_locs],
-			 [qw(*macros *macros_c_undefs *macros_uses *macros_file_line_uses   *macros_used_in_functions *mdef_name *mdef_args *mdef_body *mdef_body_noc *mdef_file *mdef_line *mdef_physical_lines *mdef_physical_ncnb_lines *mdef_freefuns *mdef_dependenton *mdef_expansion_uses *mdef_type *mdef_category *mdef_evilness *mdef_freevars *mntype *mncategory *rg_cppcmdcounts *rg_category_counts *rg_physical_lines *rg_ncnb_lines *rg_cpp_phys_lines *rg_cpp_phys_ncnb_lines *rg_cpp_cmds *rg_category_counts *file_inclusion_method *function_name_to_macros_it_uses *files_lines *function_to_locs)]);
+  open(OUTSTATE, ">$output_filename")
+    or (open(OUTSTATE, ">state" && printf STDERR "Couldn't open $output_filename, using \"state\" instead\n"))
+      or die "Failed opening output file: $!";
+
+  my @vars_list = qw(
+    %macros %macros_c_undefs %macros_uses 
+    %macros_file_line_uses %macros_used_in_functions 
+    @mdef_name @mdef_args @mdef_body @mdef_body_noc 
+    @mdef_file @mdef_line @mdef_physical_lines 
+    @mdef_physical_ncnb_lines @mdef_freefuns @mdef_dependenton 
+    @mdef_expansion_uses @mdef_type @mdef_category 
+    @mdef_evilness %mdef_freevars 
+    %mntype %mncategory 
+    @rg_cppcmdcounts @rg_category_counts 
+    @rg_physical_lines @rg_ncnb_lines 
+    @rg_cpp_phys_lines @rg_cpp_phys_ncnb_lines 
+    @rg_cpp_cmds @rg_category_counts 
+    %file_inclusion_method %function_name_to_macros_it_uses 
+    %files_lines %function_to_locs
+		     );
+
+  my $i = 0;
+  foreach $i (0..$#vars_list) {
+    my $v = $vars_list[$i];
+    my $g = $v;
+    $g =~ s/[\@\%\$]/\*/;
+    my $es = sprintf "print OUTSTATE Data::Dumper->Dumpxs([\\%s],[\"%s\"]);", $v,$g;
+#    print STDERR $es, "\n";
+    eval $es;
+  }
+
   close(OUTSTATE);
 }
 
@@ -5739,6 +5767,9 @@ use Getopt::Std;
 getopts($getopts_option_letters);
 
 usage() if ($opt_h);
+
+#SaveMacroAnalysisState("/tmp/gjb/macros");
+#exit 0;
 
 if ($opt_i) {
   while (<STDIN>) {
