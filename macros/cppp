@@ -1,20 +1,30 @@
 #!/uns/bin/perl -w
 # cppp -- Partial CPP (expands specified C preprocessor macros)
 # Michael Ernst <mernst@cs.washington.edu>
+# Time-stamp: <1999-01-28 13:28:41 mernst>
 
-# Removes conditional compilation; currently does not replace uses of the
-# macros with their definitions.
-# Takes file names on command line.
-# Backs up foo.c to foo.c.nocppp, then writes output to foo.c.
+# This program simplifies the conditional compilation structure (#if, etc.)
+# of a C file by eliminating all those that it can, based on the values of
+# preprocessor macros specified by the user.  If those specified macros are
+# insufficient to fully evaluate a conditional, it is left as is.
+# Occurrences of macros are not expanded (in code, macro definitions, or
+# conditional compilation lines), and it makes use of macro definitions
+# only on its command line, not #define directives in the input files.
+# This is similar to the unifdef Unix program (which I did not know about
+# when I wrote cppp, and which only operates on #ifdef lines).
+
+# Call the program by specifying file names on the command line.
+# Files are modified in place after being backed up with extension ".nocppp".
 
 
-# To do:
+
+## To do:
 #   Check for {re,un}definition of the specified macros.
 #   Implement -h command-line option
-#   Could use -i.no-cppp flag, but I'm not comfortable with it
+#   Could use -i.nocppp flag, but I'm not comfortable with it
 #   Simplifying postpass (eg, #else #endif => #endif) might be nice
 
-# Bugs:
+## Bugs:
 #  * only copes with conditional compilation; occurrences in code, macro
 #    definitions, etc. are not expanded
 #  * I assume that "defined" isn't the name of a macro (can it be?)
@@ -22,7 +32,16 @@
 #    (the standard doesn't specify signedness)
 #  * -D can only define constant-like macros, not function-like ones (true
 #    for cpp also)
+# This program was solid enough to be used in the development of SCWM.
 
+
+## Flags:
+# Control action to take if .nocppp file found:
+#   -nocppp-overwrite
+#   -nocppp-skip
+#   -nocppp-use		(default)
+#   -nocppp-die
+# 
 # The following cpp flags are recognized:
 # 
 # `-D NAME'
@@ -50,12 +69,6 @@
 #      undefines all predefined macros that identify the type of target
 #      system.
 
-# Control action to take if .nocppp file found:
-#   -nocppp-overwrite
-#   -nocppp-skip
-#   -nocppp-use		(default)
-#   -nocppp-die
-
 require 5.003;  # uses prototypes
 use strict;
 use Carp;
@@ -73,7 +86,7 @@ use paren;
 # Should call this somewhere
 sub usage ( ) {
   die "@_
-Usage: $0 ...
+Usage: $0 file ...
 -h     Help. Display this usage information
 ENTER USAGE INFO HERE
 ";
@@ -581,7 +594,7 @@ sub process_file ( $ )
   open(INPUT, $backup) || die "Can't read $backup: $!";
   open(OUTPUT, ">$file") or die "Can't write $file: $!";
 
-  my $prev_spliced = $false;
+  # my $prev_spliced = $false;
   my @condition_stack = ();	# conditions for all #if we are inside
 				# each is $true, $false, or $unknown
   my @condition_value_stack = ($true); # the AND of @condition_stack
@@ -639,7 +652,7 @@ sub process_file ( $ )
 	      $ifarg =~ s/\s+$//;
 	      my $oldvalue = $condition_stack[$#condition_stack];
 	      my $thisvalue = evaluate_conditional($ifarg);
-	      my $old_current_condition_value = $current_condition_value;
+	      # my $old_current_condition_value = $current_condition_value;
 	      my $prev_current_condition_value =
 		$condition_value_stack[$#condition_value_stack - 1];
 
