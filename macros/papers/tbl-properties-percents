@@ -1,0 +1,11 @@
+TOTAL = 27228
+3284	(12.06%)		free_var
+1733	(6.36%)		assign
+891	(3.27%)		uses_macro_as_type
+120	(0.44%)		passes_type_as_arg
+19	(0.07%)		uses_arg_as_type
+10	(0.04%)		pasting
+8	(0.03%)		stringize
+7	(0.03%)		self_referential
+0	(0.00%)		invokes_macro
+0	(0.00%)		assembly_code
