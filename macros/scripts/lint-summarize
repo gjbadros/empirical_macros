@@ -51,11 +51,11 @@ END
       || ($defs_files != $formal_adjacent_use_files)
       || ($defs_files != $formal_unparen_use_files)
       || ($defs_files != $formal_modified_files))
-    { die "Inconsistent number of files with info: $defs_files $null_body_files $newline_body_files $unparen_body_files $swallow_semi_files $formal_name_files $formal_mult_use_files $formal_adjacent_use_files $formal_unparen_use_files $formal_modified_files"; }
+    { die "Inconsistent number of files with info: '$defs_files' '$null_body_files' '$newline_body_files' '$unparen_body_files' '$swallow_semi_files' '$free_var_files' '$formal_name_files' '$formal_mult_use_files' '$formal_adjacent_use_files' '$formal_unparen_use_files' '$formal_modified_files'"; }
 
   # Lifted from em_reports
   print "\n\n";
-  print "Total macro definitions not in libraries: $defs\n";
+  print "Total macro definitions not in libraries: $defs in $defs_files packages\n";
   print "$null_body\t("
     . sprintf("%2.2f",percent2($null_body,$defs))
       . "%) Null body with args\n";
