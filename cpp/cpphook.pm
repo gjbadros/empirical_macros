@@ -262,6 +262,7 @@ sub macro_cleanup {
   my $state_stack = join(",",cpp::ParseStateStack());
   print "macro_cleanup $mname; [$s_start - $s_end] source $offset, $cbb; output $cbytesOutput\n";
   print " : nests = ", join("->",@nests), "\n";
+  print " : MEH = ", join("<-",cpp::MacroExpansionHistory()),"\n";
   if ($cbb == 1) {
     $top_level_full_expansion =~ s%\n%\\n\\%g;
     print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'final-exp \"$mname final expansion: $top_level_full_expansion\")\n";
@@ -332,7 +333,7 @@ sub expand_macro {
   print "\nexpand_macro $mname = ", cpp::ExpansionLookup($mname), ", source offset: $s_start - $s_end, $cbuffersDeep [$has_escapes]; ", 
       cpp::FExpandingMacros(), " in $fname\n";
   print " : expansion of $mname => $expansion (length $length:offset $start - $end [$cBytesOutput + $exp_offset + 1])\n";
-  print " : argof = ", cpp::ArgOf(), "\n";
+#  print " : argof = ", cpp::ArgOf(), "\n"; FIXGJB obsoleted
   print " : nests = ", join("->",@nests), "\n";
   print " : MEH = ", join("<-",cpp::MacroExpansionHistory()),"\n";
   chomp $raw_call;
@@ -491,13 +492,13 @@ sub Got_token {
   my @nests = cpp::MacroExpansionHistory();
   my $fname = cpp::Fname();
 
-  $argof = cpp::ArgOf();
+#  $argof = cpp::ArgOf(); FIXGJB: obsoleted, use $argno instead
   print  TOKEN "TOKEN: $raw;", substr($token,4),", FExpandingMacros = ",cpp::FExpandingMacros(),
    ", CchOffset = $fname:", cpp::CchOffset(), "; CchOutput = ", cpp::CchOutput(),"\n";
   print TOKEN ": Nests: ",join("<-",@nests),"\n";
   print TOKEN ": History: ",join("<-",@history),"\n";
   print TOKEN ": From $mname\n";
-  print TOKEN ": ArgOf = $argof vs. Argno = $argno\n";
+  print TOKEN ": Argno = $argno\n";
   if ($raw =~ m/^[\w\$]+$/) {
     print TOKEN ": ", cpp::FLookupSymbol($raw)? "Found symbol" : "Not found", "\n";
   }
@@ -518,10 +519,11 @@ sub Got_token {
   }
 }
 
-sub annotate {
-  my ($szBefore,$cdeepBefore,$szAfter,$cdeepAfter, $pad) = @_;
-  print "ANNOTATE: $szBefore\[$cdeepBefore\]; $szAfter\[$cdeepAfter\] : $pad\n";
-}
+#FIXGJB Obsoleted
+#sub annotate {
+#  my ($szBefore,$cdeepBefore,$szAfter,$cdeepAfter, $pad) = @_;
+#  print "ANNOTATE: $szBefore\[$cdeepBefore\]; $szAfter\[$cdeepAfter\] : $pad\n";
+#}
 
 sub do_function {
   my ($szName,$fStatic) = @_;
