@@ -166,7 +166,7 @@ sub find_close_paren ($;$)
 	  && (($next_open == -1) || ($next_close < $next_open)))
 	{ if (defined($brace_pos) && ($next_close > $brace_pos))
 	    { # croak "Found brace before matching paren in $exp";
-	      print STDERR "Found brace before matching paren in $exp\n";
+	      carp "Found brace before matching paren in $exp\n";
 	      return $false; }
 	  $opens--;
 	  $pos = $next_close+1; }
@@ -174,7 +174,7 @@ sub find_close_paren ($;$)
 	     && (($next_close == -1) || ($next_open < $next_close)))
 	{ if (defined($brace_pos) && ($next_open > $brace_pos))
 	    { # croak "Found brace before matching paren in $exp";
-	      print STDERR "Found brace before matching paren in $exp\n";
+	      carp "Found brace before matching paren in $exp\n";
 	      return $false; }
 	  $opens++;
 	  $pos = $next_open+1;
