@@ -48,7 +48,8 @@ tbl-package_sizes: $(STAT)
 	macros-make-package-sizes-tbl-from-stat $^ >$@
 
 tbl-def_frequency: $(MAC)
-	macros-make-def-frequency-tbl-from-mac $^ >$@
+	macros-make-def-frequency-tbl-from-mac $^
+	echo $(patsubst %.mac,%.freqdef,$^) | xargs -n12 paste /homes/gws/gjb/macros/freqdef.buckets >>$@
 
 tbl-how_used_ni: $(MAC)
 	macros-make-how-used-ni-tbl-from-mac $^ >$@
