@@ -203,14 +203,6 @@ my (%cppcmdcount, %cppcmdcount_ni, %cppcmdcount_hdr_ni, %cppcmdcount_c_ni);
 my (%category_counts_ni, %category_counts_c_ni, %category_counts_hdr_ni);
 
 
-sub args_array ($)
-{ my ($args) = check_args(1, @_);
-  $args =~ s/^\s*\(\s*//;
-  $args =~ s/\s*\)\s*$//;
-  return split(/\s*,\s*/,$args);
-}
-
-
 # FIX: these sub-parts might better be broken up into functions
 sub output_stats ()
 {
@@ -575,6 +567,8 @@ sub output_stats ()
 			{ my @formal_complaints = ();
 			  if ($arg !~ /^$identifier_re$/o)
 			    { push(@formal_complaints, "not an identifier"); }
+			  elsif ($arg =~ /^$reserved_word_re$/o)
+			    { push(@formal_complaints, "name is reserved word"); }
 			  # Add spaces to make sure that there's a first and last part
 			  my @parts = split(/\b\Q$arg\E\b/, " $body ");
 			  for my $i (0..$#parts)
@@ -664,7 +658,7 @@ sub output_stats ()
 			   (($body =~ /^($identifier_re\s*)?\(/o)
 			    # For testing
 			    # && (print STDERR "match = $MATCH, close = \n")
-			    && (($body =~ /^\(\s*\{/) # hack: don't call find_close_paren if braces inside, as it will complain
+			    && (($body =~ /^(__extension__\s*)?\(\s*\{/) # hack: don't call find_close_paren if braces inside, as it will complain
 				|| (find_close_paren($body, length($MATCH)) == length($body)-1)))
 			   # identifier or number
 			   || ($body =~ /^\w+$/)

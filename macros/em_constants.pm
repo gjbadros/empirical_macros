@@ -98,6 +98,7 @@ $ILLEGAL = 4;
 ###
 
 # These speak of the BODY; whether the macro takes args is a different matter.
+# Add "varargs" as a category?  Also other failures?
 
 ## Failure:
 $catNOT_YET = 0;		# shouldn't be used; should be undefined instead

@@ -3,7 +3,7 @@ package em_util;
 require 5.002;
 require Exporter;
 @ISA = qw(Exporter);
-@EXPORT = qw( is_number type_name count_macro_args );
+@EXPORT = qw( is_number type_name count_macro_args args_array );
 
 
 use checkargs;
@@ -44,6 +44,15 @@ sub count_macro_args ($) {
   #print STDERR "count_macro_args: $retval for $arg_decl\n";
   return $retval;
 }
+
+# Given a macro argument declaration, return an array of formal names.
+sub args_array ($)
+{ my ($args) = check_args(1, @_);
+  $args =~ s/^\s*\(\s*//;
+  $args =~ s/\s*\)\s*$//;
+  return split(/\s*,\s*/,$args);
+}
+
 
 1; #Successful import
 __END__
