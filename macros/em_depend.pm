@@ -39,7 +39,10 @@ sub dump_dependenton ( $% )
 	  else
 	    { print ","; }
 	  print "\n  ";
-	  if ($key =~ /^[_a-zA-Z][_a-zA-Z0-9]*$/)
+	  # This test works, but when reading the file via "do", we get
+	  # warnings because the unquoted strings may be ambiguous.
+	  # ($key =~ /^[_a-zA-Z][_a-zA-Z0-9]*$/)
+	  if ($key =~ /^\d+$/)
 	    { print $key; }
 	  else
 	    { print "'$key'"; }
@@ -68,11 +71,17 @@ sub dump_hashset ( $% )
 	  if ($hash{$key} ne '1')
 	    { die "hashset val $hash{$key} should have been '1'"; }
 	  print "\n" . " " x $indent . "  ";
-	  if ($key =~ /^[_a-zA-Z][_a-zA-Z0-9]*$/)
+	  # This test works, but when reading the file via "do", we get
+	  # warnings because the unquoted strings may be ambiguous.
+	  # ($key =~ /^[_a-zA-Z][_a-zA-Z0-9]*$/)
+	  if ($key =~ /^\d+$/)
 	    { print $key; }
 	  else
 	    { print "'$key'"; }
-	  print " => '1'"; }
+	  # If we don't want consistency with Data::Dumper, use a real number
+	  # print " => '1'";
+	  print " => 1";
+	}
       print "\n" . " " x $indent; }
   print "}";
 }

@@ -670,6 +670,7 @@ sub extra_state_file_name ( $ )
   @mdef_body
 			    );
 
+# I don't really need file_includers and file_includees in this list.
 @depend_state_file_vars = qw(
   %macro_inclusion_dependenton
   %macro_inclusion_dependees

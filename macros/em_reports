@@ -504,6 +504,9 @@ sub output_dependences ( )
   select DEPEND;
   # print "===========================================================================\n";
   print "Macro dependence info\n";
+  print "depon is a list of macros this one depends on\n";
+  print "depees is a list of macros that depend on this one\n\n";
+
   for my $macro_name (sort keys %macros)
     { print "$macro_name\n";
       if (scalar(@{$macros{$macro_name}}) > 0)
@@ -564,13 +567,17 @@ sub output_dependences ( )
 	$defs_lines{$macro_name} = $this_product;
 	$total_product += $this_product; }
     print "\n\n===========================================================================\n";
-    print "DEFS BY LINES PRODUCT: $total_product\n"; }
+    my $ncnb_physical_lines_ni =
+      sum_array(@rg_ncnb_lines[@ftype_NOT_INCLUDED]);
+    my $num_macros = scalar(keys %macros);
+    print "DEFS BY LINES PRODUCT: $total_product  (for $ncnb_physical_lines_ni lines and $num_macros macros)\n"; }
   print "  product = distinct_defs [defs] * (inclusion_dependees + expansion_dependees)";
 
   { my $prev_product = -1;
     for my $macro_name (sort { ($defs_lines{$b} <=> $defs_lines{$a})
-				 || (scalar(@{$macros{$b}}) <=> scalar(@{$macros{$a}})) }
-			(keys %macros))
+				 || (scalar(@{$macros{$b}}) <=> scalar(@{$macros{$a}}))
+				 || ($a cmp $b) }
+			     (keys %macros))
       # At this point we are at the end, not beginning, of an output line
       { my $this_product = $defs_lines{$macro_name};
 	## Print one line per product
@@ -584,22 +591,34 @@ sub output_dependences ( )
       } }
 
   print "\n\n===========================================================================\n";
-  print "LINES BY LEVEL OF MACRO DEPENDENCE\n";
+  print "LINES BY LEVEL OF MACRO DEPENDENCE\n\n";
   print "Any dependence\n";
-  for my $i (0 .. $#either_dependence_count)
-    { print "$i\t" . (defined($either_dependence_count[$i])
-		      ? $either_dependence_count[$i]
-		      : 0) . "\n"; }
+  { my $total_lines = 0;
+    for my $i (0 .. $#either_dependence_count)
+      { my $this_num = (defined($either_dependence_count[$i])
+			? $either_dependence_count[$i]
+			: 0);
+	print "$i\t$this_num\n";
+	$total_lines += $this_num; }
+    print "Total: $total_lines\n\n"; }
   print "Inclusion dependence\n";
-  for my $i (0 .. $#incl_dependence_count)
-    { print "$i\t" . (defined($incl_dependence_count[$i])
-		      ? $incl_dependence_count[$i]
-		      : 0) . "\n"; }
+  { my $total_lines = 0;
+    for my $i (0 .. $#incl_dependence_count)
+      { my $this_num = (defined($incl_dependence_count[$i])
+			? $incl_dependence_count[$i]
+			: 0);
+	print "$i\t$this_num\n";
+	$total_lines += $this_num; }
+    print "Total: $total_lines\n\n"; }
   print "Expansion dependence\n";
-  for my $i (0 .. $#exp_dependence_count)
-    { print "$i\t" . (defined($exp_dependence_count[$i])
-		      ? $exp_dependence_count[$i]
-		      : 0) . "\n"; }
+  { my $total_lines = 0;
+    for my $i (0 .. $#exp_dependence_count)
+      { my $this_num = (defined($exp_dependence_count[$i])
+			? $exp_dependence_count[$i]
+			: 0);
+	print "$i\t$this_num\n";
+	$total_lines += $this_num; }
+    print "Total: $total_lines\n\n"; }
 }
 
 
@@ -1155,25 +1174,30 @@ sub OutputCountsHistogramCum ( $$@ ) {
 
 sub read_variables {
   my ($file) = check_args(1,@_);
-  local $WARNING = 0;
-  no strict;
-  open(INPUTSTATE,"<$file") or die "Couldn't open state file $file: $!";
-  $INPUT_RECORD_SEPARATOR = ");\n"; #FIX: this separator could blow up
-  my $in;
-  while (defined($in = <INPUTSTATE>))
-  {
-    #DBG print "$in\n----------------\n\n";
-    eval $in;
-    if ($@)
-      { my ($varname) = split(/ = /, $in, 2);
-	die "Trouble evaling $varname from state file: $@" if $@; }
-  }
-  close(INPUTSTATE);
-
-  # If @mdef_body_simple wasn't in the state file, compute it from @mdef_body.
-  if (!defined($mdef_body_simple[0]))
-    { @mdef_body_simple = map { cline_simplify($_) } @mdef_body; }
+  # print STDERR "Reading variables from file $file\n";
+  do $file;
+  if ($@) { die "Trouble with \"do $file\": $@"; }
 }
+
+# sub read_variables {
+#   my ($file) = check_args(1,@_);
+#   print STDERR "Reading variables from file $file\n";
+#   local $WARNING = 0;
+#   no strict;
+#   open(INPUTSTATE,"<$file") or die "Couldn't open state file $file: $!";
+#   $INPUT_RECORD_SEPARATOR = ");\n"; #FIX: this separator could blow up
+#   my $in;
+#   while (defined($in = <INPUTSTATE>))
+#   {
+#     #DBG print "$in\n----------------\n\n";
+#     eval $in;
+#     if ($@)
+#       { my ($varname) = split(/ = /, $in, 2);
+# 	die "Trouble evaling $varname from state file: $@" if $@; }
+#   }
+#   close(INPUTSTATE);
+# }
+
 
 ###########################################################################
 ### Main loop
@@ -1210,12 +1234,18 @@ if (! -f $dependence_statename)
 else
   { read_variables($dependence_statename); }
 
+# print STDERR "Computing mdef_body_simple\n";
+# If @mdef_body_simple wasn't in the state file, compute it from @mdef_body.
+if (!defined($mdef_body_simple[0]))
+  { @mdef_body_simple = map { cline_simplify($_) } @mdef_body; }
+
 #$WARNING = 0;
 #require "dumpvar.pl";
 #dumpvar();
 #exit 0;
 
 
+# print STDERR "Opening output files\n";
 # using a default directory-- only open the files that aren't explicitly given
 if (!$opt_d) { $opt_d = '.'; }
 if ($opt_d) {
@@ -1345,7 +1375,7 @@ if ($opt_T) {
   exit 0;
 }
 
-#print STDERR "Computing various global statistics...\n";
+print STDERR "Computing various global statistics...\n";
 compute_global_cpp_sums();
 
 output_statistics();
