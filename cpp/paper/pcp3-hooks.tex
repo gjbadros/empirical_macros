@@ -133,11 +133,13 @@ replaces \$mname in the text (subject to further expansion, of course); \$length
 is the number of characters in that expansion, \$raw\_\-call is how the call
 appeared in the source (includes the macro name), \$has\_\-escapes is 0 if the
 source buffer is actual source text (i.e., if this is a top level expansion),
-otherwise it is a 1 (escapes has marked with @- preceding the macro name)
-FIXGJB: is that right?; \$cbuffersDeep is how many levels of expansion the text
+otherwise it is a 1 (escapes has marked with @- preceding the macro name);
+\$cbuffersDeep is how many levels of expansion the text
 has undergone beyond the source text (0 means the macro occurrence appeared
 directly in the source code); \$cnested tells how many elements are in @nests
-(so you can separate its arguments from @args); @nests is obsoleted FIXGJB:;
+(so you can separate its arguments from @args); @nests is non-empty when this
+expansion is an argument to another macro---see the body of the paper for 
+a complete explanation.
 \$cargs tells how many arguments \$mname takes; and @args contains argument
 expansion and use information.  Each argument contributes 7 elements to @args
 plus a pair of elements for each use;  e.g., if the first argument was used 3 times
@@ -152,7 +154,7 @@ successive pairs of elements give character offsets to the appearance of those
 arguments in the expansion.  For example if argument 1 is used 3 times, there could
 be (3, 5,6, 9,11,  14,18) as the final elements of the @args list.  Note that
 because the third expansion is longer than the first two (4 characters instead of
-just two), it must have been stringified. FIXGJB is this true?
+just two), it must have been stringified.
 \hookobsoleted{MACARG\_\-EXP}{\$mname, \$raw, \$number}
 \hook{MACRO\_\-CLEANUP}{\$s\_\-start, \$s\_\-end, \$mname, \$c\_\-nested, @nests}
 Called once for each macro expansion buffer as it is removed 
@@ -219,9 +221,10 @@ same text as would go to the output file when using just cpp (as in gcc -E).
 Full tokens and/or whitespace are emitted per each call to the hook.
 Use the CchOutput() and CchOffset() backcalls for output character offset
 and source code character offset, respectively.
-\hook{ADD\_\-IMPORT}{\$filename, \$was\_\-found} FIXGJB: 2nd arg right?
+\hook{ADD\_\-IMPORT}{\$filename, \$filedes\_\-num}
 Called for each filename that is \pphash{}import-ed.  Arguments give that
-file name and \$was\_\-found, which is negative iff the file was not found.
+file name and the number of the file-descriptor that file was opened
+on (negative iff the file was not found).
 \hook{INCLUDE\_\-FILE}{\$filename, \$system\_\-include}
 Called for each file that is \pphash{}include-d (not necessarily for each \pphash{}include
 directive; this hook won't be called if the file cannot be found).

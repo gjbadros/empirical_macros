@@ -186,11 +186,13 @@ typedef enum hook_index_constants {
 ///% is the number of characters in that expansion, $raw_call is how the call
 ///% appeared in the source (includes the macro name), $has_escapes is 0 if the
 ///% source buffer is actual source text (i.e., if this is a top level expansion),
-///% otherwise it is a 1 (escapes has marked with @- preceding the macro name)
-///% FIXGJB: is that right?; $cbuffersDeep is how many levels of expansion the text
+///% otherwise it is a 1 (escapes has marked with @- preceding the macro name);
+///% $cbuffersDeep is how many levels of expansion the text
 ///% has undergone beyond the source text (0 means the macro occurrence appeared
 ///% directly in the source code); $cnested tells how many elements are in @nests
-///% (so you can separate its arguments from @args); @nests is obsoleted FIXGJB:;
+///% (so you can separate its arguments from @args); @nests is non-empty when this
+///% expansion is an argument to another macro---see the body of the paper for 
+///% a complete explanation.
 ///% $cargs tells how many arguments $mname takes; and @args contains argument
 ///% expansion and use information.  Each argument contributes 7 elements to @args
 ///% plus a pair of elements for each use;  e.g., if the first argument was used 3 times
@@ -205,7 +207,7 @@ typedef enum hook_index_constants {
 ///% arguments in the expansion.  For example if argument 1 is used 3 times, there could
 ///% be (3, 5,6, 9,11,  14,18) as the final elements of the @args list.  Note that
 ///% because the third expansion is longer than the first two (4 characters instead of
-///% just two), it must have been stringified. FIXGJB is this true?
+///% just two), it must have been stringified.
 
   HI_MACARG_EXP,
 ///% obsoleted{$mname,$raw,$number}
@@ -295,9 +297,10 @@ typedef enum hook_index_constants {
 ///% and source code character offset, respectively.
 
   HI_ADD_IMPORT,
-///% {$filename,$was_found} FIXGJB: 2nd arg right?
+///% {$filename,$filedes_num}
 ///% Called for each filename that is #import-ed.  Arguments give that
-///% file name and $was_found, which is negative iff the file was not found.
+///% file name and the number of the file-descriptor that file was opened
+///% on (negative iff the file was not found).
 
   HI_INCLUDE_FILE,
 ///% {$filename, $system_include}
@@ -453,7 +456,7 @@ void gjb_call_hooks_i_i_sz_sz_3flags(struct cpp_options *, HOOK_INDEX, int, int,
 				     int, int, int);
 
 
-/* FIXGJB: beware _szl and _sz_i have some proto! */
+/* NOTE: beware _szl and _sz_i have some proto! */
 void gjb_call_hooks_szl(struct cpp_options *, HOOK_INDEX, char *, int);
 
 void gjb_call_hooks_szl_i(struct cpp_options *, HOOK_INDEX, char *, int, int);
