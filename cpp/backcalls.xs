@@ -333,9 +333,11 @@ PushBuffer($buffer_to_push, $s_start)
 	    warn("PushBuffer cannot handle strings with embedded NULLs\n");
 	}
 	
-	pbuf = cpp_push_buffer(&parse_in,szBuf,len,1 /* FROM PERL */);
-	pbuf->ichSourceStart = ichStart;
+	pbuf = cpp_push_buffer(&parse_in,szBuf,length,1 /* FROM PERL */);
+	pbuf->ichSourceStart = ichStart - 1;
 	pbuf->ichSourceEnd = ichStart + length;
+        pbuf->nominal_fname = "FromPerl";
+        fprintf(stderr,"cpp_push_buffer: %ld, %ld\n",pbuf->ichSourceStart,pbuf->ichSourceEnd);
 
 
 ###%\backcall{}{EnterScope}{}
