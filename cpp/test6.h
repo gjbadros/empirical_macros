@@ -18,7 +18,8 @@
 #define TA5(x,y) x ## y
 #define TA6(x,y) x/**/y
 #define TA7(x,y) #x, #y
-#define FOO bar
+#define FOO BAZ
+#define BAZ bar
 
 #define N1 A
 #define N2 A AB ABC ABCD
