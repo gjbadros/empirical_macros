@@ -7,8 +7,9 @@ How To Use Pcp3 To Preprocess A Package
 
 0) Use Linux for the configuration; we used that for the first run of numbers.
    Your path should contain ~gjb/bin/linux/pcp3, and, from ~gjb/bin/share,
-	gcc-pcp3, pcp3-compare-exps-vs-c, clean-for-pcp3,
-        and possibly other scripts.
+	gcc-pcp3, pcp3-compare-exps-vs-c, pcp3-compare-exps-vs-c-files-listing,
+        denote-expansions, clean-for-pcp3, find-c-no-usr,
+        canonicalize-paths-in-field1, pcp3-combine-expansions, and possibly other scripts.
    Set environment variable lgjb to /scratch/gjb; do one of
      setenv lgjb /scratch/gjb
      export lgjb=/scratch/gjb
@@ -19,8 +20,7 @@ How To Use Pcp3 To Preprocess A Package
 2) make
    This ensures that the distribution is OK, and creates any auxiliary
    files needed by the make process.
-2b) clean-for-pcp3
-    chgrp -R macros .; chmod -R g+w .
+2b) clean-for-pcp3; chgrp -R macros .; chmod -R g+w .
 
 3) Use gcc-pcp3 instead of a compiler; do one of
     * make -k CC=gcc-pcp3
@@ -36,19 +36,26 @@ How To Use Pcp3 To Preprocess A Package
 5) cd to the top level directory
 
 6) pcp3-compare-exps-vs-c
+   pcp3-compare-exps-vs-c-files-listing
    # check that for every .c file, a .exps file exists
+
 6b) For each file remaining, create the .exps file by making that .o file
         make -k CC=gcc-pcp3
     (may need to touch-oldify the .o file first).
     Do this in its own directory, not from the top-level directory.
 
+
+
 7) pcp3-combine-expansions to create 
    # To create expansions.lst
    
-8) denote-expansions expansions.lst 2>denote-expansions.err
+8) denote-expansions expansions.lst 2> denote-expansions.err
+   # (zsh syntax)
    # create munged/* directory hierarchy with preprocessed files
+   # If anything went wrong here, it's *bad news*.
 
-9) cd munged && find-c-no-usr >c-files-listing
+9) cd munged
+   find-c-no-usr > c-files-listing
    # cd into munged, and create a new c-files-list
    diff =(sort c-files-listing) =(sort ../c-files-listing)
    # compare to the old c-files-listings (zsh syntax)
@@ -57,10 +64,11 @@ How To Use Pcp3 To Preprocess A Package
    -- either copy the header file into munged/ (if it's included but has no expansions), or
    -- do nothing (if it is not included by any source file)
 
-   find-c-no-usr >c-files-listing
+   find-c-no-usr >! c-files-listing
    # Regenerate c-files-listing
 
-10) rm -fr munged/usr munged/uns
+10) # Skip this step for now; we want to see the files in case of trouble.
+    rm -fr munged/usr munged/uns
     rm -f **/*.o(.) #find . -type f -name "*.o" -exec rm \; 
     # Save space
 
