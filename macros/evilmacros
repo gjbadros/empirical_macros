@@ -119,8 +119,7 @@ $cWarning = 0;
 # Updated by gjb
 sub usage {
    die "@_\nUsage: $0 [-ihvDsS] <files>
--i use files listed on stdin [one per line]
-   in addition to those (if any) on cmd line
+-i use files listed on stdin [one per line] in addition to any on cmd line
 -h display this help message
 -v be verbose and list files as they are processed to stderr
 -D dump the names of the macros upon conclusion
@@ -131,7 +130,7 @@ sub usage {
 
 
 ###########################################################################
-### Code
+### Main loop
 ###
 
 use Getopt::Std;
@@ -155,9 +154,10 @@ if ($opt_i) {
 $fDebugCmdProcessing && print "@ARGV";
 
 foreach $file (@ARGV)
-{ $opt_v && print STDERR $file . "\n";
+{ if ($opt_v)
+    { print STDERR $file . "\n"; }
   $currentfile = $file;
-  open(INPUT,$file) or next;
+  open(INPUT,$file) or next;	# skip to next file if open fails
   $incomment = 0;
   $instring = 0;
   # $incharconst = 0;
@@ -183,11 +183,10 @@ foreach $file (@ARGV)
 	  $macros{$mname}[1] = $mdef;
 
 	  # Nothing to check if this is just making the macro defined w/o a body.
-	  if (defined($mdef)) {
-	    checkmacrobody($mdef);
-	  }
+	  if (defined($mdef))
+	    { checkmacrobody($mdef); }
 	}
-      elsif ($line =~ m/^\#[ \t]*([^ ]*)[ \t]*/) {
+      elsif ($line =~ m/^\#[ \t]*([^ ]*)\b/) {
 	$ {$macroCommands{$1}}++ if exists $macroCommands{$1}; 
 	$cpp_cmds++;
       }
@@ -344,7 +343,7 @@ sub appendlines
 
 
 ###########################################################################
-### Parse and check macros subroutines
+### Parse and check macros
 ###
 
 # Return an array of three elements: name, args, def
