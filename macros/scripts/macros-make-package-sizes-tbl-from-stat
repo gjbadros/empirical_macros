@@ -1,6 +1,0 @@
-#!/uns/bin/zsh
-# tab-delimited, no-title, total line
-awk -v OFS="\t" '/^#LINESNI#/ \
-{ nextln = 1; next} nextln==1 {phys = $1; ncnb = $2; sumphys+= phys; sumncnb += ncnb; nextln = 0; \
-gsub(/\..*$/, "", FILENAME); \
-print FILENAME,phys,ncnb; next} END { print "zzz<total>",sumphys,sumncnb } ' "$@"

@@ -1,2 +1,0 @@
-#!/uns/bin/zsh -
-awk < "$@" '$0 !~ /^[#%]/ && $3 == "FromStdin" { print $NF}' | sort | uniq -c
