@@ -1107,7 +1107,7 @@ handle_directive (cpp_reader *pfile)
 { int c;
   register struct directive *kt;
   int ident_length;
-  long after_ident;
+  long after_ident = 0;
   U_CHAR *ident, *line_end;
   long old_written = CPP_WRITTEN (pfile);
   struct cpp_options *opts = CPP_OPTIONS (pfile);
@@ -3344,6 +3344,8 @@ do_include (pfile, keyword, unused1, unused2)
   char *pcftry;
   U_CHAR *fbeg, *fend;		/* Beginning and end of fname */
   cpp_annotated_token *pcat;
+  int cchOffsetStart = CchOffset_internal(pfile);
+  int cchOffsetEnd = -1;
 
   /* Chain of dirs to search */
   struct file_name_list *search_start = CPP_OPTIONS (pfile)->include;
@@ -3465,13 +3467,15 @@ do_include (pfile, keyword, unused1, unused2)
 #endif
   else
     {
-      gjb_call_hooks_sz_sz_3flags(CPP_OPTIONS(pfile),HI_DO_INCLUDE,
-				  fbeg,"@BADNAME@",
-				  angle_brackets,skip_dirs,importing);
-      cpp_error (pfile,
-		 "`#%s' expects \"FILENAME\" or <FILENAME>", keyword->name);
       CPP_SET_WRITTEN (pfile, old_written);
       skip_rest_of_line (pfile);
+      cchOffsetEnd = pfile->buffer->cur - pfile->buffer->buf + 1;
+      gjb_call_hooks_i_i_sz_sz_3flags(CPP_OPTIONS(pfile),HI_DO_INCLUDE,
+				      cchOffsetStart,cchOffsetEnd,
+				      fbeg,"@BADNAME@",
+				      angle_brackets,skip_dirs,importing);
+      cpp_error (pfile,
+		 "`#%s' expects \"FILENAME\" or <FILENAME>", keyword->name);
       return 0;
     }
 
@@ -3510,12 +3514,14 @@ do_include (pfile, keyword, unused1, unused2)
   CPP_SET_WRITTEN (pfile, old_written);
 
   flen = fend - fbeg;
+  cchOffsetEnd = pfile->buffer->cur - pfile->buffer->buf + 1;
 
   if (flen == 0)
     {
-      gjb_call_hooks_sz_sz_3flags(CPP_OPTIONS(pfile),HI_DO_INCLUDE,
-				  fbeg,"@NULLLENGTH@",
-				  angle_brackets,skip_dirs,importing);
+      gjb_call_hooks_i_i_sz_sz_3flags(CPP_OPTIONS(pfile),HI_DO_INCLUDE,
+				      cchOffsetStart,cchOffsetEnd,
+				      fbeg,"@NULLLENGTH@",
+				      angle_brackets,skip_dirs,importing);
 
       cpp_error (pfile, "empty file name in `#%s'", keyword->name);
       return 0;
@@ -3539,9 +3545,10 @@ do_include (pfile, keyword, unused1, unused2)
     else
       f = open_include_file (pfile, fname, NULL_PTR);
     if (f == -2) {
-      gjb_call_hooks_sz_sz_3flags(CPP_OPTIONS(pfile),HI_DO_INCLUDE,
-				  fbeg,"@ALREADY_INCLUDED@",
-				  angle_brackets,skip_dirs,importing);
+      gjb_call_hooks_i_i_sz_sz_3flags(CPP_OPTIONS(pfile),HI_DO_INCLUDE,
+				      cchOffsetStart,cchOffsetEnd,
+				      fbeg,"@ALREADY_INCLUDED@",
+				      angle_brackets,skip_dirs,importing);
       return 0;		/* Already included this file */
     }
   } else {
@@ -3583,9 +3590,10 @@ do_include (pfile, keyword, unused1, unused2)
 	 redundant_include_p.  It would be nice if they were unified.  */
       if (redundant_include_p (pfile, fname))
 	{
-	gjb_call_hooks_sz_sz_3flags(CPP_OPTIONS(pfile),HI_DO_INCLUDE,
-				    fbeg,"@REDUNDANT_INCLUDE@",
-				    angle_brackets,skip_dirs,importing);
+	gjb_call_hooks_i_i_sz_sz_3flags(CPP_OPTIONS(pfile),HI_DO_INCLUDE,
+					cchOffsetStart,cchOffsetEnd,
+					fbeg,"@REDUNDANT_INCLUDE@",
+					angle_brackets,skip_dirs,importing);
 	return 0;
 	}
       if (importing)
@@ -3593,9 +3601,10 @@ do_include (pfile, keyword, unused1, unused2)
       else
 	f = open_include_file (pfile, fname, searchptr);
       if (f == -2){
-	gjb_call_hooks_sz_sz_3flags(CPP_OPTIONS(pfile),HI_DO_INCLUDE,
-				    fbeg,"@ALREADY_INCLUDED@",
-				    angle_brackets,skip_dirs,importing);
+	gjb_call_hooks_i_i_sz_sz_3flags(CPP_OPTIONS(pfile),HI_DO_INCLUDE,
+					cchOffsetStart,cchOffsetEnd,
+					fbeg,"@ALREADY_INCLUDED@",
+					angle_brackets,skip_dirs,importing);
 	return 0;			/* Already included this file */
       }
 #ifdef EACCES
@@ -3666,9 +3675,10 @@ do_include (pfile, keyword, unused1, unused2)
       else
 	cpp_error (pfile, "No include path in which to find %s", fname);
 
-      gjb_call_hooks_sz_sz_3flags(CPP_OPTIONS(pfile),HI_DO_INCLUDE,
-				  fbeg,"@NOTFOUND@",
-				  angle_brackets,skip_dirs,importing);
+      gjb_call_hooks_i_i_sz_sz_3flags(CPP_OPTIONS(pfile),HI_DO_INCLUDE,
+				      cchOffsetStart,cchOffsetEnd,
+				      fbeg,"@NOTFOUND@",
+				      angle_brackets,skip_dirs,importing);
     }
   else {
     /* Check to see if this include file is a once-only include file.
@@ -3678,9 +3688,10 @@ do_include (pfile, keyword, unused1, unused2)
 
     for (ptr = pfile->dont_repeat_files; ptr; ptr = ptr->next) {
       if (!strcmp (ptr->fname, fname)) {
-	gjb_call_hooks_sz_sz_3flags(CPP_OPTIONS(pfile),HI_DO_INCLUDE,
-				    fbeg,"@ONCED_FILE@",
-				    angle_brackets,skip_dirs,importing);
+	gjb_call_hooks_i_i_sz_sz_3flags(CPP_OPTIONS(pfile),HI_DO_INCLUDE,
+					cchOffsetStart,cchOffsetEnd,
+					fbeg,"@ONCED_FILE@",
+					angle_brackets,skip_dirs,importing);
 	close (f);
         return 0;				/* This file was once'd. */
       }
@@ -3765,9 +3776,10 @@ do_include (pfile, keyword, unused1, unused2)
 	} while (pcf != -1 && !pcfbuf);
       }
 #endif
-    gjb_call_hooks_sz_sz_3flags(CPP_OPTIONS(pfile),HI_DO_INCLUDE,
-				fbeg,fname,
-				angle_brackets,skip_dirs,importing);
+    gjb_call_hooks_i_i_sz_sz_3flags(CPP_OPTIONS(pfile),HI_DO_INCLUDE,
+				    cchOffsetStart,cchOffsetEnd,
+				    fbeg,fname,
+				    angle_brackets,skip_dirs,importing);
 
     /* Actually process the file */
     cpp_push_buffer (pfile, NULL, 0);
@@ -4131,7 +4143,7 @@ do_undef (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *lim
   U_CHAR *orig_buf = buf;
   int cDeletes = 0;
   int cchOffsetStart = pfile->buffer->prev - pfile->buffer->buf + 1;
-  int cchOffsetEnd = pfile->buffer->cur - pfile->buffer->buf + 1;
+  int cchOffsetEnd;
 
 #if 0
   /* If this is a precompiler run (with -pcp) pass thru #undef commands.  */
@@ -4140,6 +4152,7 @@ do_undef (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *lim
 #endif
 
   SKIP_WHITE_SPACE (buf);
+  cchOffsetEnd = pfile->buffer->cur - pfile->buffer->buf + 1;
   sym_length = check_macro_name (pfile, buf, "macro");
 
   gjb_call_hooks_i_i_szl(CPP_OPTIONS(pfile),HI_PRE_DO_UNDEF,cchOffsetStart,cchOffsetEnd,
@@ -4359,23 +4372,27 @@ do_sccs (pfile, keyword, buf, limit)
  */
 
 static int
-do_if (pfile, keyword, buf, limit)
-     cpp_reader *pfile;
-     struct directive *keyword;
-     U_CHAR *buf, *limit;
+do_if (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *limit)
 {
   HOST_WIDE_INT value;
+  int cchOffsetStart = pfile->buffer->prev - pfile->buffer->buf + 1;
+  int cchOffsetEnd = pfile->buffer->cur - pfile->buffer->buf + 1;
+  char *szConditionalClause;
+  int cchConditionalClause;
   U_CHAR *pchStartExpr = CPP_BUFFER(pfile)->cur+1;
   U_CHAR *pchEndExpr = NULL;
   pfile->fGettingDirective++; // FIXGJB: better flag?
   value = eval_if_expression (pfile, buf, limit - buf);
   pfile->fGettingDirective--;
   pchEndExpr = CPP_BUFFER(pfile)->cur;
-  conditional_skip (pfile, value == 0, T_IF, NULL_PTR,keyword?keyword->name:0);
-  gjb_call_hooks_szl_szl_i(CPP_OPTIONS(pfile),HI_DO_IF,
-			   pchStartExpr,pchEndExpr-pchStartExpr-1,
-			   pchEndExpr,CPP_BUFFER(pfile)->cur-pchEndExpr-1,
-			   value);
+  cchConditionalClause = pchEndExpr - pchStartExpr + 1;
+  szConditionalClause = (char *) xmalloc(cchConditionalClause + 1);
+  bcopy(pchStartExpr,szConditionalClause,cchConditionalClause);
+  conditional_skip (pfile, value == 0, T_IF, NULL_PTR,szConditionalClause);
+  gjb_call_hooks_i_i_szl_szl_i(CPP_OPTIONS(pfile),HI_DO_IF,cchOffsetStart,cchOffsetEnd,
+			       pchStartExpr,pchEndExpr-pchStartExpr-1,
+			       pchEndExpr,CPP_BUFFER(pfile)->cur-pchEndExpr-1,
+			       value);
   return 0;
 }
 
@@ -4385,19 +4402,18 @@ do_if (pfile, keyword, buf, limit)
  */
 
 static int
-do_elif (pfile, keyword, buf, limit)
-     cpp_reader *pfile;
-     struct directive *keyword;
-     U_CHAR *buf, *limit;
+do_elif (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *limit)
 {
   U_CHAR *pchStartExpr = CPP_BUFFER(pfile)->cur+1;
   U_CHAR *pchEndExpr = NULL;
   int fSkip_IfWasTrue = 0;
+  int cchOffsetStart = pfile->buffer->prev - pfile->buffer->buf + 1;
+  int cchOffsetEnd = pfile->buffer->cur - pfile->buffer->buf + 1;
   HOST_WIDE_INT value;
 
   if (pfile->if_stack == CPP_BUFFER (pfile)->if_stack) {
     cpp_error (pfile, "`#elif' not within a conditional");
-    gjb_call_hooks_sz_sz_i(CPP_OPTIONS(pfile),HI_DO_ELIF,
+    gjb_call_hooks_i_i_sz_sz_i(CPP_OPTIONS(pfile),HI_DO_ELIF,cchOffsetStart,cchOffsetEnd,
 			   "@BAD@","@BAD@",value);
     return 0;
   } else {
@@ -4417,6 +4433,9 @@ do_elif (pfile, keyword, buf, limit)
 
   if (pfile->if_stack->if_succeeded)
     {
+    /* Eval it anyway, for the hook */
+    value = eval_if_expression (pfile, buf, limit - buf); /* FIXNOWGJB: may need to remove this */
+    pchEndExpr = CPP_BUFFER(pfile)->cur;
     skip_if_group (pfile, 0);
     fSkip_IfWasTrue = 1;
     }
@@ -4430,16 +4449,10 @@ do_elif (pfile, keyword, buf, limit)
       output_line_command (pfile, 1, same_file);
     }
   }
-  if (fSkip_IfWasTrue)
-    gjb_call_hooks_szl_szl_i(CPP_OPTIONS(pfile),HI_DO_ELIF,
-			     "@IFWASTRUE@",11,
-			     pchEndExpr,CPP_BUFFER(pfile)->cur-pchEndExpr-1,
-			     value);
-  else
-    gjb_call_hooks_szl_szl_i(CPP_OPTIONS(pfile),HI_DO_ELIF,
-			     pchStartExpr,pchEndExpr-pchStartExpr-1,
-			     pchEndExpr,CPP_BUFFER(pfile)->cur-pchEndExpr-1,
-			     value);
+  gjb_call_hooks_i_i_i_szl_szl_i(CPP_OPTIONS(pfile),HI_DO_ELIF,cchOffsetStart,cchOffsetEnd,
+				 fSkip_IfWasTrue,pchStartExpr,pchEndExpr-pchStartExpr-1,
+				 pchEndExpr,CPP_BUFFER(pfile)->cur-pchEndExpr-1,
+				 value);
   return 0;
 }
 
@@ -4450,10 +4463,7 @@ do_elif (pfile, keyword, buf, limit)
  * then parse the result as a C expression and return the value as an int.
  */
 static HOST_WIDE_INT
-eval_if_expression (pfile, buf, length)
-     cpp_reader *pfile;
-     U_CHAR *buf;
-     int length;
+eval_if_expression (cpp_reader *pfile, U_CHAR *buf, int length)
 {
   HASHNODE *save_defined;
   HOST_WIDE_INT value;
@@ -4478,10 +4488,8 @@ eval_if_expression (pfile, buf, length)
  */
 
 static int
-do_xifdef (pfile, keyword, unused1, unused2)
-     cpp_reader *pfile;
-     struct directive *keyword;
-     U_CHAR *unused1, *unused2;
+do_xifdef (cpp_reader *pfile, struct directive *keyword, 
+	   U_CHAR *unused1, U_CHAR *unused2)
 {
   int skip;
   cpp_buffer *ip = CPP_BUFFER (pfile);
@@ -4495,7 +4503,9 @@ do_xifdef (pfile, keyword, unused1, unused2)
   U_CHAR *pchEndExpr = NULL;
   U_CHAR *pchEndGarbage = NULL;
   char *szConditionalClause = NULL;
-  int s_start;
+  int cchOffsetBranchStart;
+  int cchOffsetStart = CchOffset_internal(pfile);
+  int cchOffsetEnd;
 
   /* Detect a #ifndef at start of file (not counting comments).  */
   if (ip->fname != 0 && keyword->type == T_IFNDEF)
@@ -4544,6 +4554,7 @@ do_xifdef (pfile, keyword, unused1, unused2)
   pchEndExpr = CPP_BUFFER(pfile)->cur;
   skip_rest_of_line (pfile);
   pchEndGarbage = CPP_BUFFER(pfile)->cur;
+  cchOffsetEnd = pfile->buffer->cur - pfile->buffer->buf + 1;
 
 #if 0
     if (pcp_outfile) {
@@ -4559,7 +4570,7 @@ do_xifdef (pfile, keyword, unused1, unused2)
       }
 #endif
 
-  s_start = CchOffset_internal(pfile) + 2;
+  cchOffsetBranchStart = CchOffset_internal(pfile) + 2;
   conditional_skip (pfile, skip, T_IF, control_macro, szConditionalClause);
   /* This will call DO_XIFDEF hook and either DO_IFDEF or DO_IFNDEF hook */
   gjb_call_hooks_sz_szlx3_i_i(CPP_OPTIONS(pfile),HI_DO_XIFDEF,
@@ -4567,19 +4578,19 @@ do_xifdef (pfile, keyword, unused1, unused2)
 			      pchStartExpr,pchEndExpr-pchStartExpr,
 			      pchEndExpr,pchEndGarbage-pchEndExpr,
 			      pchEndGarbage,CPP_BUFFER(pfile)->cur-pchEndGarbage,
-			      skip,s_start);
+			      skip,cchOffsetBranchStart);
   if (keyword->type == T_IFDEF)
-    gjb_call_hooks_szlx3_i(CPP_OPTIONS(pfile),HI_DO_IFDEF,
-			      pchStartExpr,pchEndExpr-pchStartExpr,
-			      pchEndExpr,pchEndGarbage-pchEndExpr,
-			      pchEndGarbage,CPP_BUFFER(pfile)->cur-pchEndGarbage,
-			      skip);
+    gjb_call_hooks_i_i_szlx3_i(CPP_OPTIONS(pfile),HI_DO_IFDEF,cchOffsetStart,cchOffsetEnd,
+			       pchStartExpr,pchEndExpr-pchStartExpr,
+			       pchEndExpr,pchEndGarbage-pchEndExpr,
+			       pchEndGarbage,CPP_BUFFER(pfile)->cur-pchEndGarbage,
+			       skip);
   else
-    gjb_call_hooks_szlx3_i(CPP_OPTIONS(pfile),HI_DO_IFNDEF,
-			      pchStartExpr,pchEndExpr-pchStartExpr,
-			      pchEndExpr,pchEndGarbage-pchEndExpr,
-			      pchEndGarbage,CPP_BUFFER(pfile)->cur-pchEndGarbage,
-			      skip);
+    gjb_call_hooks_i_i_szlx3_i(CPP_OPTIONS(pfile),HI_DO_IFNDEF,cchOffsetStart,cchOffsetEnd,
+			       pchStartExpr,pchEndExpr-pchStartExpr,
+			       pchEndExpr,pchEndGarbage-pchEndExpr,
+			       pchEndGarbage,CPP_BUFFER(pfile)->cur-pchEndGarbage,
+			       skip);
   return 0;
 }
 
@@ -4787,30 +4798,31 @@ skip_if_group (cpp_reader *pfile, int any)
  */
 
 static int
-do_else (pfile, keyword, buf, limit)
-     cpp_reader *pfile;
-     struct directive *keyword;
-     U_CHAR *buf, *limit;
+do_else (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *limit)
 {
   cpp_buffer *ip = CPP_BUFFER (pfile);
   U_CHAR *pchStartGarbage = ip->cur+1;
   U_CHAR *pchEndGarbage = NULL;
   int skip = 0;
-  int s_start;
+  int cchOffsetStart = pfile->buffer->prev - pfile->buffer->buf + 1;
+  int cchOffsetEnd;
+  int cchOffsetBranchStart;
 
   if (CPP_PEDANTIC (pfile))
     validate_else (pfile, "#else");
   skip_rest_of_line (pfile);
+  cchOffsetEnd = pfile->buffer->cur - pfile->buffer->buf + 1;
   pchEndGarbage = ip->cur+1;
-  s_start = CchOffset_internal(pfile) + 2;
+  cchOffsetBranchStart = CchOffset_internal(pfile) + 2;
 
   if (pfile->if_stack == CPP_BUFFER (pfile)->if_stack) {
     cpp_error (pfile, "`#else' not within a conditional");
-    gjb_call_hooks_sz_szl_szl_i_i(CPP_OPTIONS(pfile),HI_DO_ELSE,
-				  "@NONE@",
-				  pchStartGarbage,pchEndGarbage-pchStartGarbage,
-				  "", 0,
-				  skip,s_start);
+    gjb_call_hooks_i_i_sz_szl_szl_i_i(CPP_OPTIONS(pfile),HI_DO_ELSE,
+				      cchOffsetStart,cchOffsetEnd,
+				      "@NONE@",
+				      pchStartGarbage,pchEndGarbage-pchStartGarbage,
+				      "", 0,
+				      skip, cchOffsetBranchStart);
     return 0;
   } else {
     /* #ifndef can't have its special treatment for containing the whole file
@@ -4834,11 +4846,12 @@ do_else (pfile, keyword, buf, limit)
     ++pfile->if_stack->if_succeeded;	/* continue processing input */
     output_line_command (pfile, 1, same_file);
   }
-  gjb_call_hooks_sz_szl_szl_i_i(CPP_OPTIONS(pfile),HI_DO_ELSE,
-				DEF_STR(pfile->if_stack->szConditionalClause,"@??@"),
-				pchStartGarbage,pchEndGarbage-pchStartGarbage,
-				pchEndGarbage,ip->cur-pchEndGarbage, skip,
-				s_start);
+  gjb_call_hooks_i_i_sz_szl_szl_i_i(CPP_OPTIONS(pfile),HI_DO_ELSE,
+				    cchOffsetStart,cchOffsetEnd,
+				    DEF_STR(pfile->if_stack->szConditionalClause,"@??@"),
+				    pchStartGarbage,pchEndGarbage-pchStartGarbage,
+				    pchEndGarbage,ip->cur-pchEndGarbage, skip,
+				    cchOffsetBranchStart);
   return 0;
 }
 
@@ -4850,6 +4863,8 @@ static int
 do_endif (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *limit)
 {
   cpp_buffer *ip = CPP_BUFFER (pfile);
+  int cchOffsetStart = pfile->buffer->prev - pfile->buffer->buf + 1;
+  int cchOffsetEnd;
   U_CHAR *pchStartGarbage = ip->cur+1;
   U_CHAR *pchEndGarbage = NULL;
   char *szConditionalClause = NULL;
@@ -4858,6 +4873,7 @@ do_endif (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *lim
     validate_else (pfile, "#endif");
   skip_rest_of_line (pfile);
   pchEndGarbage = ip->cur+1;
+  cchOffsetEnd = pfile->buffer->cur - pfile->buffer->buf + 1;
   if (pfile->if_stack == CPP_BUFFER (pfile)->if_stack)
     {
     cpp_error (pfile, "unbalanced `#endif'");
@@ -4928,9 +4944,9 @@ FIXME!
       free (temp);
       output_line_command (pfile, 1, same_file);
     }
-  gjb_call_hooks_sz_szl(CPP_OPTIONS(pfile),HI_DO_ENDIF,
-			(fUnbalanced?"@UNBALANCED@":szConditionalClause),
-			pchStartGarbage,pchEndGarbage-pchStartGarbage);
+  gjb_call_hooks_i_i_sz_szl(CPP_OPTIONS(pfile),HI_DO_ENDIF,cchOffsetStart,cchOffsetEnd,
+			    (fUnbalanced?"@UNBALANCED@":szConditionalClause),
+			    pchStartGarbage,pchEndGarbage-pchStartGarbage);
   free(szConditionalClause);
   return 0;
 }
