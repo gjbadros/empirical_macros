@@ -41,9 +41,10 @@ multiple formal uses
         effects in the expression will occur multiple times.
 
 unparenthesized formal uses
-        Some argument is used as a subexpression without being enclosed in
-        parentheses, so that precedence rules could result in an
-        unanticipated computation being performed.  For instance, in
+        Some argument is used as a subexpression (ie, adjacent to an
+        operator) without being enclosed in parentheses, so that precedence
+        rules could result in an unanticipated computation being performed.
+        For instance, in
                 #define DOUBLE(i) (2*i)
                 DOUBLE(3+4)
         the macro body computes the value 10, not 14.
@@ -53,6 +54,13 @@ unparenthesized formal uses
 side-effected formal
         A formal argument is side-effected.  This is erroneous if the
         argument is not an lvalue.
+
+===========================================================================
+
+We don't report on:
+
+multi-line comments/strings.  (Plus option to turn this off, like cpp
+        does.)
 
 ===========================================================================
 
