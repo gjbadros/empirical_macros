@@ -417,8 +417,51 @@ produce the C to C++ translation tool we have mentioned.)
 [FIX: We should note that we plan to look at uses of macros to help in
 this categorizations (though we don't do any of this now)]
 
-The specific categories that our analysis tool identifies are:
+In addition to classifying each macro as taking arguments or not, our tool
+identifies the following specific categories (and a few more rarely-used
+ones omitted for reasons of space):
 \begin{itemize}
+
+\item[{\em Null define\/}]  The \verb+#define+ gives only an
+identifier name.  Such macros appear most frequently in Cpp directives
+(such as \verb|#ifdef|), but may also appear in code.  For instance,
+macro \verb|private| to expand either to \verb|static| or to nothing,
+depending on whether a debugging mode was set, or macro \verb|then| might
+expand to nothing for programmers who like \verb|else| to be offset by
+\verb|then|.  Macros with null definitions are often used as boolean
+variables by the preprocessor.
+
+\item[{\em Literal\/}]  The macro is defined to be a specific constant
+  value; for instance, \verb|#define NULL 0| or \verb|#define ETCHOSTS
+  "/etc/hosts"|.  Such macros act like \verb|const| variables, albeit
+  without type information, debugging information in the symbol table, and
+  so forth.  Macros with constant expression bodies, such as \verb|#define
+  RE_DUP_MAX ((1<<15)-1)|, are included here, but not macros with arguments
+  that are literals or constants, so this number is an underestimate.
+
+COPY_BUFFER_SIZE (32 * 512)
+
+\item[{\em Expression}]  The macro body is an expression.  This expression
+  might be 
+
+A constant value appears 
+
+* null defines
+* expressions
+   * literal, constant expression
+   * expression
+%    * expression sans assignment
+%    * expression with assignment
+* statements
+* other:
+   * stringization, pasting
+   * syntactic entity, reserved word, mismatched parentheses
+%    * stringization
+%    * pasting
+%    * syntactic entity
+%    * reserved word
+%    * mismatched parentheses
+* classification failure
 
 \item {\em Constants\/}, where the \verb+#define+ gives only an
 identifier name and a value.
