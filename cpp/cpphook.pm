@@ -71,40 +71,40 @@ sub FIsDeclAllowable {
 
 # For testing of more general multiple hook mechanism
 sub Startup2 {
-  print STDERR "Startup2\n";
+  print TRACE "Startup2\n";
 }
 
 sub Startup {
   # Parse debugging (bison's yydebug variable) is on by default,
   # so turn it off
   cpp::ResetParseDebugging();
-  print STDERR "STARTUP...\n";
-#  open(CPP,">cpp.listing") || die "Could not open output file: $!";
-  *CPP = *STDERR;
+  print TRACE "STARTUP...\n";
+  open(CPP,">cpp.listing") || die "Could not open output file: $!";
   open(CHOUT,">chout.listing") || die "Could not open output file: $!";
-#  open(TOKEN,">token.listing") || die "Could not open output file: $!";
-  *TOKEN = *STDERR;
+  open(TRACE,">trace") || die "Could not open output file: $!";
+  open(TOKEN,">token.listing") || die "Could not open output file: $!";
   open(MAPPING,">mapping") || die "Could not open output file: $!";
   print MAPPING "(setq char-mapping (list\n";
   open(TP,">textprops.el") || die "Could not open output file: $!";
   open(TPSOURCE,">textprops-source.el") || die "Could not open output file: $!";
   open(MACEXP_STACKS,">macro_expand_stacks") || die "Could not open output file: $!";
   open(CPPOUT,">cppout") || die "Could not open output file: $!";
-#  select CHOUT;
-  select STDERR;
+  select TRACE;
   $| = 1; # Turn on autoflush
 }
 
 sub Exit {
   my ($retval) = @_;
-  select(STDERR); dump_uses();
+  select(TRACE);
+  dump_uses();
   close(TP);
   close(TPSOURCE);
   print MAPPING "))\n";
   close(MAPPING);
   close(CHOUT); # Not really necessary of course
   close(TOKEN); # Not really necessary of course
-  print "Exiting with status $retval\n";
+  print TRACE "Exiting with status $retval\n";
+  close (TRACE);
 }
 
 sub do_define {
@@ -112,14 +112,14 @@ sub do_define {
   my $fname = cpp::Fname();
   print CPP "In do_define w/ body = $name_args_body\n";
   print CPP ": $fname [$s_start,$s_end]\n";
-  print STDERR ": ParseStateStack: ", join(",",cpp::ParseStateStack()), "\n";
+  print TRACE ": ParseStateStack: ", join(",",cpp::ParseStateStack()), "\n";
 }
 
 
 sub add_use {
   my ($mname,$fname, $expansion, $s_start, $s_end, $cbb) = @_;
   push @{$macro_uses{$mname}}, [$fname, $s_start, $s_end, $expansion, $cbb];
-  print STDERR "add_use for $mname ($cbb), now at ", $#{$macro_uses{$mname}} + 1, "\n";
+  print TRACE "add_use for $mname ($cbb), now at ", $#{$macro_uses{$mname}} + 1, "\n";
 }
 
 
@@ -158,10 +158,10 @@ sub dump_uses {
 	  # try falling back to no name change
 	  if (exists $vars{$mname}) {
 	    # Can't even leave the name alone
-	    print STDERR "Name conflict with $mname as either $new_var or $mname\n";
+	    print TRACE "Name conflict with $mname as either $new_var or $mname\n";
 	    $new_var = "";
 	  } else {
-	    print STDERR "Name conflict with $mname as $new_var, falling back to $mname\n";
+	    print TRACE "Name conflict with $mname as $new_var, falling back to $mname\n";
 	    $new_var = $mname;
 	  }
 	} else {
@@ -211,8 +211,9 @@ sub create_def {
   push @{$macro_name{$mname}{defs}}, [ $fname, $s_start,$s_end ];
   @{$macro_name{$mname}{currdef}} = ( $fname, $s_start,$s_end );
   if (!FIsDeclAllowable()) {
-    annotate_definition('xform',"Parse stack may not be appropriate for a declaration",$mname,$fname,$s_start,$s_end);
-    print STDERR ":**BETTER NOT CHANGE THIS TO A DECL!\n";
+    @state_stack = cpp::ParseStateStack();
+    annotate_definition('xform',"Parse stack may not be appropriate for a declaration: @state_stack",$mname,$fname,$s_start,$s_end);
+    print TRACE ":**BETTER NOT CHANGE THIS TO A DECL!\n";
   }
   select $old;
 }
@@ -305,14 +306,14 @@ sub macro_cleanup {
 # FIXGJB: Obsoleted, methinks --10/08/97 gjb
 sub macro_arg_exp  {
   my ($mname,$raw,$number) = @_;
-  print STDERR "macro_arg_exp $mname of $raw (arg $number)\n";
+  print TRACE "macro_arg_exp $mname of $raw (arg $number)\n";
 }
 
 sub annotate_definition_message {
   my ($kind,$prop, $message, $mname) = @_;
   my ($fnamedef, $s_start, $s_end) = @{$macro_name{$mname}{currdef}};
   if (!defined($fnamedef)) {
-    print STDERR "annotate_definition_message: could not find $mname\n";
+    print TRACE "annotate_definition_message: could not find $mname\n";
   } else {
     print TPSOURCE "#$fnamedef:(add-$kind-property $s_start $s_end \'$prop \"$message\")\n";
   }
@@ -414,7 +415,7 @@ sub ifdef_macro {
 
 sub ifdef_lookup_macro {
   my ($mname,$fDefined) = @_;
-  print STDERR "ifdef_lookup_macro $mname is ", $fDefined?"":"not ", "defined\n";
+  print TRACE "ifdef_lookup_macro $mname is ", $fDefined?"":"not ", "defined\n";
   my $fname = cpp::Fname();
   annotate_definition_with_ifdef_use($mname,$fname,$fDefined?"\@DEFINED\@":"\@NOT_DEFINED\@",
 				    cpp::CchOffset()-length($mname),cpp::CchOffset);
@@ -452,7 +453,7 @@ sub do_if {
   cpp::YYPushStackState();
   @state_stack = cpp::ParseStateStack();
   print CPP ": Stack: @state_stack\n";
-  if ($value == 0) {
+  if ($value == 0 && $conditional ne "0") {
     handle_unincluded_block($s_branch_start,$s_branch_end,$skipped);
   }
   push @got_c_token, 0;
@@ -461,7 +462,7 @@ sub do_if {
 sub do_elif {
   my ($s_start,$s_end,$already_did_clause, $conditional, $skipped, $value) = @_;
   print CPP "do_elif on $conditional ($skipped) evals to $value; $already_did_clause\n";
-  if ($value == 0) {
+  if ($value == 0 && $conditional ne "0") {
     handle_unincluded_block($s_branch_start,$s_branch_end,$skipped);
   }
 }
@@ -471,13 +472,17 @@ sub handle_unincluded_block {
   my $fname = cpp::Fname();
   print TPSOURCE "#$fname:(put-face-property-if-none $s_branch_start $s_branch_end \'font-lock-reference-face)\n";
   print TPSOURCE "#$fname:(add-text-property $s_branch_start $s_branch_end \'doc \"Skipped due to $kind $conditional\")\n";
+  # FIXGJB: probably better to keep a #include list in perl, and only remove
+  # #include-s that we've already done, or something like that;  really
+  # need separate symbol tables and hash tables for the different configuration
+  # (versioning) structures, but that's quite a bit harder!!
   my $old_skipped = $skipped;
   $skipped =~ s/^\s*\#\s*include .*$//mg;
   if ($skipped ne $old_skipped) {
-    print STDERR "Removed some #include-s from speculative branch\n";
+    print TRACE "Removed some #include-s from speculative branch\n";
   }
-  print STDERR "Pushing skipped branch\n";
-  print STDERR ": ParseStateStack: ", join(",",cpp::ParseStateStack()), "\n";
+  print TRACE "Pushing skipped branch\n";
+  print TRACE ": ParseStateStack: ", join(",",cpp::ParseStateStack()), "\n";
   cpp::YYPushStackState();
   cpp::EnterScope();
   cpp::PushHashTab();
@@ -514,14 +519,14 @@ sub do_ifndef {
 sub pop_perl_buffer {
   my ($cbb) = @_;
   print CPP "POP_PERL_BUFFER, $cbb buffers back\n";
-  print STDERR ": ParseStateStack: ", join(",",cpp::ParseStateStack()), "\n";
+  print TRACE ": ParseStateStack: ", join(",",cpp::ParseStateStack()), "\n";
   if (!cpp::YYFCompareTopStackState()) {
-    print STDERR ": NOT Identical!\n";
+    print TRACE ": NOT Identical!\n";
   }
   cpp::ExitScope();
   cpp::PopHashTab();
   cpp::YYPopAndRestoreStackState();
-  print STDERR ": After ParseStateStack: ", join(",",cpp::ParseStateStack()), "\n";
+  print TRACE ": After ParseStateStack: ", join(",",cpp::ParseStateStack()), "\n";
 }
 
 
@@ -569,17 +574,19 @@ sub add_import {
 sub include_file {
   my ($filename, $fSystemInclude) = @_;
   print "include_file $filename, $fSystemInclude\n";
+#  cpp::YYPushStackState();
 }
 
 sub done_include_file {
   my ($filename, $fSystemInclude) = @_;
   # NOTE: $fSystemInclude is always undef due to a bug
   print "done_include_file $filename, $fSystemInclude\n";
+#  cpp::YYPopAndRestoreStackState();
 }
 
 sub Got_token2 {
   my ($token,$mname,$argno,$raw,@history) = @_;
-  print STDERR "Got TOKEN2, $token\n";
+  print TRACE "Got TOKEN2, $token\n";
 }
 
 # Token's come a lot, so redirect this output somewhere else
@@ -595,13 +602,13 @@ sub Got_token {
   print TOKEN ": History: ",join("<-",@history),"\n";
   print TOKEN ": From $mname\n";
   print TOKEN ": Argno = $argno\n";
-  print STDERR ": ParseStateStack: ", join(",",cpp::ParseStateStack()), "\n";
+  print TOKEN ": ParseStateStack: ", join(",",cpp::ParseStateStack()), "\n";
   if ($raw =~ m/^[\w\$]+$/) {
     print TOKEN ": lookup: ", cpp::FLookupSymbol($raw)? "Found symbol" : "Not found", "\n";
   }
   if (!exists $non_c_tokens{$token}) {
     map { $_++}  @got_c_token;
-    print STDERR ": C Token: $raw ($token)\n";
+    print TOKEN ": C Token: $raw ($token)\n";
   }
 
   my $end = cpp::CchOutput()+1;
