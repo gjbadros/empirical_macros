@@ -29,6 +29,7 @@ typedef enum hook_index_constants {
   HI_SPECIAL_SYMBOL,
   HI_EXPAND_MACRO,
   HI_MACARG_EXP,
+  HI_MACRO_CLEANUP,
   HI_IFDEF_MACRO,
   HI_COMMENT,
   HI_STRING_CONSTANT,
