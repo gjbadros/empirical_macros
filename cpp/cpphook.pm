@@ -88,14 +88,15 @@ sub dump_uses {
     # Note that undef-s are not an insurmountable problem,
     # they could be handled by using a new, non-conflicting name
     # and removing the undef-s
+    my $fname = pcp3::InFname();
     if ($all_same_expansions == FALSE) {
-      annotate_definition('xform',"Expansions vary, not a constant",$mname,
-			  pcp3::InFname(),undef,undef);
+      annotate_definition_message($mname,'xform',
+				  "Expansions vary, not a constant in $fname");
     } elsif ($cUses > 0) {
-      annotate_definition('expsumm',"Expansions all go to $expansion",$mname,
-			  pcp3::InFname(),undef,undef);
-      if (scalar(@$macro_name{$mname}) > 1) {
-	annotate_definition_message('text','xform',"Multiple definitions!",$mname);
+      annotate_definition_message($mname,'expsumm',
+				  "Expansions all go to $expansion in $fname");
+      if (scalar(@{$macro_name{$mname}{defs}}) > 1) {
+	annotate_all_definitions_message($mname,'xform',"Multiple definitions!");
       } elsif ($expansion =~ m/^(0x)?\d+$/) {
 	my $new_var = $mname;
 	$new_var =~ tr/[A-Z]/[a-z]/;
@@ -112,15 +113,15 @@ sub dump_uses {
 	  }
 	} else {
 	  # No conflict, so do a substitution, too
-	  annotate_definition_message('text','substexpn',"$new_var",$mname);
+	  annotate_definition_message($mname,'substexpn',"$new_var");
 	}
 	if ($new_var ne "") {
-	  annotate_definition_message('text','subst',"enum {$new_var = $expansion};",$mname);
+	  #FIXGJB: do not always use enum!
+	  annotate_definition_message($mname,'subst',"enum {$new_var = $expansion};");
 	}
       }
     } else {
-      annotate_definition('expsumm',"No uses",$mname,
-			  pcp3::InFname(),undef,undef);
+      annotate_definition_message($mname,'expsumm',"No uses in $fname");
     }
   }
 
@@ -158,7 +159,8 @@ sub create_def {
   @{$macro_name{$mname}{currdef}} = ( $fname, $s_start,$s_end );
   if (!FIsDeclAllowable()) {
     @state_stack = pcp3::ParseStateStack();
-    annotate_definition('xform',"Parse stack may not be appropriate for a declaration: @state_stack",$mname,$fname,$s_start,$s_end);
+    annotate_definition_message($mname,'xform',
+				"Parse stack may not be appropriate for a declaration: @state_stack");
     print TRACE ":**BETTER NOT CHANGE THIS TO A DECL!\n";
   }
   select $old;
@@ -256,47 +258,60 @@ sub macro_arg_exp  {
 }
 
 sub annotate_definition_message {
-  my ($kind,$prop, $message, $mname) = @_;
+  my ($mname, $prop, $message) = @_;
   my ($fnamedef, $s_start, $s_end) = @{$macro_name{$mname}{currdef}};
   if (!defined($fnamedef)) {
     print TRACE "annotate_definition_message: could not find $mname\n";
   } else {
-    print TPSOURCE "#$fnamedef:(add-$kind-property $s_start $s_end \'$prop \"$message\")\n";
+    print TPSOURCE "#$fnamedef:(add-text-property $s_start $s_end \'$prop \"$message\")\n";
   }
 }
 
-sub annotate_definition {
-  my ($prop, $message, $mname, $fname, $s, $e) = @_;
+sub annotate_all_definitions_message {
+  my ($mname, $prop, $message) = @_;
+  my @definitions = @{$macro_name{$mname}{defs}};
+  foreach my $aref (@definitions) {
+    my ($fnamedef, $s_start, $s_end) = @$aref;
+    if (!defined($fnamedef)) {
+      print TRACE "annotate_definition_message: could not find $mname\n";
+    } else {
+      print TPSOURCE "#$fnamedef:(add-text-property $s_start $s_end \'$prop \"$message\")\n";
+    }
+  }
+}
+
+
+
+sub annotate_definition_message_marker {
+  my ($mname, $prop, $message, $fname, $s, $e) = @_;
   my ($fnamedef, $s_start, $s_end) = @{$macro_name{$mname}{currdef}};
-  my $kind = "text";
-  $kind = "list" if ($prop eq "use");
-  if (!defined($s) && !defined($e)) {
-    annotate_definition_message($kind,$prop,"$message at $fname",$mname);
+  if (!defined($fnamedef)) {
+    print TRACE "annotate_definition_message: could not find $mname\n";
   } else {
-    annotate_definition_message($kind,$prop,"$message at $fname:$s,$e",$mname);
+    print TPSOURCE "#$fnamedef:(add-list-marker-property $s_start $s_end \'$prop \"$message\" \"$fname\" $s $e)\n";
   }
 }
-
 
 sub annotate_definition_with_use {
-  my $cbb = pop @_;
-  my $expansion = splice(@_,2,1);
+  my ($mname, $expansion, $fname, $s, $e, $cbb) = @_;
   if ($cbb == 0) {
     # Use appearing in the source code
-    annotate_definition('use',"$expansion",@_);
+    annotate_definition_message_marker($mname,'use',$expansion,$fname,$s,$e);
   } else {
-    annotate_definition('expuse',"$expansion [$cbb]",@_);
+    annotate_definition_message($mname,'expuse',"$expansion [$cbb]");
   }
 }
 
 sub annotate_definition_with_ifdef_use {
   my ($mname,$fname,$expansion,$s_start,$s_end,$cbb) = @_;
-  annotate_definition_message("text",'ifdefuse',"$expansion [$cbb] at $fname:$s_start,$s_end",$mname);
-  annotate_definition_message("text",'xform',"Used in a ccd! Do not convert!",$mname);
+  annotate_definition_message_marker($mname,'ifdefuse',"$expansion [$cbb]",$fname,$s_start,$s_end);
+  annotate_definition_message($mname,'xform',"Used in a ccd! Do not convert!");
 }
 
 sub annotate_definition_with_undef {
-  annotate_definition('xform',"Undef-fed",@_);
+  my ($mname,$fname,$s_start,$s_end) = @_;
+  annotate_definition_message($mname,'xform',"Undef-fed");
+  annotate_definition_message_marker($mname,'undef',"Undef-fed",$fname,$s_start,$s_end);
 }
 
 sub expand_macro {
@@ -313,7 +328,7 @@ sub expand_macro {
   my $old = select;
   my @MEH = pcp3::MacroExpansionHistory();
   if (scalar (@MEH) == 0) {
-    annotate_definition_with_use($mname,$fname,$expansion,$s_start,$s_end,$cbuffersDeep);
+    annotate_definition_with_use($mname,$expansion,$fname,$s_start,$s_end,$cbuffersDeep);
     add_use($mname,$fname,$expansion,$s_start,$s_end,$cbuffersDeep);
   }
   select CPP;
