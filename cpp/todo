@@ -15,6 +15,7 @@ o physical line
 
 o logical line (pass unexpanded, stripped, and expanded versions; also
   probably want the number of physical lines)
+  - Do I really care about this????  I don't think so
 
 o NCNB line
 
@@ -35,3 +36,46 @@ o fn def'n
 o type decl'n
 
 o typedef
+
+o whole_ifdef_clause
+
+o improve expand macro hook
+   - give unexpanded text, list of literal args, expansion, etc.
+
+
+----------------------
+Grammar-based hooks
+
+o function decl
+  - begin
+  - end
+
+o variable decl
+
+o typedef
+
+o function call
+
+o return
+
+o loop
+  - begin
+  - end
+
+o scope
+  - enter
+  -exit
+
+o label
+
+o switch
+  - begin
+  - case
+  - end
+
+-----------------------
+Vars that need to be visible to perl
+
+o Stack of buffers
+
+o macro definitions
