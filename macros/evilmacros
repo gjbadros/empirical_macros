@@ -83,7 +83,7 @@ find-c | evilmacros -iv -d ~/macros/data/stable
 # evilmacros -d ../ -v getopt.c
 # evilmacros -v -d ../../:reg /usr/include/stdlib.h
 ## Other interesting options: -A -T -g 6
-# find-c | evilmacros -v -p -i -d ../../:evilout
+# find-c | evilmacros -v -p -d ../../:evilout -i
 
 # Harbison & Steele p. 53:
 #   ISO C reaffirms that macro bodies must be sequences of well-formed tokens.
@@ -896,7 +896,7 @@ my %macros_c_undefs = ();	# hashes macro names to the number of times they
 				# are #undef-d
 
 # enumeration for the macros_uses indices
-my ($i_usage_code, $i_usage_cpp) = (0..1);
+my ($i_usage_code, $i_usage_macro, $i_usage_cond) = (0..2);
 
 my %macros_uses = ();		# hashes macro names to an array
                                 # listing the number of times they are
@@ -958,6 +958,7 @@ my $debug_parse_array_init = $false;
 my $debug_peek = $false;
 my $debug_getline = $false;	# a LOT of output; use only on small inputs
 my $debug_categorize_macro = $false;
+my $debug_cpp_if_comments = $false;
 
 ## Command-line processing
 # Are these in any order?
@@ -1051,7 +1052,7 @@ sub process_macro_definition ($$$$)
   # so that we don't have to check the defined-ness later
   if (!defined($macros{$name}[0])) {
     $macros{$name}[0] = 0;
-    $macros_uses{$name} = [0,0];
+    $macros_uses{$name} = [0,0,0];
     $macros_c_undefs{$name} = 0;
     $macros_used_in_functions{$name} = [];
     $macros_file_line_uses{$name} = [];
@@ -1266,10 +1267,35 @@ sub negate_cpp_if_condition ($)
 {
   my ($cond) = check_args(1, @_);
   if ($cond =~ /^!\((.*)\)$/)
+    # Problem: what if those parens weren't balanced??  Need to check here.
     { return $MATCH; }
   else
     { return "!($cond)"; }
 }
+
+
+sub cpp_trivially_false_condition ($)
+{ my ($cond) = check_args(1, @_);
+  if ($cond =~ /^(0|\(\s*0\s*\))$/)
+    { return $true; }
+  elsif ($cond =~ /^(!1|!\s*\(\s*1\s*\)|!\s*\(\s*\(\s*1\s*\)\s*\))$/)
+    { return $true; }
+  else
+    { return $false; }
+}
+
+
+# Just like the above, with 0 and 1 reversed
+sub cpp_trivially_true_condition ($)
+{ my ($cond) = check_args(1, @_);
+  if ($cond =~ /^(1|\(\s*1\s*\))$/)
+    { return $true; }
+  elsif ($cond =~ /^(!0|!\s*\(\s*0\s*\)|!\s*\(\s*\(\s*0\s*\)\s*\))$/)
+    { return $true; }
+  else
+    { return $false; }
+}
+
 
 ###########################################################################
 ### Print output statistics
@@ -1372,7 +1398,7 @@ sub output_stats ()
     select MACROS;
     # FIX: compute a category for all definitions of the macro, if possible
     # or give list of categories
-    print "#MACROS#: name cDefs cUndefs cCodeUses cCppUses cTotalUses HowUsed Categories InclusionMethods (%functionsThatUseIt)\n";
+    print "#MACROS#: name cDefs cUndefs cCodeUses cMacroUses cCondUses cTotalUses HowUsed Categories InclusionMethods (%functionsThatUseIt)\n";
     foreach $name (sort keys %macros) {
       #print STDERR "MNAME=$name, @{$macros{$name}}\n";
       my $i = $macros{$name}[1];
@@ -1388,12 +1414,13 @@ sub output_stats ()
       # in a print
 
       my $cCodeUses = $macros_uses{$name}[$i_usage_code];
-      my $cCppUses = $macros_uses{$name}[$i_usage_cpp];
-      my $cTotalUses = $cCodeUses + $cCppUses;
+      my $cMacroUses = $macros_uses{$name}[$i_usage_macro];
+      my $cCondUses = $macros_uses{$name}[$i_usage_cond];
+      my $cTotalUses = $cCodeUses + $cMacroUses + $cCondUses;
 
       print "$name", $macros{$name}[0], $macros_c_undefs{$name},
-      $cCodeUses, $cCppUses, $cTotalUses,
-      how_used_from_code_cpp_uses($cCodeUses, $cCppUses),
+      $cCodeUses, $cMacroUses, $cCondUses, $cTotalUses,
+      how_used_from_code_cpp_uses($cCodeUses, $cMacroUses, $cCondUses),
       join(",",CategoriesForMacroName($name)),
       join(",",InclusionMethodsForMacroName($name)),
       "\n%" . join("\n%",@{$macros_used_in_functions{$name}}),
@@ -1503,22 +1530,17 @@ sub output_stats ()
 
 
 # Returns a categorization string describing how the macro was used
-# (one of four)
-sub how_used_from_code_cpp_uses ($$) {
-  my ($cCodeUses, $cCppUses) = check_args(2,@_);
-  if ($cCodeUses > 0) {
-    if ($cCppUses > 0) {
-      return "CppAndCode";
-    } else {
-      return "CodeOnly";
-    }
-  } else {
-    if ($cCppUses > 0) {
-      return "CppOnly";
-    } else {
-      return "NoUses";
-    }
-  }
+# (one of eight (was four)); in alphabetical order:
+#   Code CodeCond CodeMacro CodeMacroCond Cond Macro MacroCond NoUses
+sub how_used_from_code_cpp_uses ($$$) {
+  my ($cCodeUses, $cMacroUses, $cCondUses) = check_args(3,@_);
+  my $result = (($cCodeUses > 0) ? "Code" : "")
+    . (($cMacroUses > 0) ? "Macro" : "")
+      . (($cCondUses > 0) ? "Cond" : "");
+  if ($result eq "")
+    { return "NoUses"; }
+  else
+    { return $result; }
 }
 
 
@@ -1722,7 +1744,7 @@ sub get_fulltoken_line (;$)
 	}
       }
 
-      if (defined($simple_result) && ($simple_result =~ /^\#/))
+      if (defined($simple_result) && ($simple_result =~ /^\s*\#/))
 	{			# Preprocessor line; usually just return "\n";
 	  if ($finding_macro_defs) {
 	    $rg_cpp_phys_lines[$current_ftype_index] +=
@@ -1799,7 +1821,7 @@ sub peek_fulltoken_line ($)
       # Do the real work.
       my $nextline;
       { local $getline_peeking = $true;
-	# Perhaps getline_peeking can replace this use of $getline_nocpp??
+	# Perhaps $getline_peeking can replace this use of $getline_nocpp??
 	local $getline_nocpp = $true;
 	local $current_raw_fulltoken_line;
 	# print "peeking about to call get_fulltoken_line\n";
@@ -1964,6 +1986,7 @@ sub find_close_brace ($;$$)
 }
 
 # Returns (raw_line, simplified_line, num_phys_lines, num_ncnb_lines)
+# Always reads directly from input, never from ungotlines.
 sub get_spliced_line ()
 {
   check_args(0, @_);
@@ -1976,7 +1999,7 @@ sub get_spliced_line ()
 
   if ($debug_getline)
     { print "initial simple: $simple_line\ninitial raw: $raw_line"; }
-  while ($raw_line =~ m/\\$/)	# could test against either string here
+  while ($raw_line =~ m/\\$/)	# could test against either raw or simple here
     { # Remove backslash and possibly newline.
       # Could use $raw_line = $PREMATCH, but would need to use substr or
       #   do a match against $simple_line anyway.
@@ -2020,7 +2043,7 @@ sub get_spliced_line ()
 	} }
 
   # Remove the filename in #include <foo.h>, which act like quotes.
-  if ($getline_simplify && ($simple_line =~ /^(\#\s*include\s+<).*>\s*$/))
+  if ($getline_simplify && ($simple_line =~ /^(\s*\#\s*include\s+<).*>\s*$/))
     { $simple_line = $1 . ">\n"; }
 
   # $raw_line and $simple_line end in newline
@@ -2029,10 +2052,36 @@ sub get_spliced_line ()
   return ($raw_line, $simple_line, $num_physical_lines, $num_ncnb_lines);
 }
 
+# Like get_spliced_line, but tries the ungotlines cache first.
+# This is a bit of a hack.
+sub get_spliced_line_maybe_ungot ()
+{
+  check_args(0, @_);
+
+  if (@getline_ungot_raw_lines > 0)
+    { # print "popping getline_ungot_raw_lines $getline_ungot_raw_lines[$#getline_ungot_raw_lines]  getline_ungot_simple_lines $getline_ungot_simple_lines[$#getline_ungot_simple_lines]"; # no newline: it ends with one
+      # print "all ungot_raw_lines: <<", join(">><<", @getline_ungot_raw_lines), ">>\n";
+      # print "all ungot_simple_lines: <<", join(">><<", @getline_ungot_simple_lines), ">>\n";
+      my $raw_result = shift(@getline_ungot_raw_lines);
+      my $simple_result = shift(@getline_ungot_simple_lines);
+
+      # What are the right values for the last two return values?
+      return ($raw_result, $simple_result, 1, 1);
+    }
+  else
+    { return get_spliced_line(); }
+}
+
+
 
 ###########################################################################
 
-
+sub resetinvars ()
+{
+  check_args(0, @_);
+  $instring = $false;
+  $incomment = $false;
+}
 
 # updateinvars is called on a *physical* line;
 #   backslash line continuations have not been processed.
@@ -2184,37 +2233,30 @@ sub updateinvars ($)
 sub getline_handle_preprocessor_line ($$)
 {
   my ($line, $line_noc) = check_args(2, @_);
-  # print "getline_handle_preprocessor_line: $line"; # $line ends with newline
-  if ($line_noc =~ /^\#\s*$/)
+  # print "getline_handle_preprocessor_line: $line == $line_noc"; # $line ends with newline
+  if ($line_noc =~ /^\s*\#\s*$/)
     { # null preprocessor command; do nothing
       return "\n";
     }
-  # Maybe also check for (0 === 1).  Overkill (and wrong, I think) to check for
-  # macro that always expands to 0.
-  elsif ($line_noc =~ /^\#\s*ifdef\s+(0|\(0\))\s*$/)
-    { if ($finding_macro_defs)
-	# Count this as a comment, not NCNB, line.
-	{ $rg_ncnb_lines[$current_ftype_index] -= $getline_physical_ncnb_lines; }
-      discard_to_endif();
-      return "\n"; }
-  elsif ($line_noc =~ m/^\#\s*($identifier_re)\s*/o)
+  elsif ($line_noc =~ m/^\s*\#\s*($identifier_re)\s*/o)
     { # Found a real preprocessor command
       my $cpp_cmd = $1;
       $line_noc = $POSTMATCH;
       # Don't just look for $MATCH -- it may contain a trailing newline
-      if ($line !~ s/^\#\s*$cpp_cmd\s*//) # no /o
+      if ($line !~ s/^\s*\#\s*$cpp_cmd\s*//) # no /o
 	{ die "Should have seen '$MATCH' in '$line' -- was at head of '$MATCH $line_noc'\n"; }
       $line = $POSTMATCH;
       $line_noc =~ s/^\s+//;	# remove leading whitespace
       $line_noc =~ s/\s+$//;	# remove trailing whitespace
       return getline_handle_preprocessor_command($cpp_cmd, $line, $line_noc); }
-  elsif ($line =~ m/^\#\s*\d+\s*\".*\"\s*$/)
+  elsif ($line =~ m/^\s*\#\s*\d+\s*\".*\"\s*$/)
     { #FIX: should we count these
       evilprint("File might be preprocessor's output--line marker found at $current_file:" . current_line_no() . "\n");
     }
   else
     { mdie("Strange preprocessor line |$line|"); }
 }
+
 
 # This is a catchall for everything that has to be done to a preprocessor line.
 # It's a bit gross to do it this way, but it seems most expedient.
@@ -2234,21 +2276,31 @@ sub getline_handle_preprocessor_command ($$$)
   # $cpp_cmd and $cpp_cmd_arg contain no leading or trailing space.
   my ($cpp_cmd, $cpp_cmd_arg, $cpp_cmd_arg_noc) = check_args(3, @_);
 
+  # print "getline_handle_preprocessor_command (", scalar(@dependenton), "): $cpp_cmd $cpp_cmd_arg == $cpp_cmd_arg_noc\n";
+
   if ($finding_macro_defs) {
     # handle @rg_cpp_cmds and @%rg_cppcmdcounts
     update_cpp_directive_counts($cpp_cmd);
   }
 
-  # print "getline_handle_preprocessor_command (", scalar(@dependenton), "): $cpp_cmd $cpp_cmd_arg\n";
-
   if ($cpp_cmd eq "if")
-    { push(@dependenton, $cpp_cmd_arg_noc);
-      # print "if ", current_line_no(), " $cpp_cmd_arg; now dependent on @dependenton\n";
-      if ($merge_cpp_if_branches)
-	{ my $merged = cpp_merged_branches();
-	  if (defined($merged))
-	    { return $merged; } }
-    }
+    { if (cpp_trivially_false_condition($cpp_cmd_arg_noc))
+	{ if ($finding_macro_defs)
+	    # Count this as a comment, not NCNB, line.
+	    { $rg_ncnb_lines[$current_ftype_index] -= $getline_physical_ncnb_lines; }
+	  my $cond = discard_to_endif_or_else();
+	  if ($cond)
+	    { return getline_handle_preprocessor_command("if", $cond, $cond); } }
+      else
+	# Not trivially false #if.  (If trivially true, do the usual thing here.)
+	{ push(@dependenton, $cpp_cmd_arg_noc);
+	  # print "if ", current_line_no(), " $cpp_cmd_arg; now dependent on @dependenton\n";
+	  if ($merge_cpp_if_branches
+	      && !cpp_trivially_true_condition($cpp_cmd_arg_noc))
+	    { my $merged = cpp_merged_branches();
+	      if (defined($merged))
+		{ return $merged; } }
+	} }
   elsif ($cpp_cmd eq "ifdef")
     { push(@dependenton, "defined($cpp_cmd_arg_noc)");
       # print "ifdef ", current_line_no(), " $cpp_cmd_arg; now dependent on @dependenton\n";
@@ -2267,21 +2319,42 @@ sub getline_handle_preprocessor_command ($$$)
     }
   elsif ($cpp_cmd eq "endif")
     { if (@dependenton == 0)
-	{ mdie("improperly nested \#endif"); }
+	{ mdie("extra \#endif"); }
       # print "endif ", current_line_no(), " $dependenton[$#dependenton]; ";
-      pop(@dependenton);
+      my $last = pop(@dependenton);
+      if (cpp_trivially_false_condition($last)
+	  # I think this test is never necessary.
+	  || cpp_trivially_true_condition($last))
+	{ if ($finding_macro_defs)
+	    # Count this as a comment, not NCNB, line.
+	    { $rg_ncnb_lines[$current_ftype_index] -= $getline_physical_ncnb_lines; } }
       # print "now dependent on @dependenton.\n";
     }
   elsif ($cpp_cmd eq "else")
     { if (@dependenton == 0)
 	{ mdie("improperly nested \#else"); }
       my $last = pop(@dependenton);
-      push(@dependenton, negate_cpp_if_condition($last)); }
+      if ($debug_cpp_if_comments)
+	{ print "#else testing '$last' for triviality: ", cpp_trivially_true_condition($last), "\n"; }
+      if (cpp_trivially_true_condition($last))
+	{ if ($finding_macro_defs)
+	    # Count this as a comment, not NCNB, line.
+	    { $rg_ncnb_lines[$current_ftype_index] -= $getline_physical_ncnb_lines; }
+	  discard_to_endif(); }
+      else
+	# Not trivially true condition
+	{ push(@dependenton, negate_cpp_if_condition($last)); } }
   elsif ($cpp_cmd eq "elif")
     { if (@dependenton == 0)
 	{ mdie("improperly nested \#elif"); }
       my $last = pop(@dependenton);
-      push(@dependenton, negate_cpp_if_condition($last)); }
+      if (cpp_trivially_true_condition($last))
+	{ discard_to_endif(); }
+      else
+	# Not trivially true condition
+	{ push(@dependenton,
+	       "(" . negate_cpp_if_condition($last) . ") && $cpp_cmd_arg_noc");
+	} }
   elsif ($cpp_cmd eq "define")
     { if ($finding_macro_defs)
 	{ process_macro_definition($cpp_cmd_arg, $cpp_cmd_arg_noc,$getline_physical_lines,$getline_physical_ncnb_lines); }
@@ -2293,9 +2366,17 @@ sub getline_handle_preprocessor_command ($$$)
       # when we're finding_macro_uses, #include "ctype.h" becomes
       # #include "" in updateinvars, so we can't do it there again, anyway
       if ($finding_macro_defs && !$fIgnoreIncludes) {
-	if ($cpp_cmd_arg !~ /(?:<(.*)>|\"(.*)\")/) {
+	# print "Got include '$cpp_cmd_arg_noc'\n";
+	# For now, hack for gnuchess-4.0.pl77/src/binsort.c
+	if ($cpp_cmd_arg_noc =~ /^(errno|std(io|lib)|time)$/)
+	  { $cpp_cmd_arg_noc = "<$cpp_cmd_arg_noc.h>"; }
+	if ($cpp_cmd_arg_noc !~ /^(?:<(.*)>|\"(.*)\")$/) {
 	  # FIX: actually, this is legal, if it's a CPP name that expands to "..." or <...>.
-	  mdie('#include not followed by file name in "" or <>: ', $cpp_cmd_arg);
+	  # For now, hack for gnuchess-4.0.pl77/src/binsort.c
+	  if ($cpp_cmd_arg_noc !~ /^(descrip|processes|unixio)$/)
+	    { mdie('#include not followed by file name in "" or <>: ', $cpp_cmd_arg_noc, " == ", $cpp_cmd_arg_noc); }
+	  parse_error("Ignoring VAX include $cpp_cmd_arg\n");
+	  # Just fall through if one of the OK-to-ignore includes
 	} else {
 	  my $angled_include = $false;
 	  my $include_file;
@@ -2346,11 +2427,18 @@ sub getline_handle_preprocessor_command ($$$)
 sub discard_to_endif ()
 {
   check_args(0, @_);
+  if ($incomment || $instring)
+    { mdie("Can't be incomment $incomment or instring $instring\n"); }
   my $if0depth = 1;
   my $line;
   while ($if0depth > 0)
-    { if (not ($line = <INPUT>))
-	{ mdie("File ends in \#ifdef 0"); }
+    # Don't use get_spliced_line(); the getline lookahead cache might not be empty.
+    { my ($raw_line, $simple_line, $phys, $ncnb) = get_spliced_line_maybe_ungot();
+      if (not $raw_line)
+	{ mdie("File ends in \#if 0"); }
+      resetinvars();		# Abandon changes by get_spliced_line
+      if ($debug_cpp_if_comments)
+	{ print "discarding (to endif @dependenton) $raw_line"; }
       # I'll trust that no comment or string contains anything that looks
       # like a preprocessor command.  Strictly speaking, I should use
       # get_fulltoken_line and/or updateinvars, because anything in an
@@ -2358,11 +2446,51 @@ sub discard_to_endif ()
       # often contains non-syntactic constructs.  (Maybe eventually use
       # get_fulltoken_line/updateinvars but permit and ignore errors.)
       # This duplicates part of find_preprocessor_commands.  Oh, well.
-      if ($line =~ m/^\#\s*if(n?def)\b/o)
+      if ($simple_line =~ m/^\s*\#\s*if(n?def)?\b/o)
 	{ $if0depth++; }
-      elsif ($line =~ m/^\#\s*endif\b/o)
+      elsif ($simple_line =~ m/^\s*\#\s*endif\b/o)
 	{ $if0depth--; } }
   return;
+}
+
+# If #endif, return $false.
+# If #else or #elseif, return a fake #if condition for re-processing.
+sub discard_to_endif_or_else ()
+{
+  check_args(0, @_);
+  if ($incomment || $instring)
+    { mdie("Can't be incomment $incomment or instring $instring\n"); }
+  my $if0depth = 1;
+  while ($if0depth > 0)
+    # Don't use get_spliced_line(); the getline lookahead cache might not be empty.
+    { my ($raw_line, $simple_line, $phys, $ncnb) = get_spliced_line_maybe_ungot();
+      if (not $raw_line)
+	{ mdie("File ends in \#if 0"); }
+      resetinvars();		# Abandon changes by get_spliced_line
+      if ($debug_cpp_if_comments)
+	{ print "discarding (to endif or else; dependenton @dependenton) $raw_line"; }
+      # I'll trust that no comment or string contains anything that looks
+      # like a preprocessor command.  Strictly speaking, I should use
+      # get_fulltoken_line and/or updateinvars, because anything in an
+      # #if is supposed to be a sequence of valid tokens, but #if 0
+      # often contains non-syntactic constructs.  (Maybe eventually use
+      # get_fulltoken_line/updateinvars but permit and ignore errors.)
+      # This duplicates part of find_preprocessor_commands.  Oh, well.
+      if ($simple_line =~ m/^\s*\#\s*if(n?def)?\b/o)
+	{ $if0depth++; }
+      elsif (($if0depth == 1) && ($simple_line =~ m/^\s*\#\s*else\b/))
+	{ if ($debug_cpp_if_comments)
+	    { print "returning !0 from discard_to_endif_or_else (dependenton @dependenton)\n"; }
+	  return "!0"; }
+      elsif (($if0depth == 1) && ($simple_line =~ m/^\s*\#\s*elif\s+/))
+	{ my $cond = $POSTMATCH;
+	  $cond =~ s/\s+$//;
+	  if ($debug_cpp_if_comments)
+	    { print "returning $cond from discard_to_endif_or_else (dependenton @dependenton)\n"; }
+	  return $cond; }
+      elsif ($simple_line =~ m/^\s*\#\s*endif\b/o)
+	{ $if0depth--; } }
+  return $false;
 }
 
 # This handles
@@ -2387,6 +2515,7 @@ sub discard_to_endif ()
 
 # Returns the sum of all the previous sizes (including the final #endif)
 # and a list of the parts.
+# First return value is undefined if failure (?).
 sub cpp_merge_candidates ($)
 {
   # sum of all previous sizes; 0 on initial call.
@@ -2404,7 +2533,7 @@ THENPART:
   # At this point we are already past the initial #if
   $next_line = peek_fulltoken_line($prev_sizes+1);
   if (!defined($next_line)) {
-    return (0);
+    return;
   }
   if ($debug_peek)
     { my $peeked_at = $prev_sizes+1;
@@ -2412,7 +2541,7 @@ THENPART:
       print "ungot raw: ", join("  >>", @getline_ungot_raw_lines);
       print "ungot simple: ", join("  >>", @getline_ungot_simple_lines);
     }
-  if ($next_line =~ /^\#\s*if(n?def)?\b/)
+  if ($next_line =~ /^\s*\#\s*if(n?def)?\b/)
     { if ($debug_merge_branches)
 	{ print "cpp_merge_candidates making recursive call from then\n"; }
       my @sub_parts;
@@ -2426,9 +2555,9 @@ THENPART:
 	{ return; }
       $next_line = peek_fulltoken_line($prev_sizes+1);
       if (!defined($next_line)) {
-	return (0);
+	return;
       }
-      if ($next_line !~ /^\#\s*els(e|if)\b/)
+      if ($next_line !~ /^\s*\#\s*els(e|if)\b/)
 	{ return; }
       $prev_sizes++;
       # Would push have worked equally well here?
@@ -2446,14 +2575,14 @@ THENPART:
       push(@parts, $then_clause);
       $next_line = peek_fulltoken_line($prev_sizes); # not $prev_sizes+1
       if (!defined($next_line)) {
-	return (0);
+	return;
       }
     }
 
   if ($debug_merge_branches) { print "cpp_merge_branches: thenpart $parts[$#parts]"; }
-  if ($next_line =~ /^\#\s*elsif/)
+  if ($next_line =~ /^\s*\#\s*elsif/)
     { goto THENPART; }
-  if ($next_line !~ /^\#\s*else/)
+  if ($next_line !~ /^\s*\#\s*else/)
     { $next_line =~ s/\n$//;	# remove newline so we get better die output
       # Unconditional prints, because we are about to die.
       print "ungot raw: ", join("  >>", @getline_ungot_raw_lines);
@@ -2463,9 +2592,9 @@ THENPART:
 ELSEPART:
   $next_line = peek_fulltoken_line($prev_sizes+1);
   if (!defined($next_line)) {
-    return (0);
+    return;
   }
-  if ($next_line =~ /^\#\s*if(n?def)?\b/)
+  if ($next_line =~ /^\s*\#\s*if(n?def)?\b/)
     # This was else ... if; treat it like elsif and go back to then part
     { if ($debug_merge_branches)
 	{ print "cpp_merge_candidates making recursive call from else\n"; }
@@ -2477,9 +2606,9 @@ ELSEPART:
 	{ return; }
       $next_line = peek_fulltoken_line($sub_prev_sizes+1);
       if (!defined($next_line)) {
-	return (0);
+	return;
       }
-      if ($next_line !~ /^\#\s*endif\b/)
+      if ($next_line !~ /^\s*\#\s*endif\b/)
 	{ return; }
       $prev_sizes = $sub_prev_sizes+1;
       # Would push have worked equally well here?
@@ -2493,11 +2622,11 @@ ELSEPART:
       push(@parts, $else_clause);
       $next_line = peek_fulltoken_line($prev_sizes); # not prev_sizes+1
       if (!defined($next_line)) {
-	return (0);
+	return;
       }
     }
   if ($debug_merge_branches) { print "cpp_merge_branches: elsepart $parts[$#parts]"; }
-  if ($next_line !~ /^\#\s*endif/)
+  if ($next_line !~ /^\s*\#\s*endif/)
     { die "Just saw endif: $next_line"; }
 
   # @parts holds the desired values; maybe merge them.
@@ -2511,16 +2640,16 @@ ELSEPART:
 sub peek_to_cpp_command ($$$)
 { my ($cpp_cmd_re, $peekahead, $size_limit) = check_args(3, @_);
   if ($debug_peek)
-    { print "entering peek_to_cpp_command(peekahead $peekahead, ungot $#getline_ungot_raw_lines): $cpp_cmd_re\n";
+    { print "entering peek_to_cpp_command(peekahead = $peekahead; ungot $#getline_ungot_raw_lines): $cpp_cmd_re\n";
       print "ungot raw: ", join("  >>", @getline_ungot_raw_lines);
       print "ungot simple: ", join("  >>", @getline_ungot_simple_lines); }
   my $this_result = "";
   my $this_size = 0;
   my $next_line = peek_fulltoken_line($peekahead+1);
-  while ($next_line !~ /^\#\s*$cpp_cmd_re\b/)
+  while ($next_line !~ /^\s*\#\s*$cpp_cmd_re\b/)
     { if ($debug_peek)
 	{ print "didn't find $cpp_cmd_re, offset $this_size: $next_line"; }
-      if (($this_size > $size_limit) || ($next_line =~ /^\#/))
+      if (($this_size > $size_limit) || ($next_line =~ /^\s*\#/))
 	{ return; }
       # was $this_result .= $next_line;
       $this_result = append_lines($this_result, $next_line);
@@ -2528,7 +2657,7 @@ sub peek_to_cpp_command ($$$)
       $next_line = peek_fulltoken_line($peekahead+$this_size+1); }
   $peekahead += $this_size+1;
   if ($debug_peek)
-    { print "peek_to_cpp_command returning peek $peekahead (ungot $#getline_ungot_raw_lines) <<$this_result>>\n";
+    { print "peek_to_cpp_command returning (peek = $peekahead; $#getline_ungot_raw_lines ungot lines) <<$this_result>>\n";
       print "ungot raw: ", join("  >>", @getline_ungot_raw_lines);
       print "ungot simple: ", join("  >>", @getline_ungot_simple_lines); }
   return ($this_result, $peekahead);
@@ -2553,7 +2682,7 @@ sub cpp_merged_branches ()
 
   # $parts_size = sum of sizes of all parts (and preprocessor glue like "#else")
   my ($parts_size, @parts) = cpp_merge_candidates(0);
-  #   if (peek_fulltoken_line($parts_size+1) !~ /^\#\s*endif/)
+  #   if (peek_fulltoken_line($parts_size+1) !~ /^\s*\#\s*endif/)
   #     { die "Should have seen an endif: ", peek_fulltoken_line($parts_size+1); }
   #   $parts_size++;		# account for the final #endif
 
@@ -2690,7 +2819,7 @@ sub merge_brace_unbalanced_lines ($@)
 
 sub is_cpp_command ($)
 { my ($line) = check_args(1, @_);
-  return ($line =~ /^\#/);
+  return ($line =~ /^\s*\#/);
 }
 
 ## According to the Perl FAQ, this is fastest for small strings, but for
@@ -2832,7 +2961,8 @@ sub parse_exp ($;$)
 	{ $parsetypes{$casttypenum} = $true; }
       return parse_exp_follower($casttypenum, $remaining); }
   # Type in parens followed by (what looks like) paren, number, or identifier
-  if ($exp =~ /^\(\s*($type_re)\s*\)\s*([0-9a-zA-Z_\(])/)
+  if (($exp =~ /^\(\s*($type_re)\s*\)\s*([0-9a-zA-Z_\(])/)
+      || ($exp =~ /^\(\s*($type_re\s*\*)\s*\)\s*(.)/))
     { my $casttype = parse_type($1);
       my $nextchar = $LAST_PAREN_MATCH;
       # print "non-built-in cast type $casttype (follower $nextchar)\n";
@@ -2857,17 +2987,24 @@ sub parse_exp ($;$)
       if (!$type) { return($typeFAIL,$exp); }
       return parse_exp_follower($type,$remaining); }
   # [^\)] was [ \ta-zA-Z0-9*]
-  if ($exp =~ /^sizeof\s*\(\s*([^\)]+?)\s*\)/)
-    { my $sizeof_arg = $1;
-      my $remaining = $POSTMATCH;
-      if ($sizeof_arg =~ /^$type_re$/o)
-	{ # fix: add this type to the list of those seen.
+  if ($exp =~ /^sizeof\s*/)
+    { # Two possibilities:  sizeof(TYPE) or sizeof EXP.
+      # If no parens, we know it's an expression.
+      # If parens, it might be an expression or a type; have to guess.
+      my $sizeof_follower = $POSTMATCH;
+      my $sizeof_arg_type;
+      my $remaining;
+      if (($sizeof_follower =~ /\(\s*([^\)]+?)\s*\)/)
+	  && (($remaining = $POSTMATCH) || $true) # execute for side effect
+	  && (($sizeof_arg_type = $1) =~ /^$type_re$/o))
+	{ # $remaining is already set
+	  # fix: add this type to the list of those seen.
 	  # (It might be an expression that looks like a type; what to do?
 	  # Can check $c_reserved_type_word_re...
 	}
       else
-	{ my ($type, $none_remaining) = parse_exp($sizeof_arg, $ignoretypes);
-	  if ((!$type) || ($none_remaining !~ /^\s*$/))
+	{ ($sizeof_arg_type, $remaining) = parse_exp($sizeof_follower, $ignoretypes);
+	  if (!$sizeof_arg_type)
 	    { return($typeFAIL,$exp); }
 	}
       # actually "size_t", but "int" is understood and that isn't yet.
@@ -3338,7 +3475,7 @@ sub process_macro_calls ()
 	  if ($line =~ /^\s*$/)
 	    { # empty line; possibly was originally a preprocessor command
 	    }
-	  elsif ($line =~ m/^\#/o)
+	  elsif ($line =~ m/^\s*\#/o)
 	    { mdie("get_fulltoken_line shouldn't return preprocessor lines: $line"); }
 	  else
 	    {			# not empty or a preprocessor line
@@ -3749,8 +3886,8 @@ ATCOMMA:
 				  $nextchar = ","; # gratuitous, I think.
 				  goto ATCOMMA; }
 			      else
-				# fix: Should this be parse_error instead of mdie?
-				{ mdie("No comma or semicolon after initializer: '$postexp'"); } }
+				# Don't die.  (Eg, flex-2.5.3/FlexLexer.h:70)
+				{ parse_error("No comma or semicolon after initializer: '$postexp'"); } }
 			  else
 			    { mdie("Bad nextchar $nextchar."); } }
 		    } }
@@ -4196,12 +4333,16 @@ sub skip_expression_nocommaop ($)
     }
   else
     { ($type, $remaining) = parse_exp_nocommaop($input, "ignore types"); }
+
   if (!$type)
-    { mdie("No type for initializer $remaining");
-      # return "";
+    { parse_error("No type for initializer $remaining");
+      return "";
     }
   else
-    { return $remaining; }
+    { # Don't return the empty string; that indicates failure
+      if ($remaining eq "")
+	{ $remaining = " "; }
+      return $remaining; }
 }
 
 
@@ -4799,20 +4940,19 @@ sub check_macro_body ($) {
         { push(@nesting,$match);
 	  # print STDERR "FRONTMATCH\n";
 	}
-      elsif ($match =~ /$c_reserved_nontype_word_re|$c_reserved_type_word_re/o)
-	{
-	  $failure_type = "expands_to_reserved_word";
-	  $category = harder_category($category,$catRESDWORD);
-	  evilprint("expands to reserved word\n    $full_body\n");
-	}
       elsif ($match =~ /;/)
 	{
 	  #FIXMERNST: what about "," operator?
 	  $failure_type = "expands_to_statement";
 	  $category = harder_category($category,$catSTATEMENT);
-	  evilprint("expands to statement\n    $full_body\n");
+	  evilprint("expands to statement: $full_body\n");
 	}
-
+      elsif ($match =~ /$c_reserved_nontype_word_re|$c_reserved_type_word_re/o)
+	{
+	  $failure_type = "expands_to_reserved_word";
+	  $category = harder_category($category,$catRESDWORD);
+	  evilprint("expands to reserved word '$MATCH': $full_body\n");
+	}
       elsif ($match =~ /[\]\)\}]/)
 	{ if ($#nesting == -1)
 	    { $result |= $DANGER;
@@ -4982,6 +5122,7 @@ sub parse_error ($@)
   my (@msg) = check_args_at_least(1, @_);
   my ($file,$line) = (caller)[1,2];
   my $message = "$file:$line on " . input_file_and_line() . ": @msg\n";
+  $message =~ s/\n+\n$/\n/;
   if ($opt_p) { print STDERR $message; }
   print PARSE_ERRS $message;
   return;
@@ -5113,7 +5254,7 @@ sub initialize_builtin_macros () {
   my $mac;
   foreach $mac ((@empty_def_macros,@string_def_macros,@num_def_macros)) {
     $macros{$mac} = [0];
-    $macros_uses{$mac} = [0,0];
+    $macros_uses{$mac} = [0,0,0];
     $macros_c_undefs{$mac} = 0;
     $macros_used_in_functions{$mac} = [];
     $macros_file_line_uses{$mac} = [];
@@ -5181,6 +5322,9 @@ sub initialize_builtin_macros () {
 # analyze_for_macro_use($spliced_line)
 # looks for macros in $spliced_line and saves the file,line#
 
+# These are macro expansions, not mere uses:  we don't count the
+# argument to #undef, for instance.
+
 # This won't be quite right since we currently don't look through
 # include-s in order.  Note that this is still subject to differences
 # from the actual parse by cpp, since not all files are included by
@@ -5209,18 +5353,29 @@ sub analyze_for_macro_use ($) {
   # study $line;  # use this if you're gonna do lots of pattern matches
 
 
-  my $cpp_line = $false;
-  if (substr($line,0,1) eq "#") {
-    $cpp_line = $true;
-  }
-
+  my $macro_uses_index = $i_usage_code;
   my $cpp_defining_macro_name;
-  if ($line =~ /^\#\s*define\s+($identifier_re)/o) {
-    $cpp_defining_macro_name = $1;
-    #print STDERR "Defining $cpp_defining_macro_name\n";
-    # Don't report the macro being defined unless it calls itself recursively
-    # (in the body), which is legal in the current standard.
-    $line = $POSTMATCH;
+  if (substr($line,0,1) eq "#") {
+    $line = substr($line,1);
+    $line =~ s/^\s+//;
+    $macro_uses_index = $i_usage_cond;
+    if ($line =~ /^define\s+($identifier_re)/o)
+      { $cpp_defining_macro_name = $1;
+	#print STDERR "Defining $cpp_defining_macro_name\n";
+	# Don't report the macro being defined unless it calls itself recursively
+	# (in the body), which is legal in the current standard.
+	$line = $POSTMATCH;
+	$macro_uses_index = $i_usage_macro; }
+    elsif ($line =~ /^undef\b/)
+      { return; }
+    elsif ($line =~ /^(if(n?def)?|elif)?\b/)
+      { $line = $POSTMATCH; }
+    else
+      { # Let all the others default to "in conditional" also.
+	# Perhaps macros can't expand anywhere else except in #include.
+	# In that case, it would be safe to just return (after adding
+	# the case to check for #include(_next)? and #import).
+      }
   }
 
   my $word;
@@ -5234,8 +5389,11 @@ sub analyze_for_macro_use ($) {
       #  * that the macro was used globally, if it wasn't in a function
       # FIX: do we want to include information about a macro's expansion
       # including another macro?  (like dependent-macros)
-      $macros_uses{$word}[$cpp_line ? $i_usage_cpp : $i_usage_code]++;
 
+      $macros_uses{$word}[$macro_uses_index]++;
+
+      # Store the fact that $word is expanded in the expansion
+      # of $cpp_defining_macro_name.
       if (defined($cpp_defining_macro_name)) {
 	my $mi = mindex_from_name_file_line($cpp_defining_macro_name,
 					    $current_file,
@@ -5685,6 +5843,8 @@ sub test_parse_expressions ()
   test_parse_expression("(foo || bar)", "bool");
   test_parse_expression("(size1 == 0 || startpos >= size1)", "bool");
   test_parse_expression("(size1 == 0 || startpos >= size1 ? string2[startpos - size1]  : string1[startpos])", $typeUNKNOWN);
+  test_parse_expression("(XColormapEvent *)&Event", "XColormapEvent *");
+  test_parse_expression("(state->basic.eax == MACH_RCV_INTERRUPTED && !memcmp (pc, &syscall, sizeof syscall))", "bool");
 }
 
 sub test_parse_type ($$)
@@ -5967,6 +6127,7 @@ if ($opt_g)
   elsif ($opt_g == 9) { $debug_peek = $true; }
   elsif ($opt_g == 10) { $debug_getline = $true; }
   elsif ($opt_g == 11) { $debug_categorize_macro = $true; }
+  elsif ($opt_g == 12) { $debug_cpp_if_comments = $true; }
   else { die "Bad -g option $opt_g"; }
 }
 
@@ -6030,6 +6191,7 @@ if ($opt_v) { print STDERR "Computing macro/function use relations...\n"; }
 compute_macros_used_in_functions();
 
 ### All the files have been read; now process the macros
+# FIX: Why +1?  This doesn't seem to be right at all.
 print STDERR "Categorizing " . ($cMacrosInTables - $cBuiltinMacros + 1) . " macros\n";
 { my $i;
   local $categorizing_macros = $true;
@@ -6056,9 +6218,6 @@ print STDERR "Categorizing " . ($cMacrosInTables - $cBuiltinMacros + 1) . " macr
 print STDERR "Computing various global statistics...\n";
 compute_global_cpp_sums();
 
-#FIX: split output_stats into two pieces-- one for after first pass,
-# and one for after second pass
-# (at least until we make mdie do something better than die)
 output_stats();
 
 #print STDERR "Included files:", join("\n",@files_included), "\n";
