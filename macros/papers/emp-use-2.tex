@@ -12,12 +12,12 @@
 
 \def\numpackages{26}
 \def\numdependpackages{25}
-\def\numlines{1.4 million}      % 1390186 as of 28 Jan 1999
+\def\numlines{1.4 million}      % 1372618 as of 5 Feb 1999
 % \def\numlinesexact{1.4 million}
 \def\numlinesalmost{1.4 million}
-% \def\numlinesncnbexact{1 million} % 995033 as of 28 Jan 1999
+% \def\numlinesncnbexact{1 million} % 973877 as of 5 Feb 1999
 
-\def\nummacrodefs{27228}        % as of 28 Jan 1999
+\def\nummacrodefs{26182}        % as of 5 Feb 1999
 
 \newcommand{\pkg}[1]{\textsf{#1}}
 \newcommand{\file}[1]{\texttt{#1}}
@@ -68,7 +68,7 @@ Department of Computer Science and Engineering \\
 University of Washington \\
 Box 352350, Seattle, WA  98195-2350  USA \\
 {\small \{{\tt mernst},{\tt gjb},{\tt notkin}\}{\tt @cs.washington.edu}} \\
-2 February 1999}  
+5 February 1999}  
 
 \maketitle
 
@@ -274,16 +274,22 @@ expansions, macro feature usage, macro pitfalls, and conditional
 intentions.  These taxonomies improve on previous work by being more
 detailed and more accurately reflecting actual use.
 
+%%Numbers:
+%% ``over one quarter'' comes from adding the extra-linguistic numbers (from
+%% tbl-subset-properties.tex, 14.1%) and macro lint numbers (from
+%% tbl-lint.tex, 22 or 23%); but I don't know the exact overlap of the two
+%% numbers, so I am a big vague here.  2/5/99
+
 Overall, our analysis confirms that the C preprocessor is used in
 exceptionally broad and diverse ways, complicating the development of C
-programming support tools.  By far the largest number of macro definitions
-and uses are relatively simple, of the variety that a programmer could
-understand through simple but tedious effort or that a relatively
-unsophisticated tool could manage (although in practice very few even
-try).  Despite the preponderance of innocuous macros, the preprocessor is
-so heavily used that the remaining ones, which are most likely to cause
-difficulties, are \comment{be specific}numerically significant, so understanding, annotating, or
-eliminating them is worthwhile.
+programming support tools.  Most macro definitions and uses are relatively
+simple, of the variety that a programmer could understand through simple
+but tedious effort or that a relatively unsophisticated tool could manage
+(although in practice very few even try).  While innocuous macros
+predominate, the preprocessor is so heavily used that it is worthwhile to
+understand, annotate, or eliminate the remaining ones, which are most
+likely to cause difficulties and which represent over one quarter of
+macros.
 
 Section~\ref{sec:methodology} describes our experimental methodology.
 Sections~\ref{sec:first-content-section}--\ref{sec:last-content-section}
@@ -368,7 +374,8 @@ presents avenues for future work.
 \section{Methodology}
 \label{sec:methodology}
 
-% .9% computed 1/28/99, from a run with a bug that didn't count those at all.
+%%Numbers: .9% computed 1/28/99, from a run with a bug that didn't count
+%% those at all.
 
 We analyzed {\numpackages} publicly-available software packages that
 represent a mix of application domains, UI styles (graphical vs.\ 
@@ -502,6 +509,7 @@ directives appear in the packages we analyzed.
 
 \begin{figure}
 \centerline{\epsfig{file=fig/directives-breakdown.eps,height=7.5in}}
+%%Numbers: Read them off the Excel chart.  2/5/99
 \captionsmall{Preprocessor directives as a fraction of non-comment,
   non-blank (NCNB) lines.  Each group of bars represents the percentage of
   NCNB lines \comment{wc}attributed to the specified category of directives, with each
@@ -509,32 +517,41 @@ directives appear in the packages we analyzed.
   Conditional compilation directives ({\tt \#if}, {\tt \#ifdef}, {\tt
   \#ifndef}, {\tt \#else}, {\tt \#elif}, {\tt \#endif}) are grouped
   together.  For example, the top bar of the fourth group indicates that
-  2.0\% of gzip's NCNB lines are {\tt \#include}s, and the bottom bar of the
-  fifth group indicates that 4.4\% of all lines across the packages are
+  .44\% of gzip's NCNB lines are {\tt \#include}s, and the bottom bar of the
+  fifth group indicates that 4.0\% of all lines across the packages are
   conditional compilation directives.}
 \label{fig:directives-breakdown}
 \end{figure}
 
+%%Numbers: 8.4%: bottom bar of first group
+%% 4.5%, 22%: penultimate and top bars of first group
+%% 25%, 37%: ``zero'' figures from fig:dep-byline
+%% 2/5/99
+
 The prevalence of, and variation in, preprocessor use makes understanding
-Cpp constructs crucial to program analysis.  Nearly 10\% of program
+Cpp constructs crucial to program analysis.  8.4\% of program
 lines are a preprocessor directives rather than C code.  Across packages, the
-percentage varies from less than 4\% to more than 22\%.  (These figures do
-not include the 28\% of lines that expand a macro or the 38\% of lines
+percentage varies from 4.5\% to 22\%.  (These figures do
+not include the 25\% of lines that expand a macro or the 37\% of lines
 whose inclusion is controlled by {\tt \#if}; see
 Section~\ref{sec:dependence}.)
 
-% \#if 46\%, \#define 35\%, \#include 13\%, \#undef 3\%, \#line 2\%
+%% Numbers: compute from ``mean'' line of tbl-directives-breakdown
+% other line    conditional     include undef   define  
+% 0.04  3.22    48.07           15.01   1.59    32.06
+%% For variation, use (directives-variation) in misc.el.
+% 2/5/99
 
-Conditional compilation directives account for 46\% of
-the total directives in all packages, macro definitions comprise another
-35\%, and file inclusion makes up \comment{be specific}most of the rest.  Packages are not very
+Conditional compilation directives account for 48\% of
+the total directives in all packages, macro definitions comprise 
+32\%, and file inclusion makes up 15\%.  Packages are not very
 uniform in their mix of preprocessor directives, however.  (If they were,
 each group of bars in Figure~\ref{fig:directives-breakdown} would be
 a scaled version of the top group.)  In particular, the prevalence of {\tt
 \#include} is essentially independent of incidence of other directives.
 The percentage of directives that are conditionals varies from 16\% to
-74\%, the percentage of {\tt \#define} varies from 14\% to 52\%, and the
-percentage of {\tt \#include} varies from 4\% to 60\%.  This variation in
+73\%, the percentage of {\tt \#define} varies from 18\% to 45\%, and the
+percentage of {\tt \#include} varies from 3.5\% to 49\%.  This variation in
 usage indicates that a tool for understanding Cpp cannot focus on just a
 subset of directives.
 
@@ -547,71 +564,93 @@ uses\comment{be precise} of {\tt \#undef} immediately precede a definition
 of the just-undefined macro, to avoid preprocessor warnings about
 incompatible macro redefinitions.
 
-Every use of {\tt \#line} (in \pkg{bash}, \pkg{cvs}, \pkg{flex}, \pkg{fvwm},
-\pkg{gawk}, \pkg{gcc}, and \pkg{perl}) appears in lex or yacc
+Every use of {\tt \#line} appears in lex or yacc
 output that enables packages to build on systems lacking lex, yacc, or
 their equivalents.  For instance, \pkg{flex} uses itself to parse its
 input, but also includes an already-processed version of its input
 specification (that is, C code corresponding to a {\tt .l} file) for
 bootstrapping.
 
-% , as are ``other'' directives (such as ).  
+
+%% Numbers: see above (compute from ``mean'' line of tbl-directives-breakdown)
+
 % as well as user-defined ones like {\tt \#module}
 
 Figure~\ref{fig:directives-breakdown} omits unrecognized directives and
 rarely-appearing directives such as {\tt \#pragma}, {\tt \#assert}, and
 {\tt \#ident}.  Among the packages we studied, these account for
-.017\%\comment{double-check} of directives.
+.04\%\comment{double-check} of directives.
 
 
 \subsection{Packages with heavy preprocessor use}
 
-The \pkg{gzip}, \pkg{remind}, and \pkg{bash} packages deserve
-special attention for their heavy preprocessor usage\,---\,22\%, 21\%, and
-16\% of NCNB lines, respectively.
+%%Numbers: read off directives-breakdown chart in Excel
+
+The \pkg{gzip}, \pkg{remind}, and \pkg{perl} packages deserve
+special attention for their heavy preprocessor usage\,---\,22\%, 19\%, and
+14\% of NCNB lines, respectively.
 
 \pkg{gzip} {\tt \#define}s disproportionately many macros as literals and
 uses them as arguments to system calls, enumerated values, directory
 components, and more.  These macros act like {\tt const} variables.
 \pkg{gzip} also contains many conditional compilation directives, since
 low-level file operations (such as accessing directories and setting access
-control bits) are done differently on different systems.
+control bits) are done differently on different systems.  In \pkg{bash},
+which is also portable across across a large variety of systems, but which
+uses even more operating system services, 97\% of the conditional
+compilation directives test the definedness of a macro whose presence or
+absence is a boolean flag indicating whether the current system supports a
+specific feature.  The presence or absence of a feature requires different
+(or sometimes additional) system calls or other code.
+
+%%Numbers: Do   search -i -n '^[ \t]*#[ \t]*if', 
+%% then (delete-matching-lines "^usr"),
+%% and then (/ 281.0 513)
 
 \pkg{remind} supports speakers of multiple natural languages by using {\tt
 \#define}d constants for basically all user output.  It also contains
-disproportionately many conditional compilation directives; \comment{be specific}over half of
+disproportionately many conditional compilation directives; 55\% of
 these test the definedness of \verb|HAVE_PROTO|, in order to provide both
 K\&R and ANSI prototypes.
 
-Like \pkg{gzip}, \pkg{bash} is portable across a large variety of
-systems, but \pkg{bash} uses even more operating system services.
-97\% of \pkg{bash}'s conditional compilation directives
-test the definedness of a macro whose presence or absence is a boolean
-flag indicating whether the current system supports a specific feature.
-The presence or absence of a feature requires different (or sometimes
-additional) system calls or other code.
+%%Numbers: 38% computed from number of lines in perl.catg starting with
+%% ``.''; 38% of those are from embed.h.
+
+\pkg{perl}'s high preprocessor usage can be attributed in part to {\tt \#define}
+directives, which make up 43\% of its preprocessor lines.  Of these, 38\%
+are used for namespace management, to permit use of short names in code
+without colliding with libraries used by extensions or applications which
+embed \pkg{perl}.  \pkg{perl} also frequently uses macros as inline
+functions or shorthand for expressions, as in
+\begin{verbatim}
+#define sb_iters cx_u.cx_subst.sbu_iters
+#define AvMAX(av) ((XPVAV*)  SvANY(av))->xav_max
+\end{verbatim}
 
 
 \section{Macro definition bodies}
 \label{sec:macro-bodies}
 
 This section examines features of macro definitions that may complicate
-understanding the containing program.  These features include macro definitions that
-expand to a partial or unidentifiable syntactic entity, take advantage of
-Cpp features that lie outside the programming language, or contain other
-error-prone constructs.  Multiple definitions of a macro name can also
-complicate understanding, whether the redefinitions do effectively the same
-thing or have incompatible bodies.
+understanding the containing program.  These features include macro
+definitions that expand to a partial or unidentifiable syntactic entity,
+take advantage of Cpp features that lie outside the programming language,
+or contain other error-prone constructs.  Multiple definitions of a macro
+name can also complicate understanding, whether the redefinitions do
+effectively the same thing or have incompatible bodies.
 
-Our tool successfully classified over 98\% of macros.
-\comment{What does it mean to fail?  What are the categories?}
-%, though not all of these will be easy to understand.  
-76\% of macros correspond to complete syntactic entities in the C language;
-understanding these macros should present little difficulty.  17\% of
-macros use Cpp features unavailable in C, and 24\% contain latent bugs.
+%%Numbers: 80% = sum of rows 2, 3, and 4 in legend of fig/def-categories.eps.
+%% 14%: sum of numbers in tbl-subset-properties.tex
+%% 23%: tbl-lint.tex
+%% 8.9%: first number in tbl-ddf-frequency
+
+80\% of macros correspond to complete syntactic entities in the C
+language\,---\,constants, expressions, and statements\,---\,so
+understanding these macros should present little difficulty.  However, 14\%
+of macros use Cpp features unavailable in C, and 23\% contain latent bugs.
 These numbers indicate the necessity and difficulty of a thorough
 understanding of macro definitions to a software engineer or tool.
-Multiple definitions of a macro are generally innocuous:  only 2\% of macro
+Multiple definitions of a macro are generally innocuous:  only 8.9\% of macro
 names had definitions with different abstract syntax trees.
 
 
@@ -626,12 +665,15 @@ We started with a set of categories that we expected to occur frequently
 taxonomies~\cite{Stroustrup-DesignEvolution,Carroll95}), then iteratively
 refined them to break up overly broad categories and add add unanticipated ones.
 
+%%Numbers: 75\% = 42% constants + 33% expressions (from fig/def-categories.eps)
+%% 5.1% statements: also from fig/def-categories.eps
+
 Figure~\ref{fig:categorization} reports, for each package, how many
 definitions fall into each category.  Macros that
 act like C language constructs\,---\,such as variables or
 functions\,---\,are easiest to analyze, understand, and perhaps even
 translate into other language constructs.  Thus, there is reason to believe
-that the 70\% of macros whose bodies are expressions and the 6\% that are
+that the 75\% of macros whose bodies are expressions and the 5.1\% that are
 statements can be handled relatively easily by people and tools.  Other
 macros, especially those that do not expand to a complete syntactic
 construct, are more problematic.
@@ -670,8 +712,8 @@ The ten definition categories follow.
   \sloppy
   \emergencystretch=2em
 
-%%% These figures come from:  macros-make-categories-tbl-from-stat.pl -bt *.stat
-%% Computed 2/1/99
+%%Numbers:  macros-make-categories-tbl-from-stat.pl -bt *.stat
+%% 2/5/99
 
 %% mcat_NULL: 1816
 %%   100%  null_define (1816)
@@ -684,9 +726,9 @@ they often represent optional syntax.  For
 instance, macro {\tt private} may expand either to {\tt static} or to
 nothing, depending on whether a debugging mode is set.
 
-%% mcat_CONSTANT: 11062
+%% mcat_CONSTANT: 11063
 %%   0.00%  constant (0)
-%%   96%  literal (10602)
+%%   96%  literal (10603)
 %%   4.2%  some_constant (460)
 % @mcat_CONSTANT = qw( catCONSTANT catLITERAL catSOME_CONSTANT );
 \item[Constant] The macro body is either a literal (96\% of this category)
@@ -701,8 +743,8 @@ values.
 
 % {\tt \#define NULL 0}
 
-%% mcat_NONCONSTANT_EXPRESSION: 8633
-%%   100%  expression (8633)
+%% mcat_NONCONSTANT_EXPRESSION: 8635
+%%   100%  expression (8635)
 % @mcat_NONCONSTANT_EXPRESSION = qw( catEXP );
 \item[Expression]  The macro body is an expression, as in {\tt \#define
   sigmask(x) (1 << ((x)-1))} or {\tt \#define mtime mailfiles[i]->\verb|mod_time|}.
@@ -822,21 +864,22 @@ ASSERT(p) if (!(p)) botch(\verb|__STRING|(p)); else}).
 
   \comment{Try to say how much results from each variety.}
 
-%% mcat_NON_C_CODE: 20
-%%   100%  command_line_arguments (20)
+%% mcat_NON_C_CODE: 17
+%%   100%  command_line_arguments (17)
 %%   0.00%  assembly_code (0)
 % @mcat_NON_C_CODE = qw( catCOMMAND_LINE catASSEMBLY_CODE );
 \item[Not C code]\label{page:not-c-code}
+%%Numbers: 17,12,10: looked up (where?) 2/7/99
   The predominant use of such macros is for filenames and operating system
   command lines and for assembly code.  The assembly code component
   includes only macros whose expansion is assembly code, not all
   expressions and statements that contain snippets of assembly code;
-  however, such macros appeared only in system libraries, not in any of our
-  packages, and so does not contribute to this category in our statistics.
+  however, we encountered such macros only in system libraries, not in the
+  packages we examined.  The macros in this category all appear in
+  \pkg{emacs}; they comprise 17 definitions, 12 names, and 10 uses in C
+  code files.  Because of their small magnitudes, we omit them from all
+  figures.
   
-  \comment{This is .1\% of definitions, 0\% of names, 0\% of uses; we omit
-  it from all the figures.}
-
   Our tool processes only C source code, not Makefiles or other non-C
   files, but sometimes a header file is used both for code files and for
   Makefiles (during the build process, to customize the
@@ -846,18 +889,8 @@ ASSERT(p) if (!(p)) botch(\verb|__STRING|(p)); else}).
     not C, so it is good style to avoid such uses.  In practice, such uses
     have forced many C preprocessors to relax their assumptions about their
     input.}  It is those files which contribute macros expanding to
-  filenames or command lines.  \comment{Are they now never expanded in
-  source code files?}Such macros are very infrequently expanded
-  in source code files; the few expansions in figure~\ref{fig:freq-use-cat}
-  result from ...\comment{what do they result from?}.
+  filenames or command lines.
   
-%   \comment{Maybe no more such misclassifications.}
-%   Our heuristics misclassify some macro bodies that should be placed in
-%   this category: the body of {\tt \#define \verb|SYSDEP_CFLAGS| -43 -w} is
-%   a valid C expression and is so classified.  (The ``expression and not C
-%   code'' line at 0.14\% in Figure~\ref{fig:subset-categories} gives an
-%   estimate of the prevalence of such classification errors.)
-
 %% mcat_FAILURE: 502
 %%   0.00%  uncategorized (0)
 %%   1.2%  being_categorized (6)
@@ -866,29 +899,35 @@ ASSERT(p) if (!(p)) botch(\verb|__STRING|(p)); else}).
 %%   2.2%  multiply_categorized (11)
 %%   3.2%  symbols (16)
 % @mcat_FAILURE = qw( catNOT_YET catIN_PROCESS catNO_DEF catFAILURE catMULTIPLE );
+%% Numbers: 1.8 = (/ 502.0 \nummacrodefs)
+%% All failures: egrep '(uncategorized|being_categorized|never_defined|failed_categorization\([0-9]*\)|multiply_categorized|symbols):' *.catg
+%%   then do (delete-matching-lines "catg:/")
+%%   and laboriously hand-classify everything.
 \item[Other]
-  This category contains all macros not otherwise classified; it represents
-  1.8\% of the {\nummacrodefs} definitions, and 8 of the {\numpackages}
-  packages have no such macros.  We examined each such macro, and no one
-  variety stands out among these classfication failures, so a more complete
-  categorization is unlikely to affect our conclusions.
+  This category contains all macros not otherwise classified.  It
+  represents 1.8\% of the {\nummacrodefs} definitions; 8 of the
+  {\numpackages} packages have no such macros, and 10 more have only one or
+  two such definitions.  12\% of these macros expand to a macro which was
+  not defined in the package or have multiple definitions with conflicting
+  categorizations (so that the macro being defined cannot be unambiguously
+  categorized itself).
   
-\comment{Discuss this in more detail, maybe; note that we did examine each
-of them by hand.}
-
   Some failures resulted from limitations of our parser, which does not
-  handle pasting\comment{fix?}, C++, or some non-portable C extensions.  Handling of
-  partial entities is incomplete, so case labels, parts of structure
-  declarations, and partial expressions are left unclassified.  Heuristics
-  for recognizing operating system command lines or flags occasionally
-  fail.  Additional failures result from macro bodies that cannot be
-  unambiguously assigned to another category because their syntactic class
-  depends on their arguments\,---\,such as {\tt \#define EXFUN(name, proto)
-  name proto} and {\tt \#define
-\verb|DO_OP|(OP,a,b) (a OP b)}.  Finally, macros in bodies were not
-expanded (though their classifications were examined), causing a small
-amount of cascading of failures when complicated or unclassified macros
-appeared in other macro definitions.
+  handle pasting and stringization (3\% of failures).  Handling of partial
+  entities is incomplete, so case labels (4\%), partial expressions (6\%),
+  and some declarations (14\%) are left unclassified, as are bodies which
+  pass a non-first-class object (such as a type or operator) to another
+  macro (7\%).  The biggest problem is macros with adjacent symbols, which
+  is generally not permitted in C\@ (35\% of macros).  These macro bodies
+  often use a macro argument which is a statement or operator or expand to
+  a partial declaration or cast.  There were also some cases in which uses
+  of macros that were not successfully classified caused classification
+  failures for the macro bodies in which they appeared.
+  
+  Because the number of classification failures is small overall, and
+  because no variety of failure stands out among these classfication
+  failures, a more complete categorization is unlikely to affect our
+  conclusions.
 
 \end{description}
 
@@ -918,11 +957,13 @@ section
 presents a list of such features and evaluates their frequency of
 appearance, both individually and in combination, in our test suite.
 
+%%Numbers: .07% by adding stringization + pasting in tbl-subset-properties.tex
+
 We anticipated problems dealing with macros that use stringization
 (conversion of a preprocessor symbol to a C string) and
 pasting (creating a new identifier from two existing identifiers), the two
 explicit extra-linguistic features of Cpp.  However, these
-features appear in less than .1\% of all macro
+features appear in only .07\% of all macro
 definitions.  Far more prevalent, and more problematic for program
 understanding tools, is exploitation of Cpp's lack of structure to effect
 mechanisms not available in C\@.  Cpp's inputs and outputs are
@@ -932,6 +973,7 @@ partial declarations.
 
 \begin{figure}
   {\small\centerline{\input{tbl-subset-properties.tex}}}
+  %% Numbers: 0.13% and 35 from tbl-subset-properties.tex
   
   \captionsmall{Usage, both singly and in
     combination, of the extra-linguistic capabilities of the C
@@ -940,15 +982,17 @@ partial declarations.
     exploiting each.  Each row of the table reports the percentage of all
     macro definitions that use a particular combination of the
     capabilities, indicated by black squares.  For instance, the sixth
-    line indicates that 0.093\% of all
-    macro definitions both perform assignment and use the result of a macro
+    line indicates that 35 macro definitions\,---\,0.13\% of all
+    definitions\,---\,both perform assignment and use the result of a macro
     invocation as a type, but use none of the other extra-linguistic
-    features listed.  The last five lines each represent a single macro
-    definition.}
+    features listed.}
   \label{fig:subset-properties}
 \end{figure}
 
-16.8\% of macros contain an extra-linguistic construct or a
+%%Numbers: 16.8% by adding rows (not columns) of tbl-subset-properties.tex.
+%% (/ 3708.0 26182)
+
+14\% of macros contain an extra-linguistic construct or a
 construct that can be used by Cpp to achieve an extra-linguistic
 effect\comment{the distinction isn't at all clear here}.
 Figure~\ref{fig:subset-properties} breaks down these macros by the
@@ -1072,16 +1116,18 @@ macro, may well give rise to these dormant errors.
 \begin{figure}
   {\small\centerline{\input{tbl-lint.tex}}}
   
-  \captionsmall{Macro lint.  This table indicates the frequency of occurrence of
-    error-prone constructs in macro bodies.  Except where specifically
-    noted, the percentages refer to the number of macro definitions.  Macro
-    definitions falling in the ``not C code'' category are omitted.}
+  \captionsmall{Macro lint:  the frequency of occurrence of error-prone
+    constructs in macro bodies.  The second column gives abolute numbers
+    and the third column gives percentages.  Except where specifically
+    noted, the percentages refer to the number of macro definitions.}
   \label{fig:macro-lint}
 \end{figure}
 
+%%Numbers: read out of tbl-lint.tex.
+
 Because it flags such errors, our tool could play the role of a macro lint
-program.  It discovered many more problems than we expected: 24\% of all
-macro definitions triggered at least one macro lint warning, and 24\% of
+program.  It discovered many more problems than we expected: 23\% of all
+macro definitions triggered at least one macro lint warning, and 22\% of
 macro names have a definition that triggers a warning.
 Figure~\ref{fig:macro-lint} further breaks down the warnings, which are
 described below.
@@ -1288,12 +1334,13 @@ expansion site.
 
 \begin{figure}
 \centerline{\epsfig{file=fig/cat-def-frequency.eps,height=7.2in}}
+%%Numbers: read off of cat-def-frequency in Excel.
 \captionsmall{\comment{Eliminate this figure after writing what it says in
     the text.}
   Number of definitions ({\tt \#define} directives) per Cpp
   identifier, graphed as the percentage of identifiers that are defined a
-  given number of times or fewer.  Overall, 95\% of macros are defined
-  three or fewer times; the other 5\% of macros have four or more
+  given number of times or fewer.  Overall, 98\% of macros are defined
+  three or fewer times; the other 2\% of macros have four or more
   definitions.  In this chart, higher lines indicate less usage.
   Percentages in the legend represent the total number of
   macro names falling in each category; Figure~\ref{fig:categorization}
@@ -1301,14 +1348,18 @@ expansion site.
 \label{fig:freq-def-cat}
 \end{figure}
 
-In 22 of our 26 packages (all but \pkg{remind}, \pkg{emacs}, \pkg{gcc}, and
-\pkg{bash}), at least 94\% of all macros are defined three or fewer times.
+%%Numbers: read 86% off Excel cat-def-frequency
+%% "22 out of 26, 98%": tbl-def-frequency
+
+In 23 of our 26 packages (all but \pkg{gawk}, \pkg{mosaic}, and
+\pkg{gnuchess}), at least 98\% of all macros are defined four or fewer times.
 Figure~\ref{fig:freq-def-cat} graphs the number of definitions for each
 macro name in our test suite, broken down by macro category.
-(Section~\ref{sec:inconsistent} extends
-macro body classifications to macro names.)  79\% of macros are defined just once.
+(Section~\ref{sec:inconsistent} extends macro body classifications to macro
+names.)  86\% of macros are defined just once.
 
-Our analysis does not distinguish sequential redefinitions of a macro from definitions that cannot take effect in a single configuration.
+Our analysis does not distinguish sequential redefinitions of a macro from
+definitions that cannot take effect in a single configuration.
 Independent definitions may result from definitions in different branches
 of a Cpp conditional, from intervening {\tt \#undef} directives, or from
 compilation conventions as when compiling different programs in a package
@@ -1317,18 +1368,15 @@ or versions of a program.
 % In general, distinguishing the cases is undecidable.
 
 The most frequently redefined macros are those most complicated to
-understand: the unclassified, not C code, and syntactic categories.  The
-more definitions a macro has, the more likely it is that one of those
+understand: the unclassified and syntactic categories.  The more
+definitions a macro has, the more likely it is that one of those
 definitions cannot be classified, or is misclassified, by our system,
-resulting in a failure to classify the macro name.  ``Not C code'' macro
-bodies tend to be Makefile compilation commands and library filenames,
-which differ for each operating system.  Supporting many systems
-necessitates many macro definitions.  Syntactic macros include those
-expanding only to punctuation.  These are frequently used to support
-variant declaration styles (such as ANSI C declarations and K\&R C
-declarations); as such, they require a definition for each
-variety, and they are frequently redefined\comment{sequentially?} to ensure that their settings
-are correct.
+resulting in a failure to classify the macro name.  Syntactic macros
+include those expanding only to punctuation.  These are frequently used to
+support variant declaration styles (such as ANSI C declarations and K\&R C
+declarations); as such, they require a definition for each variety, and
+they are frequently redefined\comment{sequentially?} to ensure that their
+settings are correct.
 
 The least frequently redefined macros are those classified as unknown
 symbol.  This is partially due to our method of coalescing multiple
@@ -1338,20 +1386,29 @@ Figure~\ref{fig:category-lub}).  Our
 analysis included enough library header files to include some
 recognizable definition of most common macros.
 
-Half of all packages have no macros defined more than 14\comment{check} times, and the
+%%Numbers:
+% * 12 times:  In tbl-def-frequency, find a line with 13 instances of "100.":
+%     (re-search-forward "100\\..*100\\..*100\\..*100\\..*100\\..*100\\..*100\\..*100\\..*100\\..*100\\..*100\\..*100\\..*100\\..*")
+%   and take the line above that.
+% * tails: see tbl-def-frequency, then examine individual .def files for
+% packages of interst.
+% * 10 times:  From old version.  Bug in pcp3 prevents me from verifying as
+%   of 2/8/99.
+
+Half of all packages have no macros defined more than 12 times, and the
 overall redefinition behavior of most packages approximates the mean line
 of Figure~\ref{fig:freq-def-cat}.  Notable exceptions are \pkg{bc},
 \pkg{remind}, and \pkg{gcc}.  \pkg{bc} is very sparing with multiple
-definitions: every macro is defined either one or two times.  By contrast, 
+definitions: with the exception of some Yacc macros, every macro is defined either one or two times.  By contrast, 
 \pkg{remind} defines 10\% of its macros more than 10 times (but none more
-than 15).  It supports ten different natural languages (and various character
-sets) by using macros for all user output strings.  The tail of \pkg{gcc}'s
-graph is longest of all: over 4\% of macros are defined more than 20 times,
-and 0.5\% are defined at least 50 times.  \comment{I think this isn't true
-any more; double-check}Many of the most heavily-defined
-macros (including the most frequently-defined, \verb|CPP_PREDEFINES|, with
-181 definitions and 198 undefinitions) are not C code.
-
+than 15).  It supports ten different natural languages (and various
+character sets) by using macros for all user output strings.  The tail of
+\pkg{gcc}'s graph is longest of all: 1.1\% of macros are defined more than
+5 times, including over 30 definitions of \verb|obstack_chunk_alloc| and
+\verb|obstack_chunk_free|.  (These figures involve only a single
+configuration; for all of \pkg{gcc}'s source code, including various
+architectures and operating systems, 4\% of macros are defined 20
+times and 0.5\% are defined 50 times.)
 
         
 \subsection{Multiple differing definitions}
@@ -1385,14 +1442,19 @@ their bodies are similar or identical.
 
 \begin{figure}
   {\small\centerline{\input{tbl-summarize-frequency.tex}}}
-  
+  %%Numbers: read them off the table.
   \captionsmall{Average number of definitions of macros in each category.
-    The left column counts each definition, while the right column merges
-    definitions that are identical modulo whitespace, comments, string and
-    character literals, and formal argument names.  The table indicates
-    that macro names which are classified as expressions have, on average,
-    1.8 different definitions, but those definitions include only 1.4
-    different abstract syntax trees.}
+    The left pair of columns examines just the files that may be compiled
+    on a RedHat-based GNU/Linux 2.0.x system (as for all other values we
+    report), whereas the right pair considers all C files in the package.
+    The left column of each pair counts each definition, while the right
+    column merges definitions that are identical modulo whitespace,
+    comments, string and character literals, and formal argument names.
+    The table indicates that macro names which are classified as
+    expressions have, on average, 1.3 different definitions in a single
+    configuration, but those definitions include only 1.2 different
+    abstract syntax trees.  Examining all files in the package produces 1.8
+    definitions of the macro (1.4 distinct definitions).}
   \label{fig:freq-sum-cat}
 \end{figure}
 
@@ -1416,8 +1478,6 @@ identical\,---\,usually, only string contents differed.
 \subsection{Inconsistent definitions}
 \label{sec:inconsistent}
 
-%% Blech:  I dislike this paragraph.
-
 \comment{Give this overview earlier in the section.}
 This section further refines our analysis of multiply-defined macros by
 considering, rather than syntactic structure, the categorization of the
@@ -1430,7 +1490,9 @@ categorizations.
 %% Collect all these recommendations, or problems that we found, in one
 %% place?  Or remark on this in the macro lint section also?
 
-In 93\% of cases, multiple definitions of a macro are compatible (more
+%%Numbers: 96% = add up numbers with \Leftarrow in tbl-subset-categories.tex
+
+In 96\% of cases, multiple definitions of a macro are compatible (more
 often than not, identical\comment{under what definition?}).  Incompatibilities usually indicate bugs or
 inconsistent usage in the package, or failures of our categorization
 technique.  We identified a number of places that package code should be
@@ -1520,35 +1582,45 @@ classifications is generally erroneous.
 \begin{figure}
   {\small\centerline{\input{tbl-subset-categories.tex}}}
   
+  %%Numbers: read them off tbl-subset-categories.tex
+  %% 2.0%: read off caption of fig/cat-def-frequency.eps
   \captionsmall{Categorization of definitions for each macro name with more
-    than one definition.  For instance, for 23\% of multiply-defined macro
-    names, all definitions fall into the expression category, and for 7.1\%
+    than one definition.  For instance, for 28\% of multiply-defined macro
+    names, all definitions fall into the expression category, and for 6.0\%
     of macro names, all definitions are either expressions or constants.
-    Rows less than .05\%, representing fewer than
-    10 macro names, are omitted.  The arrows indicate macros for which the
-    names are classified as ``failure'' (7.1\% of all multiply-defined
-    macro names; overall, 2.4\% of all macro names are so classified).}
+    Rows less than .2\%, representing 5 or fewer macro names, are omitted.
+    The arrows indicate macros for which the
+    names are classified as ``other'' (4.4\% of all multiply-defined
+    macro names; overall, 2.0\% of all macro names are so classified).}
 
   \label{fig:subset-categories}
 \end{figure}
 
+%%Numbers: 3054 multiply-defined names from tbl-subset-categories.tex
+%% 21968 names from caption of fig/cat-def-frequency.eps
+%% 14% = (/ 3054.0 21968)
+
 Figure~\ref{fig:subset-categories} gives more detailed information for the
-21\% of macro names that have multiple definitions.  Macros are grouped by
-whether all of their definitions fall into the same subset of the
-categories.
+14\% of macro names that have multiple definitions.  Macros are grouped by
+whether all of their definitions fall into the same set of categories.
+
+%%Numbers: read them off of tbl-subset-categories.tex
 
 The arrows in the chart indicate which macro names have conflicting or
 ``other'' classifications.  Using 10 presentation categories rather than
 the 28 categories distinguished by our tool makes this table manageable,
 but does hide some information.  For instance, there are two ``expression +
-statement'' groups each making up 1.1\% of multiply defined macros.  The
-slightly more prevalent one includes expressions and semicolonless
-statements.  Those macro names are classified as semicolonless statements.
-The second group has definitions of both these types, plus some complete
-statements; those macro names are classified as ``other''.  (There is
-similar duplication, along with null define, at 0.26\% and 0.10\%.)
+statement'' groups, one at 1.7\% and one at 0.39\%.  The
+more prevalent one includes expressions and semicolonless
+statements, categories which are compatible with one another; those macro
+names are classified as semicolonless statements.
+The second group includes definitions which are expressions, semicolonless
+statements, and complete
+statements; those macro names are classified as ``other''.
 
-Likewise, the ``statement'' row at 0.35\% is marked as a conflict because
+%%Numbers: read them off of tbl-subset-categories.tex
+
+Likewise, the ``statement'' row at 0.23\% is marked as a conflict because
 it includes both semicolonless and full statements, which are not
 interchangeable.  An example is
 \begin{verbatim}
@@ -1573,12 +1645,17 @@ analysis or in the source\,---\,by a simpler mechanism.  Finally, which
 macros appear in a conditional compilation test can reveal the programmer
 intention underlying that test.
 
+%%Numbers:  mostly lifted from rest of this section.
+%% 1.7% for 100+:  editing @buckets in macros-make-tbl-frequsedef-from-cum
+%%   then:  macros-make-tbl-frequsedef-from-cum cat-*.frequse_cum
+%%   364 = (* 21968 (- 1 .98343))
+
 The packages we analyzed have widely varied macro usage: \pkg{perl} uses
-.65 macros per line of code, while \pkg{ghostview} uses only .07.  While
-half of macro names are used two or fewer times, macros with hundreds of
-uses are not uncommon\comment{be specific}.  Macros categorized as syntactic and type-related
-tend to be expanded nearly 10 times as frequently as simpler macros
-defining constants or expressions.  Less than 4\% of macro names are both
+.60 macros per line of code, while \pkg{workman} uses only .034.  While
+50\% of macro names are used two or fewer times, 1.7\% of macros (364
+macros) are used 100 times.  Macros categorized as syntactic and
+type-related are expanded 10 times more frequently than simpler macros
+defining constants or expressions.  Less than 3\% of macro names are both
 tested for definedness and expanded in source code, and only 4\% of Cpp
 conditionals test multiple macros representing different categories of
 information.
@@ -1595,22 +1672,27 @@ information.
 \label{fig:use-per-line}
 \end{figure}
 
+%% Numbers: from Excel uses-per-line
+
 Figure~\ref{fig:use-per-line} illustrates how frequently each package uses
-macros.  Macros pervade the code, with more than .31\comment{tell how .31
-went to .28 with pcp3} uses per line, though
-individual packages vary from .07 to .65 uses per line.  Heavy preprocessor
+macros.  Macros pervade the code, with .28 uses per line, though
+individual packages vary from .034 to .60 uses per line.  Heavy preprocessor
 use (high incidence of preprocessor directives, as reported in
 Figure~\ref{fig:directives-breakdown}) is only weakly correlated with
 heavy macro usage, even though many preprocessor directives use macros.
 The language implementations in our study (\pkg{perl}, \pkg{gcc}, and
 \pkg{gs}) use macros the most.
 
-Figure~\ref{fig:freq-use-cat}
-illustrates that half of macros are expanded no more than twice, and 12\% are
-never used at all.  Many of these unused macros appear in incomplete or
-obsolete code.  For example, \pkg{gnuplot}, which does not use 24\% of the
-macros it defines, includes several partially implemented terminal types,
-such as {\tt tgif}.
+%%Numbers: read off Excel cat-use-frequency chart
+%% gnuplot: see gnuplot.frequse_cum: (/ 221.0 1020)
+
+Figure~\ref{fig:freq-use-cat} illustrates that 50\% of macros are expanded
+no more than twice and 10\% are never used at all.  Many of these unused
+macros appear in incomplete or obsolete code.  For example, \pkg{gnuplot},
+which does not use 22\% of the macros it defines, includes several
+partially implemented terminal types, such as {\tt tgif}.
+
+%%Numbers: read off Excel cat-use-frequency chart
 
 Macro usage also varies relative to the macro definition categories of
 Section~\ref{sec:categorization}.
@@ -1621,10 +1703,10 @@ times\,---\,58\% of macros defining constants occur 2 or fewer times.
 % (One notable outlier is \texttt{NULL} which, though usually
 % defined simply, is sometimes used very heavily\,---\,4233 times in the
 % 62,137 lines of \pkg{python} source.)
-The same fraction of syntactic (those expanding to punctuation or
-containing unbalanced delimiters, and that are problematic to parse)
-macros are used no more than 40 times, and over 10\% of type-related macros are
-used more than 80 times.  The long tails of the frequency distribution
+By contrast, 39\% of syntactic macros (those expanding to punctuation or
+containing unbalanced delimiters, and that are problematic to parse) and
+12\% of type-related macros
+are used more than 32 times.  The long tails of the frequency distribution
 result from pervasive use of some syntactic or type macros (e.g., at every
 variable declaration), which makes understanding these macros critical.
 
@@ -1632,7 +1714,9 @@ variable declaration), which makes understanding these macros critical.
 %          other non-C-code files that we do not examine.
 
 \begin{figure}
-\centerline{\epsfig{file=fig/cat-use-frequency.eps,height=7.5in}}
+% \centerline{\epsfig{file=fig/cat-use-frequency.eps,height=7.5in}}
+\centerline{\epsfig{file=fig/cat-use-frequency.eps,height=6in}}
+%%Numbers: read 50\% off the graph
 \captionsmall{Number of expansions per Cpp macro.  The numbers in the
   graph represent the percentage of identifiers that are expanded a given
   number of times or fewer.  For example, 50\% of all macros are expanded
@@ -1684,34 +1768,37 @@ We split macro uses into three categories:
 \end{itemize}
 
 \begin{figure}
-\centerline{\small
-  \setlength{\tabcolsep}{.25em}
-  \input{tbl-where-used.tex}%
-}
+\centerline{\small \setlength{\tabcolsep}{.25em} \input{tbl-where-used.tex}}
+%% Numbers: read off tbl-where-used.tex
 \captionsmall{Macro usage contexts.  Macros may be used in C code, in
   macro definition bodies, in conditional tests, or in some combination
-  thereof.  The numbers do not sum to 100\% because of rounding.  The 11.7\%
+  thereof.  The 10.3\%
   of ``No uses'' is the same number as the 0 uses value of the Mean line in
   Figure~\ref{fig:freq-use-cat}.}
 \label{fig:where-used}
 \end{figure}
 
+\comment{We assume that in ``code, macro'', the macro is itself only used
+  in code.  We didn't verify this.  \comment{Consider checking that.}}
+
+
+%%Numbers: read off of tbl-where-used.tex
+%% 48%: from tbl-directivees-breakdown (/ 4.031 8.385)
+
 Figure~\ref{fig:where-used} reports in which of these three contexts macro
 names are used.  In general, packages use macros either to direct
 conditional compilation or to produce code, but not for both purposes.
-Only 3.4\% of macros both expand in code and are used in conditional
-contexts.  Even if a similar percentage of macros used in macro definition
-bodies have such mixed usage, the total is below 4\%.  Macros are expanded
-10 times more often than they are used to control source code inclusion
-(72.5\% vs.\ 7.1\%).
-Conditional compilation accounts for \comment{be specific}half of Cpp directives but only 7.1\%
-of macro usage (plus a fraction more from macros appearing in macro
-definitions).  However, each use in a conditional use can control many
-lines of code, whereas each use in code affects the final program text for
-just that line; see Section~\ref{sec:dependence}.
-
-\comment{We assume that in ``code, macro'', the macro is itself only used
-in code.  We didn't verify this.  \comment{Consider checking that.}}
+Only 2.4\% of macros (the fourth group of Figure~\ref{fig:where-used}) both
+expand in code and are used in conditional contexts.  Even if a similar
+percentage of macros used in macro definition bodies have such mixed
+usage\comment{be specific about making this assumption, or actually do the
+  check}, the total is below 3\%.  Macros are expanded an order of
+magnitude more often than they control source code inclusion (75.9\% in the
+first group vs.\ 6.5\% in the second).  Conditional compilation accounts
+for 48\% of Cpp directives but only 6.5\% of direct macro usage.  However,
+each use in a conditional use can control many lines of code, whereas each
+use in code affects the final program text for just that line; see
+Section~\ref{sec:dependence}.
 
 %        A definition is not a use of the macro being defined, only of those
 %        in the body.  Since those are uses, 12\% is a lower bound on those
@@ -1775,12 +1862,14 @@ what system properties it reifies.  If each macro in the conditional has the
 same classification, then the conditional is given that classification;
 otherwise, the conditional is classified as ``mixed usage''.
 
+%%Numbers: read off legend of fig/ccd-categories.eps
+
 There is significant variation among packages, and no clear pattern of use
-emerges.  Portability accounts for over \comment{be specific}half of conditional compilation
-directives.  Redefinition warning suppression, at 16.5\%, is surprisingly
+emerges.  Portability accounts for 37\% of conditional compilation
+directives.  Redefinition warning suppression, at 17\%, is surprisingly
 high; it is essentially a macro definition mechanism, not a conditional
-inclusion technique.  Mixed usages are relatively rare.  This suggests
-both that the conventions for macro names are fairly standardized and that
+inclusion technique.  Mixed usage is relatively rare.  This suggests both
+that the conventions for macro names are fairly standardized and that
 programmers rarely write conditional tests that combine entirely different
 concerns in a single expression.
 
@@ -1791,8 +1880,8 @@ Cpp conditionals are classified according to structure or context as follows:
   have no effect as written (e.g., \texttt{\#ifdef 1}), or definitely fail
   and unconditionally skip a block (e.g., {\tt \#ifdef (0 \&\&
   \verb|OTHER_TEST|)}).  These guards comment out code or override other
-  conditions (e.g., to unconditionally enable or disable a previously experimental
-  feature).
+  conditions (e.g., to unconditionally enable or disable a previously
+  experimental feature).
       
 \item[Redefinition suppression] These guards test non-definedness of
   symbol, and control only a definition of the same symbol, thus avoiding
@@ -1865,12 +1954,16 @@ as ``mixed'':
       {\tt \#if defined(\verb|STDIO_H|) || \verb|SYSV_SIGNALS|}).
 \end{description}
 
-These data suggest that about 20\% of conditional compilation directives
+%%Numbers:
+%% 23% = fig/ccd-categories.eps: ``redef. suppression'' + ``MI prevention''
+%% 36% = fig/ccd-categories.eps: ``port., *''
+
+These data suggest that 23\% of conditional compilation directives
 would be unnecessary if the C preprocessor had two simple language
-features: 1) a ``define only if not already defined'' directive; and 2)
+features: a ``define only if not already defined'' directive and 
 an Objective-C-like \ppd{import} facility which automatically avoids
-multiple inclusions.  Another 30\% of conditional compilation directives
-involve handling portability across variances in target operating
+multiple inclusions.  Another 36\% of conditional compilation directives
+involve variances in target operating
 systems.  Tools such as the GNU project's \texttt{autoconf} may account
 for the prevalence of these guards by making it easier to maintain code
 bases with sprinkled \ppd{ifdef}s managing multiple target operating
@@ -1960,21 +2053,6 @@ dependences across file boundaries: if a macro controls whether a file is
 % not on {\tt A}, which must have been set to true in order for {\tt M} to be
 % defined at all.  That is, no setting of {\tt A} can affect {\tt M}'s
 
-\begin{figure}
-\centerline{\epsfig{file=fig/dep-byline.eps,height=4in}}
-
-\captionsmall{Percentage of lines dependent on a particular number of macros (or
-  fewer).  For instance, 93\% of all lines are expansion-dependent on two
-  or fewer macros, and 90\% of all lines are inclusion-dependent on 27 or
-  fewer macros.\comment{This is read off the 90\% line.}  Lines higher in the graph indicate dependence on fewer macros.
-  \comment{Give the numbers for zero in the caption here:
-Incl 63.1
-exp 75.0
-any 59.6}}
-\label{fig:dep-byline}
-\end{figure}
-
-
 The statistics reported in this section are underestimates because they
 omit two packages which aggressively use macros.  The full dependence
 information for \pkg{emacs} exceeded 500 MB of
@@ -1987,42 +2065,62 @@ defined or used in libraries.)  We did generate dependence information for
 
 \subsection{Dependences by line}
 
-%%% Figure fig:dep-byline really belongs here, but I am trying to put it on
-%%% a separate page from fig:dep-bymacro.
+\begin{figure}
+\centerline{\epsfig{file=fig/dep-byline.eps,height=4in}}
+%%Numbers: read off Excel dep-byline
+\captionsmall{Percentage of lines dependent on a particular number of macros (or
+  fewer).  For instance, 94\% of all lines are expansion-dependent on two
+  or fewer macros, and 90\% of all lines are inclusion-dependent on 10 or
+  fewer macros.  Lines higher in the graph indicate dependence on fewer
+  macros.}
+\label{fig:dep-byline}
+\end{figure}
+
+%%Numbers: read off Excel dep-byline
 
 Figure~\ref{fig:dep-byline} graphs the percentage of lines dependent on a
-given number of macros.  42\% of lines are controlled by
-macros (this is the complement of the 58\% of lines that depend on zero
-macros).  38\% of lines are inclusion-controlled by at least
-one macro; some of these lines, such as those in header files, appear
-unconditionally but are inside a guard to avoid multiple inclusion.  28\%
-of lines expand a macro, a higher value than we
-anticipated.
+given number of macros.  60\% of lines are not dependent on any macros at
+all:  75\% of lines expand no macros, and 63\% of lines are unconditionally
+included (or excluded).  Some lines which are inclusion-controlled by
+macros appear unconditionally but are inside a guard to avoid multiple
+inclusion\,---\,in particular, in header files.
 
-Expansion dependence on multiple macros is not prevalent\,---\,only 5\% of
-lines are expansion-dependent on more than 3 macros, and only 1\% are
+%%Numbers: read off Excel dep-byline
+
+Expansion dependence on multiple macros is not prevalent\,---\,only 3.6\% of
+lines are expansion-dependent on more than 3 macros, and only 1.1\% are
 expansion-dependent on more than 7 macros.  However, one line of
 \pkg{gcc}\,---\,{\tt \verb|LEGITIMIZE_ADDRESS| (x, oldx, mode,
-win);}\,---\,is expansion-dependent on 187 different macros.  Macro
-\verb|LEGITIMIZE_ADDRESS|, which creates a legitimate memory address for a
-memory operand of a given mode, is defined 30 times in \pkg{gcc}, with many of the
-definitions dozens of lines long and themselves studded with macro
-invocations.  Overall, only 13 out of 325,000\comment{be specific?} lines
-in \pkg{gcc}\comment{what about elsewhere?} are
-expansion-dependent on more than 100 macros.
+win);}\,---\,is expansion-dependent on 41 different macros.  (When we
+examined all source code, not just one architecture/OS configuration, it
+was dependent on 187 macros.)  Macro \verb|LEGITIMIZE_ADDRESS|, which
+creates a legitimate memory address for a memory operand of a given mode,
+is defined 30 times in \pkg{gcc}, with many of the definitions dozens of
+lines long and themselves studded with macro invocations.
+Inclusion dependences have a much wider distribution.  10\% of lines
+are inclusion-dependent on at least 10 macros, and 1\% of lines are
+dependent on over 176 macros.
 
-Inclusion dependences have a much wider distribution.  20\% of lines
-are inclusion-dependent on at least 133 macros, and 1\% of lines are
-dependent on over 300 macros.  As an example, the line of \pkg{gcc}
-mentioned above has 182 inclusion dependences (with only 13 macros in
-common with its set of expansion dependences), but over over 10,000 lines
-of \pkg{gcc} have even heavier inclusion dependences than that.
+%   \comment{check
+%   these numbers; where did I get them?}Overall, only 13 out of
+% 325,000\comment{be specific?} lines in \pkg{gcc}\comment{what about
+%   elsewhere?} are expansion-dependent on more than 100 macros.
 
-On average, each line in the {\numdependpackages} packages tested is 
-expansion-dependent on .04 macros, inclusion-dependent on .31 macros, has
-both varieties of dependence on .01 macros, and has some dependence on .34
-macros.
+% \comment{double-check these numbers; I think
+% em_analyze -L does that.}As an example, the line of \pkg{gcc}
+% mentioned above has 182 inclusion dependences (with only 13 macros in
+% common with its set of expansion dependences), but over 10,000 lines
+% of \pkg{gcc} have even heavier inclusion dependences than that.
+
+%%Numbers: Weighted averages of tbl-dep-byline = (8.23 0.5854 8.70)
+
+\comment{These numbers are vastly (15 times) higher than they were before.
+  Are they still correct?}  On average, each line in the
+{\numdependpackages} packages tested is expansion-dependent on .59 macros,
+inclusion-dependent on 8.2 macros, and has some dependence on 8.7 macros.
       
+% has both varieties of dependence on \comment{wrong; how did I compute?}.01
+% macros,
 
 \subsection{Dependences by macro}
 
@@ -2038,11 +2136,12 @@ macros.
 \centerline{\epsfig{file=fig/exp-dep-bymacro.eps,angle=270,width=.48\linewidth}%
 \ %
 \epsfig{file=fig/incl-dep-bymacro.eps,angle=270,width=.48\linewidth}}
+%%Numbers: read off of Excel exp-dep-bymacro
 \captionsmall{Dependences by macro name for 22648 macro names in 28 packages.
   Each bar represents all macros that control at least as many as the
   labeled percent of the lines in its package (but fewer than the next
   bar).  For instance, the .17 bar in the expansion dependence chart
-  indicates that 286 macros each control between .17\% and .26\% of the
+  indicates that 257 macros each control between .17\% and .26\% of the
   entire package which contains that macro.  The maximum falls in the
   penultimate bucket (i.e., the rightmost bucket is the first empty one).
   The $\varepsilon$ bar represents a small non-zero value, so that macros
@@ -2061,46 +2160,107 @@ percentages of a package rather than absolute numbers.
 
 %% The second sentence of this paragraph is a non sequitur.
 
+%%Numbers: 2.0% = half of the ``conditional'' bar of Excel directives-breakdown
+
 The expansion dependence chart closely approximates an exponential decay.
 Most macros control few lines, a few macros control many lines, and the
 transition between the two varieties is gradual.  Most {\tt \#if}
-directives (which account for about 2.2\% of all lines) expand at least one
+directives (which account for about 2.0\% of all lines) expand at least one
 macro; the rare exceptions include testing the compiling machine's
 character set.
 
-\comment{Rewrite this after looking at new data.}
-Of the seven macros that are expanded by more than 5\% of lines in a package,
-six are types ({\tt int} and {\tt rtx} in \pkg{gcc}, {\tt SvANY} in \pkg{perl}, and {\tt const} in
-RCS), and three are expressions
-({\tt ip} in \pkg{workman} and {\tt ArgCount} and {\tt Args} in
-\pkg{xfig}).
+%%Numbers:  Find the highest numbers in tbl-expansion-dependences-by-macro.
+%% Determine the packages containing them.
+%% In the sdepend files for those packages, and find the highest line counts:
+%%  (delete-non-matching-lines "\\+ [0-9][0-9][0-9][0-9])")
+%% or   egrep '\+ [0-9][0-9][0-9][0-9]' *.sdepend
 
-%% This data was pre-PCP3 and is certain to change.
-%         Outliers (> 6\% of all lines expand):
-%           int in gcc (14.85\% !)
-% 
-%         Above 5\%: 
-%           SvANY in Perl
-%           const in RCS
-%           ip in workman -- bogus, as defined just twice, then undefined;
-%                   most places it is a formal parameter and out of the scope
-%                   of the macro definition.
-%           ArgCount, Args in xfig (like argc, argv)
-%           rtx in gcc (defined to int or int*)
-% 
-%         Overall, for these top 10:  4 types, 3 expressions
+%% 5.1613       cvs     NULL    constant
+%% 4.1558       gcc     rtx     type
+%% 4.1285       genscript       AFM_ENC_NONE    constant
+%% 4.9994       gs      const   type
+%% 4.2015       mosaic  NULL    constant
+%% 5.2562       perl    SvANY   type
+%% 4.302        rcs     const   type
+%% 5.2813       xfig    ArgCount        check dynamic binding
+%% 5.2401       xfig    Args    check dynamic binding
+%% 
+%% 3.4216       bash    ISFUNC  sometimes constant, sometimes function expression
+%% 3.4485       gawk    NULL    constant
+%% 3.240        gnuplot fprintf function
+%% 3.4733       m4      NULL    constant
+%% 3.8026       perl    void    type
+%% 3.7568       perl    curinterp       variable renaming
+%% 3.0103       perl    op      variable renaming
+%% 3.7546       rasmol  __far   type
+%% 
+%% ;; round out the top 20
+%% 2.9615       fvwm    NULL    constant
+%% 2.959        gs      private_        type
+%% 2.9888       gzip    local   type
+%% 2.9661       perl    SvFLAGS expression
+%% 2.9751       rcs     P       type declaratrion
+%% 
+%% ;; One more very close to those.
+%% 2.9575       gs      private type
 
+
+%% 5.2813       xfig    ArgCount        manage dynamic binding
+%% 5.2401       xfig    Args    manage dynamic binding
+%% 3.7568       perl    curinterp       variable renaming
+%% 3.0103       perl    op      variable renaming
+%
+%% 4.1558       gcc     rtx     type
+%% 5.2562       perl    SvANY   type
+%% 2.959        gs      private_        type
+%% 2.9888       gzip    local   type
+%% 2.9751       rcs     P       type declaratrion
+%
+%% 4.1285       genscript       AFM_ENC_NONE    constant
+%% 2.9661       perl    SvFLAGS expression
+%% 3.4216       bash    ISFUNC  sometimes constant, sometimes function expression
+%
+%% 3.240        gnuplot fprintf function (provide specialized version)
+%% 3.7546       rasmol  __far   type
+%% 4.9994       gs      const   type
+%% 4.302        rcs     const   type
+%% 3.8026       perl    void    type
+%% 5.1613       cvs     NULL    constant
+%% 2.9615       fvwm    NULL    constant
+%% 3.4485       gawk    NULL    constant
+%% 3.4733       m4      NULL    constant
+%% 4.2015       mosaic  NULL    constant
+
+
+Each of 20 most frequently used macros is expanded on at least 3.0\% of
+lines in its package.  Four of these (in \pkg{xfig} and \pkg{perl}) rename
+variables to manage dynamic binding or linking.  Two are user-defined types
+({\tt rtx} in \pkg{gcc} and {\tt SvANY} in \pkg{perl}, two are user-defined
+type modifiers (\verb|private_| in \pkg{gs} and \verb|local| in
+\pkg{gzip}), and one creates eithr ANSI or K\&R function prototypes ({\tt
+P} in \pkg{rcs}).  One is a user-defined constant (\verb|AFM_ENC_NONE| in
+\pkg{genscript}), another is an expression ({\tt SvFLAGS} in \pkg{perl}),
+and another is incompatibly defined sometimes as a constant taking no
+arguments and sometimes as an expression taking arguments ({\tt ISFUNC} in
+\pkg{bash}).  The other ten redefine built-in quantities:  {\tt fprintf} in
+\pkg{gnuplot} to substitute a custom version, \verb|__far| in \pkg{rasmol}
+because that is meaningful only in x86 dialects of C, and {\tt void} in
+\pkg{perl}, {\tt const} in \pkg{gs} and \pkg{rcs}, and {\tt NULL} in
+\pkg{cvs}, \pkg{fvwm}, \pkg{gawk}, \pkg{m4}, and \pkg{mosaic}.  We report
+such redefinitions only when the package may override the built-in version,
+and generally only a few such built-in symbols are so overridden.
 
 
 The inclusion dependence graph is bimodal.  While most macros control
-inclusion of zero or few lines, quite a few control substantial
-fractions (10\% or so) of the package, and there are not a lot of macros in
-between.  The graphs for the individual packages exhibit far higher peaks
-than the aggregate inclusion dependence graph of
-Figure~\ref{fig:dep-bymacro}; summing the graphs tended to average them.
-The heaviest dependences are on header files (for instance, \verb|H_PERL|
-controls inclusion of over 53\% of \pkg{perl}'s lines).\comment{How does
-it look if we separate these out?}
+inclusion of zero or few lines, quite a few control over 5\% of the
+package, and there are not a lot of macros in between.  The graphs for the
+individual packages exhibit far higher peaks than the aggregate inclusion
+dependence graph of Figure~\ref{fig:dep-bymacro}; summing the graphs tended
+to average them.  The heaviest dependences tend to be on header files
+
+%%  (for
+%% instance, \verb|H_PERL| controls inclusion of over 53\% of \pkg{perl}'s
+%% lines).\comment{How does it look if we separate these out?}
 
 %        [[It would have been interesting to run these numbers for everything
 %          but exclude file multiple inclusion prevention macros.]]
@@ -2108,15 +2268,52 @@ it look if we separate these out?}
 
 \subsection{Cpp partial evaluator}
 
-\comment{I think that all but one of the packages does this; check to be
-  sure, then be specific here.}
-Support for multiple dialects of a language (such as ANSI C and K\&R C) is a particularly common use of
-the preprocessor, one which leads to unstructured macros (partial
-declarations and other difficult-to-handle constructs) and which can be
-performed only by the preprocessor, not in the language.  We performed an
-experiment to determine whether eliminating these macros would lead to
-substantially simpler uses of macros with fewer dependences, fewer ``other''
-classifications of macro bodies, and so forth.
+% These define __P:  grep __P *.catg
+%   bash cvs emacs gcc gs m4 rcs zephyr
+% These use __P:  grep ": __P," `findfile expansions.lst`
+%   (delete-non-matching-lines "expansions.lst:\\.")
+%   bash emacs zephyr
+% Uses __PROTO:  cvs
+% 
+% B bash-1.14.7
+% B bc-1.03
+% K bison-1.25
+% B cvs-1.9
+% B emacs-19.34
+% K flex-2.5.4
+% A fvwm-2.0.43
+% K gawk-2.15.6
+% B gcc-2.7.2.3
+% A genscript-1.3.2a
+% K ghostview-1.5
+% A gnuchess-4.0.pl77
+% K gnuplot-3.50.1.17
+% B gs-5.10
+% K gzip-1.2.4
+% B m4-1.4
+% A mosaic-2.6
+% K perl-5.003
+% K plan-1.7.1
+% K rasmol-2.5
+% B rcs-5.7
+% B remind-03.00.16
+% K workman-1.3
+% K xfig-3.1.4
+% B zephyr-2.0.4
+% A zsh-3.0.5
+%
+% I think workman was the only package which saw no code size reduction.
+
+\comment{I thought that more  of the packages did this this.}
+Support for multiple dialects of a language (such as ANSI C and K\&R C) is
+a common use of the preprocessor (5 of the {\numpackages} packages support
+only ANSI C, 11 support only K\&R C, and 10 use the preprocessor to support
+both dialects).  Such preprocessor usage leads to unstructured macros
+(partial declarations and other difficult-to-handle constructs) and which
+can be performed only by the preprocessor, not in the language.  We
+performed an experiment to determine whether eliminating these macros would
+lead to substantially simpler uses of macros with fewer dependences, fewer
+``other'' classifications of macro bodies, and so forth.
 
 We built a Cpp partial evaluator called Cppp.  Given Cpp-style command-line
 arguments specifying which macros are known to be defined or undefined
@@ -2138,22 +2335,23 @@ lines.
 %   end
 % and likewise for /scratch/mernst/packages
 
+% \comment{Uses per line dropped from .31
+% to .28 with pcp3; but we also changed which files we were examining...}
+
 We used Cppp to preprocess all of our test suite (and all library header
 files) with definitions for all the macros that can be depended on if using
 ANSI standard C or C++ (including prototypes and booleans) with
-POSIX-compliant libraries.
-This reduced the size of the codebase by 1.2\% overall; individual package
-reductions ranged from 3.2\% for \pkg{emacs} to none at all for \pkg{workman}.
-We then reran all of our experiments, but to
-our surprise, the
-results were little changed from the full versions of the packages (which
-generally supported both K\&R and ANSI C, and sometimes other dialects and
-libraries as well): the number of multiple definitions of macros, of ``other''
-classifications, and of dependences on macros did not decline
-substantially\comment{be specific}.  We conclude that macro usage in our test programs presents
-no obvious single point of attack: even eliminating one prevalent use did
-not eliminate\,---\,or even significantly reduce\,---\,the complexity
-introduced by preprocessor.  
+POSIX-compliant libraries.  This reduced the size of the codebase by 1.2\%
+overall; individual package reductions ranged from 3.2\% for \pkg{emacs} to
+none at all for \pkg{workman}.  We then reran all of our experiments, but
+to our surprise, the results were little changed from the full versions of
+the packages (which generally supported both K\&R and ANSI C, and sometimes
+other dialects and libraries as well).  The decline in the number of
+multiple definitions of macros, of ``other'' classifications, and of
+dependences on macros were single-digit percentages.  We conclude that
+macro usage in our test programs presents no obvious single point of
+attack: even eliminating one prevalent use did not eliminate\,---\,or even
+significantly reduce\,---\,the complexity introduced by preprocessor.
 
 However, when multiple conditional guards can be
 eliminated, using Cppp can be a big win in simplifying source code.  One 
@@ -2232,6 +2430,8 @@ Macro errors are usually discovered as a byproduct of macro
 expansion\,---\,for instance, by generating an empty statement which causes
 lint to issue a warning\,---\,rather than in their own right.
 
+%%Numbers: 3184 parse errors, 571 internal bugs, 4069 files = 92% failure rate
+
 LCLint~\cite{Evans-fse94,Evans:LCLint} allows the programmer to add
 annotations that enable more sophisticated checks than many other lint
 programs.  LCLint optionally checks function-like macros\,---\,that is,
@@ -2242,8 +2442,8 @@ are encouraged not to use constructs that might be dangerous, or to change
 code that contains such constructs.  For full checking, LCLint also
 requires users to add fine-grained annotations to macro definitions.  We
 tried to run LCLint version 2.3i on our set of packages with its macro diagnostics
-enabled, but LCLint reported 3184 parse errors and 571 internal bugs when
-running on the approximately 4000 files in our suite of packages.
+enabled, but LCLint reported either a parse error or an internal bug on
+92\% of the files in our test suite.
 
 \comment{Run PC-lint and report on its results?}
 
@@ -2285,8 +2485,8 @@ syntax tree, handles some uses of Cpp macros.  Macros whose bodies are
 expressions or statements are left unexpanded and entered into the symbol
 table (Scruple~\cite{PaulP94} takes a similar approach); otherwise, the
 body is reparsed assuming that each macro argument (in turn) is a typedef;
-otherwise, the macro is expanded inline, which is necessary for 4\% of uses
-in non-header files.
+otherwise, the macro is expanded inline, which they find necessary for 4\%
+of non-header-file uses.
 
 A limited number of tools assist software engineers to
 understand code with containing Cpp directives.  Emacs's
@@ -2303,13 +2503,15 @@ Various language construct ``tagging'' mechanisms (e.g., \texttt{etags} and
 to move easily from a macro expansion to the various definitions of that
 macro name.
 
+%%Number: grep for ": function," in *.catg:  (/ 7932.0 \nummacrodefs)
+
 Favre suggests that Cpp be expressed in an abstract syntax similar to that of
 other programming languages~\cite{Favre96}.  After a simple semantics (free
 of loops and other complicating constructs) is assigned to Cpp, traditional
 analyses such as call graph construction, control and data flow analysis,
 slicing, and specialization can be performed on it.  The Champollion/APP
 environment does not support ``the full lexical conventions of the C
-language'' nor macros that take parameters, which make up 28\% of macros in
+language'' nor macros that take parameters, which make up 30\% of macros in
 our study.
 The Ghinsu slicing tool~\cite{LivadasS94} takes a similar approach, mapping
 Cpp constructs\,---\,particularly macro substitution\,---\,to an internal
@@ -2465,8 +2667,9 @@ useful analysis of C++ packages would consider the code in the context of
 both the history of the package and the background of its authors.
 
 Further analysis of the macros with free variables is needed to see which
-of the roughly 32\% of expression macros that lack free variables should be
-easy to convert to inline functions.
+of the roughly \comment{How did I compute this?  Get the new number.}32\%
+of expression macros that lack free variables should be easy to convert to
+inline functions.
 
 Our framework currently does not benefit from analyzing the context of
 macro expansions in determining a macro's category.  For example, a
