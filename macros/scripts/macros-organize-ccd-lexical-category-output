@@ -1,0 +1,11 @@
+#!/uns/bin/zsh -f
+# Usage: $0 < file.err 
+# where file.err is the stderr output of em_analyze run on a package
+# with $debug_ccd_categories set (-g14)
+if  [[ $1 == "-h" || -t 0 ]]; then
+  echo "Usage: $0 < file.err"
+  exit 0
+fi
+gawk '
+/^CCD_LEXICAL_CATEGORY:/ { print $NF, $(NF-2) }
+' | sort
