@@ -18,11 +18,14 @@
 
 \title{An Empirical Analysis of the Use of the C Preprocessor}
 
-\author{Michael Ernst,\thanks{Email 
+\author{Michael Ernst\thanks{Email 
 addresses: {\tt \{mernst, gjb, notkin\}@cs.washington.edu}.  Contact author:
 mernst@cs.washington.edu.}
-\and Greg J. Badros \and David Notkin}
-
+\and Greg J. Badros\thanks{Supported by a National Science Foundation
+    Graduate Fellowship. Any opinions, findings, conclusions, or
+    recommendations expressed in this publication are those of the
+    author, and do not necessarily reflect the views of the National
+    Science Foundation.} \and David Notkin}
 
 \date{Department of Computer
 Science and Engineering\\
@@ -239,14 +242,7 @@ only the NCNB length, since that focuses more clearly on the essential
 source text of a package.
 
 \begin{figure}
-\begin{tabular}{|l|r|r|}\hline
-C Package & Physical Lines & NCNB Lines\\\hline\hline
-bc & 7438 & 5177\\\hline
-gzip & 9076 & 5787\\\hline\hline
-
-Total & big & num\\\hline
-\end{tabular}
-
+\input{package_and_sizes-tbl.tex}
 \caption{Analyzed Packages and Sizes\label{fig:packages}}
 \end{figure}
 
