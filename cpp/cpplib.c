@@ -4387,9 +4387,10 @@ do_if (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *limit)
   value = eval_if_expression (pfile, buf, limit - buf);
   pfile->fGettingDirective--;
   pchEndExpr = CPP_BUFFER(pfile)->cur;
-  cchConditionalClause = pchEndExpr - pchStartExpr + 1;
-  szConditionalClause = (char *) xmalloc(cchConditionalClause + 1);
-  bcopy(pchStartExpr,szConditionalClause,cchConditionalClause);
+  cchConditionalClause = pchEndExpr - pchStartExpr - 1; /* don't want the newline */
+  szConditionalClause = (char *) xmalloc(cchConditionalClause + 2);
+  strncpy(szConditionalClause,pchStartExpr,cchConditionalClause);
+  szConditionalClause[cchConditionalClause] = '\0';
   conditional_skip (pfile, value == 0, T_IF, NULL_PTR,szConditionalClause);
   gjb_call_hooks_i_i_szl_szl_i(CPP_OPTIONS(pfile),HI_DO_IF,cchOffsetStart,cchOffsetEnd,
 			       pchStartExpr,pchEndExpr-pchStartExpr-1,
@@ -4530,6 +4531,10 @@ do_xifdef (cpp_reader *pfile, struct directive *keyword,
   else if (pcat->id == CPP_NAME)
     {
       HASHNODE *hp = cpp_lookup (pfile, ident, ident_length, -1);
+
+      gjb_call_hooks_szl_i(CPP_OPTIONS(pfile),HI_IFDEF_LOOKUP_MACRO,
+			   ident,ident_length,(hp!=NULL));
+      
       skip = (hp == NULL) ^ (keyword->type == T_IFNDEF);
       if (start_of_file && !skip)
 	{
@@ -4575,12 +4580,13 @@ do_xifdef (cpp_reader *pfile, struct directive *keyword,
   cchOffsetBranchStart = CchOffset_internal(pfile) + 2;
   conditional_skip (pfile, skip, T_IF, control_macro, szConditionalClause);
   /* This will call DO_XIFDEF hook and either DO_IFDEF or DO_IFNDEF hook */
-  gjb_call_hooks_sz_szlx3_i_i(CPP_OPTIONS(pfile),HI_DO_XIFDEF,
-			      keyword->type == T_IFDEF? "IFDEF": "IFNDEF",
-			      pchStartExpr,pchEndExpr-pchStartExpr,
-			      pchEndExpr,pchEndGarbage-pchEndExpr,
-			      pchEndGarbage,CPP_BUFFER(pfile)->cur-pchEndGarbage,
-			      skip,cchOffsetBranchStart);
+  gjb_call_hooks_i_i_sz_szlx3_i_i(CPP_OPTIONS(pfile),HI_DO_XIFDEF,
+				  cchOffsetStart,cchOffsetEnd,
+				  keyword->type == T_IFDEF? "IFDEF": "IFNDEF",
+				  pchStartExpr,pchEndExpr-pchStartExpr,
+				  pchEndExpr,pchEndGarbage-pchEndExpr,
+				  pchEndGarbage,CPP_BUFFER(pfile)->cur-pchEndGarbage,
+				  skip,cchOffsetBranchStart);
   if (keyword->type == T_IFDEF)
     gjb_call_hooks_i_i_szlx3_i(CPP_OPTIONS(pfile),HI_DO_IFDEF,cchOffsetStart,cchOffsetEnd,
 			       pchStartExpr,pchEndExpr-pchStartExpr,
