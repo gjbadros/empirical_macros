@@ -3,8 +3,12 @@
 *.blg
 *.dvi
 *.html
+*.info
 *.log
 *.texi
-*.info
+checkargs.man
+cline.man
 data
+em_constants.man
+em_util.man
 test
