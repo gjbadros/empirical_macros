@@ -5,6 +5,7 @@
 \usepackage{alltt}
 
 \def\numpackages{30}
+\def\numpackageslesstwo{28}
 \def\numlines{2 million}
 \def\numlinesexact{nearly 2 million}
 \def\numlinesncnbexact{about 1.4 million}
@@ -52,7 +53,7 @@ Department of Computer Science and Engineering \\
 University of Washington \\
 Box 352350, Seattle, WA  98195-2350  USA \\
 {\small \{{\tt mernst},{\tt gjb},{\tt notkin}\}{\tt @cs.washington.edu}} \\
-11 October 1997}  
+1 November 1997}  
 
 \maketitle
 
@@ -986,7 +987,7 @@ of the macro are full statements).
 
 \subsection{high usage}
 
-        Give average uses per defined macro name (see new summary table).
+        Give average uses per defined macro name (see new summary table, figure~\ref{fig:freq-sum-cat}).
 
         In the chart, a higher line indicates less use.
 
@@ -1002,7 +1003,7 @@ of the macro are full statements).
           null define), and constants are used least.  The latter is a bit
           surprising, but shows that macros are being used as a
           configuration mechanism rather than a linguistic mechanism.  (Do
-          I buy that?  Maybe (probably!) not. ??)
+          I buy that?  I think so.)
 
         All packages follow approximately the same curve.  The outlier is
           \pkg{gnuplot}, which uses macros less, on average, than other packages
@@ -1037,7 +1038,7 @@ of the macro are full statements).
 \label{fig:freq-use-cat}
 \end{figure}
 
-Figure~\ref{fig:freq-use-cat} is structured as the previous figure, but it
+Figure~\ref{fig:freq-use-cat} is structured like figures~\ref{fig:freq-def-cat} and~\ref{fig:freq-ddf-cat}, but it
 represents the number of times that a defined name is expanded in 
 the package.  About [[82\%]] of all macros were
 expanded eight or fewer times.
@@ -1077,12 +1078,16 @@ equally rather than weighting each macro use equally, which would weight
 
 \begin{figure}
 \centerline{\epsfig{file=fig/cat-numargs.eps,height=7.5in}}
-\caption{Is this worth including?}
+\caption{Is this worth including?
+  [[PROBLEM:  the numbers in this legend don't accord with those in
+  previous legends by name.  What's going on here?]]}
 \label{fig:cat-numargs}
 \end{figure}
 
 You might wonder whether macros are used like functions (taking arguments)
-or like constants (taking no arguments).  We graphed that in
+or like constants (taking no arguments).  
+[[However, a fair number of statement macros also take no arguments.]]
+We graphed that in
 figure~\ref{fig:cat-numargs}.  This seems irrelevant to me; I don't see
 where to fit it in, or what to say about it.
 
@@ -1120,8 +1125,8 @@ merged into a single name.]]
 }
 \caption{Where macros are used: in C code, in macro definition bodies, in
   conditional tests, or in some combination thereof.  The numbers don't sum to
-  100\% because of rounding.  It might perhaps be interesting to see this
-  broken down by category.}
+  100\% because of rounding.  [[It might be interesting to see this
+  broken down by category.]]}
 \label{fig:where-used}
 \end{figure}
 
@@ -1162,7 +1167,8 @@ do not, therefore, have any affect on conditional compilation (for example).
         Even discounting that package, though, the numbers are remarkably
         high.  We would be surprised if one in eight functions and
         variables in a package were never used, not even in testing code.
-        [[Do we have any idea what fraction this is in practice?]]
+        [[Do we have any idea what fraction this is in practice?
+        Ask Dave Grove; he can compute this relatively easily.]]
         (The percentage of macros defined in libraries/standard header
         files which are never used in the code is enormous, but that is
         expected.)
@@ -1174,7 +1180,7 @@ do not, therefore, have any affect on conditional compilation (for example).
       Across packages, there is heavy variation.  Packages which use
         the preprocessor sparingly are as likely to have a high percentage
         of mixed usage as packages which make heavy use of CPP.  (There is
-        a very slight tendency for the less aggressive packages (i.e.,
+        a slight tendency for the less aggressive packages (i.e.,
         those lower on the lists in figures~\ref{fig:directives-breakdown}
         and~\ref{fig:categorization}) to have more uses in code, fewer uses
         in conditionals, and fewer macros that are never used.)
@@ -1212,7 +1218,8 @@ the system.
     The macros with mixed usage (especially here, but also in the previous
       section) are akin to Krone \& Snelting's anomalous macros that
       interfere in the lattice.  But we found more than they seemed to!
-      [[Did we analyze the package in which they found their problem?]]
+      [[Did we analyze the package in which they found their problem?
+      I'd like to somehow be able to compare.]]
       
       Each symbol is assigned to a category; if all symbols in a
       conditional guard are in the same category, then the conditional test
@@ -1231,80 +1238,132 @@ the system.
 \label{sec:dependence}
 \label{sec:last-content-section}
 
- Two types of dependence:  control/inclusion, and substitution/expansion
-     This includes macros which control its inclusion via conditional
-     compilation, macros that are invoked on the line, and macros that
-     control the definitions of, or are called by, directly invoked macros
+[[Perhaps settle on a single name for each of the types of dependence, and
+be consistent throughout (and in the figures).
 
- Explain this.  Explain how we compute it transitively.
- 
- The dependence charts omit Emacs and Mosaic; the full dependence
- information for each overran our computer's virtual memory.  This was in
- part due to dependences in libraries; the Motif library is a particular
- problem.  (We did compute dependence information for Plan, which is the
- third of our 30 packages which uses the Motif library.)  So these numbers
- are smaller than they might be with more complete information.
+Macros control the program which results from running Cpp in two distinct
+ways.  {\em Inclusion} or {\em control} dependence results from Cpp
+conditionals testing macros (for definedness, or by examining expansions)
+to determine which which lines of the Cpp input appear in the output.  {\em
+Substitution} or {\em expansion} dependence results from replacement of
+macros outside Cpp conditionals by their definition bodies, which controls
+the content of the lines on which the macros appear.
 
-Note that we are reporting on may dependences, not only must dependences.
-Mention some dependence types from notes ``must and may dependences'' section.
+This section examines these dependences, breaking them down both by macro
+and by line.
 
-\subsection{line dependent on many macros}
+
+
+
+
+[[This is just a wretched description of the algorithm.  Fix?  Or is it
+good enough?]]
+
+We computed, for each line, which macros it depends upon, and the variety
+of dependence.  A line {\em directly} depends on a macro that either
+appears in the line or appears in a {\tt \#if} condition whose scope
+contains the line.  A macros may also control a line indirectly, by
+controlling the definition of another macro that controls the line.  For
+instance, after {\tt \#define \verb|S_ISBLK|(m) ((m) \& \verb|S_IFBLK|)},
+the final text of a line that uses \verb|S_ISBLK| depends not just on its
+definition but also on that of \verb|S_IFBLK|.  These transitive
+dependences are expansion dependences only if every direct dependence is an
+expansion dependence; otherwise, the transitive dependence is an inclusion
+dependence.
+
+Our system does track dependences across file boundaries: if a macro
+controls whether a file is {\tt \#include}d, then the macro also controls
+every line of that file and anything controlled by macros defined in the
+file.  We did not distinguish must from may dependences.  When there were
+multiple different conditions that could lead to inclusion of a line, we
+did not keep track of their boolean connectives, only of the individual
+tests (like those appearing on a single {\tt \#if} line).  When
+interactions among files are considered, these relationships may become
+complex.
+
+%% This makes absolutely no sense.  What is going on here?
+%% I think there's something meaningful about lopping off prefixes of must
+%% dependences, but can't puzzle it out now.  -MDE 11/1/97
+% When different conditions control different definitions of a macro, uses
+% are dependent on the independent parts of those conditions.  For instance,
+% after
+% \begin{verbatim}
+%   #if A
+%     #if B1
+%       #define M ...
+%     #elsif B2
+%       #define M ...
+%     #else
+%       #define M ...
+%     #endif
+%   #endif
+% \end{verbatim}
+% a use of macro {\tt M} is expansion-dependent on {\tt B1} and {\tt B2}, but
+% not on {\tt A}, which must have been set to true in order for {\tt M} to be
+% defined at all.  That is, no setting of {\tt A} can affect {\tt M}'s
+
+
+This section reports on only {\numpackageslesstwo} packages; it omits Emacs
+and Mosaic, for which the full dependence information overran our
+computer's virtual memory.  This resulted in part from use of outside
+libraries; the Motif library is a particular problem.  (We did compute
+dependence information for Plan, which is the third of our
+{\numpackageslesstwo} packages which uses the Motif library.)  Since two of
+the most aggressive users of macros (and most highly dependent on macros)
+packages  are omitted, the numbers are smaller than might be expected in
+the presence of more complete information.
+
+
+\subsection{Dependences by line}
 
 \begin{figure}
 \centerline{\epsfig{file=fig/dep-byline.eps,height=7.5in}}
-\caption{dep-byline for 28 packages.
-The log scale is shifted by unity in order to place 0 on the scale; that
-is, we added 1 to each of the x axis values, before plotting, then
-relabeled ``1'' as ``0''.
-[[Make this figure smaller; doesn't deserve a full page.]]}
+
+\caption{Percentage of lines dependent on a particular number of macros (or
+  fewer).  For instance, 93\% of all lines are expansion-dependent on two
+  or fewer macros, and 90\% of all lines are inclusion-dependent on 27 or
+  fewer macros.  The log scale is shifted by unity in order to place 0
+  on the scale; that is, we added 1 to each of the x axis values, before
+  plotting, then relabeled ``1'' as ``0''.
+  [[Make this figure smaller; doesn't deserve a full page.]]}
 \label{fig:dep-byline}
 \end{figure}
 
+Figure~\ref{fig:dep-byline} graphs the percentage of lines dependent on a
+given number of macros.  Over two in five lines (42\%) are controlled by
+macros.  Most of these (38\% of all lines) are inclusion-controlled by at
+least one macro; some of these lines, such as those in header files, may
+always appear but be inside a guard to avoid multiple inclusion.  Over one
+in four lines (28\%) expands a macro, which is higher than we had
+anticipated.  
 
-    [Gloss over what kind of line; I think it's a physical line, but each
-      physical line is coalesced with other parts of its logical line for
-      the purpose of computing dependence info.]
+Multiple expansion dependence is not prevalent\,---\,only 5\% of lines are
+expansion-dependent on more than 3 macros, and only 1\% are
+expansion-dependent on more than 7 macros.  However, one line of
+\pkg{gcc}\,---\,{\tt \verb|LEGITIMIZE_ADDRESS| (x, oldx, mode,
+win);}\,---\,is expansion-dependent on 187 different macros.  Macro
+\verb|LEGITIMIZE_ADDRESS| is defined 30 times in \pkg{gcc}, many of them
+dozens of lines long and themselves studded with macro invocations.
+However, only 13 lines in \pkg{gcc} are expansion-dependent on more than
+100 macros.
 
-    We computed, for each line, the number of macros it depends on.
+Inclusion dependences have a much wider distribution.  One in twenty lines
+is inclusion-dependent on at least 133 macros, and 1\% of lines are
+dependent on over 300 macros.  As an example, the line of \pkg{gcc}
+mentioned above has 187 inclusion dependences (more than its expansion
+dependences, with only 13 macros in common between the sets), but over over
+10,000 lines of \pkg{gcc} have even heavier inclusion dependences than
+that.
 
-There are two types of dependence:  control and expansion.  Make sure we
-have good names for these!
+On average, each line is expansion-dependent on .04 macros,
+inclusion-dependent on .31 macros, and any-dependent on .34 macros.  (The
+.01 macros that each line is, on average, both expansion- and
+inclusion-dependent upon is included only once in the any-dependence
+total.)
 
-    Describe the matrix:  ExE=E, Cx?=C, ?xC=C; plus, we sum across
-      conditional compilations and alternate definitions.
-
-    
-      58\% of lines have no dependence on macros at all.  (Most lines that
-      don't expand any macros and appear in C files fall into this category.)
-
-    Overall, 28\% of lines expand a macro -- that's quite a few.
-
-    5\% of all lines depend on at least 134 macros.
-
-    On average, each line is expansion-dependent on .040 macros,
-      inclusion-dependent on .31 macros, and any-dependent on .34 macros.
-      (These numbers don't add up because a line may be both expansion and
-      inclusion dependent on a macro, but that macro is only counted once
-      in the "any dependence" number.)
       
-      One line of gcc is expansion-dependent on the expansions of 187
-      macros.  (This is an outlier: of the 297,760 [[huh?? this doesn't
-      jibe with figure~\ref{fig:packages}!!  double-check]] lines in gcc,
-      only 13 are expansion-dependent on more than 100 macros -- all of
-      which fall in the range of 159 to 187 such dependences.)
 
-        It's this one, whose mere appearance in the final source is
-        dependent on 182 macros (not such an outlier: over 10,000 lines are
-        inclusion-dependent on more than that many macros):
-
-        gcc-2.7.2.1/explow.c:430: dependences incl=182; exp=187; either=356
-              \verb|LEGITIMIZE_ADDRESS| (x, oldx, mode, win);
-
-        \verb|LEGITIMIZE_ADDRESS| is defined 30 times in gcc, and one randomly-selected
-        definition was 37 lines long (and chock full of other macro invocations).
-        [[be more specific, or say ``many of them dozens of lines long'']]
-
-\subsection{macro controlling many lines}
+\subsection{Dependences by macro}
 
     We combined these charts for the different packages, because the shapes
       of each were quite similar for each package.  In order to permit
@@ -1365,14 +1424,14 @@ when testing which character set is being used on the compiling machine.)
         All the heaviest dependences are on header files (for instance,
           \verb|H_PERL| controls inclusion of over 53\% of Perl's lines).
 
-        [It would have been interesting to run these numbers for everything
-          but include file multiple inclusion prevention macros.]
+        [[It would have been interesting to run these numbers for everything
+          but exclude file multiple inclusion prevention macros.]]
 
 
 \subsection{CPPP experiment}
 
-    [After the above, this experiment doesn't sound like such a smart thing
-      to try any more; its results certainly aren't unexpected.]
+    [[After the above, this experiment doesn't sound like such a smart thing
+      to try any more; its results certainly aren't unexpected.]]
 
     We had noticed in our programming that a particularly heavy use of the
       preprocessor is to handle multiple dialects of a language.  These uses
@@ -1382,9 +1441,9 @@ when testing which character set is being used on the compiling machine.)
       see whether standardizing on a single language would reduce
       dependences, failed classifications, etc.
 
-    We built a CPPP partial evaluator (called cppp) which, given a set of
+    We built a Cpp partial evaluator (called Cppp) which, given a set of
       macros known to be defined or undefined (and, optionally, their
-      expansions), eliminates all possible CPP conditionals.  We defined
+      expansions), eliminates all possible Cpp conditionals.  We defined
       all the macros that can be depended on if using ANSI standard C or
       C++ (including prototypes and booleans) with POSIX-compliant
       libraries, preprocessed all the source (and 
@@ -1405,9 +1464,14 @@ when testing which character set is being used on the compiling machine.)
 \section{Related work}
 \label{sec:related}
 
+Split this into:
+ * taxonomies
+ * checking tools
+ * understanding tools such as Emacs hideif mode
+ * other?
 
 We could find no other empirical study of the use of the C preprocessor nor
-any other macro processor.  However, we did find guidance on using C macros
+any other macro processor.  However, we did find some guidance on using C macros
 effectively and tools for checking macro usage.
 
 Carroll and Ellis state that ``almost all uses of macros can be eliminated
@@ -1417,7 +1481,8 @@ do not discuss automatic conversion, but focus on instructing the software
 engineer on better ways to do Cpp-like things.
 
 Similarly, a number of organizations provide hints about effective ways to
-the use the C preprocessor.  The GNU documentation discusses
+the use the C preprocessor.  The GNU documentation [[must cite!  Is this
+the Cpp manual?  That should be cited somewhere anyway]]  discusses
 a set of techniques including simple macros, argument macros, predefined
 macros, stringization macros, concatenation macros, and undefining and
 redefining macros.  It also identifies a set of ``pitfalls and subtleties
@@ -1437,11 +1502,7 @@ has to do with problems after expansion.
 A number of tools check whether specific C programs satisfy particular
 constraints.  The lint program checker [[reference]]
 checks for potentially problematic uses of C\@.  
-[[This is irrelevant, unless you're going to claim that it does a worse job
-than one would like.]]
-The implementation of lint
-is complicated by the fact that it tries to replicate significant functions
-of both the C compiler and the preprocessor.
+
 
 
 Greg:  describe LCLint methodology and results.  Say exactly what you did
@@ -1451,7 +1512,7 @@ on only 20, not all 30, packages, which doesn't include the biggest ones.
 
 LCLint performs many of lint's checks and also
 allows the programmer to add annotations which enable additional
-checks~\cite{Evans-pldi96,Evans-fse94}.
+checks~\cite{Evans-fse94}.
 LCLint optionally checks function-like
 macros\,---\,that is, those which take arguments\,---\,for
 macro arguments on the left hand side of assignments, for statements
@@ -1471,8 +1532,8 @@ wrong.
 \begin{quote}
 $\ldots$ a parameter to a macro may not be used as the left hand side
 of an assignment expression $\ldots$, a macro definition must be
-syntactically equivalent to a statement when it is invoked followed by
-%a semicolon $\ldots$, the type of the macro body must match the return
+syntactically equivalent to a statement $\ldots$ when it is invoked followed by
+a semicolon $\ldots$, the type of the macro body must match the return
 type of the corresponding function $\ldots$~\cite[\S 8]{Evans:LCLint}
 \end{quote}
 That quotation is really easy to nitpick:
@@ -1493,7 +1554,9 @@ conditional compilation structure of code~\cite{Krone94}.  They determine,
 for each line, which preprocessor macros it depends upon, and display that
 information in a lattice.  They do not determine how macros depend upon one
 another directly, only by their nesting in {\tt \#if}, and the information
-conveyed is about the program as a whole.
+conveyed is about the program as a whole.  [[Compare to our CCD work, which
+also tries to find such mismtches; and talk a bit more about what they
+discovered and how it compares to what we discovered.]]
 
 
 [[Expand; relocate in this section?]]
@@ -1514,11 +1577,11 @@ of a symbol tend to be compatible, as shown in
 section~\ref{sec:inconsistent}.]]
 
 
+[[This is the place to recap the various sections, giving the highlights of
+each.  (I think.)]]
+
 % \subsection{Who cares?}
 \subsection{Relevance of the results}
-
-[[This is the place to recap the various sections, giving the highlights of
-each.]]
 
 The results of this research are of interest to language designers, tool
 writers, programmers, and software engineers.
@@ -1645,10 +1708,19 @@ These results suggest a wide variety of future avenues for research, both
 in terms of expanding our understanding of uses of the preprocessor in
 practice and in addressing the issues identified by this study.
 
+[[Cut the repetition here.]]
+In this work  we are concerned with how it {\em could} be used, not just how it {\em
+  happens} to be used.  That's why we can't take the easy out.  But it
+  would be interesting to look at uses, which would let us infer the {\em
+  intended} use (if not all {\em possible} uses).  We are actively pursing
+  this line of research.
 A straightforward refinement that we are pursuing examines macro uses to
 aid this categorization.  (For example, a macro used where a type should
 appear can be inferred to expand to a type; a macro used before a function
 body is probably expanding to a declarator.)
+        We didn't examine every use.  Besides, the point isn't just the
+          current uses, but also future uses:  we want these to be easy for
+          programmers to use.
 
 Further analysis of the conditional
 compilation structure (in the style of Krone and Snelting~\cite{Krone94})
@@ -1656,12 +1728,8 @@ and of the macros with free variables (essentially achieving dynamic
 scoping) is needed to see which of the roughly 29\% of expression macros
 should be easy to convert to C++ language features such as constants or
 enumerated values.
-
-  We are concerned with how it {\em could} be used, not just how it {\em
-  happens} to be used.  That's why we can't take the easy out.  But it
-  would be interesting to look at uses, which would let us infer the {\em
-  intended} use (if not all {\em possible} uses).  We are actively pursing
-  this line of research.
+  [[We didn't analyze whether the free variables are globals or locals,
+          which could substantially impact understanding/translation.]]
 
 
 No libraries (e.g., \pkg{glibc}), as they're too different than applications.
@@ -1672,9 +1740,11 @@ No C++.\footnote{Preliminary results indicate that many
   without changing their habits.}
 
 ``As with all benchmarks, there is the question of how representative this is.''
-
 Variations among packages:
  * The C language has changed.  How do newer packages compare with older ones?
+   [[Language changes are likely to make things worse, not better, in the
+   short term, as code tries to compile under both while taking advantage
+   of the new.]]
  * How do PC packages compare with Unix packages?  Less pressure to make it
    work on many platforms, because there aren't as many?
  * Correlate human perceptions of good or bad preprocessor use with what my
@@ -1684,15 +1754,19 @@ Variations among packages:
    ones.
 
 
-  [[We didn't analyze whether the free variables are globals or locals,
-          which could substantially impact understanding/translation.]]
 
-        We didn't examine every use.  Besides, the point isn't just the
-          current uses, but also future uses:  we want these to be easy for
-          programmers to use.
+
           
 Reaching definitions for macros (``flow-sensitive'' due to
 dependences on other macros).
+
+Rather than storing information about a macro name, it's better to
+recompute it (memoizing, perhaps) for each use so that I only refer to the
+potentially applicable definitions (based on current must inclusion) -- but
+still computing the must inclusion, expansion, and may inclusion from the
+potentially relevant definitions.  
+
+
 
 % Not really right:  Don't want the ``References'' section head to be small.
 {\small \bibliography{evil}}
