@@ -1,28 +1,99 @@
-#!/uns/bin/perl -w
+#!/usr/bin/env perl
 # cppp -- Partial CPP (expands specified C preprocessor macros)
 # Michael Ernst <mernst@cs.washington.edu>
-# Time-stamp: <1999-10-09 11:07:43 mernst>
+# Time-stamp: <2002-12-29 17:57:21 mernst>
 
-# This program simplifies the conditional compilation structure (#if,
-# #ifdef, etc.) of a C file by eliminating CPP conditional directives,
-# based on the values of preprocessor macros specified by the user.  If
-# those specified macros are insufficient to fully evaluate a conditional,
-# it is left as is.  Occurrences of macros are not expanded (in code, macro
-# definitions, or conditional compilation lines), and this program makes
-# use of macro definitions only on its command line, not #define directives
-# in the input files.  This is similar to the unifdef Unix program (which
-# only operates on #ifdef lines).
+# cppp simplifies the conditional compilation structure (#if, #ifdef, etc.)
+# of a C file by eliminating CPP conditional directives, based on the
+# values of preprocessor macros specified by the user.  cppp makes use of
+# macro definitions only on its command line, not #define directives in the
+# input files.  If the specified macros are insufficient to fully evaluate
+# a conditional, it is left as is.  Furthermore, in the resulting file,
+# occurrences of macros are not expanded (in code, macro definitions, or
+# conditional compilation lines).
+
+# This program is similar to the unifdef Unix program.  Two differences are
+# that unifdef only operates on #ifdef lines, whereas cppp operates on #if
+# lines as well, and that unifdef produces output to standard out, whereas
+# cppp modifies the file in place.
 
 # Call this program by specifying file names on the command line.
 # Files are modified in place after being backed up with extension ".nocppp".
+# If ".nocppp" file already exists, it may be used instead; see flags below.
 
+## Flags:
+# If no .nocppp file is found, the current file is backed up to a .nocppp
+# version before being modified in place.
+# These flags control what action is taken if a .nocppp file is found:
+#   -nocppp-overwrite	Copy the current file to the .nocppp file and proceed,
+#			exactly as if the .nocppp file had not existed.
+#   -nocppp-skip	Do no processing of the current file; leave it (and
+#			the .nocppp file) as is.
+#   -nocppp-use		(default) Copy the .nocppp file to the current file
+#			(overwriting the current file), then proceed.
+#   -nocppp-die		Abort.
+#
+# The following cpp flags are recognized:
+#
+# `-D NAME'
+#      Predefine NAME as a macro, with definition `1'.
+#
+# `-D NAME=DEFINITION'
+#      Predefine NAME as a macro, with definition DEFINITION.  There are
+#      no restrictions on the contents of DEFINITION, but if you are
+#      invoking the preprocessor from a shell or shell-like program you
+#      may need to use the shell's quoting syntax to protect characters
+#      such as spaces that have a meaning in the shell syntax.  If you
+#      use more than one `-D' for the same NAME, the rightmost definition
+#      takes effect.
+#
+# `-U NAME'
+#      Do not predefine NAME.  If both `-U' and `-D' are specified for
+#      one name, the `-U' beats the `-D' and the name is not predefined.
+#
+#
+# `-A PREDICATE(ANSWER)'
+#      Make an assertion with the predicate PREDICATE and answer ANSWER.
+#      *Note Assertions::.
+#
+#      You can use `-A-' to disable all predefined assertions; it also
+#      undefines all predefined macros that identify the type of target
+#      system.
+
+# Specifying -U means that you know that the macro is undefined.  If you
+# don't know what a macro will be set to, then don't specify it at all (as
+# opposed to using "-U").
+
+# Since cpp treats identifiers that are not macros as zero, "-U var" and
+# "-D var=0" are equivalent, if "var" appears in an expression (but not if
+# var appears in an #ifdef).
+
+
+# [[These examples need to be redone.]]
+# Example:  Suppose "myfile.h" contains
+#   before
+#   #if (COND1 == PRESENT)
+#   middle
+#   #endif /** COND1 **/
+#   after
+# Then "cppp -DCOND1=7 -DPRESENT=22 myfile.h"
+# or "cppp -UCOND1 -DPRESENT=XXX myfile.h" makes myfile.h contain
+#   before
+#   after
+# and "cppp -DCOND1=XXX -DPRESENT=XXX myfile.h"
+# or "cppp -UCOND1 -DPRESENT=0 myfile.h" makes myfile.h contain
+#   before
+#   middle
+#   after
+# and "cppp myfile.h" or "cppp -DPRESENT myfile.h" results in no change to
+# myfile.h.
 
 
 ## To do:
 #   Check for {re,un}definition of the specified macros.
-#   Implement -h command-line option
-#   Could use -i.nocppp flag, but I'm not comfortable with it
-#   Simplifying postpass (eg, #else #endif => #endif) might be nice
+#   Implement -h command-line option.
+#   Could use -i.nocppp flag to Perl, but I'm not comfortable with it.
+#   Simplifying postpass (eg, #else #endif => #endif) might be nice.
 
 ## Bugs:
 #  * only copes with conditional compilation; occurrences in code, macro
@@ -32,47 +103,25 @@
 #    (the standard doesn't specify signedness)
 #  * -D can only define constant-like macros, not function-like ones (true
 #    for cpp also)
-# This program was solid enough to be used in the development of SCWM.
+# This program was solid enough to be used in the development of SCWM
+# (http://scwm.sourceforge.net/).
 
+## Alternatives:
+#  * The unifdef program, distributed with some Unix variants, is similar
+#    to cppp, except that unifdef does not permit specifying a value for a
+#    defined symbol and only operates on #ifdef tests.
+#  * Emacs's hide-ifdef-mode enables the programmer to specify
+#    preprocessor variables as explicitly defined or not defined; the mode then
+#    presents a view of the source code corresponding to that configuration,
+#    hiding code that is conditionally unincluded
+#  * Other alternatives include scpp and rmifdef.
 
-## Flags:
-# Control action to take if .nocppp file found:
-#   -nocppp-overwrite
-#   -nocppp-skip
-#   -nocppp-use		(default)
-#   -nocppp-die
-# 
-# The following cpp flags are recognized:
-# 
-# `-D NAME'
-#      Predefine NAME as a macro, with definition `1'.
-# 
-# `-D NAME=DEFINITION'
-#      Predefine NAME as a macro, with definition DEFINITION.  There are
-#      no restrictions on the contents of DEFINITION, but if you are
-#      invoking the preprocessor from a shell or shell-like program you
-#      may need to use the shell's quoting syntax to protect characters
-#      such as spaces that have a meaning in the shell syntax.  If you
-#      use more than one `-D' for the same NAME, the rightmost definition
-#      takes effect.
-# 
-# `-U NAME'
-#      Do not predefine NAME.  If both `-U' and `-D' are specified for
-#      one name, the `-U' beats the `-D' and the name is not predefined.
-# 
-# 
-# `-A PREDICATE(ANSWER)'
-#      Make an assertion with the predicate PREDICATE and answer ANSWER.
-#      *Note Assertions::.
-# 
-#      You can use `-A-' to disable all predefined assertions; it also
-#      undefines all predefined macros that identify the type of target
-#      system.
 
 require 5.003;  # uses prototypes
 use strict;
 use Carp;
 use English;
+$WARNING = 1;
 
 use checkargs;
 use cline;
@@ -91,6 +140,10 @@ Usage: $0 file ...
 ENTER USAGE INFO HERE
 ";
 }
+
+# Forward declarations required by Perl 5.6
+sub eval_substituted_conditional ( $ );
+sub process_file ( $ );
 
 
 ###########################################################################
@@ -126,7 +179,7 @@ my $backup_exists_action = "use";
 ###
 
 # If a symbol does not appear in this hash, we know nothing about it.
-# Otherwise, its value (or undefinedness) in the hash gives its value.
+# Otherwise, its value (possibly undef) in the hash gives its value.
 my %cpp_macros = ();
 
 # Returns one of $true, $false, or $unknown
@@ -160,6 +213,7 @@ sub is_true ( $ )
 # "1", "0", or "defined($symbol)" itself (if the definedness is unknown).
 sub eval_defined ( $$ )
 { my ($symbol, $expression) = check_args(2, @_);
+  # Invariant: $expression eq "defined($symbol)".
   if (!exists($cpp_macros{$symbol}))
     { return $expression; }
   elsif ($cpp_macros{$symbol})
@@ -168,6 +222,7 @@ sub eval_defined ( $$ )
     { return "0"; }
 }
 
+# In the argument, convert instances of "defined(var)" to 0 or 1 if possible.
 sub eval_all_defined ( $ )
 { my ($string) = check_args(1, @_);
   if ($debug_cppp) { print "eval_all_defined <= $string\n"; }
@@ -177,7 +232,34 @@ sub eval_all_defined ( $ )
   return $string;
 }
 
-# Takes the character literal CONTENTS as its argument.
+sub expand_macros ( $ )
+{ my ($string) = check_args(1, @_);
+  my $remaining = $string;
+  my $result = "";
+
+  # Expand macros; they're constant-like, not function-like.
+  while ($remaining =~ /\b\w+\b/)
+    { my $symbol = $MATCH;
+      if (!exists($cpp_macros{$symbol})) {
+	$result .= $PREMATCH . $symbol;
+	$remaining = $POSTMATCH;
+      } else {
+	my $replacement = (defined($cpp_macros{$symbol})
+			   ? $cpp_macros{$symbol} : "0");
+	# Put replacement on $remaining, not on $result, to give
+	# nested macros a chance to fire.
+	$result .= $PREMATCH;
+	$remaining = $replacement . $POSTMATCH;
+      }
+    }
+  $result .= $remaining;
+  if ($debug_cppp) { print "expand_macros $string => $result\n"; }
+  return $result;
+}
+
+# [[It looks like this gives the wrong answer for literals like '\n'.]]
+# Takes the character literal CONTENTS (i.e., no quote characters) as its
+# argument.
 sub char_literal_as_int ( $ )
 { my ($char) = check_args(1, @_);
   if ($char =~ /^\\/)
@@ -189,10 +271,10 @@ sub char_literal_as_int ( $ )
 
 #    EXPRESSION is a C expression of integer type, subject to stringent
 # restrictions.  It may contain
-# 
+#
 #    * Integer constants, which are all regarded as `long' or `unsigned
 #      long'.
-# 
+#
 #    * Character constants, which are interpreted according to the
 #      character set and conventions of the machine and operating system
 #      on which the preprocessor is running.  The GNU C preprocessor uses
@@ -202,16 +284,16 @@ sub char_literal_as_int ( $ )
 #      signed, then character codes large enough to set the sign bit will
 #      be considered negative; otherwise, no character code is considered
 #      negative.
-# 
+#
 #    * Arithmetic operators for addition, subtraction, multiplication,
 #      division, bitwise operations, shifts, comparisons, and logical
 #      operations (`&&' and `||').
-# 
+#
 #    * Identifiers that are not macros, which are all treated as zero(!).
-# 
+#
 #    * Macro calls.  All macro calls in the expression are expanded before
 #      actual computation of the expression's value begins.
-# 
+#
 #    Note that `sizeof' operators and `enum'-type values are not allowed.
 # `enum'-type values, like all other identifiers that are not taken as
 # macro calls and expanded, are treated as zero.
@@ -231,17 +313,10 @@ sub evaluate_conditional ( $ )
   # expansion vs. defined, but maybe it's close enough.
   # It does cope with "defined(FOO)" in macro expansion.
 
-  # Eliminate "defined(FOO)".
-  # [But this doesn't eliminate them, unless the definedness is known, right?]
+  # Eliminate "defined(FOO)", for all FOO whose definedness is known.
   $exp = eval_all_defined($exp);
-  # Expand macros; they're constant-like, not function-like.
-  while (($exp =~ /\b\w+\b/)
-	 && (exists($cpp_macros{$MATCH})))
-    { my $symbol = $MATCH;
-      $exp = eval_all_defined($PREMATCH
-				. (defined($cpp_macros{$symbol})
-				   ? $cpp_macros{$symbol} : "0")
-				. $POSTMATCH); }
+  # Expand constant-like (but not function-like) macros.
+  $exp = expand_macros($exp);
 
   # Convert character, octal, and hexadecimal integer constants into decimal
   $exp =~ s/$char_literal_re/char_literal_as_int($1)/ge;
@@ -250,7 +325,8 @@ sub evaluate_conditional ( $ )
   # Strip trailing L from long integer constants
   $exp =~ s/\b([0-9]+)L+\b/$1/g;
 
-  # Replace other macro calls by UNKNOWNMACRO; this catches "defined(FOO)".
+  # Replace function-like macro calls by UNKNOWNMACRO.
+  # This also catches "defined(FOO)".
   while ($exp =~ /\b\w+\s*\(/)
     { my $preexp = $PREMATCH . "UNKNOWNMACRO";
       my $post = $POSTMATCH;
@@ -271,15 +347,24 @@ sub evaluate_conditional ( $ )
 
 # Expression should contain only numbers, operators, and symbols (= unknown).
 # Each conditional evaluates to one of three values:  $true, $false, or $unknown
+
 sub eval_substituted_conditional ( $ )
 { my ($exp) = check_args(1, @_);
+  if ($debug_cppp) { print "eval_substituted_conditional $exp\n"; }
+  my $result = eval_substituted_conditional_internal($exp);
+  if ($debug_cppp) { print "eval_substituted_conditional $exp => $result\n"; }
+  return $result;
+}
 
+sub eval_substituted_conditional_internal ( $ )
+{ my ($exp) = check_args(1, @_);
+
+  # Remove leading and trailing space.
   $exp =~ s/^\s+//;
   $exp =~ s/\s+$//;
 
-  if ($debug_cppp) { print "eval_substituted_conditional $exp\n"; }
-
-  # This parenthesization will do the wrong thing for function calls.
+  # Evaluate parenthesized expressions from the inside out.  This does the
+  # wrong thing for function calls, but the argument shouldn't contain any.
   { my $rparen_pos;
     while (-1 != ($rparen_pos = index($exp, ")")))
       { my $lparen_pos = rindex($exp, "(", $rparen_pos);
@@ -380,6 +465,13 @@ sub eval_substituted_conditional ( $ )
     { my $left = $PREMATCH;
       my $op = $MATCH;
       my $right = $POSTMATCH;
+      $left =~ s/^\s+//;
+      $left =~ s/\s+$//;
+      $right =~ s/^\s+//;
+      $right =~ s/\s+$//;
+      if (($left eq $right) && ($left !~ /UNKNOWNMACRO/))
+        { return $op eq "=="; }
+
       my $lval = eval_substituted_conditional($left);
       my $rval = eval_substituted_conditional($right);
       if (is_unknown($lval) || is_unknown($rval))
@@ -489,7 +581,7 @@ sub eval_substituted_conditional ( $ )
   elsif ($exp =~ /^[_A-Za-z][_A-Za-z0-9\$]*$/)
     { return $unknown; }
   elsif ($exp =~ /^\#\s*[_A-Za-z][_A-Za-z0-9\$]*$/)
-    { # I don't think stringization is legal, nor how to deal with it.
+    { # I don't think stringization is legal, nor know how to deal with it.
       return $unknown; }
   else
     { print "File: $current_file\n";
@@ -500,9 +592,20 @@ sub eval_substituted_conditional ( $ )
 # cond1 was the previous condition; cond2 is the new one
 sub combine_conditional ( $$ )
 { my ($cond1, $cond2) = check_args(2, @_);
-  return (is_unknown($cond1)) ? $cond2
-    : (is_unknown($cond2)) ? $cond1
-      : ($cond1 && $cond2);
+  ## This is wrong: it combines ($true, $unknown) into $true
+  # my $result = ((is_unknown($cond1))
+  #               ? $cond2
+  #               : ((is_unknown($cond2))
+  #                  ? $cond1
+  #                  : ($cond1 && $cond2)));
+  my $result = ((is_false($cond1) || is_false($cond2))
+		? 0 # $false
+		: ((is_true($cond1) && is_true($cond2))
+		   ? $true
+		   : $unknown));
+  if ($debug_cppp)
+    { print "combine_conditional($cond1, $cond2) => $result\n"; }
+  return $result;
 }
 
 
@@ -524,14 +627,14 @@ sub process_command_line_flags ( )
 		{ die "No argument follows $thisarg" }
 	      $thisarg = shift(@ARGV); }
 	}
-      elsif ($thisarg =~ /^-nocpp-/)
+      elsif ($thisarg =~ /^-nocppp-/)
 	{ $backup_exists_action = $POSTMATCH;
 	  if ($backup_exists_action !~ /^(overwrite|skip|use|die)$/)
 	    { die "Bad flag $thisarg -- use overwrite, skip, use, or die, not $backup_exists_action"; }
 	  next;
 	}
       else
-	{ die "Unrecognized command-line arg should be one of -D, -U, -A" }
+	{ die "Unrecognized command-line arg `$thisarg' should be one of -D, -U, -A" }
 
       if ($thisflag eq "D")
 	{ my ($name,$def) = split(/=/, $thisarg, 2);
@@ -554,10 +657,6 @@ sub process_command_line_flags ( )
 ###########################################################################
 ### Main routine
 ###
-
-# <> gives all the lines of all the files mentioned on the command line.
-# $ARGV contains the name of the current file when reading from <>.
-# See example
 
 process_command_line_flags();
 
@@ -600,19 +699,23 @@ sub process_file ( $ )
   my @condition_value_stack = ($true); # the AND of @condition_stack
   my $current_condition_value = $true; # the top of @condition_value_stack
   my @elif_needs_endif = ();	# set when if unknown elif known endif
+  # Invariants:
+  #  @condition_stack and @elif_needs_endif have the same size
+  #  @condition_value_stack is one element larger than those
 
   while ($true)
-    { my ($raw, $simple, $phys_lines, $ncnb_lines) = get_spliced_cline(\*INPUT);
+    { # my ($raw, $simple, $phys_lines, $ncnb_lines) = get_spliced_cline(\*INPUT);
+      my ($raw, $simple) = get_spliced_cline(\*INPUT);
       if (!$raw)
 	{ last; }
 
       # For debugging.  (Should this code be unconditionally executed?)
-      if (!($current_condition_value == $condition_value_stack[$#condition_value_stack]))
+      if (!($current_condition_value eq $condition_value_stack[$#condition_value_stack]))
 	{ die "bad current_condition_value, condition_value_stack in $file: $current_condition_value; @condition_value_stack"; }
-      if (scalar(@condition_stack) != scalar(@condition_value_stack)-1)
+      if (scalar(@condition_stack) ne scalar(@condition_value_stack)-1)
 	{ die "bad sizes for condition_stack (", scalar(@condition_stack),
 	  "), condition_value_stack (", scalar(@condition_value_stack), ") in $file"; }
-      if (scalar(@condition_stack) != scalar(@elif_needs_endif))
+      if (scalar(@condition_stack) ne scalar(@elif_needs_endif))
 	{ die "bad sizes for condition_stack (", scalar(@condition_stack),
 	      "), elif_needs_endif (", scalar(@elif_needs_endif), ") in $file"; }
 
@@ -621,9 +724,8 @@ sub process_file ( $ )
 	  if ($debug_cppp)
 	    { print "simple preprocessor line: $simple"; }    # ends in newline
 	  if ((scalar(@condition_stack) == 0) && ($simple =~ /^(el(se|if)|endif)\b/))
-	    { # This is an extra directive, perhaps an error or a file fragment.
-	      # Just pass it through.  No need to check $current_condition_value
-	      # which must be true.
+	    { # This is an extra directive, perhaps an error or a file
+	      # fragment.   Just pass it through.
 	      if (!is_true($current_condition_value))
 		{ die "empty condition_stack but non-true current_condition_value $current_condition_value in file $file"; }
 	      print OUTPUT $raw; }
@@ -639,13 +741,22 @@ sub process_file ( $ )
 	    { my $thisvalue = $condition_stack[$#condition_stack];
 	      pop(@condition_value_stack);
 	      $current_condition_value = $condition_value_stack[$#condition_value_stack];
-	      if (is_unknown($thisvalue) && is_nonfalse($current_condition_value))
+	      if ($debug_cppp) {
+		print "Considering else: thisvalue=`$thisvalue', current_condition_value=`$current_condition_value'\n";
+	      }
+	      if ($elif_needs_endif[$#elif_needs_endif]
+		  || (is_unknown($thisvalue) && is_nonfalse($current_condition_value)))
 		{ print OUTPUT $raw; }
 	      if (!is_unknown($thisvalue))
 		{ $thisvalue = !$thisvalue;
 		  $condition_stack[$#condition_stack] = $thisvalue; }
 	      $current_condition_value = combine_conditional($current_condition_value, $thisvalue);
-	      push(@condition_value_stack, $current_condition_value); }
+	      push(@condition_value_stack, $current_condition_value);
+	      if ($debug_cppp)
+		{ print "After else:\n";
+		  print "  condition_stack = @condition_stack\n";
+		  print "  condition_value_stack = @condition_value_stack\n"; }
+	    }
 	  elsif ($simple =~ /^elif\b/)
 	    { my $ifarg = $POSTMATCH;
 	      $ifarg =~ s/^\s+//;
@@ -677,6 +788,13 @@ sub process_file ( $ )
 		push(@condition_value_stack, $current_condition_value);
 	      }
 
+	      if ($debug_cppp)
+		{ my $simple_nonewline = $simple;
+		  chomp($simple_nonewline);
+		  print "After $simple_nonewline:\n";
+		  print "  condition_stack = @condition_stack\n";
+		  print "  condition_value_stack = @condition_value_stack\n"; }
+
 	      # If doing output, use the following instead of the elif line:
 	      #   if true elif **** => no output
 	      #   if false elif true => no output
@@ -704,10 +822,12 @@ sub process_file ( $ )
 		    { if (is_unknown($thisvalue))
 			{ my $output_raw = $raw;
 			  chop $output_raw; # remove newline;
-			  $output_raw =~ s/^(\#\s*)el/$1/; # change elif to if
+			  if (! $elif_needs_endif[$#elif_needs_endif]) {
+			    $output_raw =~ s/^(\#\s*)el/$1/; # change elif to if
+			  }
 			  print OUTPUT "$output_raw\t/* cppp replaced: elif */\n"; } } } }
 	  elsif ($simple =~ /^if(n?def)?\b/)
-	    { my $iftype = $1;
+	    { my $iftype = $1;	# Value is undef or "def" or "ndef".
 	      my $ifarg = $POSTMATCH;
 	      $ifarg =~ s/^\s+//;
 	      $ifarg =~ s/\s+$//;

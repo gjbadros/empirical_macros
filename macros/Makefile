@@ -9,7 +9,7 @@ PERL_MODULE_INFO := $(patsubst %.pm,%.info,$(PERL_MODULES))
 PERL_MODULE_MAN := $(patsubst %.pm,%.man,$(PERL_MODULES))
 PERL_MODULE_HTML := $(patsubst %.pm,%.html,$(PERL_MODULES))
 
-all: module_man check
+all: module_man check test_cppp
 
 module_man: $(PERL_MODULE_MAN)
 
@@ -23,6 +23,9 @@ check: $(PERL_MODULES) $(PERL_SCRIPTS)
 .checked: $(PERL_MODULES) $(PERL_SCRIPTS)
 	for i in $?; do perl -c $$i; done
 	touch .checked
+
+test_cppp:
+	(cd test/cppp; $(MAKE) -k clean result)
 
 TAGS:	$(PERL_SCRIPTS) $(PERL_MODULES)
 	perletags $(PERL_SCRIPTS) $(PERL_MODULES)
@@ -51,9 +54,9 @@ tags:	TAGS
 	pod2html $< >$@
 
 showvars:
-	echo $(PERL_MODULES)
-	echo $(PERL_SCRIPTS)
-	echo $(PERL_MODULE_MAN)
-	echo $(PERL_MODULE_HTML)
+	@echo "PERL_MODULES     = $(PERL_MODULES)"
+	@echo "PERL_SCRIPTS     = $(PERL_SCRIPTS)"
+	@echo "PERL_MODULE_MAN  = $(PERL_MODULE_MAN)"
+	@echo "PERL_MODULE_HTML = $(PERL_MODULE_HTML)"
 
 .PHONY: all module_man check showvars tags
