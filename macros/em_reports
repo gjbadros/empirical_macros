@@ -371,13 +371,19 @@ sub output_stats ()
   }
 
   # conditional compilation directive statistics
+  # output them as two rows, one with "# cat1 cat2 .... catn"
+  # the second with the results
   if ($opt_c) {
     select CCDSTATS;
-    foreach my $i (0..$#cond_category_name) {
-      print $cond_category_name[$i], ": ",
-      sum_array(map {$_->[$i]} @rg_ccd_cat_counts[@ftype_ALL]),
-      "\n";
+    print "#";
+    foreach my $cname (@cond_category_name) {
+      print $cname . $OFS;
     }
+    print "\n";
+    foreach my $i (0..$#cond_category_name) {
+      print sum_array(map {$_->[$i]} @rg_ccd_cat_counts[@ftype_ALL]) . $OFS;
+    }
+    print "\n";
   }
 
   # macro categories
