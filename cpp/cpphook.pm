@@ -78,6 +78,7 @@ sub Startup {
   open(TP,">textprops.el") || die "Could not open output file: $!";
   open(TPSOURCE,">textprops-source.el") || die "Could not open output file: $!";
   open(MACEXP_STACKS,">macro_expand_stacks") || die "Could not open output file: $!";
+  open(CPPOUT,">cppout") || die "Could not open output file: $!";
 #  select CHOUT;
   select STDERR;
   $| = 1; # Turn on autoflush
@@ -105,9 +106,9 @@ sub do_define {
 
 
 sub add_use {
-  my ($mname,$fname, $s_start, $s_end, $expansion) = @_;
-  push @{$macro_uses{$mname}}, [$fname, $s_start, $s_end, $expansion];
-  print STDERR "add_use for $mname, now at ", $#{$macro_uses{$mname}} + 1, "\n";
+  my ($mname,$fname, $expansion, $s_start, $s_end, $cbb) = @_;
+  push @{$macro_uses{$mname}}, [$fname, $s_start, $s_end, $expansion, $cbb];
+  print STDERR "add_use for $mname ($cbb), now at ", $#{$macro_uses{$mname}} + 1, "\n";
 }
 
 
@@ -218,8 +219,8 @@ sub cpp_out {
     $top_level_full_expansion .= $sz;
   }
 
-#  print "$sz\n";
-#  print "|"; # just print separator
+  print CPPOUT "$sz\n";
+  print CPPOUT "|"; # just print separator
 }
 
 sub cpp_error {
@@ -245,8 +246,8 @@ sub delete_def {
 }
 
 sub pop_buffer {
-  my $cbb = cpp::CbuffersBack();
-  print "POP_BUFFER, $cbb buffers back";
+  my ($cbb) = @_;
+  print "POP_BUFFER, $cbb buffers back\n";
 }
 
 
@@ -298,8 +299,14 @@ sub annotate_definition {
 
 
 sub annotate_definition_with_use {
-  my $expansion = shift @_;
-  annotate_definition('use',"$expansion",@_);
+  my $cbb = pop @_;
+  my $expansion = splice(@_,2,1);
+  if ($cbb == 0) {
+    # Use appearing in the source code
+    annotate_definition('use',"$expansion",@_);
+  } else {
+    annotate_definition('expuse',"$expansion [$cbb]",@_);
+  }
 }
 
 sub annotate_definition_with_undef {
@@ -316,11 +323,10 @@ sub expand_macro {
   my $start = $cBytesOutput + 1 + $exp_offset - ($cbb > 0? $length - 1:0);
   my $end = $start + $length;
   my $call_length = length("$mname$raw_call");
-  my $cbuffersBack;
   my $fname = cpp::Fname();
   my $old = select;
-  annotate_definition_with_use($expansion,$mname,$fname,$s_start,$s_end);
-  add_use($mname,$fname,$s_start,$s_end,$expansion);
+  annotate_definition_with_use($mname,$fname,$expansion,$s_start,$s_end,$cbuffersDeep);
+  add_use($mname,$fname,$expansion,$s_start,$s_end,$cbuffersDeep);
   select CPP;
 
   print "\nexpand_macro $mname = ", cpp::ExpansionLookup($mname), ", source offset: $s_start - $s_end, $cbuffersDeep [$has_escapes]; ", 
@@ -373,8 +379,8 @@ sub comment {
 }
 
 sub string_constant {
-  my ($string,$lines) = @_;
-  print "String_constant ($lines lines): \"$string\"\n";
+  my ($s_start, $s_end, $string, $lines) = @_;
+  print "String_constant ($lines lines) [$s_start:$s_end]: \"$string\"\n";
 }
 
 sub do_include {
@@ -481,7 +487,7 @@ sub Got_token2 {
 
 # Token's come a lot, so redirect this output somewhere else
 sub Got_token {
-  my ($token,$mname,$argno,$raw,@history) = @_;
+  my ($token,$raw,$mname,$argno,@history) = @_;
   my @nests = cpp::MacroExpansionHistory();
   my $fname = cpp::Fname();
 
@@ -518,8 +524,8 @@ sub annotate {
 }
 
 sub do_function {
-  my ($szName) = @_;
-  print "Function: $szName\n";
+  my ($szName,$fStatic) = @_;
+  print "Function: $szName", $fStatic?" (static)":"", "\n";
 }
 
 sub do_func_call {
