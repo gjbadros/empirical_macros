@@ -353,8 +353,12 @@ lexer.o: lexer.c cpphook.h
 
 gram.tab.o: gram.tab.c cpphook.h
 
-gram.tab.c gram.tab.h: gram.y
+gram.tab.h: gram.y
 	$(BISON) -v -pct_yy -d $^
+
+gram.tab.c: gram.y
+	$(BISON) -v -pct_yy -d $^
+	patch <gram.tab.c.patch
 
 gram.h: gram.tab.h
 	cp $< $@
