@@ -11,17 +11,18 @@ USER_PREFIX = /homes/gws/gjb/macros
 # Directories
 PKG_DIR := /tmp/gjb/packages
 ANALYZE_OUTPUT_DIR := /tmp/gjb/data
-COMMON_DIR := $(shell dirname $$(ls -l Makefile | awk '{print $$NF}'))
+COMMON_DIR := $(shell dirname `ls -l Makefile | awk '{print $$NF}'`)
 #COMMON_DIR := /homes/gws/mernst/research/notkin/macros/scripts
 #COMMON_DIR := /homes/gws/gjb/macros/scripts
 
-EXTRA_ANALYZE_FLAGS := -v -I.
-EXTRA_REPORTS_FLAGS := -v -I.
-#EXTRA_ANALYZE_FLAGS := -g14
-
+FAST_DIR = $(USER_PREFIX)/fast
 PAPER_DIR := $(USER_PREFIX)/papers
 PAPER_CPPP_DIR := $(USER_PREFIX)/papers/cppp
 PAPER_ORIG_DIR := $(USER_PREFIX)/papers/orig
+
+EXTRA_ANALYZE_FLAGS := -v -F$(FAST_DIR)
+EXTRA_REPORTS_FLAGS := -v
+#EXTRA_ANALYZE_FLAGS := -g14
 
 include Makefile.user
 
@@ -92,10 +93,10 @@ clean_reports:
 	macros-clean-reports
 
 # Could also depend on $(PKG_DIR)/$(ANALYZE_OUTPUT_DIR)*/c-files-listing
-%.state: $(COMMON_DIR)/../em_analyze
+%.state: #[REMOVE THIS # TO DEPEND ON SCRIPTS] $(COMMON_DIR)/../em_analyze
 	em_make_state_file $(PKG_DIR) $(ANALYZE_OUTPUT_DIR) $@ $(EXTRA_ANALYZE_FLAGS) || echo $< >> $(ANALYZE_OUTPUT_DIR)/failures
 
-%.stat: %.state $(COMMON_DIR)/../em_reports
+%.stat: %.state #[REMOVE THIS # TO DEPEND ON SCRIPTS] $(COMMON_DIR)/../em_reports
 	em_reports -s $< -t $(EXTRA_REPORTS_FLAGS) -d $(ANALYZE_OUTPUT_DIR):`echo $@ | sed -e 's/\.stat$$//'`
 
 ###########################################################################
@@ -108,7 +109,7 @@ tbl-package-sizes: $(STAT)
 	macros-make-package-sizes-tbl-from-stat $^ > $@
 
 tbl-package-sizes.tex: tbl-package-sizes
-	(echo "Package	Version	Physical lines	NCNB lines	Description"; join -t'	' $(COMMON_DIR)/package_versions tbl-package-sizes | join -t'	' -v2 - $(COMMON_DIR)/package_descriptions ) | latexify > $@
+	(echo "Package	Version	Physical lines	NCNB lines	Description"; join -t'	' $(COMMON_DIR)/package_versions tbl-package-sizes | join -t'	' - $(COMMON_DIR)/package_descriptions ) | latexify > $@
 
 tbl-def-frequency: $(DEFCUM)
 	macros-make-tbl-frequsedef-from-cum $^ > $@
@@ -193,7 +194,7 @@ copyorig: $(PAPER_TABLES)
 	cp $(PAPER_TABLES) $(PAPER_ORIG_DIR)
 
 fast:	$(SCRIPTSPATH)
-	for i in $(SCRIPTSPATH); do bn=`basename $$i`; remove_check_args $$i > $$bn; chmod +x $$bn; done
-	@echo "Ensure \".\" is first on your path, and rehash now!"
+	for i in $(SCRIPTSPATH); do bn=$(FAST_DIR)/`basename $$i`; remove_check_args $$i > $$bn; chmod +x $$bn; done
+	@echo "Ensure $(FAST_DIR) is first on your path, and rehash if you changed it!"
 
 .PHONY: all clean showvars text_tables data_analyze data_reports raw copy fast
