@@ -65,7 +65,7 @@ BEGIN {
   cSyntax = $expands_to_reserved_word + $mismatched_entities + $syntax_tokens; sSyntax += cSyntax; 
   cType = $expands_to_type + $has_type_argument + $macro_as_type + $uses_type_argument; sType += cType; 
   cRecursive = $recursive; sRecursive += cRecursive; 
-  cFail = $being_categorized + $failed_categorization + $multiply_categorized; sFail += cFail; # $uncategorized here means its a builtin, don't count
+  cFail = $being_categorized + $failed_categorization + $multiply_categorized + $never_defined; sFail += cFail; # $uncategorized here means its a builtin, don't count
   totLine = cNull + cLit + cExp + cStm + cStrPast + cSyntax + cType + cRecursive + cFail;
 
   # Create the row heading
@@ -80,6 +80,8 @@ END {
   if (!nolatex) { print "\\hline" }; 
   totLine = sNull + sLit + sExp + sStm + sStrPast + sSyntax + sType + sRecursive + sFail;
   print "Total", pct(sNull), pct(sLit), pct(sExp), pct(sStm), pct(sStrPast), pct(sSyntax), pct(sType), pct(sRecursive), pct(sFail); 
+  OFMT="%2.0f";
+  print "Total-raw", sNull, sLit, sExp, sStm, sStrPast, sSyntax, sType, sRecursive, sFail; 
   ORS=""; 
   if (!nolatex) {print "\\end{tabular}"; } 
 }
