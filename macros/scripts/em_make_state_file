@@ -1,0 +1,13 @@
+#!/uns/bin/zsh -f
+# Usage $0 <pkdir> <outputdir> <target>.state <extraflags>
+PKG_DIR=$1; shift
+TM=$1; shift
+TARGET=${1%%.state}; shift
+FLAGS=($*)
+#echo $PKG_DIR $TM $TARGET
+pushd $PKG_DIR/$TARGET*
+pwd
+echo "em_analyze $FLAGS -i -t -d $TM:$TARGET > $TM/$TARGET.out 2> $TM/$TARGET.err"
+( cat c-files-listing || find-c ) \
+     | em_analyze $FLAGS -i -t -d $TM:$TARGET > $TM/$TARGET.out 2> $TM/$TARGET.err
+popd
