@@ -897,8 +897,11 @@ declaration: decl_specs opt_init_decl_list SEMICOLON
                     }
 		  gjb_call_hooks_sz(CPP_OPTIONS(&parse_in),HI_TYPEDEF,
 				    rm->data.sval->str);
-		}
+		} else {
+		  fprintf(stderr,"!= IDENT\n");
+	 	}
               } else {
+		int fIsFunc = 0;
                 /* Find the identifier for a normal declaration. */
                 treenode *here, *rest;
                 here = $$;
@@ -912,11 +915,22 @@ declaration: decl_specs opt_init_decl_list SEMICOLON
                       }
 		    gjb_call_hooks_sz(CPP_OPTIONS(&parse_in),HI_VARDECL,
 				      rm->data.sval->str);
+		  } else {
+	 	    fIsFunc = 1;
 		  }
                   here = rest;
                 } while (here != NULL);
+	        if (fIsFunc) {
+	          leafnode *fn = find_func_name($$);
+	          if (fn) {
+       	            gjb_call_hooks_sz(CPP_OPTIONS(&parse_in),HI_FUNC_PROTO,
+				      fn->data.sval->str);
+                  }
+	        }
               }
-            }
+            } else {
+	      fprintf(stderr,"!lm\n");
+	    }
         }
         |  COMMENT
         {
