@@ -255,10 +255,23 @@ iff the function was declared to be static (i.e. not global).
 \hook{FUNC\_\-CALL}{\$name}
 Called once after each function call is parsed.  Only argument is
 the name of the function being called.
+\hook{TYPEDEF}{\$name}
+Called once after each typedef is parsed.  Argument is the name
+of the new type.
+\hook{VARDECL}{\$name}
+Called once after each variable declaration is parsed.  Argument is the name
+of the declared variable.
 \hook{ANNOTATE}{} Obsoleted
 \hook{POP\_\-BUFFER}{\$cbuffersDeep}
 Called once for each buffer that is popped off of the stack of
 buffers to be parsed. The only argument is the new (after the pop)
+number of non-file buffers
+deep the stack is.  In particular, when that number is 0, 
+the parser is not parsing a macro expansion any longer.
+\hook{POP\_\-PERL\_\-BUFFER}{\$cbuffersDeep}
+Called once for each perl-pushed buffer that is popped off of the stack of
+buffers to be parsed (i.e., those pushed with the PushBuffer() backcall)
+The only argument is the new (after the pop)
 number of non-file buffers
 deep the stack is.  In particular, when that number is 0, 
 the parser is not parsing a macro expansion any longer.

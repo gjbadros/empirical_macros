@@ -65,6 +65,14 @@ of the trivial case of setting the stack of states to what it already is.
 Adds \$source\_\-code\_\-string to the being-processed text 
 as if it existed in the input at the
 current location in the current file.
+\backcall{}{EnterScope}{}
+Enters a new scoping level; useful in combination
+with PushBuffer() for causing code to be parsed without
+affecting the current symbol table directly.
+\backcall{}{ExitScope}{}
+Exits the current scoping level; useful in combination
+with PushBuffer() for causing code to be parsed without
+affecting the current symbol table directly.
 \backcall{}{SetParseDebugging}{}
 Set the yydebug flag to TRUE for the underlying parser.
 This results in extra state change information being sent to stderr.
