@@ -1,4 +1,5 @@
 % $Id$
+% Process with LaTeX2e
 \documentclass[10pt]{article}
 \def\typeofdocument{article}    % ``article'' or ``report''
 \usepackage{epsfig}
@@ -73,8 +74,9 @@
 Department of Computer Science and Engineering \\
 University of Washington \\
 Box 352350, Seattle, WA  98195-2350  USA \\
-{\small \{{\tt mernst},{\tt gjb},{\tt notkin}\}{\tt @cs.washington.edu}} \\
-18 January 2000}  
+{\small \{{\tt mernst},{\tt gjb},{\tt notkin}\}{\tt @cs.washington.edu}}
+%  \\ 18 January 2000
+}  
 
 \maketitle
 
@@ -110,9 +112,9 @@ Box 352350, Seattle, WA  98195-2350  USA \\
   software engineers.
 \end{abstract}
 
-%\noindent
-%Keywords: C preprocessor, Cpp, C, C++, program understanding, file
-%inclusion, macro, macro substitution, conditional compilation, empirical study
+\noindent
+Keywords: C preprocessor, Cpp, C, C++, macro, macro substitution, file
+inclusion, conditional compilation, empirical study, program understanding
 
 
 \bigskip
@@ -223,6 +225,7 @@ directions.
 %eliminate the remaining one-third of the macros, which are most likely
 %to cause difficulties.
 
+The remainder of this \typeofdocument{} is organized as follows.
 Section~\ref{sec:background} provides additional detail about the
 difficulties imposed by the preprocessor.
 Section~\ref{sec:methodology} describes our experimental methodology.
@@ -2440,7 +2443,7 @@ dependent on over 176 macros.
   maximum falls in the penultimate bucket (i.e., the rightmost bucket is
   the first empty one).  The second bar of each graph represents all macros
   controlling at least one line ($\varepsilon$ is a very small but nonzero
-  value), but no more than .01% of the entire package.  A log scale is used
+  value), but no more than .01\% of the entire package.  A log scale is used
   for the x axis.}
 
 %% expansion is red; inclusion is blue
@@ -3294,7 +3297,52 @@ comments, which substantially improved the presentation.
 % reflect the views of the National Science Foundation.
 
 
-% Not really right:  Do not want the ``References'' section head to be small.
-{\small \bibliography{evil}}
+\bibliography{evil}
+
+\noindent
+\epsfig{file=fig/ernst-photo.eps,width=1.4in}
+
+\textbf{Michael D. Ernst} will receive the Ph.D. in Computer Science and
+Engineering from the University of Washington in June 2000.  He has
+previously been a lecturer at Rice University and a researcher at Microsoft
+Research.  He holds the S.B. and S.M. degrees from MIT.  Ernst's primary
+technical interest is programmer productivity, encompassing software
+engineering, program analysis, compilation, and programming language
+design.  However, he has also published in artificial intelligence, theory,
+and other areas of computer science.
+
+\bigskip
+\noindent
+\epsfig{file=fig/badros-photo.eps,width=1.4in}
+
+\textbf{Greg J. Badros} is a final-year Ph.D. candidate at the University of
+Washington in Seattle, USA where he earned his M.Sc.\ degree in 1998.  He
+graduated \textit{magna cum laude} with a B.S.  degree in Mathematics and
+Computer Science from Duke University in 1995.  He is the primary author of
+the Scheme Constraints Window Manager and the Cassowary Constraint Solving
+Toolkit.  His research interests include constraint technology, software
+engineering, languages, and the Internet.
+
+\bigskip
+\noindent
+\epsfig{file=fig/notkin-photo.eps,width=1.4in}
+
+\textbf{David Notkin} 
+is the Boeing Professor of Computer Science and Engineering at
+the University of Washington. Before joining the faculty in 1984, he
+received his PhD degree at Carnegie Mellon University in 1984 and his ScB
+degree at Brown University in 1977.  Dr.~Notkin received the National Science
+Foundation Presidential Young Investigator Award in 1988; served as the
+program chair of the First ACM SIGSOFT Symposium on the Foundations of
+Software Engineering; served as program co-chair of the 17th International
+Conference on Software Engineering; chaired the Steering committee of the
+International Conference on Software Engineering (1994-1996); served as
+charter associate editor of both ACM Transactions on Software Engineering
+and Methodology and the Journal of Programming Languages; serves as an
+Associate Editor of the IEEE Transactions on Software Engineering; was named
+as an ACM Fellow in 1998; and serves as the chair of ACM SIGSOFT\@.  His
+research interests are in software engineering in general and in software
+evolution in particular.  Dr.~Notkin is a senior member of the IEEE.  
+
 
 \end{document}
