@@ -7,45 +7,141 @@
 #define gjb_printf(s...) do { fflush(stdout); fprintf(stderr,##s); } while (0)
 #endif
 
+
 // start hook_index_constants
+// Documentation strings below get pulled out using extract-latex-comments <cpphook.h
+// the comments refer to the preceding hook.
 typedef enum hook_index_constants {
   HI_STARTUP,
+///% {} Called immediately after the perl parser is initialized.
+
   HI_STARTPARSE,
+///% {} Called just before the bison parser is started (i.e., before yyparse()).
+
   HI_EXIT,
+///% {$return_exit_code} Called just before the system exit() call.
+
   HI_HANDLE_DIRECTIVE,
+///% {$directive_name} Called exactly once for each directive.  $directive_name is
+///% the directive as it appeared in the source code with the leading # removed.
+
   HI_DO_DEFINE,
+///% {$s_start,$s_end,$name_args_body} Called exactly once for each #define. 
+///% Arguments give the source code character offsets of the line and the 
+///% unprocessed rest of the line including the name of the macro, its arguments
+///% and its definition.
+
   HI_PRE_DO_UNDEF,
+///% {$s_start,$s_end,$mname} Called exactly once for each #undef.
+///% Arguments give the source code character offsets of the line and the
+///% name of the macro being undefined.  This hook is called just before
+///% the macro is undefined, so its definition still exists 
+///% in the preprocessor's state.
+
   HI_DO_UNDEF,
+///% {$s_start,$s_end,$mname} Called exactly once for each #undef.
+///% Arguments give the source code character offsets of the line and the
+///% name of the macro being undefined.  This hook is called immediately after
+///% the macro is undefined.
+
   HI_DO_INCLUDE,
+///% {$filename_given, $filename_resolved, $flags} Called exactly once for each #include,
+///% #include_next, or #import directive.  $filename_given is the name of the
+///% file to be included as written in the source.  $filename_resolved is the
+///% fully qualified path name of the file to be read.  $flags is a bitmap
+///% with three relevant masks:  $ANGLE_BRACKETS, for whether the filename appeared
+///% in angle brackets signifying a system include file; $SKIP_DIRS, for whether this
+///% is an #include_next directive; and $IMPORTING, for whether this is an #import
+///% directive.
+
   HI_DO_IF,
+///% {$conditional, $skipped, $value} Called exactly once for each #if
+///% (not #ifdef or #ifndef) directive.  Arguments .... FIXGJB
+
   HI_DO_XIFDEF,
+///% {}
+
   HI_DO_IFDEF,
+///% {}
+
   HI_DO_IFNDEF,
+///% {}
+
   HI_DO_ELSE,
+///% {}
+
   HI_DO_ELIF,
+///% {}
+
   HI_DO_ENDIF,
+///% {}
+
   HI_CREATE_PREDEF,
+///% {}
+
   HI_CREATE_DEF,
+///% {}
+
   HI_DELETE_DEF,
+///% {}
+
   HI_SPECIAL_SYMBOL,
+///% {}
+
   HI_EXPAND_MACRO,
+///% {}
+
   HI_MACARG_EXP,
+///% {}
+
   HI_MACRO_CLEANUP,
+///% {}
+
   HI_IFDEF_MACRO,
+///% {}
+
   HI_COMMENT,
+///% {}
+
   HI_STRING_CONSTANT,
+///% {}
+
   HI_CPP_ERROR,
+///% {}
+
   HI_CPP_WARN,
+///% {}
+
   HI_CPP_PEDWARN,
+///% {}
+
   HI_CPP_OUT,
+///% {}
+
   HI_ADD_IMPORT,
+///% {}
+
   HI_INCLUDE_FILE,
+///% {}
+
   HI_DONE_INCLUDE_FILE,
+///% {}
+
   HI_TOKEN,
+///% {}
+
   HI_FUNCTION,
+///% {}
+
   HI_FUNC_CALL,
+///% {}
+
   HI_ANNOTATE,
+///% {}
+
   HI_POP_BUFFER,
+///% {}
+
 } HOOK_INDEX;
 // end hook_index_constants
 
