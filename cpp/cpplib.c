@@ -287,7 +287,7 @@ extern void fancy_abort ();
 // static void print_containing_files ();
 static int lookup_import ();
 static int redundant_include_p ();
-static is_system_include ();
+static int is_system_include ();
 static struct file_name_map *read_name_map ();
 static char *read_filename_string ();
 static int open_include_file ();
@@ -885,7 +885,7 @@ file_cleanup (cpp_buffer *pbuf, cpp_reader *pfile, cpp_expand_info *pcei)
   return 0;
 }
 
-#ifdef 0
+#if 0
 static void
 newline_fix (cpp_reader *pfile)
 {
@@ -2600,10 +2600,21 @@ initialize_builtins (pfile)
     install ("__OBJC__", -1, T_CONST, 1, 0, -1);
 /*  This is supplied using a -D by the compiler driver
     so that it is present only when truly compiling with GNU C.  */
-  /* Consider routinely adding this in */
-  /*
+  /* FIXGJB these should just be turned on by an option */
   install ("__GNUC__", -1, T_CONST, 2, 0, -1);
-  */
+
+
+  /* compared cpp -dM </dev/null 's predefines
+     with those from:
+     touch foo.c && gcc -E -dM foo.c
+     these are what the latter had that the former did not */
+  install ("__i386__", -1, T_CONST, 2, 0, -1);
+  install ("__i386", -1, T_CONST, 2, 0, -1);
+  install ("__unix", -1, T_CONST, 2, 0, -1);
+  install ("__unix__", -1, T_CONST, 2, 0, -1);
+  install ("__linux", -1, T_CONST, 2, 0, -1);
+  install ("__linux__", -1, T_CONST, 2, 0, -1);
+
   if (CPP_OPTIONS (pfile)->debug_output)
     {
       char directive[2048];
@@ -3209,7 +3220,7 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
 
   pfile->output_escapes--;
   {
-#ifdef 0
+#if 0
   int cchRawCall = CPP_BUFFER(pfile)->cur - pchAfterMacroName;
   int cbuffersDeep = CbuffersDeep(pfile);
   int ichSourceStart = pcei?(pcei->offset + 1): 
@@ -3386,7 +3397,7 @@ do_include (pfile, keyword, unused1, unused2)
   int angle_brackets = 0;	/* 0 for "...", 1 for <...> */
   char *pcfbuf;
   int pcfnum;
-#ifdef 0
+#if 0
   int pcf = -1;
   char *pcfbuflimit;
   int retried = 0;		/* Have already tried macro
@@ -3750,8 +3761,8 @@ do_include (pfile, keyword, unused1, unused2)
     if (CPP_OPTIONS(pfile)->print_include_names)
       {
 	cpp_buffer *buf = CPP_BUFFER (pfile);
-	while ((buf = CPP_PREV_BUFFER (buf)) != NULL)
-	  putc ('.', stderr);
+	while ((buf = CPP_PREV_BUFFER (buf)) != CPP_NULL_BUFFER(pfile))
+	  putc (' ', stderr);
 	fprintf (stderr, "%s\n", fname);
       }
 
@@ -5023,7 +5034,7 @@ AnnotatePcat(cpp_annotated_token *pcat, cpp_reader *pfile, cpp_expand_info *pcei
     pcat->from_what = -1;
     pcat->args = NULL;
     }
-#ifdef 0
+#if 0
   //FIXGJB
   if (pad)
     {
@@ -6124,7 +6135,7 @@ finclude (pfile, f, fname, system_header_p, dirptr)
   long i;
   int length;
   cpp_buffer *fp;			/* For input stack frame */
-#ifdef 0
+#if 0
   int missing_newline = 0;
 #endif
 
