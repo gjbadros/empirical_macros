@@ -580,7 +580,7 @@ sub output_dependences ( )
     for my $macro_name (sort { ($defs_lines{$b} <=> $defs_lines{$a})
 				 || (scalar(@{$macros{$b}}) <=> scalar(@{$macros{$a}}))
 				 || ($a cmp $b) }
-			     (keys %macros))
+			     (grep {defined($defs_lines{$_})} keys %macros))
       # At this point we are at the end, not beginning, of an output line
       { 
 	next if MacroNotDefinedInsidePackage($macro_name);
