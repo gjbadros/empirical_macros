@@ -227,7 +227,7 @@ sub print_lint_summary ( $$$$$$$$$$$$$;$ )
       . "%) unparenthesized body\n";
   print "$swallow_semi\t("
     . sprintf("%2.2f",percent2($swallow_semi,$defs))
-      . "%) swallows semicolon\n";
+      . "%) doesn't swallow semicolon\n";
   print "$free_var\t("
     . sprintf("%2.2f",percent2($free_var,$defs))
       . "%) free variables\n";
