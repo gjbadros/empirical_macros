@@ -340,6 +340,21 @@ my @categoryname = (
 		    'macro_as_function', 'macro_as_type',
 		   );
 
+my %failed_categorization_type_count =
+  ( 
+   "unknown" => 0,
+   "close_but_no_open" => 0,
+   "mismatched_entities" => 0,
+   "empty_string" => 0,
+   "unterminated_string" => 0,
+   "bad_char_constant" => 0,
+   "unterminated_char_constant" => 0,
+   "token_pasting" => 0,
+   "preprocessor_directive" => 0,
+   "stringization" => 0,
+   "unterminated_comment" => 0,
+  );
+
 ## Needs to be fixed.
 ## Perhaps give actual constant, so it can be determined.
 sub category_lub
@@ -478,29 +493,29 @@ my $typeUNKNOWN = 15;		# we know it's some type, but don't know which
 my $typeUNSPECIFIED = 16;		# declared w/o a type (e.g., as function arg)
 
 my %type_num = ('short' => $typeSHORT, 'short int' => $typeSHORT,
-	     'signed short' => $typeSHORT, 'signed short int' => $typeSHORT,
-	     'unsigned short' => $typeUSHORT, 'unsigned short int' => $typeUSHORT,
-	     'int' => $typeINT, 'signed int' => $typeINT, 'signed' => $typeINT,
-	     'unsigned int' => $typeUINT, 'unsigned' => $typeUINT,
-	     'long' => $typeLONG, 'long int' => $typeLONG,
-	     'signed long' => $typeLONG, 'signed long int' => $typeLONG,
-	     'unsigned long' => $typeULONG, 'unsigned long int' => $typeULONG,
-	     'char' => $typeCHAR,
-	     'unsigned char' => $typeUCHAR,
-	     'signed char' => $typeSCHAR,
-	     'float' => $typeFLOAT,
-	     'double' => $typeDOUBLE,
-	     'long double' => $typeLDOUBLE,
-	     'char *' => $typeSTRING, 'char*' => $typeSTRING);
+		'signed short' => $typeSHORT, 'signed short int' => $typeSHORT,
+		'unsigned short' => $typeUSHORT, 'unsigned short int' => $typeUSHORT,
+		'int' => $typeINT, 'signed int' => $typeINT, 'signed' => $typeINT,
+		'unsigned int' => $typeUINT, 'unsigned' => $typeUINT,
+		'long' => $typeLONG, 'long int' => $typeLONG,
+		'signed long' => $typeLONG, 'signed long int' => $typeLONG,
+		'unsigned long' => $typeULONG, 'unsigned long int' => $typeULONG,
+		'char' => $typeCHAR,
+		'unsigned char' => $typeUCHAR,
+		'signed char' => $typeSCHAR,
+		'float' => $typeFLOAT,
+		'double' => $typeDOUBLE,
+		'long double' => $typeLDOUBLE,
+		'char *' => $typeSTRING, 'char*' => $typeSTRING);
 
 my @type_name_array = ('typeFAIL', 'bool',
-		    'char', 'unsigned char', 'signed char',
-		    'short', 'unsigned short',
-		    'int', 'unsigned int',
-		    'long', 'unsigned long',
-		    'float', 'double', 'long double',
-		    'char *',
-		    'typeUNKOWN');
+		       'char', 'unsigned char', 'signed char',
+		       'short', 'unsigned short',
+		       'int', 'unsigned int',
+		       'long', 'unsigned long',
+		       'float', 'double', 'long double',
+		       'char *',
+		       'typeUNKOWN');
 
 # For determining whether a Perl variable has numeric type.
 # This is incredibly disgusting; do something about it.
@@ -1340,6 +1355,9 @@ sub output_stats
     OutputHistogram("CATEGORIES_HNI",\%category_counts_hdr_ni,1);
     OutputHistogram("CATEGORIES_CNI",\%category_counts_c_ni,1);
 
+    print "\n";
+
+    OutputHistogram("FAILED_CATEG",\%failed_categorization_type_count,1,$true);
     print "\n";
   }
 
@@ -4236,8 +4254,12 @@ sub categorize_macro_def
 	# categorization.
 	{ # Not an expression, apparently
 	  $category = $catFAILURE;
-	  # FIXMERNST: need to call this
-#	  check_macro_body($body);
+	  my ($evil_flags,$failure_type) = check_macro_body($body);
+#	  $cEvil++ if $evil_flags & $EVIL;
+#	  $cIllegal++ if $evil_flags & $ILLEGAL;
+#	  $cObsoleted++ if $evil_flags & $OBSOLETE;
+#	  $cDanger++ if $evil_flags & $DANGER;
+	  $failed_categorization_type_count{$failure_type}++;
 	}
     }
 
@@ -4461,33 +4483,53 @@ sub checkmacrodef
 # returns zero if it was ok
 # otherwise $EVIL $DANGER $OBSOLETE $ILLEGAL
 # (each individual bits)
-sub check_macro_body
-{ my ($body) = check_args(1, @_);
+
+#FIX:  evilprint is used, and that uses $current_file, current_line_no()
+# but these are not correct when we're in our categorization loop.
+# we need to fix this to print the correct file/line# information for
+# the macro we're checking.  Presumably, this means we must pass it in,
+# or modify the globals for the current macro when we're in the classification
+# phase.
+
+sub check_macro_body {
+  if (!wantarray) 
+    {	my ($file, $line, $sub) = (caller(0))[1,2,3]; #FIX: is this right?
+	die "check_macro_body called not wanting an array at $file:$line $sub";
+      }
+  my ($body) = check_args(1, @_);
   my $result = 0;
   # print "check_macro_body: $body\n";
-  # FIX: These variables do not appear to be used
-  my $indquote = $false;
-  my $insquote = $false;
-  my $incomment = $false;
   my @nesting = ();
-  while ($body =~ m/[\]\[(){}\"\'\#]|\/\/|\/\*|\*\//) #'HACKCOLOR
+  
+  # FIX: should I concatenate failure_type-s so we see multiple failures?
+  # this would mean it'd be tricky to keep the table the same across files
+  my $failure_type = "unknown";
+  my $full_body = $body;
+
+  #print "BODY: $body\n";
+  while ($body =~ m%[\]\[(){}\"\'\#]|//|/\*|\*/%) #'HACKCOLOR
     # Found paren, quote, cpp directive, or comment
     { my $match = $MATCH;
-      my $body = $POSTMATCH;
+      $body = $POSTMATCH;
       # print "$match ||| $body\n";
       if ($match =~ /[\[\(\{]/)
-        { push(@nesting,$match); }
+        { push(@nesting,$match);
+	  # print STDERR "FRONTMATCH\n";
+	}
       elsif ($match =~ /[\]\)\}]/)
 	{ if ($#nesting == -1)
 	    { $result |= $DANGER;
-	      evilprint("dangerous: close $match without open\n    $body\n"); }
+	      $failure_type = "close_but_no_open";
+	      evilprint("dangerous: close $match without open\n    $full_body\n"); }
 	  else
 	    { my $popped = pop(@nesting);
+	      # print STDERR "ENDMATCH\n";
 	      if ((($match eq "\]") && ($popped ne "\["))
 		  || (($match eq "\)") && ($popped ne "\("))
 		  || (($match eq "\}") && ($popped ne "\{")))
 		{ $result |= $DANGER;
-		  evilprint("dangerous: $popped matched by $match:\n    $body\n"); } } }
+		  $failure_type = "mismatched_entities";
+		  evilprint("dangerous: $popped matched by $match:\n    $full_body\n"); } } }
       elsif ($match eq "\"")
         { if ($body =~ m/$non_escaped_double_quote_re/o)
             # Empty string OK only if that is the entire body.
@@ -4495,11 +4537,13 @@ sub check_macro_body
 		  && ((length($PREMATCH) + length($1) + length($2)) == 0)
 		  && (length($body) > 2))
                 { $result |= $DANGER;
-		  evilprint("dangerous: empty string:\n    $body\n"); }
+		  $failure_type = "empty_string";
+		  evilprint("dangerous: empty string:\n    $full_body\n"); }
               $body = $POSTMATCH; }
           else
            { $result |= $ILLEGAL;
-	     evilprint("illegal: unterminated string $MATCH:\n    $body\n"); } }
+	     $failure_type = "unterminated_string";
+	     evilprint("illegal: unterminated string $MATCH:\n    $full_body\n"); } }
       elsif ($match eq "\'")
         { if (($body =~ m/^\\''/) || ($body =~ m/\'/))
 	    { # do this first because we're going to do more matching
@@ -4510,25 +4554,30 @@ sub check_macro_body
 	      # for illegal character constants.
 	      if (! ($char =~ m/^$char_literal_contents_re$/o))
 	        { $result |= $ILLEGAL;
-		  evilprint("illegal: bad character constant $char:\n    $body\n"); }
+		  $failure_type = "bad_char_constant";
+		  evilprint("illegal: bad character constant $char:\n    $full_body\n"); }
     	       }
           else
             { $result |= $ILLEGAL;
-	      evilprint("illegal: unterminated character constant $MATCH:\n    $body\n");
+	      $failure_type = "unterminated_char_constant";
+	      evilprint("illegal: unterminated character constant $MATCH:\n    $full_body\n");
               $body = ""; } }
       elsif ($match eq "#")
 	{ if (substr($POSTMATCH, 0, 1) eq "#")
 	    { $result |= $DANGER;
-	      evilprint("dangerous: ## pasting:\n    $body\n");
+	      $failure_type = "token_pasting";
+	      evilprint("dangerous: ## pasting:\n    $full_body\n");
 	      $body = substr($body, 1); }
 	  # This list from GNU C preprocessor manual
 	  # It's not complete, since #assert introduces new preprocessor commands.
 	  elsif ($POSTMATCH =~ m/(assert|cpu|define|elif|else|error|ident|if|ifdef|ifndef|import|include|include_next|line|machine|pragma|system|unassert|warning)\b/)
 	    { $result |= $DANGER;
-	      evilprint("dangerous: preprocessor directive #$MATCH:\n    $body\n"); }
+	      $failure_type = "preprocessor_directive";
+	      evilprint("dangerous: preprocessor directive #$MATCH:\n    $full_body\n"); }
 	  else
 	    { $result |= $DANGER;
-	      evilprint("dangerous: stringization:\n    $body\n"); } }
+	      $failure_type = "stringization";
+	      evilprint("dangerous: stringization:\n    $full_body\n"); } }
       elsif ($match eq "/*")
 	# This test probably fails for a/**//**/b.  Oh, well.
         { my $postmatch = $POSTMATCH;
@@ -4542,7 +4591,8 @@ sub check_macro_body
 		}
 	      else
 		{ $result |= $EVIL;
-		  evilprint("evil: unterminated comment:\n    $body\n");
+		  $failure_type = "unterminated_comment";
+		  evilprint("evil: unterminated comment:\n    $full_body\n");
 		  $body = "";
 		  $postmatch = ""; } }
 	  # print "Setting $body to $POSTMATCH; $PREMATCH; $MATCH.\n";
@@ -4552,22 +4602,28 @@ sub check_macro_body
 	  $body = $POSTMATCH;
 	  if ($precedingabuts && ($body =~ m/^\w/))
 	    { $result |= $OBSOLETE;
-	      evilprint("obsoleted: comment pasting:\n    $body\n"); } }
+	      $failure_type = "old_style_token_pasting";
+	      evilprint("obsoleted: comment pasting:\n    $full_body\n"); } }
       elsif ($match eq "//")
-        { # print "$current_file:@{[ current_line_no() ]}: evil: //-style comment:\n    $body\n";
+        { # print "$current_file:@{[ current_line_no() ]}: evil: //-style comment:\n    $full_body\n";
           $body = ""; }
       elsif ($match eq "*/")
 	# $body doesn't give me the whole thing; why?  ($body only contains
 	#   what follows the match at this point.)
         { $result |= $EVIL;
-	  evilprint("evil: comment terminator */ not in comment:\n    $body\n"); }
+	  $failure_type = "unexpected_end_comment";
+	  evilprint("evil: comment terminator */ not in comment:\n    $full_body\n"); }
       else
-        { mdie("$current_file:@{[ current_line_no() ]}: ???: match = $match before $body:\n    $body\n"); }
+        { mdie("$current_file:@{[ current_line_no() ]}: ???: match = $match before $body:\n    $full_body\n"); }
         }
   if ($#nesting != -1)
     { $result |= $EVIL;
-      evilprint("evil: no match for ", @nesting, ":\n    $body\n"); }
-  return $result;
+      $failure_type = "no_match";
+      evilprint("evil: no match for ", @nesting, ":\n    $full_body\n"); }
+  if ($failure_type eq "unknown") {
+    evilprint("unknown failed categorization:\n    $full_body\n");
+  }
+  return ($result,$failure_type);
 }
 
 
@@ -4580,7 +4636,7 @@ sub check_macro_body
 # something that doesn't necessarily die, like parse_error.  Do not use
 # regular die; this should have all the same functionality and more.
 
-# Gratuitous?
+# just return the current file and line number as a string
 sub input_file_and_line
 {
   check_args(0, @_);
@@ -4607,6 +4663,7 @@ sub parse_error
   my $message = "$file:$line on " . input_file_and_line() . ": @msg\n";
   if ($opt_p) { print STDERR $message; }
   print PARSE_ERRS $message;
+  #FIX: should this return undef?
 }
 
 
@@ -5599,16 +5656,6 @@ print STDERR "Categorizing " . ($cMacrosInTables - $cBuiltinMacros + 1) . " macr
       #   print " $mdef_body[$i]\n";
       categorize_macro_def($i);
     } }
-
-# print "categoryname: @categoryname\n";
-
-# 	  # Nothing to check if this is just making the macro defined w/o a body.
-# 	  if (defined($mdef) && ($flags = check_macro_body($mdef)) != 0) {
-# 	    $cEvil++ if $flags & $EVIL;
-# 	    $cIllegal++ if $flags & $ILLEGAL;
-# 	    $cObsoleted++ if $flags & $OBSOLETE;
-# 	    $cDanger++ if $flags & $DANGER;
-# 	  }
 
 #FIX: should I only print this stuff w/ -v?
 print STDERR "Computing various global statistics...\n";
