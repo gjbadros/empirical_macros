@@ -417,9 +417,9 @@ $line = "";			# current line
 # $margs = 0;
 # $mdef = 0;
 ## Boolean:
-$incomment = 0;			# in /* */ style comment
-$instring = 0;
-$commaop = 1;			# whether commas should be operators or not
+$incomment = $false;		# in /* */ style comment
+$instring = $false;
+$commaop = $true;		# whether commas should be operators or not
 				# (they shouldn't in arglists, initializers)
 # Shouldn't be in a character constant across lines.
 # $incharconst = 0;
@@ -437,6 +437,12 @@ $commaop = 1;			# whether commas should be operators or not
 # These are for aggregate information.  Keep it for all macros, or just
 # those multiply defined?  Or put it in the other arrays?  (No.)
 #  %mntype %
+
+# For getline():
+$getline_nocomment = $false;
+$getline_simplify = $false;
+@getline_ungotlines = ();
+
 
 
 ###########################################################################
@@ -506,6 +512,11 @@ $commaop = 1;			# whether commas should be operators or not
 ###########################################################################
 ### Main loop
 ###
+
+# I would like ot move this to the end of the file, so that we can
+# introduce constants and variables near where they are used, especially
+# those that are only used by one or two routines to save state or control
+# behavior.
 
 use Getopt::Std;
 use vars qw( $opt_i $opt_h $opt_v $opt_D $opt_S $opt_c $opt_e);
@@ -743,19 +754,31 @@ sub test_typedecl_regexp
 ### Parsing
 ###
 
+# Uses globals $getline_nocomment and $getline_simplify.
+#   If $getline_nocomment is set, then comments are stripped from result.
+#   If $getline_simplify is set, then character and string literals are
+#     replaced by 'a' and "", respe respectively.  That lets us do a simple
+#     syntactic check for parens, braces, commas, etc., obviating the need
+#     for has_token, which redoes all this work anyway.
+# If calls to ungetline have been made, those strings are returned, without
+#   any processing of comments or literals.  (Uses global @getline_ungotlines.)
+# This does not take an optional string argument: use updateinvars instead.
+
 # Read the next logical line from <INPUT>, until no continuation char
 #   and not in string or comment.
 # Result ends with newline.
 sub getline
-{ my $result;
-  if (not (($instring == 0) && ($incomment == 0)))
+{ if (not (($instring == 0) && ($incomment == 0)))
     { die "Bad instring $instring or incomment $incomment\n"; }
+  if (@getline_ungotlines > 0)
+    { print "popping getline_ungotlines\n";
+      return pop(@getline_ungotlines); }
+
+  my $result;
   if (not ($result = <INPUT>))
     { return $result; }
   $lines++;
-  updateinvars($result);
-
-
+  $result = updateinvars($result);
   # perhaps check for $mname and mention it in message if it's set
   while ($incomment || $instring || ($result =~ m/\\$/))
     {
@@ -767,7 +790,7 @@ sub getline
 	  $result = $`;		# remove backslash and possibly newline
 	  my $nextline;
 	  if ($nextline = <INPUT>)
-	    { &updateinvars($nextline);
+	    { $nextline = updateinvars($nextline);
 	      $result = appendlines($result, $nextline);
 	      # The appendlines trims trailing spaces, prettying the message.
 	      if ($nextline =~ m/^\s*$/)
@@ -783,7 +806,7 @@ sub getline
 	{ my $nextline;
 	  if ($nextline = <INPUT>)
 	    { $lines++;
-	      updateinvars($nextline);
+	      $nextline = updateinvars($nextline);
 	      $result = appendlines($result, $nextline); }
 	  else
 	    { print EVIL "$file:$.: dangerous: file ends in comment:\n    $result";
@@ -795,7 +818,7 @@ sub getline
 	{ my $nextline;
 	  if ($nextline = <INPUT>)
 	    { $lines++;
-	      updateinvars($nextline);
+	      $nextline = updateinvars($nextline);
 	      # Strict ANSI C does not permit newlines in string constants;
 	      # perhaps warn.
 	      # Not "$result = appendlines($result, $nextline);" because in string.
@@ -809,180 +832,181 @@ sub getline
   $result;
 }
 
+sub ungetline
+{
+  my ($ungotline) = @_;
+  push (@getline_ungotlines, $ungotline);
+}
+
+sub peekline
+{
+  my $result = getline();
+  ungetline($result);
+  return $result;
+}
+
+
+# updateinvars exists for the purposes of getline, but may be called by others,
+#	particularly to remove comments or simplify string/character literals.
+# Obeys global variables $getline_nocomment and $getline_simplify; see their
+#	documentation at getline.
+# Result differs from input only if one of them is set.
 # All backslash line continuations have already been processed.
 sub updateinvars
 {
-  my $remaining = $_[0];
+  my ($remaining) = @_;
+  my $result;
+  my $computeresult = ($getline_nocomment || $getline_simplify);
+  if ($computeresult)
+    { $result = ""; }
+  else
+    { $result = $remaining; }
+
+  # print "updateinvars ($computeresult) $remaining"; # $remaining ends w/newline
 
   while ($remaining)
     { if ($incomment)
 	{ if ($remaining =~ /\*\//)
-	    { $remaining = $';
+	    { if ($computeresult && !$getline_nocomment)
+		{ $result .= $` . $&; }
+	      $remaining = $';
 	      $incomment = 0; }
 	  else
-	    { return; } }
+	    { if ($computeresult && !$getline_nocomment)
+		{ $result .= $remaining; }
+	      return $result; } }
       elsif ($instring)
 	{ # print "in string, processing $remaining";
 	  if ($remaining =~ m/$nonescdquote/o)
 	    # Found a non-escaped double quote
-	    { $remaining = $';
+	    { if ($computeresult)
+		{ if ($getline_simplify)
+		    { $result = $result . "\""; }
+		  else
+		    { $result = $result . $` . $&; } }
+	      $remaining = $';
 	      $instring = 0; }
 	  else
 	    { # print "$file:$.: in string after line $_[0]";
-	      return; } }
-      # If not instring, I think \" suffices instead of the more complicated
+	      if ($computeresult && !$getline_simplify)
+		{ $result .= $` . $&; }
+	      return $result; } }
+      # If not instring, \" suffices instead of the more complicated
       # regexp that checks for leading backslashes.
       elsif ($remaining =~ m/\/[\*\/]|[\'\"]/) #'FIXCOLOR
-	{ if ($& eq "\'")
-	    { if ($' =~ m/^$charlitcontents\'/o)
-		{ $remaining = $'; }
+	{ my $match = $&;
+	  my $postmatch = $';
+	  if ($computeresult)
+	    { $result .= $`; }
+	  if ($match eq "\'")
+	    { if ($postmatch =~ m/^$charlitcontents\'/o)
+		{ if ($computeresult)
+		    { if ($getline_simplify)
+			{ $result .= "'a'"; }
+		      else
+			{ $result .= "'" . $&; } }
+		  $remaining = $'; }
 	      else
                 # No newline, since $_[0] has one.
-		{ print EVIL "$file:$.: bad character constant $&\n    in $_[0]";
-                  $remaining = $'; } }
-	  elsif ($& eq "\"")
-	    { $remaining = $';
+		{ print EVIL "$file:$.: bad character constant $match$postmatch\n    in $_[0]";
+		  if ($postmatch =~ /\'/)
+		    { if ($computeresult)
+			{ if ($getline_simplify)
+			    { $result .= "'a'"; }
+			  else
+			    { $result .= "'" . $&; } }
+		      $remaining = $'; }
+		  else
+		    { $remaining = $postmatch; } } }
+	  elsif ($match eq "\"")
+	    { $result .= $match;
+	      $remaining = $';
 	      $instring = 1; }
-	  elsif ($& eq "//")
-	    { return; }
-	  elsif ($& eq "/*")
-	    { $remaining = $';
+	  elsif ($match eq "//")
+	    { if ($computeresult && !$getline_nocomment)
+		{ $result .= $match . $postmatch; }
+	      return $result; }
+	  elsif ($match eq "/*")
+	    { if ($computeresult && !$getline_nocomment)
+		{ $result .= $match . $postmatch; }
+	      $remaining = $';
 	      $incomment = 1; }
 	  else
-	    { die "$file:$.: updateinvars: what match?  $& in $_[0]\n"; } }
+	    { die "$file:$.: updateinvars: what match?  $match in $_[0]\n"; } }
       else
-	{ return; }
+	{ if ($computeresult)
+	    { $result .= $remaining; }
+	  return $result; }
     }
 }
-
-# Should merge with updateinvars.  It's more inefficient, but then the code
-# appears just once.  (I just hate to do it for every line instead of just
-# macro definition bodies.)
 
 # All backslash line continuations have already been processed; no
 # nonterminated strings, comments, or character constants.
 # Result does NOT end in newline
 sub remove_comments
 {
-  my $remaining = $_[0];
-  my $result = "";
-
-  # Check for character constants to avoid processing " in one.
-
-  # If not instring, I think \" suffices instead of the more complicated
-  # regexp that checks for leading backslashes.
-  while ($remaining =~ m/\/[\*\/]|[\"]|\'\\?[\"\']\'/) #'FIXCOLOR
-    { $result = $result . $`;
-      if (($& eq "'\"'") || ($& eq "'\\\"'") || ($& eq "'\\''"))
-	{ $result .= $&; }
-      elsif ($& eq "\"")
-	{ $result .= $&;
-	  $remaining = $';
-	  if ($remaining =~ m/$nonescdquote/o)
-	    # Found a non-escaped double quote
-	    { $result .= $` . $&;
-	      $remaining = $'; }
-	  else
-	    { die "Didn't find string terminator."; } }
-      elsif ($& eq "//")
-	{ $remaining = ""; }
-      elsif ($& eq "/*")
-	{ $remaining = $';
-	  { if ($remaining =~ /\*\//)
-	      { $remaining = $'; }
-	    else
-	      { die "Didn't find comment terminator in '$remaining' after '$`$&'"; } } }
-      else
-	{ die "$file:$.: remove_comments: what match?  $& in $_[0]\n"; } }
-  # This removes trailing newline, as well as other leading and trailing space
-  return trim_whitespace($result . $remaining);
-}
-
-# Assumes no comments
-sub has_token
-{
-  my ($token, $line) = @_;
-  if (!defined($token)) { die "undefined token, line $line\n"; }
-  if (!defined($line)) { die "undefined line, token $token\n"; }
-
-  # Check for character constants to avoid processing " in one.
-
-  # If not instring, I think \" suffices instead of the more complicated
-  # regexp that checks for leading backslashes.
-  while (($line =~ m/[\"\']/) #'FIXCOLOR
-	 # should regexp-quote $token
-	 || ($line =~ m/\Q$token\E/))
-    { my $match = $&;
-      $line = $';
-      print "has_token($token) matched $match before $line\n";
-      if ($match eq $token)
-	{ return $true; }
-      elsif ($match eq "\"")
-	{ if ($line =~ /$nonescdquote/o)
-	    { $line = $'; }
-	  else
-	    { die "Didn't find end of string literal $line.\n"; } }
-      elsif ($match eq "'")
-	{ if ($line =~ /$charlitcontents\'/o)
-	    { $line = $'; }
-	  else
-	    { die "Didn't find end of character literal $line.\n"; } }
-      else
-	{ die "What match $match in $line\n"; } }
-  return $false;
+  my ($input) = @_;
+  local $getline_nocomment = $true;
+  local $getline_simplify = $false;
+  my $result = updateinvars($input);
+  if ($instring || $incomment)
+    { die "Bad string passed to remove_comments: instring $instring incomment $incomment"; }
+  return $result;
 }
 
 
-# Stopgap version
-sub simplify_line
-{ my ($line) = @_;
-  if ($line =~ /^\#/)
-    { return "\n"; }
-  else
-    { return remove_comments($line); }
-}
+# This isn't needed any longer, because a simplified string has no
+# comments, strings, or character literals to confuse a simplistic check.
+# (Don't remove it yet, though, just in case we need it later.)
+# # Assumes no comments
+# sub has_token
+# {
+#   my ($token, $line) = @_;
+#   if (!defined($token)) { die "undefined token, line $line\n"; }
+#   if (!defined($line)) { die "undefined line, token $token\n"; }
+# 
+#   # Check for character constants to avoid processing " in one.
+# 
+#   # If not instring, I think \" suffices instead of the more complicated
+#   # regexp that checks for leading backslashes.
+#   while (($line =~ m/[\"\']/) #'FIXCOLOR
+# 	 # should regexp-quote $token
+# 	 || ($line =~ m/\Q$token\E/))
+#     { my $match = $&;
+#       $line = $';
+#       print "has_token($token) matched $match before $line\n";
+#       if ($match eq $token)
+# 	{ return $true; }
+#       elsif ($match eq "\"")
+# 	{ if ($line =~ /$nonescdquote/o)
+# 	    { $line = $'; }
+# 	  else
+# 	    { die "Didn't find end of string literal $line.\n"; } }
+#       elsif ($match eq "'")
+# 	{ if ($line =~ /$charlitcontents\'/o)
+# 	    { $line = $'; }
+# 	  else
+# 	    { die "Didn't find end of character literal $line.\n"; } }
+#       else
+# 	{ die "What match $match in $line\n"; } }
+#   return $false;
+# }
+
+
+# Rather than use simplify_line, call $updateinvars with $getline_simplify
+# and $getline_nocomment set; see remove_comments, for example.
+# # Stopgap version
+# sub simplify_line
+# { my ($line) = @_;
+#   if ($line =~ /^\#/)
+#     { return "\n"; }
+#   else
+#     { return remove_comments($line); }
+# }
 
 
 
-## More repeated code that ought to be merged in elsewhere.
-## All backslash line continuations have already been processed; no
-## nonterminated strings, comments, or character constants.
-#sub simplify_line
-#{
-#  my $remaining = $_[0];
-#  my $result = "";
-#  
-#  # Check for character constants to avoid processing " in one.
-#
-#  # If not instring, I think \" suffices instead of the more complicated
-#  # regexp that checks for leading backslashes.
-#  while ($remaining =~ m/\/[\*\/]|[\"]|\'\\?[\"\']\'/) #'FIXCOLOR
-#    { $result = $result . $`;
-#      if (($& eq "'\"'") || ($& eq "'\\\"'") || ($& eq "'\\''"))
-#	{ $result .= $&; }
-#      elsif ($& eq "\"")
-#	{ $result .= $&;
-#	  $remaining = $';
-#	  if ($remaining =~ m/$nonescdquote/o)
-#	    # Found a non-escaped double quote
-#	    { $result .= $` . $&;
-#	      $remaining = $'; }
-#	  else
-#	    { die "Didn't find string terminator."; } }
-#      elsif ($& eq "//")
-#	{ $remaining = ""; }
-#      elsif ($& eq "/*")
-#	{ $remaining = $';
-#	  { if ($remaining =~ /\*\//)
-#	      { $remaining = $'; }
-#	    else
-#	      { die "Didn't find comment terminator."; } } }
-#      else
-#	{ die "$file:$.: remove_comments: what match?  $& in $_[0]\n"; } }
-#  return trim_whitespace($result . $remaining);
-#}
-
-
+# Watch out: this removes the trailing newline.
 sub trim_whitespace
 {
   my ($result) = @_;
@@ -1058,27 +1082,17 @@ sub parse_expression
 sub parse_exp_nocommaop
 {
   my ($exp, $ignoretypes) = @_;
-  #   if ((!defined($ignoretypes)) || !$ignoretypes)
-  #     { print "parse_exp_nocommaop $exp\n"; }
-  #   else
-  #     { print "parse_exp_nocommaop (ignore types) $exp\n"; }
-  my $oldcommaop = $commaop;
-  $commaop = $false;
-  my ($type, $remaining) = parse_exp($exp, $ignoretypes);
-  $commaop = $oldcommaop;
-  #  print "parse_exp_nocommaop returning ($type) $remaining\n";
-  return ($type, $remaining);
+  local $commaop = $false;
+  return parse_exp($exp, $ignoretypes);
 }
 
 sub parse_exp_commaop
 {
   my ($exp, $ignoretypes) = @_;
-  my $oldcommaop = $commaop;
-  $commaop = $true;
-  my ($type, $remaining) = parse_exp($exp, $ignoretypes);
-  $commaop = $oldcommaop;
-  return ($type, $remaining);
+  local $commaop = $true;
+  return parse_exp($exp, $ignoretypes);
 }
+
 
 # Takes a
 # Like parse_expression, but doesn't reset @parsexxxs.
@@ -1629,10 +1643,12 @@ sub bool_op_p
 
 sub get_macro_call_types
 {
+  local $getline_nocomment = $true;
+  local $getline_simplify = $true;
   # Perhaps should use %files instead of @ARGV
   foreach $file (@ARGV)
     { if ($opt_v)
-	{ print STDERR $file . "\n"; }
+	{ print STDERR "file $file\n"; }
       open(INPUT,$file) or next; # skip to next file if open fails
       # Commented out to quiet compiler
       # $files{$file} = 1;
@@ -1643,18 +1659,19 @@ sub get_macro_call_types
       # breaks across lines.
       if ($symtab_scopes != 0)
 	{ die "Bad brace depth $symtab_scopes.\n"; }
-      while ($fullline = getline())
+      my $line;
+      while ($line = getline())
 	{
-	  if ($opt_v)
-	    { print STDERR $. . "\n"; }
-# PROCESSLINE:
-	  if ((!($fullline =~ /^\s*$/)) && (!($fullline =~ m/^\#/)))
+	  print "line $.: $line\n";
+	  # Actually, need to cope with preprocessor...
+	  if ((!($line =~ /^\s*$/)) && (!($line =~ m/^\#/)))
 	    { # not empty or a preprocessor line
-	      chop($fullline);	# remove trailing newline
-	      if ((!($fullline =~ m/^(\s|\}|\/[\/\*])/)) && ($symtab_scopes != 0))
+	      chop($line);	# remove trailing newline
+	      # In a scope, must be indented or: close brace, comment, label
+	      if (($symtab_scopes != 0)
+		  && (!($line =~ m/^(\s|\}|\/[\/\*]|$identregexp\s*:)/o)))
 		# Perhaps permit labels to be non-indented.
-		{ die "Non-indented line $fullline at bracedepth $symtab_scopes.\n"; }
-	      my $line = simplify_line($fullline);
+		{ die "Non-indented line $line at bracedepth $symtab_scopes.\n"; }
 
 	      # Look for:  typedef,
 	      #   function definition/declaration (only at symtab_scopes == 0)
@@ -1664,10 +1681,10 @@ sub get_macro_call_types
 	      #   string/char literals (to avoid catching too much).
 	      # These can span multiple lines, especially function definitions.
 
-PROCESSSIMPLELINE:
+PROCESSLINE:
 	      if (!defined($line))
-		{ die "processsimpleline: line undefined.\n"; }
-	      print "processsimpleline $line\n";
+		{ die "PROCESSLINE: line undefined.\n"; }
+	      print "PROCESSLINE $line\n";
 	      if ($line =~ /^\s*$/)
 		{ # do nothing
 		  # print "empty line $.\n";
@@ -1676,11 +1693,17 @@ PROCESSSIMPLELINE:
 		{ # process typedefs
 		  print "typedef line $.\n";
 		}
-	      elsif (($line =~ /^\s*$typedeclarator\s*([,=;\(])/o)
-		     && ($1 ne "return") # "return foo;"
-		     && ($1 ne "else") # "else if (...)"
-		     # fail if the function is actually a macro
-		     && (!(($9 eq "(") && $macros{$6})))
+	      elsif (($line =~ /^$typespecifier\s*$/o)
+		     && (peekline() =~ /^$declarator\s*\(/o))
+		{ # Function definition split over multiple lines
+		  $line .= " " . getline();
+		  goto PROCESSLINE; }
+	      elsif ($foo)
+# 		(($line =~ /^\s*$typedeclarator\s*([,=;\(])/o)
+# 		     && ($1 ne "return") # "return foo;"
+# 		     && ($1 ne "else") # "else if (...)"
+# 		     # fail if the function is actually a macro
+# 		     && (!(($9 eq "(") && $macros{$6})))
 		{
 		  # print "matched typedeclarator <$1><$2><$3><$4><$5><$6><$7><$8><$9>\n";
 		  my $basetype = $1;
@@ -1699,27 +1722,19 @@ PROCESSSIMPLELINE:
 		  # print "found type '$basetype$pointerdecls$arraydecls' identifier '$identifier' nextchar '$nextchar' remaining '$remaining' on line $.\n";
 		  # If no semicolon, then the definition must span lines.
 		  if (($nextchar ne ";") && ($nextchar ne "("))
-		    # Only really need to check the new stuff, not the whole thing.
-		    { my $has_semi = has_token(";", $remaining);
-		      while (!$has_semi)
+		    # Only need to check the new stuff, not the whole thing.
+		    { while (!($remaining =~ /;/))
 			{ print "no semicolon, so appending a line to $remaining\n";
-			  my $nextline = simplify_line(getline());
-			  $has_semi = has_token(";", $nextline);
-			  $remaining = appendlines($remaining, $nextline); } }
+			  $remaining = appendlines($remaining, getline()); } }
 		  print "found semicolon (or nextchar is open paren) in $remaining\n";
 		  if ($nextchar eq "(")
 		    { # found (start of) function definition or prototype
 		      if ($symtab_scopes != 0)
 			{ die "Function definition or prototype $& at bracedepth $symtab_scopes.\n"; }
-		      # Only really need to check the new stuff, not the whole thing.
-		      # Maybe has_token is overkill, but there can be parens in
-		      # the types.
-		      { my $has_closeparen = has_token(")", $remaining);
-			while (!$has_closeparen)
-			  { print "no close paren, so appending a line to $remaining\n";
-			    my $nextline = simplify_line(getline());
-			    $has_closeparen = has_token(")", $nextline);
-			    $remaining = appendlines($remaining, $nextline); } }
+		      # Only need to check the new stuff, not the whole thing.
+		      while (!($remaining =~ /\)/))
+			{ print "no close paren, so appending a line to $remaining\n";
+			  $remaining = appendlines($remaining, getline()); }
 		      if (!($remaining =~ /\)/))
 			{ die "There must be a close paren.\n"; }
 		      print "found function $identifier; remaining $remaining\n";
@@ -1735,11 +1750,11 @@ PROCESSSIMPLELINE:
 			{ die "remaining not defined after parse_function_decl_args => @argnames | @argtypes\n"; }
 		      if (!$success)
 			{ $line = $remaining;
-			  goto PROCESSSIMPLELINE; }
+			  goto PROCESSLINE; }
 		      # $remaining is what follows the close paren
 		      while ($remaining =~ /^\s*$/)
 			{ print "no semi or brace, so appending a line to $remaining\n";
-			  my $nextline = simplify_line(getline());
+			  my $nextline = getline();
 			  $remaining = appendlines($remaining, $nextline); }
 		      # $remaining is nonempty; if first character is
 		      # semicolon, then this is a declaration, else a definition
@@ -1764,12 +1779,11 @@ PROCESSSIMPLELINE:
 				for $argtype (@argtypes)
 				  { if ($argtype != $typeUNSPECIFIED)
 				      { die "K&R-style definition, but a type is specified as " . type_name($argtype) . ".\n"; } } }
-			      { my $has_brace = has_token("{", $remaining);
-				while (!$has_brace)
-				  { print "no brace, so appending a line to $remaining\n";
-				    my $nextline = simplify_line(getline());
-				    $has_brace = has_token("{", $nextline);
-				    $remaining = appendlines($remaining, $nextline); } }
+			      # Only need to check the new stuff, not the whole thing.
+
+			      while (!($remaining =~ /\{/))
+				{ print "no brace, so appending a line to $remaining\n";
+				  $remaining = appendlines($remaining, getline()); }
 			      $remaining = parse_KandR_function_arg_decls($remaining);
 			      # Make sure that the argument list matches the declarators
 			      { my $index;
@@ -1812,7 +1826,7 @@ PROCESSSIMPLELINE:
 		      # Process the rest of the line (if def, this is anything
 		      # after the open brace).
 		      $line = $remaining;
-		      goto PROCESSSIMPLELINE;
+		      goto PROCESSLINE;
 		    }
 		  else
 		    {
@@ -1828,7 +1842,7 @@ PROCESSVARDEF:
 		      if ($nextchar eq ";")
 			{ symtab_add($identifier, $fulltype);
 			  $line = $remaining;
-			  goto PROCESSSIMPLELINE; }
+			  goto PROCESSLINE; }
 		      elsif ($nextchar eq ",")
 			{
 ATCOMMA:
@@ -1858,7 +1872,7 @@ ATCOMMA:
 			      else
 				{ die "No semicolon or brace after function declarator?  It can't be!\n"; }
 			      $line = $remaining;
-			      goto PROCESSSIMPLELINE; }
+			      goto PROCESSLINE; }
 			  else
 			    { die "Found '$basetype $identifier' ($nextchar) on line $. but no following var in $remaining\n"; } }
 		      elsif ($nextchar eq "=")
@@ -1871,7 +1885,7 @@ ATCOMMA:
 			      die "Failed to parse initializer $remaining\n"; }
 			  elsif ($postexp =~ /\s*;/)
 			    { $line = $';
-			      goto PROCESSSIMPLELINE; }
+			      goto PROCESSLINE; }
 			  elsif ($postexp =~ /\s*,/)
 			    { $remaining = $';
 			      goto ATCOMMA; }
@@ -1894,12 +1908,12 @@ ATCOMMA:
 		  $line = $';
 		  if ($match eq "{")
 		    { enter_scope();
-		      goto PROCESSSIMPLELINE; }
+		      goto PROCESSLINE; }
 		  elsif ($match eq "}")
 		    { exit_scope();
-		      goto PROCESSSIMPLELINE; }
+		      goto PROCESSLINE; }
 		  elsif ($match eq ";")
-		    { goto PROCESSSIMPLELINE; }
+		    { goto PROCESSLINE; }
 		  elsif ($match eq "(")
 		    { if ($` =~ /$identregexp\s*$/o)
 			{ # found something that looks like a function call
@@ -1996,8 +2010,7 @@ sub exit_scope
       if ($#identifiers == -1)
 	{ die "Trying to exit scope at line $., but didn't find scopemarker.\n"; } }
   pop(@types);
-  if ($#identifiers == -1)
-    { die "Trying to exit scope at line $., this can't happen."; }
+  # It's possible that ($#identifiers == -1), if global scope is empty.
   show_symtab("exited scope $symtab_scopes");
   $symtab_scopes--;
 }
