@@ -1080,7 +1080,8 @@ handle_directive (pfile)
       goto done_a_directive;
     }
 
-  gjb_printf("DIRECTIVE = %s\n",ident);
+  //  gjb_printf("DIRECTIVE = %s\n",ident);
+  gjb_call_hooks_sz(HANDLE_DIRECTIVE,ident);
 
 #if 0
   if (ident_length == 0 || !is_idstart[*ident]) {
@@ -1806,7 +1807,8 @@ do_define (pfile, keyword, buf, limit)
   if (pcp_outfile && keyword)
     pass_thru_directive (buf, limit, pfile, keyword);
 #endif
-  gjb_printf("do_define: %s\n",buf);
+  //  gjb_printf("do_define: %s\n",buf);
+  gjb_call_hooks_sz(DO_DEFINE,buf);
 
   mdef = create_definition (buf, limit, pfile, keyword == NULL);
   if (mdef.defn == 0)

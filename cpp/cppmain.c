@@ -148,23 +148,10 @@ print_token_kind(enum cpp_token kind) {
   gjb_printf(" /#%s#/",s);
 }
 
-
-static void
-call_PrintUID()
-{
-  dSP ;
-  
-  PUSHMARK(sp) ;
-  perl_call_pv("PrintUID", G_DISCARD|G_NOARGS) ;
-}
-
 static PerlInterpreter *my_perl;
 
 int
-main (argc, argv, env)
-     int argc;
-     char **argv;
-     char **env;
+main (int argc, char **argv, char **env)
 {
   char *p;
   int i;
@@ -172,11 +159,13 @@ main (argc, argv, env)
   struct cpp_options *opts = &options;
 
   /* Perl startup code */
-  char *startup_code[] = { "", "-e", "sub PrintUID { print \"UID is $<\n\"; }" };     
+  char *startup_code[] = { "", "-I", "/tmp/gjb/cpp", "-e", "use cpphook;" };
   my_perl = perl_alloc();
   perl_construct( my_perl );     
-  perl_parse(my_perl, NULL, 3, startup_code, NULL);
+  perl_parse(my_perl, NULL, 5, startup_code, NULL);
   perl_run(my_perl);
+
+  gjb_call_hooks_void(STARTUP);
 
   p = argv[0] + strlen (argv[0]);
   while (p != argv[0] && p[-1] != '/') --p;
@@ -221,14 +210,13 @@ main (argc, argv, env)
 
   cpp_finish (&parse_in);
 
-  /* FIXGJB */
-  call_PrintUID();
-
   /* Perl shutdown code */
   perl_destruct(my_perl);
   perl_free(my_perl);
 
   if (parse_in.errors)
+    {
     exit (FATAL_EXIT_CODE);
+    }
   exit (SUCCESS_EXIT_CODE);
 }
