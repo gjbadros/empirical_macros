@@ -1741,7 +1741,9 @@ sub get_fulltoken_line
 	# and also only if -a is set or this is a project file
 	# don't do it if -u is set (user want to ignore usage)
 	if (!$opt_u && ($opt_a || !file_was_included($current_file))) {
-	  analyze_for_macro_use($simple_result);
+	  if (!defined($simple_result))
+	    # fix: How could $simple_result not be defined??
+	    { analyze_for_macro_use($simple_result); }
 	}
       }
 
