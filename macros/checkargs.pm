@@ -115,7 +115,7 @@ sub check_args_at_least ($@)
   my $index;
   for $index (0..$#args)
     { if (!defined($args[$index]))
-	{ die "$file_arg:$line_arg: function $subname undefined argument ", $index+1, ": @args[0..$index-1]\n"; } }
+	{ warn "$file_arg:$line_arg: function $subname undefined argument ", $index+1, ": @args[0..$index-1]\n"; last; } }
   return @args;
 }
 
