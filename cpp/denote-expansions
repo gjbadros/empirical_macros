@@ -97,12 +97,17 @@ while (<IN>) {
 #  print OUT "$mname, $ichStart, $ichEnd\n";
   my $ichLast = tell INFILE;
   my $cchToRead = $ichStart - $ichLast -1;
+  die "Asked to go backwards!  Expansions file is not sorted by offset!" if $cchToRead < 0;
   my $source_data;
   # read through to the end of the next expansion
   read INFILE, $source_data, $cchToRead;
   print OUT $source_data;
   my $macro_expansion;
-  read INFILE, $macro_expansion, ($ichEnd - $ichStart + 1);
+  if ($ichEnd - $ichStart + 1 <= 0) {
+    print STDERR "Negative expansion length in $filename, macro $mname, $ichStart, $ichEnd\n";
+  } else {
+    read INFILE, $macro_expansion, ($ichEnd - $ichStart + 1);
+  }
   print OUT $expansion_prefix, $macro_expansion;
 }
 
