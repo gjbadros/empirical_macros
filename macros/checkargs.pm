@@ -71,7 +71,7 @@ sub check_args_range
 {
   my ($min_formals, $max_formals, $function_name, $package, $filename, $line, @args) = @_;
   if (@_ < 6) { die "check_args_range needs at least 6 args, got: @_\n"; }
-  if (!wantarray)
+  if ((!wantarray) && ($max_formals != 0) && ($min_formals !=0) )
     { ($package, $filename, $line) = caller;
       die "check_args_range called in scalar context at $filename line $line: @args\n"; }
   my $num_actuals = @args;
@@ -92,9 +92,10 @@ sub check_args_at_least
   # if ($min_formals == 0)
   #   { die "Isn't it pointless to check for at least zero args to $function_name?\n"; }
   if (@_ < 6) { die "check_args_at_least needs at least 6 args, got: @_\n"; }
-  if (!wantarray)
+  if ((!wantarray) && ($min_formals != 0))
     { ($package, $filename, $line) = caller;
-      die "check_args_at_least called in scalar context at $filename line $line: @args\n"; }
+      die "check_args_at_least called in scalar context at $filename line $line: @args\n";
+    }
   my $num_actuals = @args;
   if ($num_actuals < $min_formals)
     { die "function $function_name expected at least $min_formals argument",
