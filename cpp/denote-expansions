@@ -107,8 +107,8 @@ while (<IN>) {
     print STDERR "Negative expansion length in $filename, macro $mname, $ichStart, $ichEnd\n";
   } else {
     read INFILE, $macro_expansion, ($ichEnd - $ichStart + 1);
+    print OUT $expansion_prefix, $macro_expansion;
   }
-  print OUT $expansion_prefix, $macro_expansion;
 }
 
 flush_to_end_of_file();
