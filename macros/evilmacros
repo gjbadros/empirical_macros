@@ -214,21 +214,21 @@ $typeSTRING = 14;
 $typeUNKNOWN = 15;		# we know it's some type, but don't know which
 $typeUNSPECIFIED = 16;		# declared w/o a type (e.g., as function arg)
 
-%type_num = ('short', $typeSHORT, 'short int', $typeSHORT,
-	     'signed short', $typeSHORT, 'signed short int', $typeSHORT,
-	     'unsigned short', $typeUSHORT, 'unsigned short int', $typeUSHORT,
-	     'int', $typeINT, 'signed int', $typeINT, 'signed', $typeINT,
-	     'unsigned int', $typeUINT, 'unsigned', $typeUINT,
-	     'long', $typeLONG, 'long int', $typeLONG,
-	     'signed long', $typeLONG, 'signed long int', $typeLONG,
-	     'unsigned long', $typeULONG, 'unsigned long int', $typeULONG,
-	     'char', $typeCHAR,
-	     'unsigned char', $typeUCHAR,
-	     'signed char', $typeSCHAR,
-	     'float', $typeFLOAT,
-	     'double', $typeDOUBLE,
-	     'long double', $typeLDOUBLE,
-	     'char *', $typeSTRING, 'char*', $typeSTRING);
+%type_num = ('short' => $typeSHORT, 'short int' => $typeSHORT,
+	     'signed short' => $typeSHORT, 'signed short int' => $typeSHORT,
+	     'unsigned short' => $typeUSHORT, 'unsigned short int' => $typeUSHORT,
+	     'int' => $typeINT, 'signed int' => $typeINT, 'signed' => $typeINT,
+	     'unsigned int' => $typeUINT, 'unsigned' => $typeUINT,
+	     'long' => $typeLONG, 'long int' => $typeLONG,
+	     'signed long' => $typeLONG, 'signed long int' => $typeLONG,
+	     'unsigned long' => $typeULONG, 'unsigned long int' => $typeULONG,
+	     'char' => $typeCHAR,
+	     'unsigned char' => $typeUCHAR,
+	     'signed char' => $typeSCHAR,
+	     'float' => $typeFLOAT,
+	     'double' => $typeDOUBLE,
+	     'long double' => $typeLDOUBLE,
+	     'char *' => $typeSTRING, 'char*' => $typeSTRING);
 
 @type_name_array = ('typeFAIL', 'bool',
 		    'char', 'unsigned char', 'signed char',
@@ -520,9 +520,18 @@ $getline_simplify = $false;
 
 use Getopt::Std;
 use vars qw( $opt_i $opt_h $opt_v $opt_D $opt_S $opt_c $opt_e);
+use vars qw( $fShowCategorization $fDebugCmdProcessing %cppcmdcount $index $file
+	   @dependenton $line $identregexp $cpp_cmd $cpp_cmds %macros @mname @margs @mbody
+	   @mdependenton @mfile $lines $h $mline $cObsoleted $cDanger $cEvil $cIllegal 
+	   @categoryname $typespecifier $typedeclarator $symtab_scopes $instring);
 $fDebugCmdProcessing = 0;
 $fDebugCommentRemoval = 0;
 
+# Use strict requires that all globals are either fully qualified with
+# the package name (e.g. $main::$true) or are declared in a use vars qw( ... ) decl'n
+# Turning "use strict" on would involve adding all globals to above, 
+#    or making them lexical vars.  Changing the scoping of a variable can
+#    lead to hard to find bugs, so gjb is not doing this now.
 # use strict;
 # use English;
 
@@ -664,6 +673,7 @@ sub output_stats
     print STDERR "No lines read! Perhaps you meant to use the -i option?\n";
   } else {
     if ($opt_S) {
+      my ($h, $v);
       # Dump statistics on frequencies of directives
       printf STATS "DIRECTIVES#: ";
       while ( ($h,$v) = each(%cppcmdcount) ) {
@@ -689,6 +699,7 @@ sub output_stats
 
       # Show categorization
       print STATS "CATEGORIZATION:";
+      my $catname;
       foreach $catname (@categoryname)
 	{ print STATS "\t$catname"; }
       print STATS "\n";
@@ -707,6 +718,7 @@ sub output_stats
 
     # -D = dump the defines
     if ($opt_D) {
+      my $name;
       foreach $name (keys %macros) {
 	# Could also print number of times it's defined.
 	print DEFINES "$name\n";
@@ -1791,8 +1803,8 @@ PROCESSLINE:
 				  { # print "argname: ", @argname, "\nargtype: ", @argtype, "\n";
 				    my $thistype = $argnametype{$argnames[$index]};
 				    if (!defined($thistype))
-				      { die "No K&R-style declarator for $argname[$index]\n"; }
-				    $argtype[$index] = $thistype;
+				      { die "No K&R-style declarator for $argnames[$index]\n"; }
+				    $argtypes[$index] = $thistype;
 				    delete $argnametype{$argnames[$index]};
 				  }
 				# argnametype should be empty now
