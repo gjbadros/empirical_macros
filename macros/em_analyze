@@ -1673,7 +1673,7 @@ sub UniquifyAndSortList ( @ ) {
 sub CategoriesForMacroName ( $ ) {
   my ($name) = check_args(1,@_);
   my @list = ();
-  for (my $iDef = 0; $iDef <= $#{$macros{$name}}; $iDef++ ) {
+  for (my $iDef = 0; $iDef <= $#{$macros{$name}}; $iDef++) {
     my $index = $macros{$name}[$iDef];
     mdie() if !defined($macros{$name});
     mdie() if !defined($macros{$name}[$iDef]);
@@ -1689,7 +1689,7 @@ sub CategoriesForMacroName ( $ ) {
 sub InclusionMethodsForMacroName ( $ ) {
   my ($name) = check_args(1,@_);
   my @list = ();
-  for (my $iDef = 0 ; $iDef <= $#{$macros{$name}}; $iDef++ ) {
+  for (my $iDef = 0 ; $iDef <= $#{$macros{$name}}; $iDef++) {
     my $index = $macros{$name}[$iDef];
     mdie() if !defined($macros{$name});
     mdie() if !defined($macros{$name}[$iDef]);
@@ -2422,7 +2422,7 @@ sub discard_to_endif_or_else ( )
     # Don't use get_spliced_cline(); the getline lookahead cache might not be empty.
     { my ($raw_line, $simple_line, $phys, $ncnb, $warnings)
 	= get_spliced_cline_maybe_ungot(\*INPUT, $true);
-      print "line has length $phys: $raw_line";
+      # print "line has length $phys: $raw_line";
       $total_phys += $phys;
       for my $warning (@{$warnings})
 	{ evilprint($warning); }
@@ -3787,7 +3787,7 @@ PROCESSLINE:
 		    { $line = $POSTMATCH;
 		      # print "found '$MATCH'; set line to $line = $POSTMATCH\n";
 		      if ($MATCH eq ";")
-			{ if ($PREMATCH =~ /$identifier_re$/)
+			{ if ($PREMATCH =~ /$identifier_re\s*$/)
 			    { # print "found typedef name $MATCH\n";
 			      $typedefs{$MATCH} = input_file_and_line();
 			    }
@@ -4977,6 +4977,13 @@ sub symtab_lookup ( $ )
 # Need a routine that assigns a type to a literal.
 # (Useful for turning macros into const variables.)
 
+# So that when we need this name's category, we will recompute.
+sub uncategorize_macro_name ( $ )
+{ my ($mname) = check_args(1, @_);
+  delete $mntype{$mname};
+  delete $mncategory{$mname};
+}
+
 # Takes macro name as argument; categorizes each of the macro's definitions
 sub categorize_macro_name ( $ )
 { my ($name) = check_args(1, @_);
@@ -5067,6 +5074,30 @@ sub categorize_macro_name ( $ )
   $mntype{$name} = $type;
 }
 
+
+# So the next time we call categorize_macro_def, work will be redone.
+# Takes index into macro arrays as argument
+sub uncategorize_macro_def ( $ )
+{ my ($index) = check_args(1, @_);
+  undef $mdef_category[$index];
+  undef $mdef_type[$index];
+}
+
+# Takes index into macro arrays as argument
+sub categorize_macro_def_nicely ( $ )
+{ my ($i) = check_args(1, @_);
+  # A comment in the macro categorization loop said:
+  #   current_file_name and current_line_no need to be set
+  #   while we are categorizing.  Also must always
+  #   set $current_ftype_index when we change the $current_file_name
+  #   (use compute_ftype_index() )
+  # but it doesn't seem to *always* be set...
+  $current_file_number = $mdef_fileno[$i];
+  $current_file_name = $files[$current_file_number];
+  $current_ftype_index = compute_ftype_index($current_file_number);
+  $current_macro_line_number = $mdef_line[$i];
+  categorize_macro_def($i);	# also gets properties (currently, it discards)
+}
 
 # Takes index into macro arrays as argument
 sub categorize_macro_def ( $ )
@@ -5344,6 +5375,9 @@ sub get_macro_properties ( $ )
 
   ## Free variables in the macro body: new implementation.
   { my %vars = ();
+    # Macros whose bodies are a symbol are often just renaming, and we
+    # might not have the library or header files with the definition of the
+    # alternate name.
     if ($body !~ /^$identifier_re$/o) # if body is a symbol, never report free vars
       { foreach my $var (identifiers_in($body))
 	  { $vars{$var} = $true; }
@@ -5356,12 +5390,17 @@ sub get_macro_properties ( $ )
 		|| exists($typedefs{$var})
 		|| exists($global_symbols{$var})
 		|| ($var =~ /^$reserved_word_re$/)
-		|| ($body =~ /(\.|->|\bstruct|\bunion)\s*$var\b/)
-		|| ($body =~ /\b\Q$var\E\s*(\*\s*)+\)/)
-		|| ($body =~ /\b\Q$var\E\s*\(/))
+		# Do I need the quoting, or is $var guaranteed to contain no
+		# regexp metacharacters?
+		|| ($body =~ /(\.|->|\bstruct|\bunion)\s*$var\b/) # looks like a field name
+		|| ($body =~ /\b\Q$var\E\s*(\*\s*)+\)/) # looks like a type
+		|| ($body =~ /\b\Q$var\E\s*\(/) # looks like a function
+		|| ($body =~ /\bgoto\s+\Q$var\E\b/) # looks like a label; not worth it to look for labels
+		)
 	      { delete $vars{$var}; } }
 	if (scalar(keys %vars) > 0)
-	  { my $body_remaining = $body;
+	  { # print STDERR "No global symbols ", join(" ", keys %vars), "\n";
+	    my $body_remaining = $body;
 	    while ($body_remaining =~ /\{/)
 	      { my ($post_decls, $warnings, %name_types) = parse_declarations($POSTMATCH);
 		$body_remaining = $post_decls;
@@ -7156,10 +7195,11 @@ $fDebugCmdProcessing && print "ARGV = @ARGV";
 if (-f "symbols.gjbmde")
 { open(SYMBOLS,"symbols.gjbmde") || die "Can't read symbols.gjbmde: $!";
   my $symbol;
-  while (defined($symbol = <CMDLINEDEFS>))
+  while (defined($symbol = <SYMBOLS>))
     { chomp($symbol);
       $global_symbols{$symbol} = $true; }
   close(SYMBOLS); }
+# print STDERR "global symbols: ", join(' ', keys(%global_symbols)), "\n";
 
 # Add the rest of the arguments to the files list
 foreach my $file (@ARGV) {
@@ -7285,51 +7325,133 @@ if ($opt_v) { print STDERR "Undef-ed \%macros_file_line_uses\n"; }
 
 ### All the files have been read; now process the macros
 print STDERR "Categorizing $cMacrosInTables macros\n";
-{ local $categorizing_macros = $true;
-  for (my $i = 0;
-       $i < $cMacrosInTables;
-       $i++ )
+
+# Potential problem:  we may have eagerly categorized some macro names and
+# definitions.  (For instance, parse_array_initializer calls
+# parse_exp_nocommaop, which calls parse_exp, which calls
+# categorize_macro_defs, which determines the free variables; but all this
+# can happen before all files have been parsed and all typedefs have been
+# found.)  So we should really re-do everything from scratch.  I claim
+# that's OK, because the previous categorizations were only for the purpose
+# of assisting the parse anyway.
+
+
+## New implementation
+# All this redoing of work is probably huge overkill.  So long as it works...
+{
+  # Uncategorize all macro definitions and names
+  for (my $i = 0; $i < $cMacrosInTables; $i++)
+    { uncategorize_macro_def($i); }
+  for my $mname (keys %macros)
+    { uncategorize_macro_name($mname); }
+
+  local $categorizing_macros = $true;
+
+  # Categorize every macro defintion, even those that were previously
+  # categorized, because we might not have had full information yet the
+  # last time.
+  for (my $i = 0; $i < $cMacrosInTables; $i++)
     { # print "$i: $mdef_body[$i]\n";
       #   print &parse_expression($mdef_body[$i]) . ": ";
       #   foreach my $var (keys(%parsevars)) { print $var . " "; }
       #   print "\n  $mdef_name[$i]";
       #   if (defined($mdef_formals[$i])) { print $mdef_formals[$i]; }
       #   print " $mdef_body[$i]\n";
-      # current_file_name and current_line_no need to be set
-      # while we are categorizing.  Also must always
-      # set $current_ftype_index when we change the $current_file_name
-      # (use compute_ftype_index() )
-      $current_file_number = $mdef_fileno[$i];
-      $current_file_name = $files[$current_file_number];
-      $current_ftype_index = compute_ftype_index($current_file_number);
-      $current_macro_line_number = $mdef_line[$i];
-      categorize_macro_def($i);	# also gets properties (currently, discards)
+      categorize_macro_def_nicely($i);
     }
 
+  ## This block is repeated below.
+  # If anything was originally categorized as in_process, try again:
+  #  erase the macro name's category, and try again from the parts.
+  for my $mname (keys %macros)
+    # Not sure why I'm using mntype instead of mncategory; I do so elsewhere.
+    { if (defined($mntype{$mname}) && ($mncategory{$mname} == $catIN_PROCESS))
+	{ uncategorize_macro_name($mname); } }
+  for my $mname (keys %macros)
+    { categorize_macro_name($mname); }
+
+  # Recategorize everything; could get better info from the fact that some
+  # macro names are now better categorized than they might have been the
+  # first time we categorized macro definitions.
+  # This time we uncategorize just one macro at a time to prevent excessive
+  # cascading.
+  for (my $i = 0; $i < $cMacrosInTables; $i++)
+    { uncategorize_macro_def($i);
+      categorize_macro_def_nicely($i); }
+  for my $mname (keys %macros)
+    { uncategorize_macro_name($mname);
+      categorize_macro_name($mname); }
+
+  ## Repeat of the above block.
   # If anything was originally categorized as in_process, try again:
   #  erase the macro name's category, and try again for the parts.
   for my $mname (keys %macros)
     # Not sure why I'm using mntype instead of mncategory; I do so elsewhere.
     { if (defined($mntype{$mname}) && ($mncategory{$mname} == $catIN_PROCESS))
-	{ delete $mntype{$mname};
-	  delete $mncategory{$mname}; } }
-  # Maybe should undef all these before trying again.
-  # Or maybe should try in the reverse order.
+	{ uncategorize_macro_name($mname); } }
+  for my $mname (keys %macros)
+    { categorize_macro_name($mname); }
+
+
+  # If a name or def is STILL in_process, give it one more try (probably fruitless)
   for (my $i = 0; $i < $cMacrosInTables; $i++)
     { if ($mdef_category[$i] == $catIN_PROCESS)
-	{ undef $mdef_category[$i];
-	  undef $mdef_type[$i];
-	  categorize_macro_def($i); } }
-  # If a name is STILL in_process, give it one more try (probably fruitless)
+	{ uncategorize_macro_def($i); } }
   for my $mname (keys %macros)
     # Not sure why I'm using mntype instead of mncategory; I do so elsewhere.
     { if (defined($mntype{$mname}) && ($mncategory{$mname} == $catIN_PROCESS))
-	{ delete $mntype{$mname};
-	  delete $mncategory{$mname}; } }
-
+	{ uncategorize_macro_name($mname); } }
+  # This will catch only what we undefined immediately above.
+  for (my $i = 0; $i < $cMacrosInTables; $i++)
+    { categorize_macro_def_nicely($i); }
   for my $mname (keys %macros)
     { categorize_macro_name($mname); }
 }
+
+## Old implementation
+# { local $categorizing_macros = $true;
+#   for (my $i = 0;
+#        $i < $cMacrosInTables;
+#        $i++ )
+#     { # print "$i: $mdef_body[$i]\n";
+#       #   print &parse_expression($mdef_body[$i]) . ": ";
+#       #   foreach my $var (keys(%parsevars)) { print $var . " "; }
+#       #   print "\n  $mdef_name[$i]";
+#       #   if (defined($mdef_formals[$i])) { print $mdef_formals[$i]; }
+#       #   print " $mdef_body[$i]\n";
+#       # current_file_name and current_line_no need to be set
+#       # while we are categorizing.  Also must always
+#       # set $current_ftype_index when we change the $current_file_name
+#       # (use compute_ftype_index() )
+#       $current_file_number = $mdef_fileno[$i];
+#       $current_file_name = $files[$current_file_number];
+#       $current_ftype_index = compute_ftype_index($current_file_number);
+#       $current_macro_line_number = $mdef_line[$i];
+#       categorize_macro_def($i);	# also gets properties (currently, it discards)
+#     }
+# 
+#   # If anything was originally categorized as in_process, try again:
+#   #  erase the macro name's category, and try again for the parts.
+#   for my $mname (keys %macros)
+#     # Not sure why I'm using mntype instead of mncategory; I do so elsewhere.
+#     { if (defined($mntype{$mname}) && ($mncategory{$mname} == $catIN_PROCESS))
+# 	{ uncategorize_macro_name($mname); } }
+# 
+#   # Maybe should undef all these before trying again.
+#   # Or maybe should try in the reverse order.
+#   for (my $i = 0; $i < $cMacrosInTables; $i++)
+#     { if ($mdef_category[$i] == $catIN_PROCESS)
+# 	{ uncategorize_macro_def($i);
+# 	  categorize_macro_def($i); } }
+#   # If a name is STILL in_process, give it one more try (probably fruitless)
+#   for my $mname (keys %macros)
+#     # Not sure why I'm using mntype instead of mncategory; I do so elsewhere.
+#     { if (defined($mntype{$mname}) && ($mncategory{$mname} == $catIN_PROCESS))
+# 	{ uncategorize_macro_name($mname); } }
+# 
+#   for my $mname (keys %macros)
+#     { categorize_macro_name($mname); }
+# }
 
 # print STDERR "Files:",join("\n  ",@files),"\n";
 # print STDERR "Included files:", join("\n    ",@files_included), "\n";
