@@ -1,0 +1,58 @@
+if (STREQ (&(argv[arg_index][1]), 
+	      long_args[i].name))
+...
+else {
+#if defined (HISTORY)
+#  if defined (BANG_HISTORY)
+    history_expansion = 0;
+#  endif
+    remember_on_history = 0;
+#endif /* HISTORY */
+    interactive_shell = 
+        startup_state = 
+          interactive = 0;
+    no_line_editing = 1;
+#if defined (JOB_CONTROL)
+    job_control = 0;
+#endif /* JOB_CONTROL */
+}
+...
+shell_name = 
+  savestring (args->word->word);
+dollar_vars[0] = 
+  savestring (args->word->word);
+
+
+
+
+
+if ((( &(argv[arg_index][1]) )[0] == 
+  (long_args[i].name )[0] && 
+   strcmp( &(argv[arg_index][1]),
+   long_args[i].name ) == 0) )
+...
+else {
+
+
+      history_expansion = 0;
+
+      remember_on_history = 0;
+
+      interactive_shell = 
+          startup_state = 
+            interactive = 0;
+      no_line_editing = 1;
+
+      job_control = 0;
+
+}
+...
+
+shell_name = 
+     (char *)strcpy (xmalloc 
+     (1 + strlen ( args->word->word )),
+     ( args->word->word )) ;	 
+dollar_vars[0] = 
+     (char *)strcpy (xmalloc 
+     (1 + strlen ( args->word->word )),
+     ( args->word->word )) ;
