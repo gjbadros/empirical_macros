@@ -26,7 +26,9 @@
        
 *************************************************************************/
 
-#include <stdio.h>
+#include "bar.h"
+
+#include <bytesex.h>
 
 typedef enum {PLUS, MINUS} sign;
 
