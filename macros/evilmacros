@@ -1690,6 +1690,9 @@ sub get_fulltoken_line
       # don't check $simple_result, which might be simplified to "" (= false)
       if (not ($raw_result))
 	{ return $raw_result; }
+      # This screws something up really badly.
+      # if (not ($simple_result))
+      #  { return $simple_result; }
 
       # perhaps check for $mdef_name and mention it in message if it's set
       while ($incomment || $instring)
@@ -4225,7 +4228,10 @@ sub categorize_macro_name
 	      { $type = $mdef_type[$i];
 		$category = $mdef_category[$i]; }
 	    else
-	      { $type = type_lub($type, $mdef_type[$i]);
+	      { if (!defined($mdef_type[$i]))
+		  { parse_error("Undefined mdef_type[$i]: $mdef_name[$i] $mdef_args[$i] $mdef_body[$i] $mdef_body_noc[$i]"); }
+		else
+		  { $type = type_lub($type, $mdef_type[$i]); }
 		$category = category_lub($category, $mdef_category[$i]); } } } }
   $mntype{$name} = $type;
   $mncategory{$name} = $category;

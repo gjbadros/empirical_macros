@@ -64,12 +64,12 @@ Seattle, WA  98195-2350\\
 
 The C programming language~\cite{ansi} is intimately connected to its macro
 preprocessor, Cpp~\cite[Ch.3]{Harbison91}.  Preprocessor facilities such as
-files inclusion, defining constants and macros, conditional compilation,
-etc.\ are present in essentially every C program.  
+file inclusion, defining constants and macros, and conditional compilation
+are present in essentially every C program.   
 While the preprocessor can be used in a simple or well-structured way to
 improve portability, performance, or readability, it also lends itself to 
 arbitrary source code manipulations that complicate understanding of the
-program by both programmers and tools.
+program by both software engineers and tools.
 This relationship
 between the C language and the preprocessor has a number of consequences,
 many of which were probably not anticipated by the original designers.
@@ -91,7 +91,7 @@ accurate information about function extents, scope nesting, declared
 variables and functions, and so forth requires addressing the preprocessor.
 
 Operating on preprocessed code, the most common strategy, is simple to
-implement, but then the tool's input is different from what the
+implement, but then the tool's input differs from what the
 programmer sees.  Even when line number mappings are maintained, other
 information is lost in the mapping back to the original source code.
 For instance, source-level debuggers have no symbolic names or types
@@ -106,7 +106,7 @@ yet another related example, call graph extractors generally work in
 terms of the post-processed code, even when a human programmer---as
 opposed to an optimizing compiler, for example---is the intended
 consumer of the call graph~\cite{Murphy-icse18}.  Some tools even
-leave the programmer responsible for inferring the mapping between the
+leave the software engineer responsible for inferring the mapping between the
 original and the post-processed source, which is an undesirable and
 error-prone situation.
 
@@ -129,7 +129,8 @@ expressions or statements.  Conditional compilation and alternative macro
 definitions lead to very different results from a single original program
 text.  Tradeoffs must be made between performing preprocessing and
 maintaining the code in as close to its original form as possible.
-Preprocessing also adds complexity to an implementation, but in many
+Preprocessing also adds complexity to an implementation.  Despite these
+problems, in many
 situations only performing some sort of preprocessing can produce correct
 answers.
 
@@ -143,7 +144,7 @@ preprocessor directives.  This is exactly what Stroustrup suggests:
   other extra-linguistic tools where it
   belongs~\cite[p.~426]{Stroustrup-DesignEvolution}.
 \end{quote}
-C++ contains a number of features---such as \verb|const|, \verb|inline|,
+C++ contains features---such as constant variables, inline functions,
 templates, and reference arguments---that obviate many uses of Cpp.  Thus,
 translation to C++
 is another path for partial elimination of Cpp.  
@@ -153,7 +154,7 @@ is another path for partial elimination of Cpp.
 %they, too, apply their techniques to post-processed
 %code~\cite{OCallahan-icse97}.
 
-As a step toward preprocessor elimination, we empirically analyzed
+As a step toward such preprocessor elimination, we empirically analyzed
 preprocessor usage in 23 C packages comprising nearly one million lines of
 code.  Section~\ref{sec:gathering} lists the packages and their sizes.  The
 analysis is intended to build a better understanding of how the
@@ -172,19 +173,19 @@ This paper reports on several specific analyses we performed.
 
 \item We computed the percentage of original C source code lines that
 were preprocessor directives, including a breakdown of the frequency
-of specific directives (such as \verb+#define+) (see
+of specific directives such as \verb+#define+ (see
 Section~\ref{sec:directives}). It was not unusual to find C programs 
 in which over 10\% of the total lines were preprocessor directives, and 
 three of the 23 packages had over 20\% directives.
 
-\item We computed which macros were defined, how often they were
-defined, how often they were undefined, and the number of times they
+\item We computed how often each macro was
+defined,  undefined, and
 were expanded both from other preprocessor directives and also from
 true C source code (see Section~\ref{sec:usage}).
 [FIX: pithy observation goes here]
 
-\item We categorized definitions of macros according to what they
-      expanded to; for example, we determined which macros simply
+\item We categorized macro definitions according to their expansions; 
+      for example, we determined which macros simply
       defined a preprocessor symbol, which defined constants, etc.~(see
       Section~\ref{sec:categorization}).  We
       were particularly interested in determining which macros are
@@ -205,9 +206,9 @@ percentage of Cpp code into C++ language
 features.\footnote{Preliminary results using our tool on C++ code
 demonstrates that many C++ packages still rely on Cpp, even when C++
 provides mechanisms within the language to support a nearly identical
-construct.  This probably holds due to a combination of trivial
+construct, probably due to a combination of trivial
 translations from C to C++ and of C programmers becoming C++
-programmers and continuing on with particular habits.}  We are
+programmers without changing their habits.}  We are
 interested not in translations that merely allow a C program to be
 compiled by a C++ compiler (which is usually easy, by intentional
 design of C++) but those that take advantage of the added richness of C++
@@ -234,31 +235,32 @@ discuss automatic conversion, but  focus on instructing the
 software engineer on better ways to do Cpp-like things.
 
 Similarly, a number of organizations provide hints about effective
-ways to the use the C preprocessor.  The GNU documentation, for example ,
+ways to the use the C preprocessor.  The GNU documentation, for example,
 discusses a set of techniques including simple macros, argument
 macros, predefined macros, stringification macros, concatentation
 macros, undefining and redefining
 macros.
 It also identifies a set of ``pitfalls and subtleties of
 macros''; these are much like some of the problems our analysis tool
-identifies, as discussed below.  Our effort does not only categorize
+identifies, as discussed below.  Our effort not only categorizes
 problems, but it also determines the frequency of appearance of those
-problems. 
+problems and discovers other idiosyncratic uses.
 
-There are a number of tools to check whether specific C programs
+A number of tools check whether specific C programs
 satisfy particular constraints.  The lint program checker, distributed
 with most Unix systems, checks for uses of C that are likely to be
 problematic.  The implementation of lint is complicated by the fact
 that it tries to replicate significant functions of both the C
-compiler and also the preprocessor.  LCLint, a recently developed tool
+compiler and also the preprocessor.
+
+LCLint, a recently developed tool
 at MIT, handles many of the checks that lint does; furthermore, LCLint
 allows the programmer to add annotations that then permit additional
-checks to be performed~\cite{Evans-fse94}\cite{Evans-pldi96}.
+checks to be performed~\cite{Evans-fse94,Evans-pldi96}.
 Examples of checks that LCLint can optionally perform on function-like
 macros---that is, those which take arguments---include checking for
-macros on the left hand side of assignments, checking for statements
+macro arguments on the left hand side of assignments, checking for statements
 playing the role of expressions, checking for consistent return types, etc.
-
 %\begin{quote}
 %$\ldots$ a parameter to a macro may not be used as the left hand side
 %of an assignment expression $\ldots$, a macro definition must be
@@ -281,7 +283,7 @@ automatically removing such uses so that tools can better process existing
 code without requiring human interaction or producing misleading results.
 
 
-\section{The Data}\label{sec:gathering}
+\section{The Programs}\label{sec:gathering}
 
 Figure~\ref{fig:packages} shows the packages we analyzed, along with their
 sizes.  For each package we also report the physical line count---the
