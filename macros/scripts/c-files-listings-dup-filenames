@@ -1,0 +1,6 @@
+#!/uns/bin/zsh -f
+for i in *(/); do 
+  print $i
+  (for j in `cat $i/c-files-listing`; print ${j:t};) | \
+   histogram-numeric | awk '$1 == 1 {exit} {print}'
+done
