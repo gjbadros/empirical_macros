@@ -2,8 +2,12 @@
 # Makefile for post-processing of evilmacros output files
 # (Using the macros-* scripts)
 
+# Directories on uni
 PKG_DIR := /tmp/mernst/packages
-COMMON_DIR := $(shell dirname $$(which evilmacros))
+ANALYZE_OUTPUT_DIR := /tmp/gjb/splitdata
+COMMON_DIR := $(shell dirname $$(which em_analyze))
+
+PAPER_DIR := /homes/gws/gjb/macros/papers
 
 # FIX: These files should be generated from the directory names under PKG_DIR
 
@@ -34,6 +38,15 @@ CVT_LATEX_TABLES := $(patsubst %,%.tex,$(TEXT_TABLES))
 
 ALL_TABLES := $(TEXT_TABLES) $(RAW_TABLES) $(LATEX_TABLES) $(CVT_LATEX_TABLES)
 
+PAPER_TABLES :=  \
+	tbl-def-frequency \
+	tbl-use-frequency \
+	tbl-directives-breakdown \
+	tbl-where-used \
+	tbl-def-categories \
+	tbl-subset-categories.tex
+
+
 all:	$(ALL_TABLES)
 
 clean:
@@ -43,8 +56,14 @@ clean:
 ### Data
 ###
 
-data:
-	macros-make-data $(PKG_DIR)
+data_analyze:
+	pushd $(ANALYZE_OUTPUT_DIR); \
+	macros-make-data-analyze $(PKG_DIR); \
+	popd
+
+data_reports:
+	macros-make-data-reports $(ANALYZE_OUTPUT_DIR)
+
 
 ###########################################################################
 ### Text tables
@@ -84,10 +103,10 @@ package_and_sizes-tbl.txt: $(STAT)
 ### LaTeX tables
 ###
 
-tbl-categories.tex: $(STAT)
+tbl-def-categories.tex: $(STAT)
 	macros-make-categories-tbl-from-stat $^ > $@
 
-tbl-categories: $(STAT)
+tbl-def-categories: $(STAT)
 	macros-make-categories-tbl-from-stat -t -p $^ > $@
 
 tbl-subset-categories: $(MAC)
@@ -112,4 +131,8 @@ showvars:
 	echo $(COMMON_DIR)
 
 
-.PHONY: all clean showvars text_tables data raw
+copy:
+	perl -pi.bak -e 's/<total>/Total/g' $(PAPER_TABLES)
+	cp $(PAPER_TABLES) $(PAPER_DIR)	
+
+.PHONY: all clean showvars text_tables data raw copy

@@ -24,8 +24,8 @@ while (<>) {
 
 print "$file\n";
 foreach $i (@buckets) {
-#  printf "%2d %2.2f\n", $i, 100*sum_through($i)/$total;
-  printf "%2.2f\n", 100*sum_through($i)/$total;
+#  printf "%2d %2.3f\n", $i, 100*sum_through($i)/$total;
+  printf "%2.3f\n", 100*sum_through($i)/$total;
 }
 
-printf "%2.2f\n", 100;
+printf "%2.3f\n", 100;

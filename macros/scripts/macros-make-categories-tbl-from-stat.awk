@@ -46,7 +46,7 @@ BEGIN {
 #Recursive
   recursive=18;
 
-  if (usepct) { OFMT="%2.2f" } 
+  if (usepct) { OFMT="%2.3f" } 
   if (nolatex) { OFS="\t"; } 
   else { OFS=" & "; 
   ORS="\\\\\\hline\n"; 

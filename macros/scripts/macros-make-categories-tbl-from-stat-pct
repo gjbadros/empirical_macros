@@ -14,7 +14,7 @@ totLine = 0;
 } \
 BEGIN { \
 OFS=" & "; \
-OFMT="%2.2f"; \
+OFMT="%2.3f"; \
 ORS="\\\\\\hline\n"; \
 print "\\begin{tabular}{|l|c|c|c|c|c|c|c|}\\hline\n" "Package", "Null define", "Literal", "Expression", "Statement", "Stringization and pasting", "Other syntatic macros", "Failed classification" } \
 END { \

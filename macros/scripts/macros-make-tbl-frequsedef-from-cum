@@ -1,5 +1,7 @@
 #!/uns/bin/perl -w
-
+#$Id$
+# Typical usage:  macros-make-tbl-frequsedef-from-cum *.frequse_cum
+# or from the Makefile.
 use English;
 use File::Basename;
 
@@ -14,10 +16,10 @@ if ($#ARGV == -1) {
 
 @files = @ARGV;
 if ($files[0] =~ /\.frequse_cum$/) {
-  @buckets = (0,1,2,3,4,5,6,8,10,20,40,80);
+  @buckets = (0,1,2,3,4,5,6,8,10,20,40,80);  # extend this here to see tails
   $label = "No. uses";
 } elsif ($files[0] =~ /\.freqdef_cum$/) {
-  @buckets = (1,2,3,4,5,6,7,8,10,12,14);
+  @buckets = (1..14);
   $label = "No. defs";
 } else {
   usage();
@@ -82,7 +84,7 @@ for ($iRow = 0; $iRow <= $#buckets; $iRow++) {
     $n = $column{$pkg}[$iRow];
     $d = $total{$pkg};
     if ($opt_p) {
-      printf "%2.2f$OFS", pct2($n,$d);
+      printf "%2.3f$OFS", pct2($n,$d);
     } else {
       print $n . $OFS;
     }
