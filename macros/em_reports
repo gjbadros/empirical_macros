@@ -475,7 +475,7 @@ sub output_stats ()
 #        any of the macro name's defs occur outside the package and would end up
 #        outputting information for any definition which is defined somewhere inside
 #        the package, even those definitions from outside the package
-	next if ($file_inclusion_method{$mdef_file[$i]} ne "FromStdin");
+	($i++ and next) if ($file_inclusion_method{$mdef_file[$i]} ne "FromStdin");
 	$cASSIGN++ if ($mdef_properties[$i] & $propASSIGN);
 	$cFREE_VAR++ if ($mdef_properties[$i] & $propFREE_VAR);
 	$cINVOKES_MACRO++ if ($mdef_properties[$i] & $propINVOKES_MACRO);
