@@ -29,6 +29,7 @@ Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #undef TRUE
 
 #include "cpplib.h"
+#include "cpphook.h"
 #include <stdio.h>
 
 #ifndef EMACS
@@ -165,7 +166,7 @@ main (int argc, char **argv, char **env)
   perl_parse(my_perl, NULL, 5, startup_code, NULL);
   perl_run(my_perl);
 
-  gjb_call_hooks_void(STARTUP);
+  gjb_call_hooks_void(opts,STARTUP);
 
   p = argv[0] + strlen (argv[0]);
   while (p != argv[0] && p[-1] != '/') --p;

@@ -55,6 +55,7 @@ Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #endif /* 0 */
 
 #include "cpplib.h"
+#include "cpphook.h"
 #include "cpphash.h"
 
 #ifndef STDC_VALUE
@@ -803,7 +804,8 @@ init_parse_options (opts)
   opts->warn_import = 1;
   opts->warnings_are_errors = 0;
 
-  opts->call_perl_hooks = 0;
+  opts->fWarnMissingHooks = 1;
+  opts->call_perl_hooks = 1;
 }
 
 enum cpp_token
@@ -1056,6 +1058,7 @@ handle_directive (pfile)
   long after_ident;
   U_CHAR *ident, *line_end;
   long old_written = CPP_WRITTEN (pfile);
+  struct cpp_options *opts = CPP_OPTIONS (pfile);
 
   cpp_skip_hspace (pfile);
 
@@ -1081,7 +1084,7 @@ handle_directive (pfile)
     }
 
   //  gjb_printf("DIRECTIVE = %s\n",ident);
-  gjb_call_hooks_sz(HANDLE_DIRECTIVE,ident);
+  gjb_call_hooks_sz(opts,HANDLE_DIRECTIVE,ident);
 
 #if 0
   if (ident_length == 0 || !is_idstart[*ident]) {
@@ -1522,6 +1525,7 @@ create_definition (buf, limit, pfile, predefinition)
   int rest_args = 0;
   long line, col;
   char *file = CPP_BUFFER (pfile) ? CPP_BUFFER (pfile)->nominal_fname : "";
+  struct cpp_options *opts = CPP_OPTIONS (pfile);
   DEFINITION *defn;
   int arglengths = 0;		/* Accumulate lengths of arg names
 				   plus number of args.  */
@@ -1675,6 +1679,11 @@ create_definition (buf, limit, pfile, predefinition)
   mdef.symnam = symname;
   mdef.symlen = sym_length;
 
+  if (predefinition)
+    gjb_call_hooks_szl_defn(opts,CREATE_PREDEF,mdef.symnam,mdef.symlen,defn);
+  else
+    gjb_call_hooks_szl_defn(opts,CREATE_DEF,mdef.symnam,mdef.symlen,defn);
+
   return mdef;
 
  nope:
@@ -1801,6 +1810,7 @@ do_define (pfile, keyword, buf, limit)
   int hashcode;
   MACRODEF mdef;
   HASHNODE *hp;
+  struct cpp_options *opts = CPP_OPTIONS (pfile);
 
 #if 0
   /* If this is a precompiler run (with -pcp) pass thru #define commands.  */
@@ -1808,7 +1818,7 @@ do_define (pfile, keyword, buf, limit)
     pass_thru_directive (buf, limit, pfile, keyword);
 #endif
   //  gjb_printf("do_define: %s\n",buf);
-  gjb_call_hooks_sz(DO_DEFINE,buf);
+  gjb_call_hooks_sz(opts,DO_DEFINE,buf);
 
   mdef = create_definition (buf, limit, pfile, keyword == NULL);
   if (mdef.defn == 0)
@@ -6279,6 +6289,10 @@ cpp_handle_options (pfile, argc, argv)
 	opts->in_fname = argv[i];
     } else {
       switch (argv[i][1]) {
+
+      case 'q':
+	opts->fWarnMissingHooks = FALSE;
+	break;
 
       case 'i':
 	if (!strcmp (argv[i], "-include")

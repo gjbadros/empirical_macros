@@ -20,9 +20,8 @@ Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  You are forbidden to forbid anyone else to use, share and improve
  what you give them.   Help stamp out software-hoarding!  */
 
-
-#include "cpphook.h"
-
+#ifndef CPPLIB_H_
+#define CPPLIB_H_
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -497,6 +496,9 @@ struct cpp_options {
      been registered */
   char call_perl_hooks;
 
+  /* Non-zero if we are to output a message about missing hooks */
+  char fWarnMissingHooks;
+
 };
 
 #define CPP_TRADITIONAL(PFILE) (CPP_OPTIONS(PFILE)-> traditional)
@@ -657,4 +659,6 @@ extern cpp_hashnode* cpp_lookup PARAMS ((cpp_reader*, const U_CHAR*,
 
 #ifdef __cplusplus
 }
+#endif
+
 #endif
