@@ -125,7 +125,7 @@ preprocessor and the parser further enables some analyses that otherwise
 would be especially difficult.
 
 \subsection*{Keywords}
-Parsing, preprocessor, cpp, lexical analysis, syntactic analysis, Perl.
+Parsing, preprocessor, C, C++, cpp, lexical analysis, syntactic analysis, Perl.
 
 \bigskip
 
@@ -167,7 +167,7 @@ compiles.\footnote{To avoid ambiguity, we will use \emph{unprocessed} to
 
 Experienced and novice \C{} programmers alike are frustrated by
 misunderstandings of source code due to the arbitrary transformations
-\Cpp{} performs. Such confusions are easily reduced, if not eliminated
+\Cpp{} performs. Such confusions are easily reduced, if not eliminated,
 by allowing the software engineer to see the code exactly as the
 compiler does.  Unfortunately, that view of the program is at a level of
 abstraction lower than the unprocessed source.  Well-known
@@ -191,7 +191,7 @@ constructs~\cite{EmpCpp-TR}.
 \subsection{\Cpp{} and Software Tools}
 
 Because of the preprocessor's textual foundations, unprocessed \C{} source code
-cannot be parsed directly.  For example, identifiers which are macro-expanded may
+cannot be parsed directly.  For example, identifiers that are macro-expanded may
 hide braces, parentheses, or other 
 important tokens from the parser.  Only after preprocessing is a \C{} program
 in a grammatically usable form. Since parsing
@@ -237,7 +237,7 @@ technique improves robustness in handling syntax errors
 and language variants. Because the input is unprocessed, the extracted
 information is presented to the human software engineer at the same
 level of abstraction as the source.  Additionally, the unprocessed
-source still contains the preprocessor directives which are essential
+source still contains the preprocessor directives that are essential
 to the portability and flexibility of many \C{} programs.
 
 However, these tools cannot use a straightforward parser or reliably construct an
@@ -493,7 +493,7 @@ write.  The complexities and subtleties of \Cpp{} must be duplicated in
 each tool.  Not surprisingly, our framework is ideal for analyzing
 preprocessor constructs.
 
-\subsection{Macro expansion mappings}
+\subsection{Macro Expansion Mappings}
 \label{ssec:macro_exp_map}
 To support useful interactions between the parser and preprocessor, it
 is essential that \pcp{} maintain an accurate mapping between the
@@ -599,7 +599,9 @@ that expansion.  Similarly, the list \texttt{MacroExpansionHistory()}
 returns can be visualized as the stack of blue expansion
 lines directly above the expansion in question (those that have not
 already been paired with a green line representing the completion of
-their expansion).
+their expansion).  See \sectionref{ssec:prg_und_supp} for an example of
+how the results of this macro-expansion-analysis might be presented to
+the user.
 
 
 \subsection{Marking Macro Expansions}
@@ -612,16 +614,16 @@ Recognizing identifiers that are macro-expanded is exceedingly useful as
 suggested by the nearly universal convention of using all-uppercase
 identifiers for macro names.  Previous tools have difficulty even just
 counting macro expansions~\cite{Griswold96}.  For the empirical study,
-our first approximation of identifying macro expansions did not use our
-framework.  That analysis was overly conservative: we marked all
-occurrences of any identifier that was ever (in any source file of the program)
-\ppd{define}d to be a macro
-as an expansion.  To gain more accurate information, we used our
-framework for the subsequent version of the analysis.
+our first approximation of identifying macro expansions did not use this
+framework.  That analysis was overly conservative: we marked as an
+expansion all occurrences of each identifier that was ever
+(in any source file of the program) \ppd{define}d to be a macro.
+To gain more accurate information, we used \pcp{}
+framework for the subsequent version of the analyses for that study.
 
 Since the marking of expansions should cover the entire unprocessed
-source code, we use the boiler-plate code mentioned in the previous
-section to expose all the code to the tool.  Because we wanted a
+source code, we use the boiler-plate code mentioned in \sectionref{sec:interactions}
+to expose all the code to the tool.  Because we wanted a
 conservative analysis (\ie{} it should over-mark when imprecise), we treat an
 identifier as a macro at a program point if it has been \ppd{define}d on
 any path and not yet definitely \ppd{undef}ined.  In particular, the
@@ -657,10 +659,11 @@ constant variables or \CPP{} inline functions.
 %parse, not by some lexical rules which may cause a mismatch
 Some of the analyses \pcp{} has been used to perform generate large amounts of
 information that are not easy to comprehend in raw form.  For example,
-the mapping between unprocessed source code and preprocessed code aids
+the mapping between unprocessed source code and preprocessed code 
+(see \sectionref{ssec:macro_exp_map}) aids
 program understanding little when the correspondence exists only in a
 \Perl{} data structure.
-The standard module of hook utilities provides a
+A standard \Perl{} module of hook utilities provides a
 mechanism to output character-indexed annotations of the source code.
 These annotations are Emacs Lisp source code which manipulate text
 properties of character ranges when evaluated by Emacs~\cite{GNUELisp}.  This
@@ -675,7 +678,7 @@ the annotations made to the current character. See
   \begin{center}
     \leavevmode
     \includegraphics{emacs-xform-view.eps}
-    \caption{A view of Emacs using the author's ``doc-property-display''
+    \caption{A view of Emacs using the authors' ``doc-property-display''
       feature to dynamically view textual annotations of results of the
       analyses of \pcp{}.  The red outline box in the top frame
       indicates the user's cursor position, and the lower frame lists the
