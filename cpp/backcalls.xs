@@ -66,14 +66,13 @@ SumCchExpansionOffset()
 	}
 	XPUSHs(sv_2mortal(newSViv(sum)));
 	XPUSHs(sv_2mortal(newSViv(cbuffersBack)));
-	
 
- # Returns a list, (CchOffset,expansion buffer depth)
-void
-CchOffset()
+
+int
+CbuffersBack()
 	cpp_buffer *buffer = parse_in.buffer;
 	int cbuffersBack = 0;
-	PPCODE:
+	CODE:
 	while (buffer != CPP_NULL_BUFFER(&parse_in)) {
 	    if (buffer->nominal_fname) {
 		break;
@@ -82,9 +81,60 @@ CchOffset()
 		buffer = CPP_PREV_BUFFER(buffer);
 	    }
 	}
-	XPUSHs(sv_2mortal(newSViv(buffer->cur - buffer->buf)));
-	XPUSHs(sv_2mortal(newSViv(cbuffersBack)));
+	RETVAL=cbuffersBack;
+	OUTPUT:
+	RETVAL
 
+
+void
+MacroExpansionHistory()
+	cpp_buffer *buffer = parse_in.buffer;
+	int cbuffersBack = 0;
+	PPCODE:
+	while (buffer != CPP_NULL_BUFFER(&parse_in)) {
+	    if (buffer->data == 0) {
+		break;
+	    } else {
+		XPUSHs(sv_2mortal(newSVpv(buffer->data?
+					  ((HASHNODE*) (buffer->data))->name:
+					  (U_CHAR *)"",0)));
+		cbuffersBack++;
+		buffer = CPP_PREV_BUFFER(buffer);
+	    }
+	}
+
+ # FIXGJB: This returns use_count as a test, instead of computing
+ # which argument is being expanded
+int
+ArgOf()
+	HASHNODE *macro = (HASHNODE*)(parse_in.buffer->data);
+	int offset = parse_in.buffer->cur - parse_in.buffer->buf - 1;
+	struct argdata *args = parse_in.buffer->args;
+	CODE:
+	RETVAL = -1;
+	if (args)
+	  RETVAL = IargWithOffset(offset, macro->value.defn->nargs,args) + 1;
+	OUTPUT:
+	RETVAL
+
+
+	
+int
+CchOffset()
+	cpp_buffer *buffer = parse_in.buffer;
+	int cbuffersBack = 0;
+	CODE:
+	while (buffer != CPP_NULL_BUFFER(&parse_in)) {
+	    if (buffer->nominal_fname) {
+		break;
+	    } else {
+		cbuffersBack++;
+		buffer = CPP_PREV_BUFFER(buffer);
+	    }
+	}
+	RETVAL=buffer->cur - buffer->buf;
+	OUTPUT:
+	RETVAL
 
  # When expanding macros inside arguments of another expansion,
  # the STATIC_BUFFERS of parse_in are used.  use "print parse_in" from gdb
@@ -109,7 +159,7 @@ Fname()
 	OUTPUT:
 	RETVAL
 
-
+# FIXGJB: obsoleted
 char *
 fname_obsoleted()
 	CODE:
@@ -121,7 +171,7 @@ fname_obsoleted()
 	RETVAL
 
 char *
-nominal_fname()
+FnameNominal()
 	CODE:
 	if (parse_in.buffer)
 	  RETVAL = parse_in.buffer->nominal_fname;
@@ -131,7 +181,7 @@ nominal_fname()
 	RETVAL
 
 char *
-lookup(sz)
+ExpansionLookup(sz)
 	char *sz
 	CODE:
 	HASHNODE *hp = cpp_lookup(&parse_in,sz,-1,-1);
@@ -140,7 +190,7 @@ lookup(sz)
 	RETVAL
 
 int
-CBytesOutput()
+CbytesOutput()
 	CODE:
 	RETVAL = cBytesOutput;
 	OUTPUT:
@@ -156,7 +206,7 @@ CbytesOutputAndBuffer_obsolete()
 	RETVAL
 
 int
-CBytesCppRead()
+CbytesCppRead()
 	CODE:
 	RETVAL = cBytesCppRead;
 	OUTPUT:
