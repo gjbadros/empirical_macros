@@ -1,3 +1,6 @@
+#define simple (x+3)
+simple
+
 /* number.h: Arbitrary precision numbers header file. */
 
 /*  This file is part of bc written for MINIX.
@@ -82,8 +85,8 @@ __FILE__
 // Note that these need the option "-lang-c++" to get parsed as comments
 
 
-char *sz = "A string constant
-
+char *sz = "A string constant \
+ \
 for all to see \n\n";
 
 
