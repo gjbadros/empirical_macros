@@ -236,43 +236,101 @@ typedef enum hook_index_constants {
 
 
   HI_STRING_CONSTANT,
-///% {}
+///% {$s_start, $s_end, $string, $lines}
+///% Called once for each string in the source code or macro/special symbol expansion.
+///% Note that both stringization and symbols like __FILE__ will invoke this hook
+///% with their string expansions.
+///% Arguments give the source code character offsets of the string, $string is
+///% the string, and $lines is the number of lines (or partial lines) that the
+///% string spans.  $s_start == $s_end if the string does not actually appear
+///% in the top level source code (e.g, __LINE__ or gcc's __FUNCTION__).
+///% The source code offsets include the string delimiters, the $string argument
+///% has them stripped, but has not had backslash sequences replaced.
 
   HI_CPP_ERROR,
-///% {}
+///% {$nominal_fname,$line_number,$message,@extra_args}
+///% Called once each time CPP issues an error.  The hook does not interfere
+///% with normal error handling.  Arguments give the current filename and line
+///% number where the error occurred;  $message is the string (containing printf
+///% percent-escapes) to be printed, and @extra_args are the values to be 
+///% interpolated into the string.
 
   HI_CPP_WARN,
-///% {}
+///% {$nominal_fname,$line_number,$message,@extra_args}
+///% Called once each time CPP issues a warning.  The hook does not interfere
+///% with normal warning handling.  Arguments give the current filename and line
+///% number where the warning occurred;  $message is the string (containing printf
+///% percent-escapes) to be printed, and @extra_args are the values to be 
+///% interpolated into the string.
 
   HI_CPP_PEDWARN,
-///% {}
+///% {$nominal_fname,$line_number,$message,@extra_args}
+///% Called once each time CPP issues a pedantic warning.  The hook does not interfere
+///% with normal pedantic warning handling.  Arguments give the current filename and line
+///% number where the pedantic warning occurred;  $message is the string (containing printf
+///% percent-escapes) to be printed, and @extra_args are the values to be 
+///% interpolated into the string.
 
   HI_CPP_OUT,
-///% {}
+///% {$string}
+///% Called for each sequence of characters cpp is outputting.  This is the
+///% same text as would go to the output file when using just cpp (as in gcc -E).
+///% Full tokens and/or whitespace are emitted per each call to the hook.
+///% Use the CchOutput() and CchOffset() backcalls for output character offset
+///% and source code character offset, respectively.
 
   HI_ADD_IMPORT,
-///% {}
+///% {$filename,$was_found} FIXGJB: 2nd arg right?
+///% Called for each filename that is #import-ed.  Arguments give that
+///% file name and $was_found, which is negative iff the file was not found.
 
   HI_INCLUDE_FILE,
-///% {}
+///% {$filename, $system_include}
+///% Called for each file that is #include-d (not necessarily for each #include
+///% directive; this hook won't be called if the file cannot be found).
+///% Arguments are the filename and $system_include, which is non-zero if the filename
+///% appears to be a system include file (absolute pathname and in a known
+///% system directory);  it is exactly 2 iff the file is a C-language
+///% system header file for which C++ should assume extern "C".
 
   HI_DONE_INCLUDE_FILE,
-///% {}
+///% {$filename}
+///% Called upon completion of parsing of an included file.  The filename
+///% that what just finished being parsed is the only argument.
 
   HI_TOKEN,
-///% {}
+///% {$token,$raw,$macro_name,$arg_num,@history}
+///% Called once for each token CPP reads.  $token is the type of token,
+///% with a leading CPP_; $raw is the raw characters which constitute that
+///% token; $macro_name is the name of the macro that expanded to create this token,
+///% or is empty if the token did not result from macro expansion; $arg_num is -1
+///% if the token did not come from a macro expansion, 0 if it came from the
+///% body of a macro expansion (i.e., not an argument), or positive and equal
+///% to the argument number that produced the token, if from an substitution
+///% of an argument in a macro expansion; @history is obsoleted, use the
+///% MacroExpansionHistory() backcall instead.
 
   HI_FUNCTION,
-///% {}
+///% {$name,$fStatic}
+///% Called once after an entire function is parsed.  Arguments
+///% give the name of the newly defined function, and $fStatic is non-zero
+///% iff the function was declared to be static (i.e. not global).
 
   HI_FUNC_CALL,
-///% {}
+///% {$name}
+///% Called once after each function call is parsed.  Only argument is
+///% the name of the function being called.
 
   HI_ANNOTATE,
-///% {}
+///% {} Obsoleted
 
   HI_POP_BUFFER,
-///% {}
+///% {$cbuffersDeep}
+///% Called once for each buffer that is popped off of the stack of
+///% buffers to be parsed. The only argument is the new (after the pop)
+///% number of non-file buffers
+///% deep the stack is.  In particular, when that number is 0, 
+///% the parser is not parsing a macro expansion any longer.
 
 } HOOK_INDEX;
 // end hook_index_constants
@@ -315,8 +373,8 @@ void gjb_call_hooks_expansion(struct cpp_reader *pfile, HOOK_INDEX ih,
 			      cpp_expand_info *pcei,
 			      int nargs, struct argdata *args);
 
-void gjb_call_hooks_macro_cleanup(struct cpp_options *opts, HOOK_INDEX ih,
-				  int i1, int i2, char *sz1, cpp_expand_info *pcei);
+void gjb_call_hooks_macro_cleanup(struct cpp_options *opts, HOOK_INDEX ih, int s, int e,
+				  char *sz1, cpp_expand_info *pcei);
 
 void gjb_call_hooks_sz_szl_szl(struct cpp_options *, HOOK_INDEX, 
 			       char *, char *, int, char *, int);
