@@ -282,13 +282,16 @@ sub macro_arg_exp  {
 sub annotate_definition_message {
   my ($kind,$prop, $message, $mname) = @_;
   my ($fnamedef, $s_start, $s_end) = @{$macro_name{$mname}{currdef}};
-  print TPSOURCE "#$fnamedef:(add-$kind-property $s_start $s_end \'$prop \"$message\")\n";
+  if (!defined($fnamedef)) {
+    print STDERR "annotate_definition_message: could not find $mname\n";
+  } else {
+    print TPSOURCE "#$fnamedef:(add-$kind-property $s_start $s_end \'$prop \"$message\")\n";
+  }
 }
 
 sub annotate_definition {
   my ($prop, $message, $mname, $fname, $s, $e) = @_;
   my ($fnamedef, $s_start, $s_end) = @{$macro_name{$mname}{currdef}};
-  print STDERR "\"$mname\" from $fnamedef, $s_start:$s_end\n";
   my $kind = "text";
   $kind = "list" if ($prop eq "use");
   if (!defined($s) && !defined($e)) {
@@ -308,6 +311,12 @@ sub annotate_definition_with_use {
   } else {
     annotate_definition('expuse',"$expansion [$cbb]",@_);
   }
+}
+
+sub annotate_definition_with_ifdef_use {
+  my ($mname,$fname,$expansion,$s_start,$s_end,$cbb) = @_;
+  annotate_definition_message("text",'ifdefuse',"$expansion [$cbb] at $fname:$s_start,$s_end",$mname);
+  annotate_definition_message("text",'xform',"Used in a ccd! Do not convert!",$mname);
 }
 
 sub annotate_definition_with_undef {
@@ -363,7 +372,18 @@ sub ifdef_macro {
   my ($s_start,$s_end,$mname,$expansion,$length,$raw_call,$has_escapes,$cbuffersDeep,@rest) = @_;
   my $start = cpp::CchOutput()+1;
   my $end = $start + $length - 3; # Subtract off for the @ @, and it's an inclusive range
-  print CPP "ifdef_macro $mname => $expansion (offset $start - $end)\n";
+  print CPP "ifdef_macro $mname => $expansion [$s_start:$s_end] (offset $start - $end)\n";
+  my $fname = cpp::Fname();
+  annotate_definition_with_ifdef_use($mname,$fname,$expansion,$s_start,$s_end,$cbuffersDeep);
+}
+
+
+sub ifdef_lookup_macro {
+  my ($mname,$fDefined) = @_;
+  print STDERR "ifdef_lookup_macro $mname is ", $fDefined?"":"not ", "defined\n";
+  my $fname = cpp::Fname();
+  annotate_definition_with_ifdef_use($mname,$fname,$fDefined?"\@DEFINED\@":"\@NOT_DEFINED\@",
+				    cpp::CchOffset()-length($mname),cpp::CchOffset);
 }
 
 sub special_symbol {
@@ -406,16 +426,16 @@ sub do_elif {
 }
 
 sub do_xifdef {
-  my ($kind,$conditional, $trailing_garbage, $skipped, $fSkipping, $s_start) = @_;
+  my ($s_start,$s_end,$kind,$conditional,$trailing_garbage,$skipped,$fSkipping,$s_branch_start) = @_;
   my $fname = cpp::Fname();
-  my $s_end = cpp::CchOffset() + 1;
+  my $s_branch_end = cpp::CchOffset() + 1;
   print CPP "do_xifdef ($kind) on $conditional [$trailing_garbage] ($skipped), ",
   !$fSkipping?"Not ":"", "skipped\n";
   print CPP ": @[$s_start - $s_end]\n";
   if ($fSkipping) {
-    print STDERR "#$fname:(put-face-property-if-none $s_start $s_end \'font-lock-reference-face)\n";
-    print TPSOURCE "#$fname:(put-face-property-if-none $s_start $s_end \'font-lock-reference-face)\n";
-    print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'doc \"Skipped due to $kind $conditional\")\n";
+    print STDERR "#$fname:(put-face-property-if-none $s_branch_start $s_branch_end \'font-lock-reference-face)\n";
+    print TPSOURCE "#$fname:(put-face-property-if-none $s_branch_start $s_branch_end \'font-lock-reference-face)\n";
+    print TPSOURCE "#$fname:(add-text-property $s_branch_start $s_branch_end \'doc \"Skipped due to $kind $conditional\")\n";
   }
 }
 
@@ -552,6 +572,7 @@ AddHook("EXPAND_MACRO",\&expand_macro);
 AddHook("MACARG_EXP",\&macro_arg_exp);
 AddHook("MACRO_CLEANUP",\&macro_cleanup);
 AddHook("IFDEF_MACRO",\&ifdef_macro);
+AddHook("IFDEF_LOOKUP_MACRO",\&ifdef_lookup_macro);
 AddHook("SPECIAL_SYMBOL",\&special_symbol);
 AddHook("COMMENT",\&comment);
 AddHook("STRING_CONSTANT",\&string_constant);
