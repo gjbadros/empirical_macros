@@ -12,6 +12,7 @@
 #   Check for {re,un}definition of the specified macros.
 #   Implement -h command-line option
 #   Could use -i.no-cppp flag, but I'm not comfortable with it
+#   Simplifying postpass (eg, #else #endif => #endif) might be nice
 
 # Bugs:
 #  * only copes with conditional compilation; occurrences in code, macro
@@ -49,6 +50,11 @@
 #      undefines all predefined macros that identify the type of target
 #      system.
 
+# Control action to take if .nocppp file found:
+#   -nocppp-overwrite
+#   -nocppp-skip
+#   -nocppp-use		(default)
+#   -nocppp-die
 
 require 5.003;  # uses prototypes
 use strict;
@@ -98,6 +104,9 @@ my $char_literal_re = "L?'" . $char_literal_contents_re . "'";
 
 my $current_file;
 
+# one of overwrite, skip, use, die.
+my $backup_exists_action = "use";
+
 
 ###########################################################################
 ### Symbol table
@@ -125,10 +134,10 @@ sub is_nonfalse ($)
 
 # Returns a textual substitution for "defined($symbol)"; result is one of
 # "1", "0", or "defined($symbol)" itself (if the definedness is unknown).
-sub eval_defined ($)
-{ my ($symbol) = check_args(1, @_);
+sub eval_defined ($$)
+{ my ($symbol, $expression) = check_args(2, @_);
   if (!exists($cpp_macros{$symbol}))
-    { return "defined($symbol)"; }
+    { return $expression; }
   elsif ($cpp_macros{$symbol})
     { return "1"; }
   else
@@ -138,7 +147,8 @@ sub eval_defined ($)
 sub eval_all_defined ($)
 { my ($string) = check_args(1, @_);
   if ($debug_cppp) { print "eval_all_defined <= $string\n"; }
-  $string =~ s/\bdefined\((\w+)\)/eval_defined($1)/ge;
+  $string =~ s/\bdefined\s*\(\s*(\w+)\s*\)/eval_defined($1,$MATCH)/ge;
+  $string =~ s/\bdefined\s*(\w+)\b/eval_defined($1,$MATCH)/ge;
   if ($debug_cppp) { print "eval_all_defined => $string\n"; }
   return $string;
 }
@@ -197,8 +207,9 @@ sub evaluate_conditional ($)
   # expansion vs. defined, but maybe it's close enough.
   # It does cope with "defined(FOO)" in macro expansion.
 
-  # Eliminate "defined(FOO)"
-  $exp =~ eval_all_defined($exp);
+  # Eliminate "defined(FOO)".
+  # [But this doesn't eliminate them, unless the definedness is known, right?]
+  $exp = eval_all_defined($exp);
   # Expand macros; they're constant-like, not function-like.
   while (($exp =~ /\b\w+\b/)
 	 && (exists($cpp_macros{$MATCH})))
@@ -212,6 +223,7 @@ sub evaluate_conditional ($)
   $exp =~ s/$char_literal_re/char_literal_as_int($1)/ge;
   $exp =~ s/\b0x?[0-9]+\b/oct($MATCH)/ge;
 
+  # Replace other macro calls by UNKNOWNMACRO; this catches "defined(FOO)".
   while ($exp =~ /\b\w+\s*\(/)
     { my $preexp = $PREMATCH . "UNKNOWNMACRO";
       my $post = $POSTMATCH;
@@ -220,6 +232,9 @@ sub evaluate_conditional ($)
 	{ print "File: $current_file\n";
 	  die "No close paren found to match function call in $exp"; }
       $exp = $preexp . substr($post, $close_paren_pos+1); }
+
+  # Replace "defined FOO" by UNKNOWNMACRO
+  $exp =~ s/\bdefined\s*(\w+)\b/UNKNOWNMACRO/g;
 
   if ($debug_cppp) { print "conditional expression: $exp\n"; }
 
@@ -232,6 +247,11 @@ sub evaluate_conditional ($)
 sub eval_substituted_conditional ($)
 { my ($exp) = check_args(1, @_);
 
+  $exp =~ s/^\s+//;
+  $exp =~ s/\s+$//;
+
+  if ($debug_cppp) { print "eval_substituted_conditional $exp\n"; }
+
   # This parenthesization will do the wrong thing for function calls.
   { my $rparen_pos;
     while (-1 != ($rparen_pos = index($exp, ")")))
@@ -241,12 +261,17 @@ sub eval_substituted_conditional ($)
 	    die "Right paren at $rparen_pos but no preceding left paren: $exp"; }
 	if ($debug_cppp)
 	  { print "left paren at $lparen_pos, right paren at $rparen_pos\n"; }
-	my $pre = ($lparen_pos == 0) ? "" : substr($exp, 0, $lparen_pos-1);
+	# my $pre = ($lparen_pos == 0) ? "" : substr($exp, 0, $lparen_pos-1);
+	my $pre = substr($exp, 0, $lparen_pos);
 	my $parenthesized = substr($exp, $lparen_pos+1, $rparen_pos-$lparen_pos-1);
 	my $post = substr($exp, $rparen_pos+1);
 	if ($debug_cppp)
 	  { print "evaluating $parenthesized in $pre<<<>>>$post\n"; }
-	$exp = $pre . eval_substituted_conditional($parenthesized) . $post; } }
+	my $paren_evalled = eval_substituted_conditional($parenthesized);
+
+	$exp = $pre . (is_unknown($paren_evalled) ? "UNKNOWNMACRO"
+		       : $paren_evalled ? "1" : "0")
+	  . $post; } }
 
   # No more parentheses; attack operators in increasing precedence order
   if ($exp =~ /\?/)
@@ -343,12 +368,12 @@ sub eval_substituted_conditional ($)
       else
 	{ print "File: $current_file\n";
 	  die "impossible"; } }
-  elsif ($exp =~ /\b\s*[<>]=?/)
+  elsif ($exp =~ /\b\s*[<>]=?\s*\b/)
     { my $left = $PREMATCH;
       my $op = $MATCH;
       my $right = $POSTMATCH;
       my $lval = eval_substituted_conditional($left);
-      $op =~ s/^\s+//;
+      $op =~ s/\s+//g;
       my $rval = eval_substituted_conditional($right);
       if (is_unknown($lval) || is_unknown($rval))
 	{ return $unknown; }
@@ -431,9 +456,9 @@ sub eval_substituted_conditional ($)
   elsif ($exp =~ /[~!]/)
     { print "File: $current_file\n";
       die "Should only find [~!] at beginning of expression: $exp"; }
-  elsif ($exp =~ /^\s*[-+]?[0-9]+\s*$/)
+  elsif ($exp =~ /^\s*[-+]?[0-9]+\b\s*$/)
     { return int($exp); }
-  elsif ($exp =~ /^\s*[_A-Za-z]\w*\s*$/)
+  elsif ($exp =~ /^\s*[_A-Za-z]\w*\b\s*$/)
     { return $unknown; }
   else
     { print "File: $current_file\n";
@@ -467,6 +492,12 @@ sub process_command_line_flags ()
 	    { if ($#ARGV == 0)
 		{ die "No argument follows $thisarg" }
 	      $thisarg = shift(@ARGV); }
+	}
+      elsif ($thisarg =~ /^-nocpp-/)
+	{ $backup_exists_action = $POSTMATCH;
+	  if ($backup_exists_action !~ /^(overwrite|skip|use|die)$/)
+	    { die "Bad flag $thisarg -- use overwrite, skip, use, or die, not $backup_exists_action"; }
+	  next;
 	}
       else
 	{ die "Unrecognized command-line arg should be one of -D, -U, -A" }
@@ -516,8 +547,17 @@ sub process_file ($)
   $current_file = $file;
   my $backup = $file . ".nocppp";
   if (-e $backup)
-    { die "Backup file $backup already exists; do something clever here"; }
-  rename($file, $backup);
+    { if ($backup_exists_action eq "overwrite")
+	{ rename($file, $backup); }
+      elsif ($backup_exists_action eq "skip")
+	{ return; }
+      elsif ($backup_exists_action eq "use")
+	{ }
+      elsif ($backup_exists_action eq "die")
+	{ die "Backup file $backup already exists."; } }
+  else
+    { rename($file, $backup); }
+
   open(INPUT, $backup);
   open(OUTPUT, ">$file");
 
@@ -534,18 +574,17 @@ sub process_file ($)
 	{ last; }
 
       # For debugging.  (Should this code be unconditionally executed?)
-      if ($debug_cppp)
-	{ if (!($current_condition_value == $condition_value_stack[$#condition_value_stack]))
-	    { print "File: $current_file\n";
-	      die "bad current_condition_value, condition_value_stack: $current_condition_value; @condition_value_stack"; }
-	  if (scalar(@condition_stack) != scalar(@condition_value_stack)-1)
-	    { print "File: $current_file\n";
-	      die "bad sizes for condition_stack (", scalar(@condition_stack),
-	      "), condition_value_stack (", scalar(@condition_value_stack), ")"; }
-	  if (scalar(@condition_stack) != scalar(@elif_needs_endif))
-	    { print "File: $current_file\n";
-	      die "bad sizes for condition_stack (", scalar(@condition_stack),
-	          "), elif_needs_endif (", scalar(@elif_needs_endif), ")"; } }
+      if (!($current_condition_value == $condition_value_stack[$#condition_value_stack]))
+	{ print "File: $current_file\n";
+	  die "bad current_condition_value, condition_value_stack: $current_condition_value; @condition_value_stack"; }
+      if (scalar(@condition_stack) != scalar(@condition_value_stack)-1)
+	{ print "File: $current_file\n";
+	  die "bad sizes for condition_stack (", scalar(@condition_stack),
+	  "), condition_value_stack (", scalar(@condition_value_stack), ")"; }
+      if (scalar(@condition_stack) != scalar(@elif_needs_endif))
+	{ print "File: $current_file\n";
+	  die "bad sizes for condition_stack (", scalar(@condition_stack),
+	      "), elif_needs_endif (", scalar(@elif_needs_endif), ")"; }
 
       if ($simple =~ /^\#\s*(if(n?def)?|el(se|if)|endif)\b/)
 	{ $simple =~ s/^\#\s*//;
