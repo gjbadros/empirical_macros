@@ -22,6 +22,8 @@ PAPER_DIR := $(USER_PREFIX)/papers
 PAPER_CPPP_DIR := $(USER_PREFIX)/papers/cppp
 PAPER_ORIG_DIR := $(USER_PREFIX)/papers/orig
 
+include makefile.user
+
 PKGS := $(shell zsh -c "echo $(PKG_DIR)/*(/:t) | sed -e 's/-[^ ]*//g'")
 
 STATE := $(addsuffix .state,$(PKGS))
@@ -88,6 +90,9 @@ clean_reports:
 
 %.state:
 	em_make_state_file $(PKG_DIR) $(ANALYZE_OUTPUT_DIR) $@ $(EXTRA_ANALYZE_FLAGS) || echo $< >> $(ANALYZE_OUTPUT_DIR)/failures
+
+%.stat: %.state
+	em_reports -s $< -t -d $(ANALYZE_OUTPUT_DIR):`echo $@ | sed -e 's/\.stat$$//'`
 
 ###########################################################################
 ### Text tables
