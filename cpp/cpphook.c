@@ -1020,6 +1020,31 @@ gjb_call_hooks_i_i_sz_sz_i(struct cpp_options *opts, HOOK_INDEX ih, int s, int e
   perl_call_sv_hooks(psvFunc, G_DISCARD);
 }
 
+void
+gjb_call_hooks_i_i_i_sz_sz_i_i(struct cpp_options *opts, HOOK_INDEX ih, int s, int e, int f,
+			   char *sz1, char *sz2, int i1, int i2)
+{
+  SV *psvFunc = NULL;
+
+  dSP;
+  
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
+    return;
+
+  PUSHMARK(sp);
+  XPUSHs(sv_2mortal(newSViv(s)));
+  XPUSHs(sv_2mortal(newSViv(e)));
+  XPUSHs(sv_2mortal(newSViv(f)));
+  XPUSHs(sv_2mortal(newSVpv(sz1, 0)));
+  XPUSHs(sv_2mortal(newSVpv(sz2, 0)));
+  XPUSHs(sv_2mortal(newSViv(i1)));
+  XPUSHs(sv_2mortal(newSViv(i2)));
+  PUTBACK ;
+     
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
+}
+
+
 /* Modified to return an int, so that DO_INCLUDE
    hooks could say whether we want the #include-d file
    actually included --05/05/98 gjb */
