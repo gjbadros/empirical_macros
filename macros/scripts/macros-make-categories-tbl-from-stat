@@ -2,7 +2,9 @@
 # use macros-make-categories-tbl-from-stat *.stat
 # FIX: use getopts 
 
-SCRIPT_DIR=~gjb/macros/scripts
+# The .awk file needs to be in the same directory
+# as this script -- ${0:h} is the same as `dirname $0`
+SCRIPT_DIR=${0:h}
 
 if [[ $1 == "-h" ]]; then
     echo "Usage: $0 [-t] [-p] <stat-files>"
@@ -19,6 +21,6 @@ while getopts "pt" OPT; do
 	OPTS=($OPTS -v nolatex=1)
     fi
 done
-shift $OPTIND
+shift $[$OPTIND-1]
 
 gawk $OPTS -f $SCRIPT_DIR/macros-make-categories-tbl-from-stat.awk "$@"
