@@ -145,10 +145,10 @@ tbl-def-categories: $(STAT)
 	macros-make-categories-tbl-from-stat -t -p $^ > $@
 
 tbl-subset-categories: $(MAC)
-	macros-make-subset-categorizations-from-mac $^ | sort | uniq -c | sort -nr >$@
+	macros-make-subset-metacateg-from-mac $^ | sort | uniq -c | sort -nr >$@
 
 tbl-subset-categories.tex: tbl-subset-categories
-	latexify-mark-table `sum-column 1 <$^`  < $^ > $@
+	latexify-meta-mark-table `sum-column 1 <$^`  < $^ > $@
 
 ###########################################################################
 ### Etc.
