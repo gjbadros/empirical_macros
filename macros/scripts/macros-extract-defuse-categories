@@ -106,7 +106,7 @@ while (<>) {
 }
 close(OUT);
 
-my $use_limit = 8000;  # emacs max uses is 4636
+my $use_limit = 20000;  # emacs max uses is 4636
 my $def_limit = 3000;
 
 print STDERR "USES:\n";
@@ -126,27 +126,27 @@ sub do_categories($$@) {
     my $length = 0;
     foreach my $filename (@files) {
       next if ! grep {$filename =~ /-$_$/} @$category_list_ref;
-#      print STDERR "  Reading $filename...\n";
+#DBG      print STDERR "  Reading $filename...\n";
       close(IN);
-      open(IN,"<$filename");
+      open(IN,"<$filename") || die $!;
       my $total = 0;
       my $i = 0;
       my $num = 0;
-      if (<IN> !~ /Total\t(\d*)/) {
-	warn "Expecting total line";
+      if (<IN> !~ /Total[\t ](\d*)/) {
+	warn "Expecting total line, got $_";
       } else {
 	$total = $1 || 0;
-	#      print STDERR "Using $total\n";
+#DBG	      print STDERR "Using $total\n";
       }
       while (<IN>) {
-	$num = (split(/\t/,$_))[1];
+	$num = (split(/[ \t]+/,$_))[1];
 	if (defined($num) && $num ne "") {
 	  $sum_of_line[$i++] += $num;
 	}
       }
       $length = $i-1 if $i-1 > $length;
       if ($i > $limit) {
-	croak "Too big!";
+	croak "Too big!, $i > $limit";
       }
       while ($i < $limit) {
 	$sum_of_line[$i++] += $total;
