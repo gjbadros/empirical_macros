@@ -1175,8 +1175,22 @@ sub OutputCountsHistogramCum ( $$@ ) {
 sub read_variables {
   my ($file) = check_args(1,@_);
   # print STDERR "Reading variables from file $file\n";
-  do $file;
-  if ($@) { die "Trouble with \"do $file\": $@"; }
+  print STDERR "Reading variables from file $file\n";
+  if (-f "$file.0") {
+    my $i = 9;
+    #local $WARNING = 0;
+    no strict;
+    while ($i >= 0) {
+      if ( -f "$file.$i" ) {
+	print STDERR "Doing $file.$i\n";
+	do "$file.$i";
+      }
+      $i--;
+    }
+  } else {
+    do $file;
+    if ($@) { die "Trouble with \"do $file\": $@"; }
+  }
 }
 
 # sub read_variables {
@@ -1226,13 +1240,20 @@ if (-z $statename)
 $fDebugCmdProcessing && print "@ARGV";
 
 # Read input before opening any output files, in case of trouble.
-read_variables($statename);
-read_variables(extra_state_file_name($statename));
 $dependence_statename = depend_state_file_name($statename);
 if (! -f $dependence_statename)
   { undef $dependence_statename; }
-else
-  { read_variables($dependence_statename); }
+else { 
+  print STDERR "Reading variables from extra state file...\n" if $opt_v;
+  read_variables($dependence_statename); 
+  print STDERR "Done.\n" if $opt_v;
+}
+print STDERR "Reading variables from .state file...\n" if $opt_v;
+read_variables($statename);
+print STDERR "Done.\n" if $opt_v;
+print STDERR "Reading variables from extra state file...\n" if $opt_v;
+read_variables(extra_state_file_name($statename));
+print STDERR "Done.\n" if $opt_v;
 
 # print STDERR "Computing mdef_body_simple\n";
 # If @mdef_body_simple wasn't in the state file, compute it from @mdef_body.
