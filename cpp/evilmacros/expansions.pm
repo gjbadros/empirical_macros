@@ -519,6 +519,25 @@ sub cmd_line_def {
   print CMDLNDEFS "#define $def\n";
 }
 
+# from em_analyze
+# potential problem:  if arg == "!(!(...))", then  (nif(nif($arg)) ne $arg)
+sub negate_cpp_if_condition ( $ )
+{
+  my ($cond) = check_args(1, @_);
+  if ($cond =~ /^!defined\($identifier_re\)$/o)
+    { return substr($cond,1); }
+  elsif ($cond =~ /^!\((.*)\)$/)
+    { my $negated = $1;
+      # avoid converting "!(A) && (B)" into "A) && (B".
+      if (paren_change($negated))
+	{ return "!($cond)"; }
+      else
+	{ return $1; } }
+  else
+    { return "!($cond)"; }
+}
+
+
 # From mde's paren.pm
 # Takes a simplified line as its argument; returns a string containing the
 # unbalanced parens (empty string if all parens are balanced).
