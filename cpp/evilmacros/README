@@ -48,7 +48,7 @@ How To Use Pcp3 To Preprocess A Package
 
 9) cd into munged, and create a new c-files-list and
 compare to the old c-files-listings:
-find-c-no-usr >c-files-listing
+cd munged && find-c-no-usr >c-files-listing
 diff =(sort c-files-listing) =(sort ../c-files-listing)    #zsh-syntax
 
 "Do the right thing" with header files
@@ -56,7 +56,7 @@ diff =(sort c-files-listing) =(sort ../c-files-listing)    #zsh-syntax
 -- do nothing (if it is not included by any source file)
 
 Regenerate c-files-listing:
-find-c >c-files-listing
+find-c-no-usr >c-files-listing
 
 
 10) rm -fr munged/usr munged/uns
@@ -64,4 +64,3 @@ find-c >c-files-listing
     # Save space
 
 11) run em_analyze over the munged directory and pray
-
