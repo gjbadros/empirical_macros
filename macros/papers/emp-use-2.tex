@@ -7,16 +7,18 @@
 
 % Delete in final version of paper.
 \newcommand{\comment}[1]{\textbf{[[#1]]}}
+\newcommand{\pcp}{\mbox{\textsf{PCp}$^3$}}
 
 \def\numpackages{26}
 \def\numdependpackages{25}
 \def\numlines{1.4 million}      % 1390186 as of 28 Jan 1999
 % \def\numlinesexact{1.4 million}
-% \def\numlinesalmost{1.4 million}
+\def\numlinesalmost{1.4 million}
 % \def\numlinesncnbexact{1 million} % 995033 as of 28 Jan 1999
 
 \newcommand{\pkg}[1]{\textsf{#1}}
 \newcommand{\file}[1]{\texttt{#1}}
+\newcommand{\ppd}[1]{\texttt{\##1}}
 
 % the "fullpage" package does almost the same thing
 % as the below lines-- it doesn't make things quite as
@@ -387,39 +389,65 @@ reflects the amount of source code.
 \end{figure}
 
 Before performing our analysis, we ran {\tt configure} or the equivalent on
-each package in order to prepare it for compilation.  This creates various
-header files such as \file{config.h}.  Our analysis works in the
-absence of this step, but warns about uses of never-defined macros and
-under-reports some values related to those missing definitions.  We did
-not, however, compile the packages; our analysis does not require that the
-package be compilable, or even that the preprocessor be able to run on it.
+each package in order to prepare it for compilation on our RedHat-based
+GNU/Linux 2.0.x system.  The {\tt configure} script creates various
+header files such as \file{config.h}.  We then 
+compiled the package to ensure that any package-building utilities
+(e.g., a header file generator that takes a {\tt .c} file and produces a 
+{\tt .h} file listing the prototypes of its exported functions).
 
-We generated a list of all the C files in the package (both code and header
-files).  In general, these have extensions like \file{.c}, \file{.h},
-\file{.cc}, \file{.cpp}, \file{.hxx}, etc.  We removed files with such
-extensions that do not actually contain valid C, and added others that were
-{\tt \#include}d by valid C files (some included files have extension
-\file{.def}).
+After a package built successfully, we removed all object files, and
+then rebuilt using a \pcp{} \cite{CppAwareCAnalyses}
+macro-expansion-marking analysis instead of \texttt{gcc} as the
+compiler.  Generally this was done by passing a value for the
+\texttt{CC} environment variable to \texttt{make}, but some packages
+required editing, e.g., the \texttt{Makefile}.  The \pcp{} analysis and
+some secondary tools create a marked-up copy of all the source files
+that the compiler preprocessed during the full rebuild.  In that copy,
+identifiers that are possibly macro-expanded are denoted by prepending a
+distinguishing text sequence to the identifier name in the otherwise
+unchanged unprocessed source code.  The \pcp{} expansion analysis
+studies the entire code base (excluding comments) and is
+conservative---an identifier is marked as possibly-expanded if any
+\ppd{define} of the identifier occurs before the use site (even one
+protected by an \ppd{ifdef} that might be false), unless a \ppd{undef}
+definitely was encountered (e.g., if the \ppd{undef} of the identifier
+is protected by a conditional compilation guard, that identifier is
+considered to still be a macro).  We do static constant folding on
+conditional guards; e.g., \verb|#if 0 && anything| makes us consider the 
+enclosed text to be a comment.  Inclusion directives inside conditional
+compilation directives are honoured exactly as the real preprocessor
+behaves.
 
-We analyzed all the C files in the package, as well as every file {\tt
-\#include}d by any of those, primarily library header files.  We
-took care to include as many libraries as possible so as not to overlook
-those definitions.  However, the figures reported in this paper always omit
-all macros defined only in libraries, as well as all macro uses in
-libraries.  This prevents libraries from swamping the characteristics of
-the package code, which is our focus in this study.  The programmer
-generally has no control over libraries and their header files, and may not
-even know whether a library symbol is defined as a macro or a true function
-or variable.  Finally, we assume that library macros are carefully written
-to behave correctly and robustly.  (This is not always true in practice,
-but an analysis of library macros is outside the scope of this
-\typeofdocument).
+From the marked up copy of the package sources, we generated a list of
+all the C files in the package (both code and header files).  We ignored
+system include files that were preprocessed (e.g., the
+\file{/usr/include/*} hierarchy) except for determining the macros that
+they define.  This prevents library header files from swamping the
+characteristics of the package code, which is our focus in this study.
+The programmer generally has no control over libraries and their header
+files, and may not even know whether a library symbol is defined as a
+macro or a true function or variable.  Finally, we assume that library
+macros are carefully written to behave correctly and robustly.  (This is
+not always true in practice, but an analysis of library macros is
+outside the scope of this \typeofdocument).
 
-Our analysis is a true whole-program analysis; rather than preprocessing the
-code and examining just one configuration, we examine all possible code and
-ignore no possible  conditional compilation conditions (though we do skip
-over those that can be statically proven to be false).   As a result, this
-analysis is more thorough than traditional ``whole-program'' analyses.
+We also ignored source files that were not used as part of the rebuild
+process.  These files often included source code for other
+platforms\footnote{In contrast, we do analyze source code protected by
+  conditional compilation directives included in a platform-independent
+  file.} (e.g., MS-DOS or VMS) or source code that was not part of the running
+system but was just used during the build process (e.g., the
+aforementioned header-file creator).  Libraries that build as part of
+the package (e.g., Mosaic includes \texttt{libhtmlw}, an HTML widget)
+were analyzed along with the other source code of the package.  Our
+%% FIXGJB: I didn't think this was always true, but can't find examples
+%% of where I excluded a library (made just a quick look --01/29/99 gjb)
+analysis is a more thorough than traditional ``whole-program'' analyses
+in that we examine all possible code and ignore no possible conditional
+compilation conditions (though we do skip over those that can be
+statically proven to be false).  Only files that the build process
+ignores are omitted from the view of our tool.
 
 % [[We merge different Cpp branches in the code wherever possible.  Discuss
 % this a bit.]]
@@ -427,13 +455,15 @@ analysis is more thorough than traditional ``whole-program'' analyses.
 % We performed our analysis via a collection of Perl scripts, totaling
 % approximately 11,000 lines (7,000 NCNB lines).
 
-We perform approximate
-parsing because the input may not be a valid C program; as a result, we
-misinterpret some constructs, but we can cope with uncompilable C and with
-partial constructs in conditional compilation branches.  Our tool includes
-parsers for expressions, statements, and declarations.  The raw data, which
-includes considerable data not reported here, and the programs used to
-generate and manipulate them, are available from the authors.
+The \pcp{} tool is only used to mark expansions, the rest of the
+analysis is done by other scripts operating on the unprocessed source
+code.  We perform approximate parsing because the input may not be a
+valid C program; as a result, we misinterpret some constructs, but we
+can cope with uncompilable C and with partial constructs in conditional
+compilation branches.  Our tool includes parsers for expressions,
+statements, and declarations.  The raw data, which includes considerable
+data not reported here, and the programs used to generate and manipulate
+them, are available from the authors.
 
 
 \section{Occurrence of preprocessor directives}
