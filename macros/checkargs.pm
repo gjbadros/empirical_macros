@@ -13,17 +13,17 @@ checkargs -- Provide rudimentary argument checking for perl5 functions
 
 =head1 SYNOPSIS
 
-  check_args(cArgsExpected, szFunctionName, caller, @_)
-  check_args_range(cArgsMin, cArgsMax, szFunctionName, caller, @_)
-  check_args_at_least(cArgsMin, szFunctionName, caller, @_)
-where "caller" and "@_" should be supplied literally.
+  check_args(cArgsExpected, caller(0), @_)
+  check_args_range(cArgsMin, cArgsMax, caller(0), @_)
+  check_args_at_least(cArgsMin, caller(0), @_)
+where "caller(0)" and "@_" should be supplied literally.
 
 As the first line of user-written subroutine foo, do one of the following:
 
-  my ($arg1, $arg2) = check_args(2, "foo", caller, @_);
-  my ($arg1, @rest) = check_args_range(1, 4, "foo", caller, @_);
-  my ($arg1, @rest) = check_args_at_least(1, "foo", caller, @_);
-  my @args = check_args_at_least(0, "foo", caller, @_);
+  my ($arg1, $arg2) = check_args(2, caller(0), @_);
+  my ($arg1, @rest) = check_args_range(1, 4, caller(0), @_);
+  my ($arg1, @rest) = check_args_at_least(1, caller(0), @_);
+  my @args = check_args_at_least(0, caller(0), @_);
 
 These functions may also be called for side effect (put a call to one
 of the functions near the beginning of the subroutine), but using the
@@ -43,69 +43,66 @@ Michael D. Ernst <F<mernst@cs.washington.edu>>
 
 =cut
 
-# A sample call:   check_args(2, "parse_declarator", caller, @_);
-# The last two arguments should always be "caller" and "@_";
-# Maybe have this return the arglist, so it can be merged in with the my line???
-
 sub check_args
 {
-  my ($num_formals, $function_name, $package, $filename, $line, @args) = @_;
-  if (@_ < 5) { die "check_args needs at least 5 args, got: @_\n"; }
+  my ($num_formals, $pack, $file_arg, $line_arg, $subname, $hasargs, $wantarr, @args) = @_;
+  if (@_ < 7) { die "check_args needs at least 7 args, got ", scalar(@_), ": @_\n"; }
   if ((!wantarray) && ($num_formals != 0))
-    { ($package, $filename, $line) = caller;
-      die "check_args called in scalar context by $function_name at $filename line $line: @args\n"; }
+    { my ($package, $filename, $line) = caller;
+      die "$filename:$line: check_args called in scalar context by $subname: @args\n"; }
   my $num_actuals = @args;
   if ($num_actuals != $num_formals)
-    { die "function $function_name expected $num_formals argument",
+    { die "$file_arg:$line_arg: function $subname expected $num_formals argument",
       ($num_formals == 1) ? "" : "s",
-      ", got $num_actuals at $filename line $line",
+      ", got $num_actuals",
       ($num_actuals == 0) ? "" : ": @args", "\n"; }
   my $index;
   for $index (0..$#args)
     { if (!defined($args[$index]))
-	{ die "function $function_name undefined argument ", $index+1, " at $filename line $line: @args\n"; } }
+	{ die "$file_arg:$line_arg: function $subname undefined argument ", $index+1, ": @args[0..$index-1]\n"; } }
   return @args;
 }
 
 sub check_args_range
 {
-  my ($min_formals, $max_formals, $function_name, $package, $filename, $line, @args) = @_;
-  if (@_ < 6) { die "check_args_range needs at least 6 args, got: @_\n"; }
+  my ($min_formals, $max_formals, $pack, $file_arg, $line_arg,
+      $subname, $hasargs, $wantarr, @args) = @_;
+  if (@_ < 8) { die "check_args_range needs at least 8 args, got ", scalar(@_), ": @_\n"; }
   if ((!wantarray) && ($max_formals != 0) && ($min_formals !=0) )
-    { ($package, $filename, $line) = caller;
-      die "check_args_range called in scalar context at $filename line $line: @args\n"; }
+    { my ($package, $filename, $line) = caller;
+      die "$filename:$line: check_args_range called in scalar context: @args\n"; }
   my $num_actuals = @args;
   if (($num_actuals < $min_formals) || ($num_actuals > $max_formals))
-    { die "function $function_name expected $min_formals-$max_formals arguments, got $num_actuals at $filename line $line",
+    { die "$file_arg:$line_arg: function $subname expected $min_formals-$max_formals arguments, got $num_actuals",
       ($num_actuals == 0) ? "" : ": @args", "\n"; }
   my $index;
   for $index (0..$#args)
     { if (!defined($args[$index]))
-	{ die "function $function_name undefined argument ", $index+1, " at $filename line $line: @args\n"; } }
+	{ die "$file_arg:$line_arg: function $subname undefined argument ", $index+1, ": @args[0..$index-1]\n"; } }
   return @args;
 }
 
 sub check_args_at_least
 {
-  my ($min_formals, $function_name, $package, $filename, $line, @args) = @_;
+  my ($min_formals, $pack, $file_arg, $line_arg, $subname, $hasargs, $wantarr, @args) = @_;
   # Don't do this, because we want every sub to start with a call to check_args*
   # if ($min_formals == 0)
-  #   { die "Isn't it pointless to check for at least zero args to $function_name?\n"; }
-  if (@_ < 6) { die "check_args_at_least needs at least 6 args, got: @_\n"; }
+  #   { die "Isn't it pointless to check for at least zero args to $subname?\n"; }
+  if (@_ < 7) { die "check_args_at_least needs at least 7 args, got ", scalar(@_), ": @_\n"; }
   if ((!wantarray) && ($min_formals != 0))
-    { ($package, $filename, $line) = caller;
-      die "check_args_at_least called in scalar context at $filename line $line: @args\n";
+    { my ($package, $filename, $line) = caller;
+      die "$filename:$line: check_args_at_least called in scalar context: @args\n";
     }
   my $num_actuals = @args;
   if ($num_actuals < $min_formals)
-    { die "function $function_name expected at least $min_formals argument",
+    { die "$file_arg:$line_arg: function $subname expected at least $min_formals argument",
       ($min_formals == 1) ? "" : "s",
-      ", got $num_actuals at $filename line $line",
+      ", got $num_actuals",
       ($num_actuals == 0) ? "" : ": @args", "\n"; }
   my $index;
   for $index (0..$#args)
     { if (!defined($args[$index]))
-	{ die "function $function_name undefined argument ", $index+1, " at $filename line $line: @args\n"; } }
+	{ die "$file_arg:$line_arg: function $subname undefined argument ", $index+1, ": @args[0..$index-1]\n"; } }
   return @args;
 }
 
