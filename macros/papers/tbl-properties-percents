@@ -1,8 +1,8 @@
-TOTAL = 27228
-3284	(12.06%)		free_var
-1733	(6.36%)		assign
-891	(3.27%)		uses_macro_as_type
-120	(0.44%)		passes_type_as_arg
+TOTAL = 26182
+2236	(8.54%)		free_var
+1706	(6.52%)		assign
+368	(1.41%)		uses_macro_as_type
+120	(0.46%)		passes_type_as_arg
 19	(0.07%)		uses_arg_as_type
 10	(0.04%)		pasting
 8	(0.03%)		stringize
