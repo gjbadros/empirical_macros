@@ -444,7 +444,7 @@ sub categorizeMacro
   }
   $fDebugCommentRemoval && print STDERR "fullbody = '$fullbody'\nbody = '$body'\n";
   if (defined($args)) {
-    if ($args =~ /\(\w*\)/) {
+    if ($args =~ /^\s*\(\s*\)\s*$/) {
       $cWithNullArgs++;
       $fShowCategorization && 
 	print "$currentfile:$.: WithNullArgs: $name $args $fullbody\n";
