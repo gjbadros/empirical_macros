@@ -9,7 +9,7 @@ print '
 {\small
 \addtolength{\columnsep}{-.5\columnsep}
 \begin{tabular}{|r|*{22}{c|}}\hline
-\rotatebox{90}{\# Occurrences} &
+\rotatebox{90}{Percentage of macro names} &
 \rotatebox{90}{failed categorization} &
 \rotatebox{90}{null define} &
 \rotatebox{90}{expression} &
