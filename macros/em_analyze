@@ -1561,12 +1561,12 @@ sub update_for_cond_comp_directive ($$) {
     foreach my $word (@words) {
       my $curr_ccdCategory = ccd_lexical_category($word);
       if ($debug_ccd_categories) {
-	print STDERR "CCD_LEXICAL_CATEGORY: $word in ",
+	print CCD_CATEG "$word in ",
 	$cond_category_name[$curr_ccdCategory], "\n";
       }
       if (defined($ccdCategory) && $curr_ccdCategory != $ccdCategory) {
 	if ($debug_ccd_categories) {
-	  print STDERR "CCD_LEXICAL_CATEGORY: $word in mixed, now\n";
+	  print CCD_CATEG "$word in mixed, now\n";
 	}
 	$ccdCategory = $ccatMIXED;
 	last;
@@ -1593,7 +1593,7 @@ sub update_for_cond_comp_directive ($$) {
 	}
       }
       if ($debug_ccd_categories) {
-	print STDERR "CCD_LEXICAL_CATEGORY: other -> $cond_category_name[$ccdCategory], from\n 1: $simple 2: $simple2\n";
+	print CCD_CATEG "other -> $cond_category_name[$ccdCategory], from\n 1: $simple 2: $simple2\n";
       }
     }
   }
@@ -1810,7 +1810,7 @@ sub getline_handle_preprocessor_command ($$$$$)
     if ($cpp_cmd eq "ifdef" || $cpp_cmd eq "ifndef" ||
 	$cpp_cmd eq "if" || $cpp_cmd eq "elif" &&
 	!cpp_trivially_false_condition($cpp_cmd_arg_noc)) {
-      # get the category of this #if based solely on the macro name checked
+      # get the category of this #if using some heuristics & regexps
       my $ccCategory = update_for_cond_comp_directive($cpp_cmd,$cpp_cmd_arg_noc);
     }
   }
@@ -6334,48 +6334,7 @@ if ($opt_a && ($opt_u || $opt_1)) {
 }
 
 my $statename = "state";
-# using a default directory-- only open the files that
-# aren't explicitly given
-if ($opt_d) {
-  my ($dir,$base_name) = split /:/,$opt_d;
 
-
-  if (!defined($base_name) || $base_name eq "") {
-    $base_name = "";
-  } else {
-    $base_name .= ".";
-  }
-
-  if ($dir !~ /\/$/) {
-    $dir .= "/";
-  }
-
-  print STDERR "Output to $dir with prefix '$base_name'\n";
-
-  $statename = "$dir/${base_name}state";
-
-  if (!$opt_E) {
-    open(EVIL,">$dir/${base_name}evil") || die "Failed opening $dir/${base_name}evil: $!";
-  }
-
-  if (!$opt_P) {
-    open(PARSE_ERRS,">$dir/${base_name}perr") || die "Failed opening $dir/${base_name}perr: $!";
-  }
-}
-
-if ($opt_E) { open(EVIL,">$opt_E") || die "Failed opening $opt_E"; }
-  elsif (!$opt_d) { open(EVIL,">-") || die "Failed opening stdout!"; }
-if ($opt_P) { open(PARSE_ERRS,">$opt_P") || die "Failed opening $opt_P"; }
-  elsif (!$opt_d) { open(PARSE_ERRS,">-") || die "Failed opening stdout!"; }
-if ($opt_I) { $fIgnoreIncludes = $true; }
-if ($opt_t) { $outOFS = "\t"; } # use tab for OFS
-if ($opt_l) { $identifier_re = $identifier_no_dollar_re; } # no $ in identifiers
-
-# Fix: Explain why these are set unconditionally.
-# Now set these so we'll actually do the output
-# (output_stats uses $opt_X as a guard for printing)
-$opt_E = $true;
-$opt_P = $true;
 
 # Clunky, but faster than editing and saving the file over NFS.
 if ($opt_g)
@@ -6415,6 +6374,53 @@ if ($opt_g)
   elsif ($opt_g == 16) { $debug_parse_declaration = $true; }
   else { die "Bad -g option $opt_g"; }
 }
+
+# using a default directory-- only open the files that
+# aren't explicitly given
+if ($opt_d) {
+  my ($dir,$base_name) = split /:/,$opt_d;
+
+
+  if (!defined($base_name) || $base_name eq "") {
+    $base_name = "";
+  } else {
+    $base_name .= ".";
+  }
+
+  if ($dir !~ /\/$/) {
+    $dir .= "/";
+  }
+
+  print STDERR "Output to $dir with prefix '$base_name'\n";
+
+  $statename = "$dir/${base_name}state";
+
+  if (!$opt_E) {
+    open(EVIL,">$dir/${base_name}evil") || die "Failed opening $dir/${base_name}evil: $!";
+  }
+
+  if (!$opt_P) {
+    open(PARSE_ERRS,">$dir/${base_name}perr") || die "Failed opening $dir/${base_name}perr: $!";
+  }
+
+  if ($debug_ccd_categories) {
+    open(CCD_CATEG,">$dir/${base_name}ccd_debug") || die "Failed opening $dir/${base_name}ccd_debug: $!";
+  };
+}
+
+if ($opt_E) { open(EVIL,">$opt_E") || die "Failed opening $opt_E"; }
+  elsif (!$opt_d) { open(EVIL,">-") || die "Failed opening stdout!"; }
+if ($opt_P) { open(PARSE_ERRS,">$opt_P") || die "Failed opening $opt_P"; }
+  elsif (!$opt_d) { open(PARSE_ERRS,">-") || die "Failed opening stdout!"; }
+if ($opt_I) { $fIgnoreIncludes = $true; }
+if ($opt_t) { $outOFS = "\t"; } # use tab for OFS
+if ($opt_l) { $identifier_re = $identifier_no_dollar_re; } # no $ in identifiers
+
+# Fix: Explain why these are set unconditionally.
+# Now set these so we'll actually do the output
+# (output_stats uses $opt_X as a guard for printing)
+$opt_E = $true;
+$opt_P = $true;
 
 $fDebugCmdProcessing && print "ARGV = @ARGV";
 
