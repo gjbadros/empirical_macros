@@ -1751,7 +1751,7 @@ in code.  We didn't verify this.  \comment{Consider checking that.}}
 
 \begin{figure}
 % \centerline{\epsfig{file=fig/ccd-categories.eps,height=6in}}
-\centerline{\epsfig{file=fig/ccd-categories.eps,width=\linewidth}}
+\centerline{\epsfig{file=fig/ccd-categories.eps,angle=270,width=\linewidth}}
 \captionsmall{Categories for conditional compilation directives.
   The legend indicates what percentage of all Cpp conditionals fall
   into each category, numerically presenting the information in the top row
@@ -2034,9 +2034,10 @@ macros.
 % \centerline{\epsfig{file=fig/exp-dep-bymacro.eps,angle=270,width=.5\linewidth}}
 % \bigskip
 % \centerline{\epsfig{file=fig/incl-dep-bymacro.eps,angle=270,width=.5\linewidth}}
-\centerline{\epsfig{file=fig/exp-dep-bymacro.eps,angle=0,width=.48\linewidth}%
+% When Mike exports Excel charts, angle is 270.  When Greg exports, angle is 0.
+\centerline{\epsfig{file=fig/exp-dep-bymacro.eps,angle=270,width=.48\linewidth}%
 \ %
-\epsfig{file=fig/incl-dep-bymacro.eps,angle=0,width=.48\linewidth}}
+\epsfig{file=fig/incl-dep-bymacro.eps,angle=270,width=.48\linewidth}}
 \captionsmall{Dependences by macro name for 22648 macro names in 28 packages.
   Each bar represents all macros that control at least as many as the
   labeled percent of the lines in its package (but fewer than the next
