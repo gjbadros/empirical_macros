@@ -2258,11 +2258,11 @@ sub is_cpp_command ($)
 sub append_lines ($$)
 {
   my ($arg1, $arg2) = check_args(2, @_);
-  # "+" instead of "*" wouldn't introduce spaces where there were none before;
-  # but we want to make sure the two lines don't just run together.
-  $arg1 =~ s/[ \t\n]*$/ /;
-  $arg2 =~ s/^[ \t\n]*/ /;
-  return ($arg1 . $arg2);
+  $arg1 =~ s/[ \t\n]+$//;
+  $arg2 =~ s/^[ \t\n]+//;
+  # insert a space so that the two lines don't just run together
+  # (above regexps are a lot faster (3x) than using [ \t\n]*)
+  return ($arg1 . " " . $arg2);
 }
 
 # Return an array of three elements: name, args, def.
