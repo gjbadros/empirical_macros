@@ -450,12 +450,20 @@ void gjb_call_hooks_szl_szl_i(struct cpp_options *, HOOK_INDEX, char *, int,
 int gjb_call_hooks_i_i_szl_szl_i(struct cpp_options *, HOOK_INDEX, int, int,
                                  char *, int, char *, int, int);
 
+int gjb_call_hooks_i_i_szl_szl_i_i(struct cpp_options *, HOOK_INDEX, int, int,
+                                   char *, int, char *, int, int, int);
+
+
 void gjb_call_hooks_i_i_szl_sz_i(struct cpp_options *, HOOK_INDEX, int, int,
 				  char *, int, char *, int );
 
 
 void gjb_call_hooks_i_i_i_szl_szl_i(struct cpp_options *, HOOK_INDEX, int, int, int,
 				    char *, int, char *, int, int);
+
+void gjb_call_hooks_i_i_i_szl_szl_i_i(struct cpp_options *, HOOK_INDEX, int, int, int,
+                                      char *, int, char *, int, int, int);
+
 
 void gjb_call_hooks_sz_sz_i(struct cpp_options *, HOOK_INDEX, char *, char *, int);
 

@@ -713,6 +713,53 @@ gjb_call_hooks_i_i_szl_szl_i(struct cpp_options *opts, HOOK_INDEX ih, int s, int
 
 }
 
+int
+gjb_call_hooks_i_i_szl_szl_i_i(struct cpp_options *opts, HOOK_INDEX ih, int s, int e,
+                               char *sz1, int cch1, char *sz2, int cch2, int i, int j)
+{
+  SV *psvFunc = NULL;
+
+  dSP;
+  int count;
+  int retval;
+  
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
+    return -1;
+
+  ENTER ;
+  SAVETMPS;
+
+
+  PUSHMARK(sp);
+  XPUSHs(sv_2mortal(newSViv(s)));
+  XPUSHs(sv_2mortal(newSViv(e)));
+  XPUSHs(sv_2mortal(newSVpvlen(sz1, cch1)));
+  XPUSHs(sv_2mortal(newSVpvlen(sz2, cch2)));
+  XPUSHs(sv_2mortal(newSViv(i)));
+  XPUSHs(sv_2mortal(newSViv(j)));
+  PUTBACK ;
+     
+  count = perl_call_sv_hooks(psvFunc, G_SCALAR);
+
+  SPAGAIN ;
+
+  if (count != 1)
+    {
+    croak("Big trouble: count != 1");
+    }
+
+  retval = POPi;
+  /*  fprintf(stderr,"retval = %d\n",retval); */
+
+  PUTBACK ;
+  FREETMPS ;
+  LEAVE ;
+  return retval;
+
+}
+
+
+
 void
 gjb_call_hooks_i_i_szl_sz_i(struct cpp_options *opts, HOOK_INDEX ih, int s, int e,
 			    char *sz1, int cch1, char *sz2, int i)
@@ -758,6 +805,32 @@ gjb_call_hooks_i_i_i_szl_szl_i(struct cpp_options *opts, HOOK_INDEX ih,
      
   perl_call_sv_hooks(psvFunc, G_DISCARD);
 }
+
+void
+gjb_call_hooks_i_i_i_szl_szl_i_i(struct cpp_options *opts, HOOK_INDEX ih, 
+                                 int s, int e, int i1,
+                                 char *sz1, int cch1, char *sz2, int cch2, int i2, int i3)
+{
+  SV *psvFunc = NULL;
+
+  dSP;
+  
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
+    return;
+
+  PUSHMARK(sp);
+  XPUSHs(sv_2mortal(newSViv(s)));
+  XPUSHs(sv_2mortal(newSViv(e)));
+  XPUSHs(sv_2mortal(newSViv(i1)));
+  XPUSHs(sv_2mortal(newSVpvlen(sz1, cch1)));
+  XPUSHs(sv_2mortal(newSVpvlen(sz2, cch2)));
+  XPUSHs(sv_2mortal(newSViv(i2)));
+  XPUSHs(sv_2mortal(newSViv(i3)));
+  PUTBACK ;
+     
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
+}
+
 
 void 
 gjb_call_hooks_szlx3_i(struct cpp_options *opts, HOOK_INDEX ih,
