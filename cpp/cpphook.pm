@@ -86,7 +86,7 @@ sub create_predef {
 
 sub cpp_out {
   my ($sz) = @_;
-  print "$sz\n";
+#  print "$sz\n";
 #  print "|"; # just print separator
 }
 
@@ -192,6 +192,16 @@ sub Got_token {
   print TOKEN substr($token,4),"\n";
 }
 
+sub do_function {
+  my ($szName) = @_;
+  print "Function: $szName\n";
+}
+
+sub do_func_call {
+  my ($szName) = @_;
+  print "CallFunction: $szName\n";
+}
+
 # Add the hooks, now
 
 AddHook("STARTUP",\&Startup);
@@ -211,8 +221,8 @@ AddHook("DO_INCLUDE",\&do_include);
 AddHook("DO_IF",\&do_if);
 AddHook("DO_ELIF",\&do_elif);
 AddHook("DO_XIFDEF",\&do_xifdef);
-AddHook("DO_IFDEF",\&do_ifdef);
-AddHook("DO_IFNDEF",\&do_ifndef);
+#AddHook("DO_IFDEF",\&do_ifdef);
+#AddHook("DO_IFNDEF",\&do_ifndef);
 AddHook("DO_ELSE",\&do_else);
 AddHook("DO_ENDIF",\&do_endif);
 AddHook("ADD_IMPORT",\&add_import);
@@ -220,6 +230,8 @@ AddHook("INCLUDE_FILE",\&include_file);
 AddHook("DONE_INCLUDE_FILE",\&done_include_file);
 AddHook("EXIT",\&Exit);
 AddHook("TOKEN",\&Got_token);
+AddHook("FUNCTION",\&do_function);
+AddHook("FUNC_CALL",\&do_func_call);
 
 
 1;

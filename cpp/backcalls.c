@@ -26,7 +26,7 @@ extern "C" {
 #include "EXTERN.h"
 #include "perl.h"
 #include "XSUB.h"
-#include "cppmain.h"
+#include "pcpp.h"
 #include "cpplib.h"
 #include "cpphash.h"
 #ifdef __cplusplus

@@ -10,6 +10,7 @@
 // start hook_index_constants
 typedef enum hook_index_constants {
   HI_STARTUP,
+  HI_STARTPARSE,
   HI_EXIT,
   HI_HANDLE_DIRECTIVE,
   HI_DO_DEFINE,
@@ -37,6 +38,8 @@ typedef enum hook_index_constants {
   HI_INCLUDE_FILE,
   HI_DONE_INCLUDE_FILE,
   HI_TOKEN,
+  HI_FUNCTION,
+  HI_FUNC_CALL,
 } HOOK_INDEX;
 // end hook_index_constants
 

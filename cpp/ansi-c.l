@@ -10,7 +10,7 @@ IS                      (u|U|l|L)*
 #include <stdio.h>
 #include "ansi-c.tab.h"
 #include "cpplib.h"
-#include "cppmain.h"
+#include "pcpp.h"
 #include "cpphook.h"
 
 void count();

@@ -32,10 +32,11 @@
 #include "symtab.h"
 #include "token.h"
 #include "globals.h"
+#include "pcpp.h"
 
 extern int errno;
 extern int err_cnt;
-extern int yylex(YYSTYPE *lvalp);
+extern int ct_yylex(YYSTYPE *lvalp);
 
 treenode *parse_include(char *filename);
 
@@ -228,6 +229,7 @@ top_level_decl: declaration
 
 func_def:  func_spec cmpnd_stemnt
         {
+	    char *szName;
             leafnode *lm, *rm;
             for_node *tmpnode;
             tmpnode = (for_node *) $1;
@@ -241,20 +243,23 @@ func_def:  func_spec cmpnd_stemnt
 
               if (rm)
                 {
+		szName = rm->data.sval->str;
                 if (lm && (lm->tok == STATIC))
                   {
                   if (! symtab_insert_at(ParseStack->contxt->syms,
                         mk_funcdef(rm->data.sval, $$), FILE_SCOPE))
-                    yyerr("Duplicate function.");
+                    ct_yyerr("Duplicate function.");
                   }
                 else
                   {
                   if (! symtab_insert_at(ParseStack->contxt->syms,
                         mk_funcdef(rm->data.sval, $$), EXTERN_SCOPE))
-                    yyerr("Duplicate function.");
+                    ct_yyerr("Duplicate function.");
                   }
                 }
               }
+	    gjb_call_hooks_sz(CPP_OPTIONS(&parse_in),HI_FUNCTION,
+			      szName);
         }
 
 enter_scope:
@@ -836,7 +841,7 @@ named_label:  IDENT
           {
           if (! symtab_insert_at(ParseStack->contxt->labels,
                 mk_label($1->data.sval, $$), FUNCTION_SCOPE))
-            yyerr("Duplicate label.");
+            ct_yyerr("Duplicate label.");
           }
         }
 
@@ -1087,7 +1092,7 @@ enum_type_define:  ENUM opt_tag LBRACE enum_def_list RBRACE
               leafnode *leaf = (leafnode *) $2;
               if (! symtab_insert(ParseStack->contxt->tags,
                     mk_tag(leaf->data.sval, $$)))
-                yyerr("Duplicate tag.");
+                ct_yyerr("Duplicate tag.");
               }
         }
  
@@ -1122,7 +1127,7 @@ enum_constant:  IDENT
              {
              if (! symtab_insert(ParseStack->contxt->syms,
                                  mk_enum_const($1->data.sval, $$)))
-               yyerr("Duplicate enumeration constant.");
+               ct_yyerr("Duplicate enumeration constant.");
              }
         }
 
@@ -1138,7 +1143,7 @@ struct_type_define: STRUCT opt_tag LBRACE field_list RBRACE
               leafnode *leaf = (leafnode *) $2;
               if (! symtab_insert(ParseStack->contxt->tags,
                     mk_tag(leaf->data.sval, $$)))
-                yyerr("Duplicate tag.");
+                ct_yyerr("Duplicate tag.");
               }
         }
 
@@ -1160,7 +1165,7 @@ union_type_define: UNION opt_tag LBRACE field_list RBRACE
               leafnode *leaf = (leafnode *) $2;
               if (! symtab_insert(ParseStack->contxt->tags,
                     mk_tag(leaf->data.sval, $$)))
-                yyerr("Duplicate tag.");
+                ct_yyerr("Duplicate tag.");
               }
         }
 
@@ -1452,11 +1457,16 @@ indirect_comp_select: postfix_expr ARROW any_ident
 
 func_call: postfix_expr LPAREN opt_expr_list RPAREN
         {
+            leafnode *ln;
             $2->type = TN_FUNC_CALL;
             $2->lnode = $1;
             $2->rnode = $3;
             $$ = $2;
             free_tree($4);
+	    ln = leftmost($$);
+	    
+	    gjb_call_hooks_sz(CPP_OPTIONS(&parse_in),HI_FUNC_CALL,
+			      ln->data.sval->str);
         }
 
 assign_op:  EQ

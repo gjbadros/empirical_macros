@@ -40,9 +40,9 @@ typedef union {
 /******************************************************/
 
 void get_lineno (void);
-void yywarn  (char *s);
-int  yyerror (char *s);
-int  yyerr   (char *s);
+void ct_yywarn  (char *s);
+int  ct_yyerror (char *s);
+int  ct_yyerr   (char *s);
 
 /******************************************************/
 

@@ -32,7 +32,7 @@ Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include "cpplib.h"
 #include "cpphook.h"
-#include "cppmain.h"
+#include "pcpp.h"
 #include <stdio.h>
 
 #ifndef EMACS

@@ -19,11 +19,11 @@ char what_version[] = "@(#) Ctree Version 0.05";
 
 /* o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o */
 
-extern FILE *yyin;
+extern FILE *ct_yyin;
 
-extern YY_BUFFER_STATE yy_create_buffer( FILE *file, int size );
-extern void            yy_switch_to_buffer( YY_BUFFER_STATE buff );
-extern void            yy_delete_buffer( YY_BUFFER_STATE buff );
+extern YY_BUFFER_STATE ct_yy_create_buffer( FILE *file, int size );
+extern void            ct_yy_switch_to_buffer( YY_BUFFER_STATE buff );
+extern void            ct_yy_delete_buffer( YY_BUFFER_STATE buff );
 
 /* o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o */
 Stk_Item  *new_stk_item( FILE *fp, char *fname )
@@ -40,7 +40,7 @@ Stk_Item  *new_stk_item( FILE *fp, char *fname )
     }
     strcpy(stk_item->filename, fname);
 
-    if ((stk_item->yybuff = yy_create_buffer(fp, YYBUFF_SIZE )) == NULL){
+    if ((stk_item->yybuff = ct_yy_create_buffer(fp, YYBUFF_SIZE )) == NULL){
         free(stk_item->filename);
         free(stk_item);
         return((Stk_Item *) NULL);
@@ -48,7 +48,7 @@ Stk_Item  *new_stk_item( FILE *fp, char *fname )
 
     if ((stk_item->node_heap  = CreateHeap(MX_NODE_SZE, 0)) == NULL){
         free(stk_item->filename);
-        yy_delete_buffer( stk_item->yybuff );
+        ct_yy_delete_buffer( stk_item->yybuff );
         free(stk_item);
         return((Stk_Item *) NULL);
     }
@@ -82,7 +82,7 @@ void delete_stk_item( Stk_Item *stk_item )
         free(stk_item->filename);
 
     if (stk_item->yybuff)
-        yy_delete_buffer(stk_item->yybuff);
+        ct_yy_delete_buffer(stk_item->yybuff);
 
     if (stk_item->node_heap)
         DestroyHeap(stk_item->node_heap);
@@ -208,8 +208,8 @@ void reset_position(TreeStack *tree_stk)
     if ( !(Parse_TOS = top_of_stack(tree_stk)))
         return;
 
-    yy_switch_to_buffer(Parse_TOS->yybuff);
-    yyin = top_file(tree_stk);
+    ct_yy_switch_to_buffer(Parse_TOS->yybuff);
+    ct_yyin = top_file(tree_stk);
 }
 
 /* o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o */
@@ -222,7 +222,7 @@ int tree_parse(TreeStack *tree_stk, int parse_all)
 
     do {
     
-        while(yyparse())
+        while(ct_yyparse())
             ;
 
         cnt++;

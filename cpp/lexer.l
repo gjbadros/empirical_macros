@@ -12,8 +12,7 @@
  *
  *************************************************/
 
-#undef yywrap
-int yywrap();
+int ct_yywrap();
 
 #define  YY_BUFFER_STATE_DEFD
 
@@ -47,33 +46,46 @@ char *tokn_ptr;
 #undef YY_INPUT
 
 #include "cpplib.h"
-#include "cppmain.h"
+#include "pcpp.h"
 #include "cpphook.h"
 
 void count();
+
+int cpp_got_eof = 0;
 
 int /* result */
 cpp_yy_input(char *buf,int max_size)
 {
     int result;
-    enum cpp_token kind = cpp_get_token (&parse_in);
-    gjb_call_hooks_szl(CPP_OPTIONS(&parse_in),HI_CPP_OUT,
-		       parse_in.token_buffer,CPP_WRITTEN(&parse_in));
-    gjb_call_hooks_sz_szl(CPP_OPTIONS(&parse_in),HI_TOKEN,SzFromToken(kind),
-			  parse_in.token_buffer,
-			  CPP_WRITTEN(&parse_in));
-    if (kind == CPP_EOF) {
-	result = YY_NULL;
-	buf[0] = 0;
-    } else {
-	result = CPP_WRITTEN(&parse_in);
-	if (result > max_size) {
-	    fprintf(stderr,"OVERFLOWED max_size in YY_INPUT macro!\n");
-	    result = max_size;
+    do {
+	enum cpp_token kind = cpp_get_token (&parse_in);
+	gjb_call_hooks_szl(CPP_OPTIONS(&parse_in),HI_CPP_OUT,
+			   parse_in.token_buffer,CPP_WRITTEN(&parse_in));
+	gjb_call_hooks_sz_szl(CPP_OPTIONS(&parse_in),HI_TOKEN,SzFromToken(kind),
+			      parse_in.token_buffer,
+			      CPP_WRITTEN(&parse_in));
+	if (kind == CPP_EOF || cpp_got_eof == 1) {
+	    fprintf(stderr,"Got kind == CPP_EOF\n");
+	    result = YY_NULL;
+	    buf[0] = 0;
+	    cpp_got_eof = 1;
+	    /* Return here, since we really want to return the YY_NULL == 0 */
+	    return result;
+	} else {
+	    result = CPP_WRITTEN(&parse_in);
+	    /* NOTE: result could be zero */
+	    if (result > max_size-1) {
+		fprintf(stderr,"OVERFLOWED max_size in YY_INPUT macro!\n");
+		result = max_size-1;
+	    }
+	    strncpy(buf,parse_in.token_buffer,result);
+	    parse_in.limit = parse_in.token_buffer;
 	}
-	strncpy(buf,parse_in.token_buffer,result);
-	parse_in.limit = parse_in.token_buffer;
-    }
+    } while (result == 0);
+    buf[result] = 0;
+#ifdef GJB_DEBUG_CPP_YY_INPUT
+    fprintf(stderr,"Returning %d chars: %s\n",result,buf);
+#endif
     return result;
 }
 
@@ -193,7 +205,7 @@ pp_line         ^{whitespace}*"#"{whitespace}*[0-9]
 
 <INITIAL>"//*"      { /* Ambiguous C++ style comment, must parse as
                             '/' '/*' to be Ansi compliant */
-                         yywarn(
+                         ct_yywarn(
                             "Ambiguous C++ comment, use '/ /*' -or- '// *'");
                          yyless(1);
                          SETPOS_NDE(DIV);
@@ -203,7 +215,7 @@ pp_line         ^{whitespace}*"#"{whitespace}*[0-9]
 <INITIAL>"//"[^*].*$ { /* C++ style comment */
                          if (cpp_comment_warn){
                              cpp_comment_warn = 0;
-                             yywarn("C++ style comment encountered");
+                             ct_yywarn("C++ style comment encountered");
                          }
                      }
 
@@ -431,7 +443,7 @@ pp_line         ^{whitespace}*"#"{whitespace}*[0-9]
                        }
 
 <STR>\n                { /* Error - unterminated string constant */
-                         yyerr("Unterminated string constant starting");
+                         ct_yyerr("Unterminated string constant starting");
                          LAST_STATE();
                          return(INVALID);
                        }
@@ -443,13 +455,13 @@ pp_line         ^{whitespace}*"#"{whitespace}*[0-9]
 
                              /* error, constant is out-of-bounds */
                          if ( result > 0xff ){
-                            yyerr("Escape sequence out-of-bounds");
+                            ct_yyerr("Escape sequence out-of-bounds");
                          }
 
                          if (tokn_ptr < tokn_end)
                             *tokn_ptr++ = result;
                          else
-                            yywarn("String constant too long");
+                            ct_yywarn("String constant too long");
                        }
 
 <STR>\\x{hexdigit}+    {   /* hex escape sequence - ISO C */
@@ -459,19 +471,19 @@ pp_line         ^{whitespace}*"#"{whitespace}*[0-9]
 
                              /* error, constant is out-of-bounds */
                          if ( result > 0xff ){
-                            yyerr("Escape sequence out-of-bounds");
+                            ct_yyerr("Escape sequence out-of-bounds");
                          } else if (yyleng > 4){
-                            yywarn("Hexadecimal escape exceeds two chars");
+                            ct_yywarn("Hexadecimal escape exceeds two chars");
                          }
 
                          if (tokn_ptr < tokn_end)
                             *tokn_ptr++ = result;
                          else
-                            yywarn("String constant too long");
+                            ct_yywarn("String constant too long");
                        }
 
 <STR>\\{number}        {  /* Bad escape sequence */
-                         yywarn("Bad escape sequence in string");
+                         ct_yywarn("Bad escape sequence in string");
                         *tokn_ptr++ = '?';
                        }
 
@@ -479,49 +491,49 @@ pp_line         ^{whitespace}*"#"{whitespace}*[0-9]
                          if (tokn_ptr < tokn_end)
                            *tokn_ptr++ = '\n';
                          else
-                            yywarn("String constant too long");
+                            ct_yywarn("String constant too long");
                        }
 
 <STR>\\t               {
                          if (tokn_ptr < tokn_end)
                            *tokn_ptr++ = '\t';
                          else
-                            yywarn("String constant too long");
+                            ct_yywarn("String constant too long");
                        }
 
 <STR>\\r               {
                          if (tokn_ptr < tokn_end)
                            *tokn_ptr++ = '\r';
                          else
-                            yywarn("String constant too long");
+                            ct_yywarn("String constant too long");
                        }
 
 <STR>\\b               {
                          if (tokn_ptr < tokn_end)
                            *tokn_ptr++ = '\b';
                          else
-                            yywarn("String constant too long");
+                            ct_yywarn("String constant too long");
                        }
 
 <STR>\\f               {
                          if (tokn_ptr < tokn_end)
                            *tokn_ptr++ = '\f';
                          else
-                            yywarn("String constant too long");
+                            ct_yywarn("String constant too long");
                        }
 
 <STR>\\v               {
                          if (tokn_ptr < tokn_end)
                            *tokn_ptr++ = '\v';
                          else
-                            yywarn("String constant too long");
+                            ct_yywarn("String constant too long");
                        }
 
 <STR>\\a               {
                          if (tokn_ptr < tokn_end)
                            *tokn_ptr++ = '\a';
                          else
-                            yywarn("String constant too long");
+                            ct_yywarn("String constant too long");
                        }
 
 <STR>\\(\n)            {  /* String continuation */
@@ -533,7 +545,7 @@ pp_line         ^{whitespace}*"#"{whitespace}*[0-9]
                          if (tokn_ptr < tokn_end)
                            *tokn_ptr++ = yytext[1];
                          else
-                            yywarn("String constant too long");
+                            ct_yywarn("String constant too long");
                        }
 
 <STR>[^\\\n\"]+        {
@@ -543,7 +555,7 @@ pp_line         ^{whitespace}*"#"{whitespace}*[0-9]
                              memcpy(tokn_ptr,yytext,n);
                              tokn_ptr += n;
                          } else 
-                            yywarn("String constant too long");
+                            ct_yywarn("String constant too long");
                        }
 
 <CMMT>[^*\n/\\]*       ;   /* Inside C-style comment */
@@ -558,7 +570,7 @@ pp_line         ^{whitespace}*"#"{whitespace}*[0-9]
                          Parse_TOS->yynxtcol = 0;
                          in_preprocess = 0;
                        }
-<CMMT>"/*"             { yywarn("/* inside comment"); }
+<CMMT>"/*"             { ct_yywarn("/* inside comment"); }
 <CMMT>"*"+[^*/\n\\]*     ;       /* Stars */
 <CMMT>"*"+[^*/\n\\]*\n   { Parse_TOS->yylineno++;
                            Parse_TOS->yynxtcol = 0;
@@ -576,7 +588,7 @@ pp_line         ^{whitespace}*"#"{whitespace}*[0-9]
 
                              /* error, constant is out-of-bounds */
                          if ( result > 0xff ){
-                             yywarn("Escape sequence out-of-bounds");
+                             ct_yywarn("Escape sequence out-of-bounds");
                              result = 0;
                          }
 
@@ -591,10 +603,10 @@ pp_line         ^{whitespace}*"#"{whitespace}*[0-9]
 
                              /* error, constant is out-of-bounds */
                          if ( result > 0xff ){
-                             yywarn("Escape sequence out-of-bounds");
+                             ct_yywarn("Escape sequence out-of-bounds");
                              result = 0;
                          } else if (yyleng > 5){
-                             yywarn("Hexadecimal escape exceeds two chars");
+                             ct_yywarn("Hexadecimal escape exceeds two chars");
                              result = 0;
                          }
 
@@ -604,7 +616,7 @@ pp_line         ^{whitespace}*"#"{whitespace}*[0-9]
                        }
 
 <CC>\\{number}"'"      {  /* Bad escape sequence */
-                         yywarn("Bad escape sequence in char constant");
+                         ct_yywarn("Bad escape sequence in char constant");
                          lvalp->leaf->data.cval = '\0';
                          LAST_STATE();
                          return(CHAR_CONST);
@@ -613,7 +625,7 @@ pp_line         ^{whitespace}*"#"{whitespace}*[0-9]
 <CC>\n                 { /* Error unterminated char constant */
                          Parse_TOS->yylineno++;
                          Parse_TOS->yynxtcol = 0;
-                         yywarn("Unterminated char constant");
+                         ct_yywarn("Unterminated char constant");
                          lvalp->leaf->data.cval = '\0';
                          LAST_STATE();
                          return(CHAR_CONST);
@@ -682,14 +694,14 @@ pp_line         ^{whitespace}*"#"{whitespace}*[0-9]
                        }
 
 <CC>"'"                { /* Empty */
-                         yywarn("Empty character constant");
+                         ct_yywarn("Empty character constant");
                          lvalp->leaf->data.cval = '\0';
                          LAST_STATE();
                          return(CHAR_CONST);
                        }
 
 <CC>[^\\\n][^']+"'"    { /* Multiple characters */
-                         yywarn("Invalid character constant");
+                         ct_yywarn("Invalid character constant");
                          lvalp->leaf->data.cval = '\0';
                          LAST_STATE();
                          return(CHAR_CONST);
@@ -703,18 +715,18 @@ pp_line         ^{whitespace}*"#"{whitespace}*[0-9]
                        }
 
 <CMMT><<EOF>>          { 
-                         yyerr("EOF reached inside comment");
+                         ct_yyerr("EOF reached inside comment");
                          in_preprocess = 0;
                          return(0);
                        }
 
 <CC><<EOF>>            { 
-                         yyerr("EOF reached inside character constant");
+                         ct_yyerr("EOF reached inside character constant");
                          return(0);
                        }
 
 <STR><<EOF>>           { 
-                         yyerr("EOF reached inside string constant");
+                         ct_yyerr("EOF reached inside string constant");
                          return(0);
                        }
 
@@ -733,19 +745,19 @@ pp_line         ^{whitespace}*"#"{whitespace}*[0-9]
 
 /************************************************************************
 //
-// yywrap() - This function is called by the lexer [yylex() or sslex()] when
-//            the end-of-file (or end-of-string for sslex()) is reached.
-//            It gets the next file/string ready (if any) and returns 1
-//            which indicates to the lexer that there are no more files
-//            remaining.  The lexer returns 0 to the parser, indicating
-//            no more tokens are remaining. The parser function, yyparse(),
-//            then returns 0, indicating that the parse is done.  This
-//            behaviour allows a single item to be parsed to be placed
-//            on the stack and parsed without the entire stack being consumed.
+// ct_yywrap() - This function is called by the lexer [yylex() or sslex()] when
+//               the end-of-file (or end-of-string for sslex()) is reached.
+//               It gets the next file/string ready (if any) and returns 1
+//               which indicates to the lexer that there are no more files
+//               remaining.  The lexer returns 0 to the parser, indicating
+//               no more tokens are remaining. The parser function, yyparse(),
+//               then returns 0, indicating that the parse is done.  This
+//               behaviour allows a single item to be parsed to be placed
+//               on the stack and parsed without the entire stack being consumed.
 //
 // **********************************************************************/
 
-int yywrap()
+int ct_yywrap()
 {
     in_preprocess = 0;
 
@@ -799,7 +811,7 @@ void get_lineno()
 
     } while(0);
 
-    yywarn("Malformed #line directive");
+    ct_yywarn("Malformed #line directive");
 }
 
 /***********************************************************************/
@@ -820,7 +832,7 @@ void print_caret(char *s, int pos)
  
 /***********************************************************************/
 
-void yywarn(char *s)
+void ct_yywarn(char *s)
 {
     fprintf(stderr,"%s:%d: Warning - %s:\n%s",
          Parse_TOS->filename, Parse_TOS->yylineno, s, line_buf); 
@@ -829,7 +841,7 @@ void yywarn(char *s)
 
 /***********************************************************************/
 
-int yyerr(char *s)
+int ct_yyerr(char *s)
 {
     fprintf(stderr,"%s:%d: %s:\n%s",
          Parse_TOS->filename, Parse_TOS->yylineno, s, line_buf); 
@@ -846,7 +858,7 @@ int yyerr(char *s)
 
 /***********************************************************************/
 
-int yyerror(char *s)
+int ct_yyerror(char *s)
 {
         /* Insure temination */
     line_buf[MAX_TOKN_LEN-1] = '\0';

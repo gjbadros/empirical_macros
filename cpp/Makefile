@@ -254,7 +254,7 @@ tags:
 	etags cppmain.[ch] cpplib.[ch] cpphash.[ch] cppalloc.[ch] cpperror.[ch] cppexp.[ch] version.c pcp.h tm.h 
 
 clean:
-	rm -f *.o cppmain pcpp pcppct cpphook_names.h hook_index_constants.pm
+	rm -f *.o cppmain pcpp pcppct cpphook_names.h hook_index_constants.pm gram.tab.* lexer.c
 
 cpp: $(CCCP)
 	-rm -f cpp$(exeext)
@@ -338,10 +338,10 @@ ansi-c.tab.c ansi-c.tab.h: ansi-c.y
 
 ## The C Grammar used by CTree 0.05
 lexer.c: lexer.l
-	flex -o$@ $^
+	flex -Pct_yy -o$@ $^
 
 gram.tab.c gram.tab.h: gram.y
-	bison -d $^
+	bison -pct_yy -d $^
 
 gram.h: gram.tab.h
 	cp $< $@

@@ -13,6 +13,6 @@ extern cpp_options options;
 
 char * SzFromToken(enum cpp_token kind);
 
-extern int yydebug;
+extern int ct_yydebug;
 
 #endif _CPPMAIN_H_

@@ -204,7 +204,7 @@ cppmain_handle_options (cpp_reader *pfile, int argc, char **argv)
     if (argv[i][0] == '-' && argv[i][1]== '-')
       {
       if (strcmp(argv[i]+2,"yydebug") == 0)
-	yydebug = 1;
+	ct_yydebug = 1;
       else if (strcmp(argv[i]+2,"noparse") == 0)
 	fShouldParse = 0;
       continue;
@@ -242,7 +242,6 @@ main (int argc, char **argv, char **env)
     die("Problem use-ing cpphook!  Check that perl file for compilation errors.");
 
   perl_run(my_perl);
-
   gjb_call_hooks_void(opts,HI_STARTUP);
 
   p = argv[0] + strlen (argv[0]);
@@ -273,6 +272,7 @@ main (int argc, char **argv, char **env)
   else if (! freopen (opts->out_fname, "w", stdout))
     cpp_pfatal_with_name (&parse_in, opts->out_fname);
 
+
 #ifdef CTGRAMMAR
   parse_tree = (treenode *) NULL;
   
@@ -289,8 +289,8 @@ main (int argc, char **argv, char **env)
     fputs("Out of memory.\n", stderr);
     exit(1);
     }
-
 #endif /* CTGRAMMAR */
+
   if (!fShouldParse)
     {
     fprintf(stderr,"Option --noparse given, just running cpp w/o grammar!\n");
@@ -312,7 +312,8 @@ main (int argc, char **argv, char **env)
     }
   else
     {
-    if (yydebug)
+    gjb_call_hooks_void(opts,HI_STARTPARSE);
+    if (ct_yydebug)
       fprintf(stderr,"Calling yyparse()...\n");
 #ifndef CTGRAMMAR
     yyparse();
@@ -323,11 +324,12 @@ main (int argc, char **argv, char **env)
     enter_scope(contxt);
     
     tree_parse(ParseStack, 0);
+    fprintf(stderr,"Done tree_parse!\n");
   
-    parse_tree = (top_of_stack(DoneStack))->parse_tree;
+    // parse_tree = (top_of_stack(DoneStack))->parse_tree;
 
 #endif /* CTGRAMMAR */
-    if (yydebug)
+    if (ct_yydebug)
       fprintf(stderr,"Returned from yyparse()!\n");
     }
 
