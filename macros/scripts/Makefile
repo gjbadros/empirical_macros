@@ -19,9 +19,12 @@ PERR := $(wildcard *.perr)
 
 TEXT_TABLES :=	tbl-package_sizes \
 		tbl-def_frequency \
+		tbl-use_frequency \
 		tbl-how_used_ni
 
-RAW_TABLES := raw-directives-hist baked-directives-hist
+# Maybe "baked" is actually a text table?
+RAW_TABLES := raw-directives-hist baked-directives-hist \
+		tbl-categories
 
 LATEX_TABLES :=	tbl-categories.tex
 
@@ -52,7 +55,13 @@ tbl-package_sizes: $(STAT)
 
 tbl-def_frequency: $(MAC)
 	macros-make-def-frequency-tbl-from-mac $^
-	echo $(patsubst %.mac,%.freqdef,$^) | xargs -n12 paste /homes/gws/gjb/macros/freqdef.buckets >> $@
+	# -n12 arg to xargs for latex
+	echo $(patsubst %.mac,%.freqdef,$^) | xargs paste /homes/gws/gjb/macros/freqdef.buckets >> $@
+
+tbl-use_frequency: $(MAC)
+	macros-make-use-frequency-tbl-from-mac $^
+	# -n12 arg to xargs for latex
+	echo $(patsubst %.mac,%.frequse,$^) | xargs paste /homes/gws/gjb/macros/frequse.buckets >> $@
 
 tbl-how_used_ni: $(MAC)
 	macros-make-how-used-ni-tbl-from-mac $^ > $@
@@ -67,7 +76,7 @@ raw-directives-hist: $(STAT)
 	macros-make-directives-raw-hist-from-stats $^ > $@
 
 baked-directives-hist: raw-directives-hist
-	macros-bake-raw-directives-hist < $^ > $@
+	macros-bake-raw-directives-hist $^ > $@
 
 package_and_sizes-tbl.txt: $(STAT)
 	macros-make-package-sizes-tbl-from-stat $^ > $@
@@ -78,7 +87,10 @@ package_and_sizes-tbl.txt: $(STAT)
 ###
 
 tbl-categories.tex: $(STAT)
-	macros-make-categories-tbl-from-stat-pct $^ > $@
+	macros-make-categories-tbl-from-stat $^ > $@
+
+tbl-categories: $(STAT)
+	macros-make-categories-tbl-from-stat -t -p $^ > $@
 
 $(CVT_LATEX_TABLES): %.tex: %
 	latexify $< > $@
