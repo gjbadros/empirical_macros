@@ -1,3 +1,6 @@
+% $Id$
+% macros-paper.tex
+% FIX: Switch to LaTeX2e, not 209
 \documentstyle[11pt,epsf]{article}
 
 \marginparwidth 0pt
@@ -33,22 +36,23 @@ Seattle, WA  98195-2350\\
 
 \begin{abstract}
 
-The C programming language is intimately connected to its macro
-preprocessor.  This relationship affects, indeed generally hinders,
-both the tools (compilers, debuggers, call graph extractors, etc.)
-built to engineer C programs and also the ease of translating to other
-languages such as C++.  In this paper we analyze over 20 packages
-comprising 1.5 million lines of publicly available C code, determining
-the ways in which the preprocessor is used in practice.  We developed
-a framework for analyzing preprocessor usage, using it to extract
-information the percentage of preprocessor directives in C programs,
-about the frequency of use of defined macros, about the relationship
-between C functions and their use of macros, and about the macros that
-are difficult to express in terms of other C or C++ language features.
-We report on the analysis, in particular illustrating data that are
-material when considering the definition of tools for C or translators
-to C++.  We present how the results (and the supporting framework) lay
-the foundation for developing a tool to translate from C to C++.
+  The C programming language is intimately connected to its macro
+  preprocessor.  This relationship affects, indeed generally hinders,
+  both the tools (compilers, debuggers, call graph extractors, etc.)
+  built to engineer C programs and also the ease of translating to other
+  languages such as C++.  In this paper we analyze over 20 packages
+  comprising 1.5 million lines of publicly available C code, determining
+  the ways in which the preprocessor is used in practice.  We developed
+  a framework for analyzing preprocessor usage, using it to extract
+  information about the percentage of preprocessor directives in C
+  programs, about the frequency of use of defined macros, about the
+  relationship between C functions and their use of macros, and about
+  the macros that are difficult to express in terms of other C or C++
+  language features.  We report on the analysis, in particular
+  illustrating data that are material when considering the definition of
+  tools for C or C++.  We present how the results (and the supporting
+  framework) lay the foundation for developing a tool to reduce usage of
+  the preprocessor by translating from C to C++.
 
 \end{abstract}
 
@@ -56,14 +60,14 @@ the foundation for developing a tool to translate from C to C++.
 
 \section{Introduction}
 
-The C programming language~\cite{kr,ansi} is intimately connected to
-its macro preprocessor, Cpp [FIX: any cites?].  Nobody writes
-programs in ``pure'' C; facilities of the preprocessor such as
-including other files, defining constants and macros, conditional
-compilation, etc. are present in essentially every program.  This
-relationship between the C language and the preprocessor has a number
-of consequences, many of which were probably not anticipated by the
-original designers.
+The C programming language~\cite{kr,ansi} [FIX: kr ref?] is intimately
+connected to its macro preprocessor, Cpp~\cite[Ch.3]{Harbison91}.
+Nobody writes programs in ``pure'' C; facilities of the preprocessor
+such as including other files, defining constants and macros,
+conditional compilation, etc. are present in essentially every program.
+This relationship between the C language and the preprocessor has a
+number of consequences, many of which were probably not anticipated by
+the original designers.
 
 Stroustrup puts the consequences of this relationship in perspective:
 \begin{quote}
@@ -96,7 +100,7 @@ translation; they, too, apply their techniques to post-processed
 code~\cite{OCallahan-icse97}.  
 
 Having tools use post-processed source code increases the dissonance
-between what the programmer sees and what the tools analyze.  There
+between what the programmer writes and what the tools analyze.  There
 are several ways to try to reduce this problem; Stroustrup suggests
 the following:
 \begin{quote}
@@ -111,16 +115,16 @@ belongs~\cite[p.~426]{Stroustrup-DesignEvolution}.
 As a step in this direction, we performed an empirical analysis of the
 ways in which the preprocessor is used in a large collection of C
 programs; we analyzed nearly 30 packages that comprise well over one
-million lines of code.  The intent of the analysis is to build a
-better understanding of how the preprocessor is used.  In turn, this
-will help us to build a C to C++ conversion tool with two attractive
-properties: one, it will take as input C programs complete with
-preprocessor directives; and two, it will map many---preferably
-most---uses of directives into C++ language features.\footnote{It is
-not practical to eliminate all uses of Cpp since C++ currently
-provides no replacement for the \verb+\#include+ directive.}  The
-framework we developed for analyzing preprocessor usage provides a
-basis for the development of such a conversion tool.
+million lines of code.  The intent of the analysis is to build a better
+understanding of how the preprocessor is used.  In turn, this will help
+us to build a C to C++ conversion tool with two attractive properties:
+one, it will take as input C programs complete with preprocessor
+directives; and two, it will map many---preferably most---uses of
+directives into C++ language features.\footnote{It is not practical to
+  eliminate all uses of Cpp.  For example, C++ currently provides no
+  replacement for the \verb+\#include+ directive.} The framework we
+developed for analyzing preprocessor usage provides a basis for the
+development of such a conversion tool.
 
 In this paper, we report on several specific analyses that we
 performed.  
@@ -153,12 +157,27 @@ convinces us that, by extending our analysis framework with some class
 type inferencing techniques (similar to those used by Siff and
 Reps~\cite{Siff-fse96}, O'Callahan and Jackson~\cite{OCallahan-icse97},
 and others), we can take significant steps towards a tool that usefully
-converts a high percentage of C code into C++.  [Two important points to
-address: C code almost *is* C++ code, so what do we gain from a
-``conversion''?  If we can't get all the code, can we identify the parts
-we can't get?]
+converts a high percentage of Cpp code into C++ language
+features.\footnote{Preliminary results using our tool on C++ code
+  demonstrates that many C++ packages still rely on Cpp, even when C++
+  provides mechanisms within the language to support a nearly identical
+  construct.} 
+[FIX: Two important points to address: C code almost *is*
+C++ code, so what do we gain from a ``conversion''?  If we can't get all
+the code, can we identify the parts we can't get?
+gjb thinks this is more for the next paper-- we don't need to get into
+it here]
 
 \section{Related Work}\label{sec:related}
+
+Carroll and Ellis claim ``almost all uses of macros can be eliminated from
+C++ libraries.''~\cite{Carroll95}  As evidence of this, they list eight
+categories of macro usage, and explain how to convert these types of
+constructs into C++ mechanisms.  They don't, however, discuss automatic
+conversion, and focus only on instructing the software engineer on
+better ways to do Cpp-like things.
+
+
 
 \section{The Data}\label{sec:gathering}
 
@@ -176,10 +195,10 @@ text of a package.
 \begin{figure}
 %\epsfxsize 6in
 %\centerline{\epsfbox{mc.eps}}
-\begin{tabular}{|l|r|r|}\\\hline
+\begin{tabular}{|l|r|r|}\hline
 C Package & Physical Lines & NCNB Lines\\\hline\hline
 bc & 7438 & 5177\\\hline
-gzip & 9076 & 5787\\\hline
+gzip & 9076 & 5787\\\hline\hline
 
 Total & big & num\\\hline
 \end{tabular}
@@ -245,9 +264,13 @@ determined:
 \item How many times (and where) it was mentioned in other
 preprocessor directives.
 
-[FIX: This is redundant with the same information in paragraph form, above]
-
 \end{itemize}
+[FIX: gjb: This is redundant with the same information in paragraph
+form, above]
+
+[FIX: gjb: I'd also like to see info about how often define-d to the same
+expansion, or not, etc.]
+
 
 We display some of these data here, in several different forms.
 Figure~\ref{fig:define_count} shows a histogram with cumulative
@@ -278,7 +301,8 @@ goes here
 \end{figure}
 
 Figure~\ref{fig:define_usage} shows the percentage of defined macros
-that are used in C code, in Cpp code
+that are used in C code, in Cpp code, in both, or in neither (i.e. no
+uses).
 
 \begin{figure}
 goes here
@@ -318,14 +342,14 @@ parameters.  The functions are broken down into several sub-categories:
 \begin{itemize}
 
 \item {\em Functions/Cpp\/}, where the body of the macro invokes one
-or more other macros.  [This is currently ``function, macro as
+or more other macros.  [FIX: This is currently ``function, macro as
 function'', I think.]
 
 \item {\em Functions/C-expression\/}, where the body of the macro is
-defined as a well-defined C expression.  [This is currently
+defined as a well-defined C expression.  [FIX: This is currently
 ``function, some constant'', I think.]
 
-\item {\em Functions/Essential\/}, [bad name?] where the body of the
+\item {\em Functions/Essential\/}, [FIX: bad name?] where the body of the
 macro is not defined as a C expression; specific reasons include
 ...
 
@@ -349,14 +373,14 @@ for gzip.]
 What do these analyses tell us about the use of the C pre-processor?
 [FIX: well?] 
 
-We wrote several Perl scripts to produce and analyze these data.  As
-we developed them, we slowly shifted from a lexical analysis of the
-source to a syntactic analysis of the source.  For example, we now
-properly parse all declarations in every package.  We're pursuing even
-more analysis, pushing into semantics.  For instance, we can now
-determine which identifiers are free variables within a defined macro.
-We are also close to being able to infer the types of the bodies of
-defined macros, one of several steps necessary before we can attempt
+We wrote a collection of Perl scripts to produce and analyze these
+data.  As we developed them, we slowly shifted from a lexical analysis
+of the source to a syntactic analysis of the source.  For example, we
+now properly parse virtually all declarations in every package.  We're
+pursuing even more analysis, pushing into semantics.  For instance, we
+can now determine which identifiers are free variables within a defined
+macro.  We are also close to being able to infer the types of the bodies
+of defined macros, one of several steps necessary before we can attempt
 to build a converter from C to C++.
 
 \section{Conclusion}\label{sec:conclusion}
