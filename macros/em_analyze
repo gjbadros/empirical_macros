@@ -2252,9 +2252,9 @@ sub is_cpp_command ($)
 #   return $result;
 # }
 
-
 # This pretties things up but changes contents of line-spanning strings,
 # so don't call it if ARG1 ends inside a string.
+# NOTE: this sub is also in cline.pm
 sub append_lines ($$)
 {
   my ($arg1, $arg2) = check_args(2, @_);
@@ -2262,7 +2262,7 @@ sub append_lines ($$)
   $arg2 =~ s/^[ \t\n]+//;
   # insert a space so that the two lines don't just run together
   # (above regexps are a lot faster (3x) than using [ \t\n]*)
-  return ($arg1 . " " . $arg2);
+  return ($arg1 . "  " . $arg2);
 }
 
 # Return an array of three elements: name, args, def.
