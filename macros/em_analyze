@@ -5098,6 +5098,9 @@ sub categorize_macro_def ( $ )
 	{ categorize_macro_name($body);
 	  $category = $mncategory{$body};
 	  $type = $mntype{$body}; }
+      elsif (grep(/^\Q$body\E$/, $mdef_formals[$index]))
+	# Expands to one of its arguments
+	{ $category = $catFAILURE; }
       else
 	{ $category = $catSYMBOL_UNKNOWN; } }
   # FIX: elements of $body may be ordinary symbols, if they expand to macros
