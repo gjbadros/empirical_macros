@@ -21,12 +21,15 @@ if ($files[0] =~ /\.frequse_cum$/) {
 } elsif ($files[0] =~ /\.freqdef_cum$/) {
   @buckets = (1..20);
   $label = "No. defs";
+} elsif ($files[0] =~ /\.freqddf_cum$/) {
+  @buckets = (1..20);
+  $label = "No. distinct defs";
 } else {
   usage();
 }
 
 sub usage {
-  print STDERR "Usage: $script_name <*.freq{use,def}_cum files>\n";
+  print STDERR "Usage: $script_name <*.freq{use,def,ddf}_cum files>\n";
   exit -1;
 }
 
