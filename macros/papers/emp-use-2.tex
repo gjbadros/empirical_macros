@@ -784,7 +784,8 @@ The ten macro body categories are as follows.
 %   \centerline{\input{categories-tbl.tex}}%
 % }
 % \centerline{\epsfig{file=fig/def-categories.eps,height=6in}}
-\centerline{\epsfig{file=fig/def-categories.eps,width=\linewidth}}
+% \centerline{\epsfig{file=fig/def-categories.eps,width=\linewidth}}
+\centerline{\epsfig{file=fig/def-categories.eps,height=\linewidth,angle=270}}
 \captionsmall{Categorization of macro definition bodies.  The legend numerically
   represents the information in the top row.  The packages are ordered from
   most preprocessor directives per line to fewest (as in
@@ -995,7 +996,7 @@ ASSERT(p) if (!(p)) botch(\verb|__STRING|(p)); else}).
 %%   2.2%  multiply_categorized (11)
 %%   3.2%  symbols (16)
 % @mcat_FAILURE = qw( catNOT_YET catIN_PROCESS catNO_DEF catFAILURE catMULTIPLE );
-%% Numbers: 1.8 = (/ 502.0 \nummacrodefs)
+%% Numbers: 1.9 = (/ 502.0 \nummacrodefs)
 %% All failures: egrep '(uncategorized|being_categorized|never_defined|failed_categorization\([0-9]*\)|multiply_categorized|symbols):' *.catg
 %%   then do (delete-matching-lines "catg:/")
 %%   and laboriously hand-classify everything.
@@ -1031,7 +1032,7 @@ ASSERT(p) if (!(p)) botch(\verb|__STRING|(p)); else}).
   result in a statement.  As a result, our ``other'' category contains
   macros that might otherwise have been heuristically placed in some other category, at
   increased risk of miscategorizations of other macros.  Because the number
-  of categorization failures is small overall (1.8\% of the {\nummacrodefs}
+  of categorization failures is small overall (1.9\% of the {\nummacrodefs}
   definitions; 8 of the {\numpackages} packages have no such macros, and 10
   more have only one or two such definitions), and because no variety of
   failure stands out among these classification failures, a more extensive
