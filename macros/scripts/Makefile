@@ -20,16 +20,15 @@ USECUM  := $(wildcard *.frequse_cum)
 DEFCUM  := $(wildcard *.freqdef_cum)
 PERR := $(wildcard *.perr)
 
-TEXT_TABLES :=	tbl-package_sizes \
-		tbl-def_frequency \
-		tbl-use_frequency \
-		tbl-how_used_ni
+TEXT_TABLES :=	tbl-package-sizes \
+		tbl-def-frequency \
+		tbl-use-frequency \
+		tbl-where-used
 
-# Maybe "baked" is actually a text table?
-RAW_TABLES := raw-directives-hist tbl-baked-directives-hist \
-		tbl-categories tbl-subset-categories
+RAW_TABLES := raw-directives-hist tbl-directives-breakdown \
+		tbl-def-categories tbl-subset-categories
 
-LATEX_TABLES :=	tbl-categories.tex tbl-subset-categories.tex
+LATEX_TABLES :=	tbl-def-categories.tex tbl-subset-categories.tex
 
 CVT_LATEX_TABLES := $(patsubst %,%.tex,$(TEXT_TABLES))
 
@@ -53,20 +52,17 @@ data:
 
 text_tables:	$(TEXT_TABLES)
 
-tbl-package_sizes: $(STAT)
+tbl-package-sizes: $(STAT)
 	macros-make-package-sizes-tbl-from-stat $^ > $@
 
-tbl-def_frequency: $(DEFCUM)
+tbl-def-frequency: $(DEFCUM)
 	macros-make-tbl-frequsedef-from-cum $^ > $@
 
-tbl-use_frequency: $(USECUM)
+tbl-use-frequency: $(USECUM)
 	macros-make-tbl-frequsedef-from-cum $^ > $@
 
-tbl-how_used_ni: $(MAC)
+tbl-where-used: $(MAC)
 	macros-make-how-used-ni-tbl-from-mac $^ > $@
-
-tbl-how_used: tbl-how_used_ni
-	ln -s $^ $@
 
 ###########################################################################
 ### Raw tables
@@ -77,7 +73,7 @@ raw: $(RAW_TABLES)
 raw-directives-hist: $(STAT)
 	macros-make-directives-raw-hist-from-stats $^ > $@
 
-tbl-baked-directives-hist: raw-directives-hist
+tbl-directives-breakdown: raw-directives-hist
 	macros-bake-raw-directives-hist $^ > $@
 
 package_and_sizes-tbl.txt: $(STAT)
@@ -114,5 +110,6 @@ showvars:
 	echo $(CVT_LATEX_TABLES)
 	echo $(ALL_TABLES)
 	echo $(COMMON_DIR)
+
 
 .PHONY: all clean showvars text_tables data raw
