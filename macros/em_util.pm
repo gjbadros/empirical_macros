@@ -4,7 +4,8 @@ require 5.002;
 require Exporter;
 @ISA = qw(Exporter);
 @EXPORT = qw( is_number type_name count_macro_args formals_array actuals_array
-	     percent2 sum_array make_cum_array sum_parallel_hashes add_newline);
+	      percent2 sum_array make_cum_array sum_parallel_hashes add_newline 
+	      simplify_path_name);
 
 use checkargs;
 use em_constants;
@@ -163,6 +164,20 @@ sub add_newline ($)
     { return $string . "\n"; }
 }
 
+# Simplify a directory path by canonicalizing to not contain
+# any ".." or "." components
+# e.g.  simplify_path_name("./bink/baz/foo/../foo2/../../bar") is
+#       "./bink/bar"
+sub simplify_path_name ( $ ) {
+  my ($path) = @_;
+  my $result = $path;
+  while (($result =~ s%/[^/\n]*/\.\./%/%) && $result ne $path) {
+    $path = $result;
+  }
+  while (($result =~ s%//%/%g) && $result ne $path) {
+    $path = $result;
+  }
+}
 
 1; #Successful import
 __END__

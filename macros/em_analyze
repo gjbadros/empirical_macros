@@ -5791,21 +5791,6 @@ sub get_include_path () {
   return;
 }
 
-# Simplify a directory path by canonicalizing to not contain
-# any ".." or "." components
-# e.g.  simplify_path_name("./bink/baz/foo/../foo2/../../bar") is
-#       "./bink/bar"
-sub simplify_path_name ( $ ) {
-  my ($path) = @_;
-  my $result = $path;
-  while (($result =~ s%/[^/\n]*/\.\./%/%) && $result ne $path) {
-    print "$result\n";
-    $path = $result;
-  }
-  return $result;
-}
-
-
 # fix: If $system is true, look only for a system include file.
 # Otherwise, look in package and system directories.
 # Search through @include_path's directories and find the first
