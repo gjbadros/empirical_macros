@@ -82,9 +82,12 @@ find . -name "core" -print
    find-c-no-usr >! c-files-listing
    # Regenerate c-files-listing
 
-10) # Skip this step for now; we want to see the files in case of trouble.
+10) Run ~gjb/bin/share/pcp3-bad-expansions from munged/ directory;
+report any problems to Greg
+
+11) # Skip this step for now; we want to see the files in case of trouble.
     rm -fr munged/usr munged/uns
     rm -f **/*.o(.) #find . -type f -name "*.o" -exec rm \; 
     # Save space
 
-11) run em_analyze over the munged directory and pray
+12) run em_analyze over the munged directory and pray plentifully!
