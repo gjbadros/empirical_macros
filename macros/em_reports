@@ -143,14 +143,23 @@ my @mdef_body_simple;
 
 
 use vars qw(%macros_c_all_uses
-	   @macros_c_number_uses @macros_c_number_defs
-	   @macros_c_number_uses_for @macros_c_number_defs_for
-	   $macros_c_most_uses   $macros_c_most_defs
-	   @macros_c_most_uses_for @macros_c_most_defs_for);
-
+	   @macros_c_number_uses
+	   @macros_c_number_uses_for
+	   $macros_c_most_uses
+	   @macros_c_most_uses_for
+	   @macros_c_number_defs
+	   @macros_c_number_defs_for
+	   $macros_c_most_defs
+	   @macros_c_most_defs_for
+	   @macros_c_number_defs_distinct
+	   @macros_c_number_defs_distinct_for
+	   $macros_c_most_defs_distinct
+	   @macros_c_most_defs_distinct_for);
 
 my (%cppcmdcount, %cppcmdcount_ni, %cppcmdcount_hdr_ni, %cppcmdcount_c_ni);
 my (%category_counts_ni, %category_counts_c_ni, %category_counts_hdr_ni);
+
+my %mndistinct_defs = ();	# number of distinct definitions
 
 
 # FIX: these sub-parts might better be broken up into functions
@@ -212,19 +221,19 @@ sub output_stats ( )
     sum_array(@rg_physical_lines[@ftype_HEADER_NOT_INCLUDED]);
   my $ncnb_physical_lines_hdr_ni =
     sum_array(@rg_ncnb_lines[@ftype_HEADER_NOT_INCLUDED]);
-  my $cpp_physical_lines_hdr_ni =
-    sum_array(@rg_cpp_phys_lines[@ftype_HEADER_NOT_INCLUDED]);
-  my $cpp_physical_ncnb_lines_hdr_ni =
-    sum_array(@rg_cpp_phys_ncnb_lines[@ftype_HEADER_NOT_INCLUDED]);
+#   my $cpp_physical_lines_hdr_ni =
+#     sum_array(@rg_cpp_phys_lines[@ftype_HEADER_NOT_INCLUDED]);
+#   my $cpp_physical_ncnb_lines_hdr_ni =
+#     sum_array(@rg_cpp_phys_ncnb_lines[@ftype_HEADER_NOT_INCLUDED]);
 
   my $physical_lines_c_ni =
     sum_array(@rg_physical_lines[@ftype_NONHEADER_NOT_INCLUDED]);
   my $ncnb_physical_lines_c_ni =
     sum_array(@rg_ncnb_lines[@ftype_NONHEADER_NOT_INCLUDED]);
-  my $cpp_physical_lines_c_ni =
-    sum_array(@rg_cpp_phys_lines[@ftype_NONHEADER_NOT_INCLUDED]);
-  my $cpp_physical_ncnb_lines_c_ni =
-    sum_array(@rg_cpp_phys_ncnb_lines[@ftype_NONHEADER_NOT_INCLUDED]);
+#   my $cpp_physical_lines_c_ni =
+#     sum_array(@rg_cpp_phys_lines[@ftype_NONHEADER_NOT_INCLUDED]);
+#   my $cpp_physical_ncnb_lines_c_ni =
+#     sum_array(@rg_cpp_phys_ncnb_lines[@ftype_NONHEADER_NOT_INCLUDED]);
 
 
   print "#LINES#: physical ncnb_phys cpp_phys cpp_phys_ncnb\n";
@@ -545,30 +554,17 @@ sub output_dependences ( )
 	{ print "  tot_depee_lines: ", $either_dependee_lines{$macro_name}, "\n"; } }
 
   my %defs_lines = ();
-  my %mndefs = ();;
-  my %mndistinct_defs = ();
+  my %mndefs = ();
   { my $total_product = 0;
     for my $macro_name (keys %macros)
       { next if MacroNotDefinedInsidePackage($macro_name);
 	my $num_defs = scalar(@{$macros{$macro_name}});
 	$mndefs{$macro_name} = $num_defs;
-	my $num_distinct_defs;
-	if ($num_defs < 2)
+	my $num_distinct_defs = $mndistinct_defs{$macro_name};
+	if (!defined($num_distinct_defs))
+	  { die "Didn't compute number of distinct definitions for $macro_name"; }
+	if ($num_distinct_defs == 0)
 	  { $num_distinct_defs = 1; }
-	else
-	  { my %def_hash;
-	    for my $i (@{$macros{$macro_name}})
-	      { my $body = $mdef_body_simple[$i];
-		my $args = $mdef_formals[$i];
-		# Canonicalize formal names to avoid gratuitous differences
-		if ($args)
-		  { my @formals = formals_array($args);
-		    for my $fno (0 .. $#formals)
-		      { $body =~ s/\b$formals[$fno]\b/EM_ARG_NUM_$fno/g; } }
-		$body =~ s/\s+//g; # collapse all spaces
-		$def_hash{$body} = $true; }
-	    $num_distinct_defs = scalar(keys %def_hash); }
-	$mndistinct_defs{$macro_name} = $num_distinct_defs;
 	my $dep_lines = $either_dependee_lines{$macro_name};
 	my $this_product = $num_distinct_defs * $dep_lines;
 	$defs_lines{$macro_name} = $this_product;
@@ -596,7 +592,10 @@ sub output_dependences ( )
 	#	{ print "\n", $this_product, "\t", $macro_name;
 	#	  $prev_product = $this_product; }
 	# Print one line per macro name
-	print "\n$this_product\t$macro_name\t= $mndistinct_defs{$macro_name} [$mndefs{$macro_name}] * ($inclusion_dependee_lines{$macro_name} + $expansion_dependee_lines{$macro_name})";
+	my $distinct = $mndistinct_defs{$macro_name};
+	if ($distinct == 0)
+	  { $distinct = 1; }
+	print "\n$this_product\t$macro_name\t= $distinct [$mndefs{$macro_name}] * ($inclusion_dependee_lines{$macro_name} + $expansion_dependee_lines{$macro_name})";
       } }
 
   print "\n\n===========================================================================\n";
@@ -748,20 +747,20 @@ sub output_lint ( )
 			  $this_warn_formal_reserved_word = $true; }
 		      # Add spaces to make sure that there's a first and last part
 		      my @parts = split(/\b\Q$arg\E\b/, " $body ");
-		      for my $i (0..$#parts)
-			{ $parts[$i] =~ s/^\s+//;
-			  $parts[$i] =~ s/\s+$//; }
+		      for my $j (0..$#parts)
+			{ $parts[$j] =~ s/^\s+//;
+			  $parts[$j] =~ s/\s+$//; }
 
 		      my @unparen_uses = ();
 		      my @sideeff_uses = ();
 		      my $is_selector = $false;
-		      for my $i (1..$#parts)
-			{ my $pre = $parts[$i-1];
-			  my $post = $parts[$i];
+		      for my $j (1..$#parts)
+			{ my $pre = $parts[$j-1];
+			  my $post = $parts[$j];
 			  # if ($macro_name eq "__isctype") { print STDOUT "pre = $pre\nmatch = " . ($pre =~ /[\?:,\)]$/) . "  " . ($pre !~ /\($/) . "  " . ($post !~ /^\)/) . "  " . ($arg ne $body) . "\n" ; }
-			  if (($i < $#parts) && (!$post))
+			  if (($j < $#parts) && (!$post))
 			    { push(@formal_complaints,
-				   "adjacent uses \#$i and \#" . $i+1);
+				   "adjacent uses \#$j and \#" . $j+1);
 			      $this_warn_formal_use_adjacent = $true; }
 
 			  if (!$is_selector && ($pre =~ /$selector_regexp$/o))
@@ -788,11 +787,11 @@ sub output_lint ( )
 				  || ($post =~ /^[\?:]/o) #  for ? :
 				  )
 			      )
-			    { push(@unparen_uses, $i); }
+			    { push(@unparen_uses, $j); }
 			  if (($pre =~ /(--|\+\+)$/)
 			      || ($post =~ /^(--|\+\+)/)
 			      || ($post =~ /^([-+*\/%&^\|]|<<|>>)?=[^=]/))
-			    { push(@sideeff_uses, $i); }
+			    { push(@sideeff_uses, $j); }
 			}
 		      if (!$is_selector && (scalar(@unparen_uses) > 0))
 			{ if (scalar(@unparen_uses) == 1)
@@ -939,6 +938,18 @@ sub output_freqdef ( )
 			       make_cum_array(@{$macros_c_number_defs_for[$cat]}));
     }
   }
+  select(FREQDEF_DISTINCT);
+  OutputCountsHistogramCum(1,$macros_c_most_defs_distinct,
+			   make_cum_array(@macros_c_number_defs_distinct));
+  foreach my $cat (0..$catLast) {
+    local $WARNING = 0;
+    if ($#{$macros_c_number_defs_distinct_for[$cat]} >= 0) {
+      print "\n#Category: $categoryname[$cat]\n";
+      OutputCountsHistogramCum(1,$macros_c_most_defs_distinct_for[$cat],
+			       make_cum_array(@{$macros_c_number_defs_distinct_for[$cat]}));
+    }
+  }
+
 }
 
 
@@ -963,7 +974,7 @@ sub HistogramNumericFromList ( @ ) {
 # Returns a categorization string describing how the macro was used
 # (one of eight (was four)); in alphabetical order:
 #   Code CodeCond CodeMacro CodeMacroCond Cond Macro MacroCond NoUses
-sub how_used_from_code_cpp_uses ( $$$ ) {
+sub how_used_from_code_cpp_uses ( $$$$ ) {
   my ($cCodeUses, $cMacroUses, $cCondUses, $cCondRedefUses) = check_args(4,@_);
   my $result = "";
   $result .= "Code" if ($cCodeUses > 0);
@@ -1083,6 +1094,31 @@ sub compute_global_cpp_sums ( ) {
 
 }
 
+# sets %mndistinct_defs
+sub compute_num_defs_distinct ( )
+{
+  for my $macro_name (keys %macros)
+    { my $num_defs = scalar(@{$macros{$macro_name}});
+      my $num_distinct_defs;
+      if ($num_defs < 2)
+	{ $num_distinct_defs = $num_defs; }
+      else
+	{ my %def_hash;
+	  for my $i (@{$macros{$macro_name}})
+	    { my $body = $mdef_body_simple[$i];
+	      my $args = $mdef_formals[$i];
+	      # Canonicalize formal names to avoid gratuitous differences
+	      if ($args)
+		{ my @formals = formals_array($args);
+		  for my $fno (0 .. $#formals)
+		    { $body =~ s/\b$formals[$fno]\b/EM_ARG_NUM_$fno/g; } }
+	      $body =~ s/\s+//g; # collapse all spaces
+	      $def_hash{$body} = $true; }
+	  $num_distinct_defs = scalar(keys %def_hash); }
+      $mndistinct_defs{$macro_name} = $num_distinct_defs; }
+}
+
+
 # Return false if any of the definitions of the macro name
 # occur inside the package
 sub MacroNotDefinedInsidePackage ( $ ) { # returns bool
@@ -1090,7 +1126,6 @@ sub MacroNotDefinedInsidePackage ( $ ) { # returns bool
   for (my $iDef = 0 ; $iDef <= $#{$macros{$name}}; $iDef++ ) {
     my $index = $macros{$name}[$iDef];
     my $fileno = $mdef_fileno[$index];
-    my $filename = $files[$fileno];
     if ($file_inclusion_method[$fileno] eq "FromStdin") {
       # it is defined inside the package
       # print "MacroNotDefinedInsidePackage ($name) => false [due to $files[$fileno]]\n";
@@ -1141,16 +1176,27 @@ sub compute_freq_use_info ( ) {
 sub compute_freq_def_info ( ) {
   check_args(0, @_);
   $macros_c_most_defs = 0;
-  # $#{$macros{$name}} is the number of macro definitions of $name
+  $macros_c_most_defs_distinct = 0;
+  # scalar(@{$macros{$name}}) is the number of macro definitions of $name
+  # $mndistinct_defs{$name} is the number of distinct definitions of $name
   foreach my $name (keys %macros) {
     next if MacroNotDefinedInsidePackage($name);
     my $category = macro_name_lub_category($name);
-    my $c = $#{$macros{$name}} + 1;
+    my $num_defs = scalar(@{$macros{$name}});
+    my $num_defs_distinct = $mndistinct_defs{$name};
     local $WARNING = 0; # want to exploit scalars being 0 when undefined
-    $macros_c_number_defs_for[$category][$c]++;
-    $macros_c_number_defs[$c]++;
-    $macros_c_most_defs = $c if ($c > $macros_c_most_defs);
-    $macros_c_most_defs_for[$category] = $c if ($c > $macros_c_most_defs_for[$category]);
+    $macros_c_number_defs_for[$category][$num_defs]++;
+    $macros_c_number_defs_distinct_for[$category][$num_defs_distinct]++;
+    $macros_c_number_defs[$num_defs]++;
+    $macros_c_number_defs_distinct[$num_defs_distinct]++;
+    $macros_c_most_defs = $num_defs
+      if ($num_defs > $macros_c_most_defs);
+    $macros_c_most_defs_distinct = $num_defs_distinct
+      if ($num_defs_distinct > $macros_c_most_defs_distinct);
+    $macros_c_most_defs_for[$category] = $num_defs
+      if ($num_defs > $macros_c_most_defs_for[$category]);
+    $macros_c_most_defs_distinct_for[$category] = $num_defs_distinct
+      if ($num_defs_distinct > $macros_c_most_defs_distinct_for[$category]);
   }
 }
 
@@ -1330,6 +1376,8 @@ if ($opt_d) {
 
   open(FREQDEF,">$dir/${basename}freqdef_cum") || die "Failed opening $!";
   open(FREQUSE,">$dir/${basename}frequse_cum") || die "Failed opening $!";
+  open(FREQDEF_DISTINCT,">$dir/${basename}freqdef_cum_distinct") || die "Failed opening $!";
+  open(FREQUSE_DISTINCT,">$dir/${basename}frequse_cum_distinct") || die "Failed opening $!";
 
 }
 
@@ -1402,6 +1450,7 @@ if ($opt_T) {
 
 print STDERR "Computing various global statistics...\n";
 compute_global_cpp_sums();
+compute_num_defs_distinct();
 
 output_statistics();
 
