@@ -55,12 +55,12 @@ close(FILE);
 print join("\t", "package", "other", "line", "conditional", "include", "undef", "define", "total"), "\n";
 print "Average";
 foreach $val ($tot_other/$tot_lines, $tot_line/$tot_lines, $tot_cond/$tot_lines, $tot_include/$tot_lines, $tot_undef/$tot_lines, $tot_def/$tot_lines, $tot_total/$tot_lines)
-{ printf("\t%2.2f", $val); }
+{ printf("\t%2.3f", $val); }
 print "\n";
 foreach $line_ref (@lines_sorted)
 { print shift(@$line_ref);
   foreach $val (@$line_ref)
-    { printf("\t%2.2f", $val); }
+    { printf("\t%2.3f", $val); }
   print "\n";
   # "$package\t$this_other\t$line\t$this_cond\t$this_include\t$undef\t$define\n";
 }
