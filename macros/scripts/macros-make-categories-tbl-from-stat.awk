@@ -52,7 +52,7 @@ BEGIN {
   else { OFS=" & "; 
   ORS="\\\\\\hline\n"; 
   print "\\begin{tabular}{|l|c|c|c|c|c|c|c|}\\hline"; } 
-  print " ",        "Null",   " ",         " ",           " ",          "Stringization", "Other syntatic","Type",   " ",         "Failed"; 
+  print " ",        "Null",   " ",         " ",           " ",          "Stringization", "Other syntactic","Type",   " ",         "Failed"; 
   print "Package", "Define", "Constant", "Expression", "Statement", "and pasting",   "macros",        "Related","Recursive","classification"; } 
 
 
