@@ -1,4 +1,4 @@
-#!/uns/bin/zsh
+#!/uns/bin/perl -w
 echo "Package	Code	Code, macro	Macro	Code, cond	Code, cond, macro	Cond, macro	Cond	No uses"
 # Input to awk is a file with 8 lines, each representing one of the
 # 8 categorizations, alphabetized:

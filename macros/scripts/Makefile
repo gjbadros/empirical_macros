@@ -47,6 +47,7 @@ FUNC := $(addsuffix .func,$(PKGS))
 LINT := $(addsuffix .lint,$(PKGS))
 PROP := $(addsuffix .prop,$(PKGS))
 MAC  := $(addsuffix .mac,$(PKGS))
+HMAC  := $(addsuffix .hmac,$(PKGS))
 CCD  := $(addsuffix .ccd,$(PKGS))
 DEPEND  := $(addsuffix .depend,$(PKGS))
 SDEPEND  := $(addsuffix .sdepend,$(PKGS))
@@ -80,7 +81,8 @@ RAW_TABLES := tbl-directives-hist tbl-subset-categories
 
 LATEX_TABLES := tbl-package-sizes.tex \
 		tbl-subset-categories.tex \
-		tbl-subset-properties.tex
+		tbl-subset-properties.tex \
+		tbl-where-used.tex
 
 ALL_TABLES := $(TEXT_TABLES) $(RAW_TABLES) $(LATEX_TABLES)
 
@@ -140,8 +142,11 @@ tbl-cat-def-frequency: made-catdefuse
 tbl-cat-use-frequency: made-catdefuse
 	macros-make-tbl-frequsedef-from-cum $(CATUSECUM) > $@
 
-tbl-where-used: $(MAC)
-	macros-make-how-used-ni-tbl-from-mac $^ > $@
+tbl-where-used: $(HMAC)
+	macros-make-how-used-ni-tbl-from-hmac.pl $^ > $@
+
+tbl-where-used.tex: tbl-where-used
+	latexify $<  >$@
 
 tbl-ccd-categories: $(CCD)
 	( head -1 $< && grep -v '^#' $^ | sed -e 's/:/	/' -e 's/.ccd//' ) > $@
@@ -212,6 +217,9 @@ tbl-expansion-dependences-by-line: $(SDEPEND)
 
 %.sdepend.bymacro: %.sdepend
 	macros-simplify-dependences-by-macro $<
+
+%.hmac: %.mac
+	macros-how-used-ni-from-mac $< > $@
 
 tbl-inclusion-dependences-by-macro: $(SDEPEND_BY_MACRO)
 	macros-make-dependences-by-macro 4 `only-non-empty-files $^` > $@ # column 4 has inclusion dependences

@@ -1,10 +1,4 @@
 #!/uns/bin/zsh -
 # Should only take one argument, a .mac file.
-# Eighth field is something like "CodeCond" or "NoUses".
-# Cool (lame) hack to add one of each categories via the echo,
-# then decrement the counted (uniq's output) sum using the awk at 
-# the end of the pipeline
-(echo "Code\nCodeCond\nCodeMacro\nCodeMacroCond\nCond\nMacro\nMacroCond\nNoUses\n\
-Redef\nCodeRedef\nCodeCondRedef\nCodeMacroRedef\nCodeMacroCondRedef\nCond\nMacroRedef\nMacroCondRedef\nNoUses"; \
-    awk < "$1" 'NR>1 && $0 !~ /^[%#]/ && $11 ~ /FromStdin/ {print $9}') | \
-    sort | uniq -c | awk '$1--'
+awk < "$1" 'NR>1 && $0 !~ /^[%#]/ && $11 ~ /FromStdin/ {print $9}' | \
+    sort | uniq -c
