@@ -630,7 +630,20 @@ sub compute_freq_use_info () {
   # sum of slice @{$macros_uses{$name}}[@i_usage_all] is the total no. uses for macro
   foreach my $name (keys %macros) {
     next if MacroNotDefinedInsidePackage($name);
-    my $index = $macros{$name}[0]; #FIXGJB: do not just look at first definition
+    my $index = $macros{$name}[0];
+    if ($mdef_category[$index] == $catNULLDEFINE) {
+      # if the first definition's category is NULLDEFINE, use
+      # a different category if any of its other definitions were
+      # not NULLDEFINEs.
+      my $i = 1;
+      while (defined($macros{$name}[$i]) &&
+	     $mdef_category[$macros{$name}[$i]] == $catNULLDEFINE) {
+	$i++;
+      }
+      if (defined($macros{$name}[$i])) {
+	$index = $i;
+      }
+    }
     my $category = $mdef_category[$index];
     my $c = sum_array(@{$macros_uses{$name}}[@i_usage_all]);
     local $WARNING = 0;# want to exploit scalars being 0 when undefined
@@ -647,7 +660,20 @@ sub compute_freq_def_info () {
   # $#{$macros{$name}} is the number of macro definitions of $name
   foreach my $name (keys %macros) {
     next if MacroNotDefinedInsidePackage($name);
-    my $index = $macros{$name}[0];  #FIXGJB: do not just look at first definition
+    my $index = $macros{$name}[0];
+    if ($mdef_category[$index] == $catNULLDEFINE) {
+      # if the first definition's category is NULLDEFINE, use
+      # a different category if any of its other definitions were
+      # not NULLDEFINEs.
+      my $i = 1;
+      while (defined($macros{$name}[$i]) &&
+	     $mdef_category[$macros{$name}[$i]] == $catNULLDEFINE) {
+	$i++;
+      }
+      if (defined($macros{$name}[$i])) {
+	$index = $i;
+      }
+    }
     my $category = $mdef_category[$index];
     my $c = $#{$macros{$name}} + 1;
     local $WARNING = 0; # want to exploit scalars being 0 when undefined
