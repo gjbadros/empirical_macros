@@ -1,0 +1,14 @@
+#!/uns/bin/perl -wn
+# Usage: $0 <literal_filename>
+# Reads from <> and outputs only those lines which start with
+# "^#literal_filename", after stripping that prefix
+BEGIN {
+  $literal_filename = $ARGV[0] || die "Missing filename";
+  shift @ARGV;
+}
+
+@F = split(/:/,$_,2);
+if ($F[0] =~ /\Q$literal_filename\E/) {
+  shift @F;
+  print @F;
+}

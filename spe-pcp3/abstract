@@ -1,0 +1,22 @@
+Title: A Framework for Preprocessor-Aware C Source Code Analyses
+Author: Greg J. Badros and David Notkin
+
+Abstract:
+
+Analyses of C source code usually ignore the C preprocessor because of
+its complexity.  Instead, these analyses either define their own
+approximate parser (or scanner) or else they require that their input
+already be preprocessed.   Neither approach is entirely satisfactory:
+the first gives up accuracy (or incurs large implementation costs),
+while the second loses the preprocessor-based abstractions.  We describe
+a framework that permits analyses to be expressed in terms of both
+preprocessing and parsing actions, allowing the implementer to focus on
+the analysis of interest while still handling preprocessing information.
+We discuss an implementation of
+such a framework that embeds a C preprocessor, a parser, and a Perl
+interpreter for the action "hooks."  Many common software engineering
+analyses can be implemented surprisingly easily using this framework,
+replacing numerous ad-hoc tools.  The framework's integration of the
+preprocessor and the parser further enables some analyses that
+otherwise would be especially difficult to perform.
+

@@ -1,0 +1,990 @@
+% $Id$
+% cpp-aware-c-analyses.tex
+
+\documentclass[twocolumn]{article}
+\usepackage{icse99}
+%\usepackage{fullpage}
+\usepackage{graphicx}
+\usepackage{rotating}
+\usepackage{lscape}
+\usepackage{personal}
+
+
+\newcommand{\B}{\discretionary{}{}{}}
+
+%%% Some stuff from Mike
+%%% Figures
+%%%
+
+%% Get a line between figures at the top of the page and the text
+\makeatletter
+\def\topfigrule{\kern3\p@ \hrule \kern -3.4\p@} % the \hrule is .4pt high
+\def\botfigrule{\kern-3\p@ \hrule \kern 2.6\p@} % the \hrule is .4pt high
+\makeatother
+
+%% This is too crowded...
+% \setlength{\textfloatsep}{0.25\textfloatsep}
+% \setlength{\dbltextfloatsep}{0.25\dbltextfloatsep}
+%% ...but I can live with halving it (still a bit crowded for my taste).  -MDE
+\setlength{\textfloatsep}{0.5\textfloatsep}
+\setlength{\dbltextfloatsep}{0.5\dbltextfloatsep}
+
+%% Permit text to appear on pages containing many big figures
+\def\floatpagefraction{.8}      % default .5
+\def\textfraction{.2}
+\def\topfraction{.8}
+
+%%% End stuff from Mike
+
+\newcommand{\pcp}{\mbox{\textsf{PCp}$^3$}}
+\newcommand{\pcppp}{\mbox{\textsf{PCppP}}}
+\newcommand{\Cpp}{\mbox{\textsf{cpp}}}
+%\newcommand{\CPP}{\mbox{\textsf{C\texttt{++}}}}
+\newcommand{\CPP}{\mbox{C\texttt{++}}}
+%\newcommand{\Perl}{\mbox{\textsf{Perl}}}
+\newcommand{\Perl}{\mbox{Perl}}
+%\newcommand{\C}{\mbox{\textsf{C}}}
+\newcommand{\C}{\mbox{C}}
+
+\newcommand{\backcall}[3]{\item \texttt{#2} (\texttt{#3})
+  \ifthenelse{\equal{#1}{}}{}{\textbf{returns} \texttt{#1}} \\ }
+
+%\newcommand{\backcallobsoleted}[3]{\item \texttt{#2} (\texttt{#3})
+%  \textbf{returns} \texttt{#1} \textsc{Obsoleted}\\ }
+
+% Don't even print these out for the paper
+\newcommand{\backcallobsoleted}[3]{}
+
+\newcommand{\hook}[2]{\item \texttt{#1} (\texttt{#2}) \\ }
+\newcommand{\shook}[1]{\texttt{#1}}
+
+\newcommand{\hookobsoleted}[2]{}
+\newcommand{\pphash}{\texttt{\#}}
+
+\newcommand{\ppd}[1]{\texttt{\##1}}
+
+\newcommand{\file}[1]{{\small \texttt{#1}}}
+\newcommand{\email}[1]{{\small \texttt{#1}}}
+\newcommand{\program}[1]{{\small \texttt{#1}}}
+\newcommand{\syscall}[1]{{\textsf{#1}}}
+\newcommand{\sectionref}[1]{section \ref{#1}, on page \pageref{#1}}
+\newcommand{\appendixref}[1]{Appendix \ref{#1}, on page \pageref{#1}}
+\newcommand{\ie}{i.e.,}
+\newcommand{\eg}{e.g.,}
+\newcommand{\etc}{etc}  % trailing ".\ " needed at use; this just for
+                        % italicizing optionally
+\newcommand{\figref}[1]{Figure~\ref{#1}}
+\setlength{\fboxsep}{.1in}
+
+\title{A Framework for Preprocessor-Aware \\ C Source Code Analyses}
+\author{
+        \hspace*{-2ex}
+        \parbox{4in} {\begin{center}
+        {\authornamefont Greg J. Badros} and {\authornamefont David Notkin}\\
+        \end{center}}\\
+        \parbox{4in} {\begin{center}
+            Technical Report UW-CSE-98-08-04 \\ 
+            \begin{small}
+              Dept. Computer Science \& Engineering\\
+              University of Washington \\
+              Box 352350, Seattle WA  98195-2350 ~ USA \\
+              +1-206-543-1695\\
+              \email{\{gjb,notkin\}@cs.washington.edu}
+            \end{small}
+        \end{center} }
+}
+
+\date{21 August 1998}
+
+
+\begin{document}
+\maketitle
+% \copyrightspace
+%\submitspace{\LARGE{Draft of paper\\ submitted to ICSE 99.}}
+
+\thispagestyle{empty}  % suppresses page number on first page
+
+\pagestyle{plain}
+
+\section*{ABSTRACT}
+\label{sec:abstract}
+Analyses of \C{} source code usually ignore the \C{} preprocessor
+because of its complexity.  Instead, these analyses either define their
+own approximate parser (or scanner) or else they require that their
+input already be preprocessed.  Neither approach is entirely
+satisfactory: the first gives up accuracy (or incurs large
+implementation costs), while the second loses the preprocessor-based
+abstractions.  We describe a framework that permits analyses to be
+expressed in terms of both preprocessing and parsing actions, allowing
+the implementer to focus on the analysis.  We discuss an implementation of
+such a framework that embeds a \C{} preprocessor, a parser, and a Perl
+interpreter for the action ``hooks.''  Many common software engineering
+analyses can be written surprisingly easily using our implementation,
+replacing numerous ad-hoc tools.  The framework's integration of the
+preprocessor and the parser further enables some analyses that otherwise
+would be especially difficult.
+
+\subsection{Keywords}
+Parsing, preprocessor, cpp, lexical analysis, syntactic analysis, Perl.
+
+\bigskip
+
+% Introduction, including problem statement, goals, etc
+\section{INTRODUCTION}
+\label{sec:intro}
+More than twenty years ago, Dennis Ritchie designed the \C{}
+language~\cite{Kernighan88} to include a textual macro preprocessor
+called \Cpp{}~\cite[Ch.~3]{Harbison91}.  Given the simplicity of the
+language and the state of the art in compiler technology in the
+mid-1970s, his decision to provide some language features in this
+extra-linguistic tool was justified.  For the last two
+decades, \C{} programs have exploited \Cpp{}'s capabilities for
+everything from manifest constants and type-less pseudo-inline
+functions to modularization and symbol generation.  Bjarne
+Stroustrup, the designer and original implementor of \CPP{}, notes that
+``without the \C{} preprocessor, \C{} itself $\ldots$ would have been
+stillborn''~\cite[p.~119]{Stroustrup94}.  Certainly \Cpp{} contributes
+to \C{}'s expressiveness and portability, but perhaps at too large a
+cost.  Stroustrup recognizes this tradeoff:
+
+\begin{quotation}
+\noindent Occasionally, even the most extreme uses of \Cpp{} are useful, but its
+facilities are so unstructured and intrusive that they are a constant
+problem to programmers, maintainers, people porting code, and tool
+builders~\cite[p.~424]{Stroustrup94}.
+\end{quotation}
+
+\subsection{Why \Cpp{} is good $\ldots$ \emph{and} bad}
+
+The intrinsic problem with \Cpp{} is also its fundamental strength: it
+is a distinct first pass of textual (non-syntactic) processing over the
+source code.  This introduces significant differences between the code
+that the programmer sees and what the compiler proper (\ie{} the \C{}
+compiler distinct from the preprocessor) ultimately
+compiles.\footnote{To avoid ambiguity, we will use \emph{unprocessed} to
+  refer to the original source code, and \emph{preprocessed} to refer to
+  the view of the code after running \Cpp{} on it.}
+
+Experienced and novice \C{} programmers alike are frustrated by
+misunderstandings of source code due to the arbitrary transformations
+\Cpp{} performs. Such confusions are easily reduced, if not eliminated
+by allowing the software engineer to see the code exactly as the
+compiler does.  Unfortunately, that view of the program is at a level of
+abstraction lower than the unprocessed source.  Well-known
+identifiers such as \texttt{stderr} may appear as the far less readable
+\texttt{(\_IO\_FILE*)(\&\_IO\_stderr\_)},
+%\footnote{This is the
+%  output generated when preprocessed using the \texttt{gcc} compiler's
+%  standard include files.}
+and useful encapsulations such as \texttt{assert} degenerate into
+sequences of symbols that are less meaningful to a human programmer.  Every
+non-trivial \C{} program uses the preprocessor, and an empirical study
+of numerous packages written in \C{} documents the extensive use of \Cpp{}
+constructs~\cite{EmpCpp-TR}.
+
+%Unlike syntax-based macros~\cite{Weise93} which operate at the parser
+%level, \Cpp{} provides macros and conditional inclusion mechanisms which
+%operate at the lexical level.  The \C{} preprocessor also includes
+%``stringization'' and pasting operators which manipulate symbols
+%directly, altering their ultimate interpretation by a parser.  
+
+\subsection{\Cpp{} and Software Tools}
+
+Because of the preprocessor's textual foundations, unprocessed \C{} source code
+cannot be parsed directly.  For example, identifiers which are macro-expanded may
+hide braces, parentheses, or other 
+important tokens from the parser.  Only after preprocessing is a \C{} program
+in a grammatically usable form. Since parsing
+preprocessed code is relatively easy and well-understood,
+most software engineering tools operate on
+exactly that view of the source, losing abstractions that are
+expressed in \Cpp{}.  
+
+Various tools including source-level debuggers and call graph extractors
+either run \Cpp{} as the first stage in their analysis, or use
+representations derived from a compiler operating on the preprocessed
+code.  Siff and Reps implement a function-generalization transformation
+tool that operates on preprocessed code, but note that future versions
+of their tool must drop that requirement so that macro abstractions are
+not lost~\cite{Siff96}. Using preprocessed code for program
+understanding or transformation tasks is fraught with difficulties due
+to changes in the source artifact from preprocessing.\footnote{In
+  contrast, this approach is exactly right for the compiler, which has
+  no need to preserve high level abstractions while generating object
+  code.}
+
+%  However, in the presence of errors, the compiler itself is a
+%  program-understanding tool and preprocessing hinders its ability to
+%  accurately describe the problem.  The automatically output \ppd{line}
+%  directive provides a rudimentary (but far too coarse)
+%  mapping to the original source to permit better diagnostics.}
+
+% Additionally, parsing requires a syntactically correct program with all
+%header files present---often unrealistic constraints during 
+% software maintenance activities such as porting or switching
+% compilers.
+% -- above point isn't something that our system fixes --08/25/98 gjb
+Another disadvantage of preprocessing is that it eliminates
+conditional compilation directives that are essential to the portability
+and versatility of the source code~\cite{Krone94}.  Preprocessing
+forces tools to limit their analysis to a single configuration of the
+source code, instead of permitting global reasoning about the entire
+artifact.  
+
+Some tools instead operate on the
+unprocessed source code exactly as the programmer sees it.  This
+technique improves robustness in handling syntax errors
+and language variants. Because the input is unprocessed, the extracted
+information is presented to the human software engineer at the same
+level of abstraction as the source.  Additionally, the unprocessed
+source still contains the preprocessor directives which are essential
+to the portability and flexibility of many \C{} programs.
+
+However, these tools cannot use a straightforward parser or reliably construct an
+abstract syntax tree because the source is not
+grammatically-correct \C{} code.  Lexical tools such as \texttt{etags},
+LSME~\cite{Murphy96}, and \texttt{font-lock-mode} for Emacs and
+approximate parsers such as \texttt{Field}~\cite{ReissField} and
+\texttt{LCLint}~\cite{LCLint} use this approach.  Unfortunately,
+disregarding or only partially honoring the \Cpp{} directives leads to
+an extracted model of the source code that is only an approximation of
+the program's appearance to a compiler.  Certain uses of the
+preprocessor can cause substantial problems:  the syntax of declarations 
+or scoping constructs can be customized and arbitrary code can be hidden in macro
+expansions.  Macro expansion was a
+major cause of both false positives and false negatives in call graph
+extraction~\cite{Griswold96}.  Such approximate tools are inappropriate
+for software engineering analyses that require exact or conservative
+information.
+
+We introduce a new approach that integrates the \C{} preprocessor and a
+parser in a flexible framework for statically analyzing \C{}
+source code.  The framework makes it easy for tool builders to produce
+analysis tools for \C{} source code that are capable of reasoning about the
+preprocessor.  Section~\ref{sec:framework} describes that framework and
+illustrates a sample analysis (a call-graph extraction) using the
+framework.  Section~\ref{sec:further_examples} details a pair of
+macro-expansion understanding analyses, and section~\ref{sec:pcp3} describes our
+prototype tool, \pcp{}. Finally, section~\ref{sec:related} discusses
+related work, and sections~\ref{sec:limitations} and \ref{sec:conclusion}
+review the limitations of our approach and conclude.
+
+\section{THE FRAMEWORK}
+\label{sec:framework}
+
+The idea behind our framework is simple: provide an integrated parser
+and preprocessor which controls the scanning of the source code while
+executing user-defined callbacks when specified ``interesting'' actions occur.
+Though similar to the way the \texttt{yacc} parser~\cite{Levine92}
+associates actions with parse rule invocation, our framework provides
+callbacks on both parser and preprocessor actions. Additionally,
+instead of \C{} as the language for the actions, we use the \Perl{} scripting
+language for writing the hook subroutines.  Griswold, Atkinson and McCurdy note
+that various software tools benefited from using a special-purpose
+action language~\cite{Griswold96}, and interpreted languages can
+often significantly speed development time~\cite{Scripting}.
+
+Callbacks can be installed on actions such as the scanning of preprocessor directives, the
+creation of a macro definition, the expansion (\ie{} use) of a macro
+name, and the parsing of a variable declaration.  Each action callback
+is passed arguments relevant to the event for which it was invoked.  For
+example, the \texttt{TYPEDEF} action receives the name of the declared
+type as its first argument.  See Appendix~\ref{sec:hooks} for a more complete list of
+the hooks in our current implementation of the framework.
+
+To supplement the directly-passed arguments, action subroutines may also invoke
+``backcalls'' to access internal
+parser and preprocessor data structures. Example backcalls include
+getting the name of the currently-processed file, looking up a symbol in
+the parser's symbol table, inserting arbitrary code for the preprocessor
+to process, and instructing the parser to enter a new scope. 
+See Appendix~\ref{sec:backcalls} for a more complete list of
+the backcalls in our current implementation of the framework.
+
+The callback and backcall interfaces combined with a general
+purpose scripting language provide a concise and flexible means for
+easily writing static analyses of \C{} source code.
+
+\begin{figure*}[t]
+\begin{center}
+\begin{small}
+\begin{pseudocode}[5.5in]
+use pcp3;
+my %func_calls = ();  # the dictionary of callees for the current function
+                      # maps called function name to number of times in appears
+                      #   in the definition of the calling function
+
+AddHook("FUNC_SPEC", sub { %func_calls = (); } );
+AddHook("FUNC_CALL", sub { # $_[0] argument is the name of function invoked
+                           $func_calls{$_[0]}++; } );
+AddHook("FUNCTION", 
+   sub { # $_[0] argument is the name of function just defined
+     if (scalar (keys %func_calls) > 0) {
+       print "$_[0] calls ", join(", ", sort keys %func_calls), "\n";
+     }
+   } );
+\end{pseudocode}
+\end{small}
+\caption{A complete static analysis to extract a call graph.}
+\label{fig:call_graph_extractor}
+\end{center}
+\end{figure*}
+%$
+
+\subsection{Example: Call-Graph Extraction}
+\label{sec:call_graph_extraction}
+
+
+One common software engineering analysis is to extract a call graph from a
+body of \C{} source code.  Our framework permits this analysis to be
+written in about ten lines of code, as shown in
+Figure~\ref{fig:call_graph_extractor}.
+
+To perform the analysis, we attach subroutines to three parsing
+callbacks.  When a function specifier (the signature specification of a
+function definition) is parsed, the \texttt{FUNC\_SPEC} hook is
+activated.  That callback resets the set of functions invoked by
+the current function.  For each function call parsed, the
+\texttt{FUNC\_CALL} hook is activated, and we add the name (passed to
+the subroutine as the zeroth argument) of the called function to the
+set.  Finally, when the entire function definition has been parsed, the
+\texttt{FUNCTION} reduction occurs and we output the set of called
+functions we accumulated while scanning the body of the function
+definition.
+
+The script does not implement the main control flow of the
+analysis.  Also, it need not handle any preprocessor directives.  Since
+this simple analysis deals only with parser actions, the view the
+analysis sees is exactly the same as if we had analyzed the preprocessed 
+code.
+
+\subsection{Revising the Extractor}
+\label{sec:call_graph_revised}
+The simple call-graph extractor used as an example in the preceding
+section suffers from many of the same shortcomings as tools which
+operate on preprocessed code: it reasons about only a single
+configuration of the source and eliminates all macro abstractions
+from the extracted model.  As Murphy et al.\ discuss, there are many
+degrees of freedom for call-graph extractors~\cite{Murphy98}.  A
+strength of our framework is that it lets a tool-builder easily
+fine-tune the extraction to derive the desired view.
+
+For example, often macros are used to express inline functions.  If we
+choose, we can have macro expansions included in the extracted
+call-graph:
+
+\begin{verbatim}
+# $_[2] is the macro name being expanded
+AddHook("EXPAND_MACRO", 
+     sub { $func_calls{$_[2]}++; }
+\end{verbatim}
+%$
+
+\noindent Given this revised extractor, a macro that expands into code
+that includes function calls will expose those function calls as callees
+from the function definition in which the macro was expanded.  For some
+tasks, this may be exactly what we want.  If instead we prefer to hide
+those nested calls, our framework supports that behaviour as well.  We
+simply ignore function calls that we parse while expanding macros (see
+Figure~\ref{fig:rev_call_graph_extractor}).
+
+Another possible extension of the analysis is to query the symbol table
+for the type of the identifier being called.  If the variable is a
+pointer to a function, the enclosing function could conservatively be
+marked as ``possibly calling all functions'' (\ie{} $\bot$).\footnote{A more
+aggressive analysis could maintain data on which functions
+are ever assigned to the variable throughout the program.}
+
+%FIXGJB: maybe this should just be the three changed action hooks?
+\begin{figure*}[hbt]
+\begin{center}
+\begin{small}
+\begin{pseudocode}[5.5in]
+use pcp3;
+my %func_calls = ();  # the set of callees for the current function
+my $expanding = 0;    # are we expanding a macro?
+
+AddHook("FUNC_SPEC", sub { %func_calls = (); });
+AddHook("FUNC_CALL", sub { # $_[0] argument is the name of function invoked
+                           $func_calls{$_[0]}++ if !$expanding; } );
+AddHook("EXPAND_MACRO", sub { # $_[2] argument is macro name being expanded
+                              $func_calls{$_[2]}++ if !$expanding; 
+                              ++$expanding} );
+AddHook("MACRO_CLEANUP", sub { --$expanding; } );
+
+AddHook("FUNCTION", 
+  sub { # $_[0] argument is the name of function just defined
+    if (scalar (keys %func_calls) > 0) {
+      print "$_[0] calls ", join(", ", sort keys %func_calls), "\n";
+    }
+  } );
+\end{pseudocode} %$
+\end{small}
+\caption{A revised call graph extractor that treats macros as functions.}
+\label{fig:rev_call_graph_extractor}
+\end{center}
+\end{figure*}
+
+Because the activations of the preprocessor and parser hooks
+are intermingled, the analysis can reason about the preprocessed version 
+of the source within the context of how it was preprocessed.  
+
+\subsection{Preprocessor and Parser Interactions}
+\label{sec:interactions}
+
+Given a straightforward preprocessor and parser front end, some analyses
+are impossible.  For example, since the preprocessor will skip code as
+instructed by conditional compilation directives, that source will be
+left unprocessed.
+
+To permit handling the otherwise-skipped code hidden by conditional
+compilation directions such as \ppd{ifdef} and \ppd{if}, our framework
+provides a general mechanism for inserting arbitrary source text to be
+processed.  Action subroutines can pass a string to the \texttt{PushBuffer}
+backcall.  A hook, \texttt{DO\_XIFDEF}, is called for all conditional
+compilation directives and provides an argument that is the text that
+would \emph{not} be included.  The action routine for that hook may then
+use \texttt{PushBuffer} to ask the preprocessor and parser to use that
+string as input and process it normally.
+
+However, since such program text can include arbitrary preprocessor
+directives and \C{} code, we may want to ensure that the state of
+neither the preprocessor nor the parser is permanently changed after the
+``for analysis only'' parsing of the skipped code.  Three data
+structures must be preserved to avoid side-effects to the main
+processing (\ie{} the version selected by the \ppd{define}dness of macro
+names): the preprocessor's hash table of macros, the \C{} symbol table,
+and the parser's current stack of states.  
+
+The backcalls \texttt{PushHashTab} and \texttt{PopHashTab} save and
+restore the preprocessor's table of definitions so that preprocessor
+directives in skipped code will not affect \Cpp{} when normal processing
+resumes.  For the symbol table, the backcalls \texttt{EnterScope} and
+\texttt{ExitScope} provide similar functionality.  Finally,
+\texttt{YYPushStackState} and \texttt{YYPopStackState} save and restore
+the stack of parser states.  In under fifty lines of boiler-plate code,
+an analysis tool can manage these complexities and expose the full source to
+the analysis.
+
+Other related backcalls provide additional support for querying and
+interacting with the parser.  \texttt{ParseStateStack} returns the
+list of states in the parser's stack; this exposes information about what
+constructs might be legal at the current location (for example,
+determining whether declarations may be permitted).
+\texttt{SetStateStack} permits explicitly changing the parser's stack
+of states, perhaps to prepare for handling a top level construct or to
+re-parse text using a different configuration of the parser.  Using
+\texttt{YYFCompareTopStackState}, an action hook can efficiently check
+whether a previously saved parser state matches the current
+configuration.  For example, an analysis can easily provide a warning
+whenever the ``if'' block and the ``else'' block of an \ppd{ifdef}
+directive leave the parser in different states.
+
+
+% Possible applications
+%** Tags generation
+%** parser debugging, teaching
+%** multi-version reasoning
+
+\section{FURTHER EXAMPLES}
+\label{sec:further_examples}
+
+Preprocessor-specific analyses are generally especially difficult to
+write.  The complexities and subtleties of \Cpp{} must be duplicated in
+each tool.  Not surprisingly, our framework is ideal for analyzing
+preprocessor constructs.
+
+\subsection{Marking Macro Expansions}
+\label{ssec:mark_macros}
+\nopagebreak
+
+For an empirical study of \C{} preprocessor use~\cite{EmpCpp-TR}, we
+wanted to identify macro expansions in the unprocessed source code.
+Recognizing identifiers that are macro-expanded is exceedingly useful as
+suggested by the nearly universal convention of using all-uppercase
+identifiers for macro names.  Previous tools have difficulty even just
+counting macro expansions~\cite{Griswold96}.  For the empirical study,
+our first approximation of identifying macro expansions did not use our
+framework.  That analysis was overly conservative: we marked all
+occurrences of any identifier that was ever (in any source file of the program)
+\ppd{define}d to be a macro
+as an expansion.  To gain more accurate information, we used our
+framework for the subsequent version of the analysis.
+
+Since the marking of expansions should cover the entire unprocessed
+source code, we use the boiler-plate code mentioned in the previous
+section to expose all the code to the tool.  Because we wanted a
+conservative analysis (\ie{} it should over-mark when imprecise), we treat an
+identifier as a macro at a program point if it has been \ppd{define}d on
+any path and not yet definitely \ppd{undef}ined.  In particular, the
+improved analysis properly limits the effects of macros that are
+defined for a segment of code and subsequently undefined.
+
+Our improved analysis using the framework is written in under 90 lines
+of code, most of which is the boiler-plate for handling all
+conditionally-included code.
+
+\subsection{\Cpp{} Transformation Understanding}
+\label{ssec:xform_understand}
+
+When debugging preprocessor difficulties, experienced \C{}
+programmers have learned the hackish usefulness of directly viewing the
+output of \Cpp{}. A more precise character-by-character
+mapping between the unprocessed and preprocessed source proves even more
+beneficial to understanding the transformation performed by \Cpp{}.
+Our framework permits deriving such a fine-grained mapping with relative 
+ease (about 300 lines of Perl callbacks and code).
+
+Since the analysis is meant to be used as an interactive
+program-understanding tool, we needed a useful way to present the extensive
+information about the mapping.  To achieve this, 
+the tool outputs Emacs Lisp code~\cite{GNUELisp} which marks up the
+unprocessed source using text properties. A custom Emacs mode then
+permits viewing of those annotations (see ~\figref{fig:emacs_xform_view}).
+
+\begin{figure}[hbtp]
+  \begin{center}
+    \leavevmode
+    \includegraphics{emacs-xform-view.eps}
+    \caption{An interactive view of the mapping between unprocessed and
+      preprocessed views of an example \C{} program fragment. The
+      outlined box in the top frame indicates the user's cursor position
+      and the lower frame describes the macro-expansion information at
+      that character location.  The bottom frame potentially changes
+      after each cursor movement.}
+    \label{fig:emacs_xform_view}
+  \end{center}
+\end{figure}
+
+
+\subsection{Other Possibilities}
+\label{ssec:other_poss}
+
+Our framework has proven useful for several software engineering
+analyses.  Other ad-hoc tools could benefit from our framework, as well.
+For example, Emacs's \texttt{etags}~\cite{GNUELisp} creates a database
+of function definitions in unprocessed source but can be easily confused
+by package-specific macros used in function definition headers.\footnote{To
+circumvent this limitation, \texttt{etags} permits the programmer to manually specify an
+arbitrary regular expression which it uses to find definitions to mark.}
+Also, searching for uses of global variables could be enhanced using our
+framework since it will not omit references to globals hidden by macros.
+
+Another possible use of the framework is in identifying ``tricky'' uses
+of the preprocessor as an aid to determining, for example, which
+\ppd{define}s can be replaced with language-proper features such as
+constant variables or \CPP{} inline functions.
+
+% PCP^3
+\section{THE \pcp{} TOOL}
+\label{sec:pcp3}
+
+Our framework combines a
+\textbf{\textsf{P}}arser, a \textbf{\textsf{C}}
+\textbf{\textsf{p}}re\textbf{\textsf{p}}rocessor, and a
+\textbf{\textsf{P}}erl action language.  Thus, we have named the tool
+that implements the framework \pcppp{} or \pcp{}.  
+
+\subsection{Parser}
+\label{ssec:parser}
+
+Choosing a parser was difficult as there are many freely available
+parsers, often tightly coupled to a functional back-end, thus
+complicating reuse.  We chose the parser from \texttt{CTree}~\cite{CTree}, a
+freely available ANSI \C{} front end, to embed in \pcp{}
+largely because of its simple implementation and fully-scoped symbol
+table.  Its lexical analyzer and parser are mechanically generated
+by \texttt{flex} and \texttt{bison}~\cite{BisonAndFlex,Levine92} (freely
+available implementations of \texttt{lex} and \texttt{yacc},
+respectively).  As \texttt{CTree} parses, it builds a complete abstract
+syntax tree of the preprocessed code.
+
+The implementation of the \texttt{CTree} parser component of \pcp{} is
+about 5,000 lines of \C{} code and \texttt{bison} and \texttt{flex}
+specifications.  Most of the changes to the parser were to eliminate
+name conflicts and to call the \Perl{} hooks as part of various
+reduction rules.
+
+%\footnote{Ironically, the preprocessor came to
+%  the rescue here; macros provided an easy way to rename
+%  \texttt{CTree}'s symbols from its automatically-generated parsers and
+%  lexical analyzer.}
+
+\subsection{Preprocessor}
+\label{ssec:preprocessor}
+
+%As a software tool targeting \C{} code, the design of \pcp{} faced the
+%same difficulties as other tools as outlined in section~\ref{sec:intro}.
+%Disregarding the preprocessor is clearly not an option since analyzing
+%the preprocessor is a goal for \pcp{}.  But approximating \Cpp{} is not
+%good enough either, as 
+
+Since \pcp{} must mimic \Cpp{} exactly, the \C{}
+preprocessing library from the GNU \C{} compiler's (\texttt{gcc})
+well-tested (and slightly extended) \Cpp{}~\cite{GCC} is embedded in
+\pcp{}.  
+
+%\footnote{The tight mapping is similar
+%  to the approach the intentional programming group at Microsoft
+%  Research is using trying to recover preprocessor ``intentions'' from
+%  fully preprocessed code annotated with this mapping
+%  information~\cite{MSIPPersonal}.}
+
+The implementation of \texttt{cpplib} grew from about 7,000 lines of
+code as distributed with \texttt{gcc} to almost 8,000 lines.  Most of
+the changes involved modifying data structures and function calls to
+maintain the extra macro expansion information to support the
+character-by-character correspondence between the source and output.
+
+\subsection{Action Language}
+\label{sec:perl_action_lang}
+
+\nopagebreak
+
+We chose \Perl{} as the action language for \pcp{} because it interfaces
+easily with \C{} and is used widely.  Additionally, \Perl{}'s built-in
+data structures, closures, and higher-order functions make it especially 
+well-suited for use with the framework.
+
+The \Perl{} subroutine hooks are written in a user-specifiable script
+file that registers a subroutine for each action it wants to process.
+That script is free to manage its local data structures arbitrarily, and
+may import reusable modules as an ordinary \Perl{} program would.  However, the
+\C{} data structures of the preprocessor and parser are hidden behind
+the hooks and backcalls interfaces. All command line options accepted by
+\Cpp{} are also accepted by \pcp{} (this often makes it easier to use
+the tool in place of a compiler for analyzing complete packages as
+described by Murphy et al.~\cite{Murphy98}).  Additionally, \pcp{}
+accepts a \texttt{--noparse} option that turns off its parser and the
+calls to related hooks.  \pcp{} provides over currently over forty action
+hooks (see Appendix \ref{sec:hooks}).
+
+The implementation of the main \pcp{} program, the (roughly thirty)
+backcalls (see Appendix \ref{sec:backcalls}),
+and the glue connecting the components totals about 1,800
+lines of \C{} code.  About 60\% of this code deals directly with passing
+arguments between \C{} and \Perl{}.
+
+\subsection{Performance}
+\label{sec:pcp3_performance}
+The performance of \pcp{} depends on the complexity of the
+analysis.  For comparison, for \texttt{gcc} to compile and optimize the
+5,000 lines of the \texttt{bc} package~\cite{bc} (an arbitrary precision
+arithmetic language interpreter) required 38 seconds on a Pentium Pro
+200 Linux machine.  Running \pcp{} with its test analysis consisting of
+600 lines of hooks that exercise every event required 4 minutes for the
+\texttt{bc} source.  Removing hooks for \texttt{CPP\_OUT} and
+\texttt{TOKEN}\footnote{These hooks are invoked on every string that
+  \Cpp{} outputs and on every token it inputs, respectively.  They are
+  the most frequently invoked hooks.} reduced the running time to 50
+seconds.  With all action code turned off, the running time is 
+less than 10 seconds.  The useful analyses described in this paper involve
+only a handful of callbacks, and thus execute very quickly.
+
+\section{RELATED WORK}
+\label{sec:related}
+Numerous tools exist for assisting the software engineer in
+understanding and manipulating source code.  Griswold, Atkinson and McCurdy
+review a number of them while motivating their \texttt{TAWK}
+tool~\cite{Griswold96}.  \texttt{TAWK} uses \C{} as its action language
+and matches patterns in the abstract syntax tree.  \texttt{TAWK}, like
+\pcp{}, operates on unprocessed source code.  Instead of embedding a
+preprocessor, \texttt{TAWK} tries to parse each macro definition as an
+expression, allowing macro arguments to be types, as well.  If that
+succeeds, the macro is left unexpanded in the code and becomes a node
+resembling a function call in their AST.  About 92\% of macro
+definitions in the two packages they studied parsed acceptably.  For the
+remaining 8\%, \texttt{TAWK} expands the macro uses before feeding the resulting tokens to
+their parser.
+
+The Intentional Programming group at Microsoft
+Research~\cite{Simonyi96}, headed by Charles Simonyi, is interested in
+preserving preprocessor abstractions as they import legacy \C{} code
+into their system.  They developed a novel technique for handling
+preprocessor directives.\footnote{Charles Simonyi and Rammoorthy
+  Sridharan, personal conversation.}  Before preprocessing, conditional
+compilation directives are converted to stylized variable declarations.
+Then, the source text is preprocessed and all macros are expanded while
+marking each token with its textual derivation by the preprocessor.
+These declarations and the other source are then run through a \CPP{}
+parser to create an AST.  The annotations decorate the tree, and
+``enzymes'' privy to the meaning of the stylized declarations process
+the tree in an attempt to identify abstractions.  When macro expansions
+vary from use to use (\eg{} \texttt{\_\_LINE\_\_}), the non-constant
+text is considered an extra argument to the macro, and the different
+expansions are explicitly passed at the invocation sites. Especially
+unusual uses of conditional compilation directives cause problems
+because of constraints on where \CPP{} declarations may go, but
+generally the group is optimistic about the possibilities for their
+approach.  Some of their techniques might be applicable to a future
+version of \pcp{}, especially as the AST-related backcalls mature.
+
+LCLint~\cite{LCLint} attempts to analyze macro definitions for dangerous or
+error-prone constructs.  It allows the programmer to add annotations to
+the code in comments.  These annotations give the LCLint checker extra
+information that it then verifies.  For example, a macro argument can be
+marked that it needs to be side-effect free at an invocation site, and
+LCLint will generate a warning message if that constraint is violated.
+Evans's focus is on finding errors, and dealing with macro expansions is
+largely ignored~\cite[Ch.~8]{LCLint}.  Unlike \pcp{}, LCLint is not
+designed to be a general framework for analyses
+
+Krone and Snelting analyze conditional compilation directives in the
+context of a lattice-theoretic framework for inferring configuration
+structures from the source code.  They study how \ppd{if} guards depend
+on and relate to each other, and provide a means of visualizing the
+relationships with the goal of improving the programmer's understanding
+of the structure and properties of the configurations~\cite{Krone94}.
+
+\section{LIMITATIONS}
+\label{sec:limitations}
+
+% Framework problems
+%** Fairly dependent on internals of the preprocessing and parsing peculiarities of the tools
+%** Huge effort in making the hooks interface complete; existing hooks motivated by need not by design
+%** Also data structure sharing; duplication of work between perl code and cpp/parser structures
+%** AST going to waste for now; ast viewing w/ Tk?
+
+%* Convert to Java
+%* C++ parser; C++ code still uses preprocessor too much
+%* Multiple translation units: use technique like CIA++ ~\cite{CIA++90}
+
+%* Use configuration structures to bound the number of cpp tables and
+%scope table variants required
+
+Our framework provides a concise and flexible infrastructure for analyzing
+unprocessed \C{} code. It permits reasoning about the entire source
+artifact and eliminates the need of individual analyses to mimic the
+preprocessor.  Nevertheless there are several weaknesses of the
+framework and our implementation in \pcp{}.
+
+First, some sophisticated preprocessor analyses (\eg{} the second
+analysis in section \ref{ssec:xform_understand}) are dependent on the order that
+action hooks are called.  This in turn requires an intimate
+understanding of the implementation's preprocessing and (to a lesser
+extent) parsing
+peculiarities.  Fortunately, the fast development time provided by the
+scripting language permits easy exploration and testing of analyses.
+
+Because \pcp{} works like a compiler, it handles only a single
+translation unit at a time, complicating whole-program analysis.  The
+analyses discussed in section~\ref{sec:further_examples} output
+character-indexed annotations of the input that a separate tool later
+applies to the source code to perform the final transformation or to permit
+interactive exploration.  These extra tools can also combine
+information derived from various translation units (\eg{} marking
+expansions in a header file that is included by multiple source files).
+To better support reasoning about an entire source code artifact, a
+database approach similar to \texttt{CIA++}~\cite{CIA++90} could be
+used.  Atkinson and Griswold mention the importance of flexibility in
+allowing the user to select the appropriate balance between precision
+and performance of a whole-program analysis~\cite{Atkinson96}.  One
+could provide this flexibility by using one of \Perl{}'s
+data-persistency modules to permit specified data structures to be shared among
+invocations on separate translation units.
+
+Better support for multiple conditional compilation versions would be
+useful. \pcp{}'s mechanisms for
+handling multiple source configurations are primitive---a single
+distinguished path (a version) through the source code is treated
+specially.  Ideally, multiple versions could be considered with more
+uniform handling of the various paths.  This would permit future blocks
+of code that are hidden via an \ppd{ifdef} to be properly influenced by prior
+blocks of code using the same guard.  Krone and Snelting suggest
+that the number of distinct paths through the source is reasonably
+bounded~\cite{Krone94}.  A generalized symbol table could track which
+configurations contain each symbol, and how the type of a variable
+depends on conditional compilation guards.  A similar generalization
+could be made for the preprocessor name table.
+
+% The hooks and backcalls interfaces are incomplete.  It would be useful
+% to have a hook associated with each parse rule.  This might best be done
+% by modifying \texttt{yacc} to insert code to call a \Perl{} hook in each
+% of the \C{} actions it outputs when generating the parser.
+% Additionally, not all of the data structures from the parser and
+% preprocessor are made available to the \Perl{} code; ideally more of
+% these would be shared through ``magic'' \Perl{} variables, instead of
+% the existing function call interface.
+
+Finally, although \pcp{}'s \texttt{CTree}-based parser constructs an abstract syntax
+tree, there is currently no easy way to access the AST from action
+callbacks.  More backcalls and utility subroutines could be
+written to permit useful manipulation of the abstract syntax tree to
+avoid many of the problems created by the current limitation of a single
+pass over the source code.  To make the AST more useful, some
+generalization of the tree could permit representation of
+preprocessor-specific annotations.
+
+%  The \texttt{Tk} widget set's
+%\Perl{} interface could provide a reasonable platform for
+%experimentation with visualizing and manipulating the augmented AST.
+
+% Weak, and conclusion restores focus to strengths anyway, so drop it --08/26/98 gjb
+%Despite these limitations, the simplicity and flexibility of analyses
+%that \pcp{} enables prove its usefulness.
+
+\section{CONCLUSION}
+\label{sec:conclusion}
+
+Our framework distinguishes itself from other software
+engineering tools by providing an accurate parse without disregarding
+the \C{} preprocessor.  By maintaining a tight
+mapping between the unprocessed and preprocessed code, analyses
+requiring expanded code can be considered in terms of the unprocessed
+code familiar to the programmer.  This approach empowers and simplifies
+analyses while relieving the tool builder from the burden of partially 
+re-implementing \Cpp{} for each desired analysis.
+
+\section*{ACKNOWLEDGMENTS}
+\label{sec:ack}
+This paper was supported by a National Science Foundation Graduate
+Fellowship. Any opinions, findings, conclusions, or recommendations
+expressed in this publication are those of the author, and do not
+necessarily reflect the views of the National Science Foundation.
+
+Thanks to Michael Ernst, Craig Kaplan, Brian Michalowski, Gail Murphy, and Douglas
+Zongker for their thoughtful comments on earlier revisions of this
+paper.
+
+\appendix
+
+\section{ABRIDGED HOOKS REFERENCE}
+\label{sec:hooks}
+
+The below lists action hooks and the conditions under which the
+framework invokes the corresponding callback.  We omit partially
+redundant and less useful hooks. Passed parameters
+generally include source code character offsets and other relevant
+details of the invoking action.
+
+\begin{description}
+\item[\shook{STARTUP}, \shook{STARTPARSE}, \shook{EXIT}] ~ \\
+  Initialization of \Cpp{}, initialization of parser, and conclusion of processing
+
+\item[\shook{HANDLE\_DIRECTIVE}] ~ \\
+  Reading of a \Cpp{} directive
+
+\item[\shook{DO\_XIFDEF}, \shook{DO\_IF}, \shook{DO\_ELIF},
+      \shook{DO\_ELSE}, \shook{DO\_ENDIF}] ~ \\
+  Handling of conditional compilation directives
+
+\item[\shook{CREATE\_PREDEF}, \shook{CREATE\_DEF}] ~ \\
+  Predefined (\eg{} \verb+__GCC__+) and
+  user-defined macro definitions (from \ppd{define}s)
+
+\item[\shook{DELETE\_DEF}] ~ \\
+  \ppd{undef} of a macro
+
+\item[\shook{SPECIAL\_SYMBOL}] ~ \\
+  Expansion of a special symbol (\eg{} \verb+__FILE__+)
+
+\item[\shook{EXPAND\_MACRO}, \shook{MACRO\_CLEANUP}] ~ \\
+  In-code expansion of a macro, and completed expansion of a
+  macro (these action hooks nest)
+
+\item[\shook{IFDEF\_MACRO}, \shook{IFDEF\_LOOKUP\_MACRO}] ~ \\
+  Expansion of a macro inside a conditional compilation
+  directive, or test for definedness
+
+\item[\shook{COMMENT}, \shook{STRING\_CONSTANT}] ~ \\
+  Reading of a comment and string constant
+
+\item[\shook{CPP\_ERROR}, \shook{CPP\_WARN}, \shook{CPP\_PEDWARN}] ~ \\
+  \Cpp{} errors, warnings, and pedantic warnings
+
+\item[\shook{CPP\_OUT}, \shook{CPP\_TOKEN}] ~ \\
+  Outputting a sequence of characters written, and inputting a token
+
+\item[\shook{INCLUDE\_FILE}, \shook{DONE\_INCLUDE\_FILE}] ~ \\
+  Inclusion of a file, and conclusion of reading an included file (these action hooks nest)
+
+\item[\shook{FUNCTION}, \shook{FUNC\_CALL}] ~ \\
+  Parsing of a function definition and function invocation
+
+\item[\shook{ASSIGN\_EXPR}, \shook{EQUALITY\_TEST}] ~ \\
+  Parsing of an assignment and equality test
+
+\item[\shook{TYPEDEF}, \shook{VARDECL}] ~ \\
+  Parsing of a typedef and variable declaration parsed.
+
+\item[\shook{POP\_PERL\_BUFFER}] ~ \\
+  Completion of processing a \Perl{}-pushed (via the \texttt{PushBuffer}
+  backcall) buffer
+
+\end{description}
+
+\section{ABRIDGED BACKCALLS REFERENCE}
+\label{sec:backcalls}
+
+The below backcalls are grouped by functionality.  Parameters, if any,
+are indicated.
+
+\begin{description}
+\item[\texttt{CbuffersBack}, \texttt{MacroExpansionHistory}] ~ \\
+Return the number of macro expansions deep in the current expansion, and 
+the list of the stack of the current expansion history (the nesting of
+the various macro invocations).
+
+\item[\texttt{FExpandingMacros}] ~ \\
+Return true if a macro is currently being expanded.
+
+\item[\texttt{CchOffset}, \texttt{CcchOutput}] ~ \\
+Return a character position offset into the current input source file,
+and the character position offset into the output file.
+
+\item[\texttt{InFname}, \texttt{Fname}] ~ \\
+Return the main filename (\eg{} the one given on the command line), and 
+the filename of the input currently being processed.
+
+\item[\texttt{ExpansionLookup}, \texttt{LookupSymbol}] ~ \\
+Takes a macro or variable name; return the expansion of that macro or
+the symbol table entry of the identifier.
+
+\item[\texttt{EnterScope}, \texttt{ExitScope}] ~ \\
+Push and pop new symbol table scopes.
+
+\item[\texttt{PushHashTab}, \texttt{PopHashTab}] ~ \\
+Push and pop new macro definition hash table scopes.
+
+\item[\texttt{ParseStateStack}, \texttt{SetStateStack}] ~ \\
+Return and set the stack of states for the parser (the latter takes a
+list of parser states).
+
+\item[\texttt{YYGetState}, \texttt{YYSetState}] ~ \\
+Return and set the current state for the parser (the latter takes a
+parser state).
+
+\end{description}
+
+%\newpage
+
+% References
+%\nocite{ARM}
+%\nocite{Dragon}
+%\nocite{Glickstein97} % Writing GNU Emacs Ext.
+%\nocite{Camel}        % Perl 5
+%\nocite{Perl}        % Perl 5
+%\nocite{Levine92}     % Lex & Yacc
+%\nocite{Harbison91}   % C Ref Man
+%\nocite{Kernighan88}  % C, 2nd
+%\nocite{EmpCpp-TR}
+%\nocite{GCC}
+%\nocite{CTree}
+%\nocite{Krone94}
+%\nocite{Griswold96}
+%\nocite{Atkinson96}
+
+\bibliographystyle{abbrv}
+%\bibliographystyle{alpha}
+\bibliography{library,articles,cpp-aware-c-analyses}
+
+
+\end{document}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: t
+%%% End: 
+% LocalWords:  stringization tex fancybox gjb endif cpplib backcall Pentium AST
+% LocalWords:  MacroExpansionHistory Linux Simonyi analogues disorienting hbtp
+% LocalWords:  Michalowski Notkin Griswold

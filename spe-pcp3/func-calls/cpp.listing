@@ -1,0 +1,40 @@
+In do_define w/ body = __ELF__ 1
+:  [1,1]
+PREDEF for "__ELF__": "1"
+nargs = -1
+simp_expn = "@ 1@ "
+argnames = 
+file = 
+line = 0
+predefined = 1
+restargs = 0
+In do_define w/ body = unix 1
+:  [1,1]
+PREDEF for "unix": "1"
+nargs = -1
+simp_expn = "@ 1@ "
+argnames = 
+file = 
+line = 0
+predefined = 1
+restargs = 0
+In do_define w/ body = i386 1
+:  [1,1]
+PREDEF for "i386": "1"
+nargs = -1
+simp_expn = "@ 1@ "
+argnames = 
+file = 
+line = 0
+predefined = 1
+restargs = 0
+In do_define w/ body = linux 1
+:  [1,1]
+PREDEF for "linux": "1"
+nargs = -1
+simp_expn = "@ 1@ "
+argnames = 
+file = 
+line = 0
+predefined = 1
+restargs = 0

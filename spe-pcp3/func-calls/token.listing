@@ -1,0 +1,14 @@
+TOKEN: # 1 ""
+;POP, FExpandingMacros = 1, CchOffset = :0; CchOutput = 0
+: Nests: 
+: History: 
+: From 
+: Argno = 0
+: ParseStateStack: 0
+TOKEN: ;EOF, FExpandingMacros = 1, CchOffset = @NONE@:0; CchOutput = 0
+: Nests: 
+: History: 
+: From 
+: Argno = 0
+: ParseStateStack: 0
+: C Token:  (CPP_EOF)

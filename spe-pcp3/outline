@@ -1,0 +1,51 @@
+I. Intro
+ A) Problem with CPP
+ B) extensive use of CPP
+ C) related works and their shortcomings
+
+II. The framework
+ A) General idea
+ B) Example using typedef/callgraph extractors (very simple)
+ C) Extensions to the extractors to explot preprocessor-awareness
+
+III. PCP^3 Tool
+ 
+IV. Macro expansion analyses
+ A) Marking macro expansions (useful -- we needed it for evilmacros)
+ B) Pre/post processed understanding with Emacs (from quals)
+
+V. Related Work
+ A) Tool -- parser is very alpha
+ B) Idea -- Not transformation-based... more markup-oriented
+
+VI. Discussion and conclusion
+
+P.S. Below are the two analyses to demonstrate how easy the framework
+makes it to perform some simple analyses
+
+
+#---call graph extractor---
+use pcp3; 
+my $fDebug = 0; my %func_calls = ();
+
+AddHook("FUNCTION",\&do_function);
+AddHook("FUNC_SPEC", sub { %func_calls = (); });
+AddHook("FUNC_CALL", sub { $func_calls{$_[0]} = 1; } );
+
+sub do_function { my ($szName,$fStatic) = @_;
+  if (scalar (keys %func_calls) > 0) {
+    print "$szName", $fStatic?" (static)":"", " calls ", 
+          join(", ",sort keys %func_calls), "\n";
+  }
+}
+
+
+#----typedef extractor-----
+use pcp3;
+
+my $fDebug = 0; my %typedefs = ();
+
+AddHook("TYPEDEF",sub { $typedefs{$_[0]} = 1; });
+AddHook("EXIT",sub { print join(", ", (sort keys %typedefs)); });
+
+1;

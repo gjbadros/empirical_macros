@@ -1,0 +1,14 @@
+* ICSE PCP^3 paper
+** Extensible Preprocessing: A Framework for Source Code Analyses
+** Analyses to attempt
+*** pre vs. post processed code mapping (emacs-based ui from quals paper)
+*** conservatively marking identifiers that might be macro expanded
+*** call graph extractor (just because)
+*** global variable uses (some hidden inside macros, etc.)
+*** inter-file dependency minimization (not sure what pcp3 buys me here)
+**** headers
+**** globals
+*** etags definition extractor
+**** do not need to give regexps
+*** code metrics (e.g., ncnb lines, complexity measures)
+
