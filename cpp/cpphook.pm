@@ -143,7 +143,11 @@ $s_start = 0;
 $s_end = 0;
 $top_level_mname = "";
 sub expand_macro {
-  my ($mname,$expansion,$length,$raw_call,$has_escapes,$cbuffersDeep,$cargs,@args) = @_;
+  my ($mname,$expansion,$length,$raw_call,$has_escapes,$cbuffersDeep,@rest) 
+    = @_;
+  my $cnested = shift @rest;
+  my @nests = splice(@rest,0,$cnested);
+  my ($cargs,@args) = @rest;
   my ($exp_offset, $cbb) = cpp::SumCchExpansionOffset();
   my $cBytesOutput = cpp::CbytesOutput();
   my $start = $cBytesOutput + 1 + $exp_offset - ($cbb > 0? $length - 1:0);
@@ -158,10 +162,12 @@ sub expand_macro {
     $s_start = $s_end - $call_length;
     $top_level_mname = $mname;
   }
-
   print "\nexpand_macro $mname = ", cpp::ExpansionLookup($mname), ", source offset: $s_start - $s_end, $cbuffersDeep [$has_escapes]; ", 
       cpp::FExpandingMacros(), " in $fname\n";
   print " : expansion of $mname => $expansion (length $length:offset $start - $end [$cBytesOutput + $exp_offset + 1])\n";
+  print " : argof = ", cpp::ArgOf(), "\n";
+  print " : nests = ", join("->",@nests), "\n";
+  print " : MEH = ", join("<-",cpp::MacroExpansionHistory()),"\n";
   chomp $raw_call;
   print " : was \"$mname$raw_call\" with $cargs args, length = ", $call_length, "\n";
   my $iarg = 0;
