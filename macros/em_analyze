@@ -5160,8 +5160,8 @@ sub categorize_macro_def ( $ )
     { # print "found string";
       $category = $catLITERAL;
       $type = $typeSTRING; }
-  elsif (($body =~ /^($float_literal_whole_re|$float_literal_frac_re|float_literal_exp_re|float_literal_noexp_re)$/o)
-	 || ($body =~ /^\(($float_literal_whole_re|$float_literal_frac_re|float_literal_exp_re|float_literal_noexp_re)\)$/o))
+  elsif (($body =~ /^($float_literal_whole_re|$float_literal_frac_re|$float_literal_exp_re|$float_literal_noexp_re)$/o)
+	 || ($body =~ /^\(($float_literal_whole_re|$float_literal_frac_re|$float_literal_exp_re|$float_literal_noexp_re)\)$/o))
     { $category = $catLITERAL;
       $type = $typeFLOAT; }
   elsif (($body =~ /^-?($hex_literal_re|$dec_oct_literal_re)$/o)
@@ -5198,7 +5198,12 @@ sub categorize_macro_def ( $ )
 	{ $category = $catSYMBOL_UNKNOWN; } }
   # FIX: elements of $body may be ordinary symbols, if they expand to macros
   # with definitions in $catCOMMAND_LINE.
-  elsif (($body =~ /^(-\w[a-zA-Z0-9_.,\/]*([= ][a-zA-Z0-9_.,\/]*)?\s*)+$/)
+  elsif ((($body =~ /^(-\w[a-zA-Z0-9_.,\/]*([= ][a-zA-Z0-9_.,\/]*)?\s*)+$/)
+	  # Avoid xfig/region.h:40: command_line_arguments: MINSHORT -MAXSHORT
+	  && (! (($body =~ /^-($identifier_re)$/)
+		 && (exists($macros{$1})
+		     || exists($macros_used_by_cpp{$1})
+		     || exists($global_symbols{$1})))))
 	 || ($body =~ /^(\/$identifier_re)+$/) # pathname (didn't used to have ^$; why?)
 	 || ($body =~ /^[-_a-zA-Z0-9]+\.[os]$/)	# .o or .s filename
 	 || ($body =~ /\$[\(\{]/) # use of "$()" or "${}"
