@@ -342,7 +342,7 @@ out of eight exceed 20\%.  On average, conditional compilation
 directives account for just under half (47.4\%) of the total
 directives in all packages, \verb+#define+s account for another
 29.5\%, \verb+#include+s account for 18.9\%, and the other directives
-are in the noise.\footnote{Only the flex package had a significant
+are in the noise.\footnote{The flex package had the most significant
 ``other'' component, accounted for by its aggressive use of the
 \verb+\#line+ directive.} The percentage of \verb+#define+s varies by a factor of 14
 across the packages, \verb+#include+s by a factor of 25, and
@@ -352,6 +352,7 @@ conditional compilation directives by a factor of about 16.
 
 The second question we asked was: where and how often are macros
 defined and used in practice?  
+
 %Specifically, for each macro we
 %determined:
 %\begin{itemize}\itemsep 0pt \parskip 0pt
@@ -379,6 +380,20 @@ single bin.
 For example, looking at the \verb+Python+ package, 94.18\% of
 the identifiers were \verb+#define+d six or fewer times.  
 
+Going out to five or fewer separate \verb+#define+s per symbol covers
+over 90\% of the symbols for all but four packages: CVS is nearly
+90\%, gawk and glib are about 80\%, and remind is under 50\%.  One
+factor in the gawk and glib packages is that they are both highly
+portable and also quite dependent on system libraries.  The
+surprisingly low cumulative percentage for remind is due to its used
+of macro definitions to distinguish among 12 different natural
+languages; the cumulative percentage rises to nearly 100\% at 12
+definitions per symbol for remind.  
+
+That there is a fairly limited use of multiple definitions of symbols
+allows us to more reasonably bound the analysis needed to determine
+the interactions among the definitions for a given symbol.
+
 \begin{figure}
 {\small
   \setlength{\tabcolsep}{.25em}
@@ -387,19 +402,26 @@ the identifiers were \verb+#define+d six or fewer times.
 \caption{Cumulative Definition Percentage\label{fig:define_count}}
 \end{figure}
 
-The \verb+#undef+ counts are generally extremely low; the maximum
-number of undefines seen in any package was [FIX: fill in here].
-
 Figure~\ref{fig:use_count} is structured as the last figure, but it
-represents the number of times that a defined name is expanded (in
-either C code or preprocessor directives).
+represents the number of times that a defined name is expanded in
+either C code or preprocessor directives.  For instance, in the bc
+package, 74.58\% of the macros were expanded eight or fewer times.  
+
+One of the more noticeable points about these data are that almost all
+packages have a significant number of defined macros that are never
+expanded.  Most packages are in the 3-10\% range, while gnuplot
+reaches nearly 40\%.  Although it's difficult to fully account for the
+larger numbers, contributing factors include a lot of cut-and-paste
+and a lack of attention to implementations for specific platforms in
+some packages.  Again with respect to bounding analysis, covering
+macros with 10 or fewer uses covers approximately 75-80\% of the cases.
 
 \begin{figure}
 {\small
   \setlength{\tabcolsep}{.25em}
   \input{freq_of_use-tbl.tex}%
 }
-\caption{Frequency of Macro Expansions\label{fig:use_count}}
+\caption{Cumulative Percentage of Macro Expansions\label{fig:use_count}}
 \end{figure}
 
 Figure~\ref{fig:define_usage} shows the percentage of defined macros
@@ -417,17 +439,15 @@ uses).
 
 \section{Categorization}\label{sec:categorization}
 
-The third question we asked was: how are the macros used in practice?
-In contrast to the earlier analyses, this requires a analysis and
-categorization of the bodies of the macros to determine how they can
-be used.  This analysis depends in part on some heuristics we defined
-to interpret the bodies of the macros; by studying our analyses, we
-have refined (and continue to refine) the heuristics to do a better
-job of categorization.  (This improvement is important in helping us
-produce the C to C++ translation tool we have mentioned.)
-
-[FIX: We should note that we plan to look at uses of macros to help in
-this categorizations (though we don't do any of this now)]
+The third question we asked was: in what ways are the macros used in
+practice?  In contrast to the earlier analyses, this requires an
+analysis and categorization of the bodies of the macros to determine
+how they can be used.  This analysis depends in part on some
+heuristics we defined to interpret the bodies of the macros; by
+studying our analyses, we have refined (and continue to refine) the
+heuristics to do a better job of categorization.  A straightforward
+refinement that we are pursuing looks at the specific uses of macros
+to help in this categorization.
 
 \begin{figure}
 {\small
@@ -447,10 +467,12 @@ ones omitted for reasons of space):
 \item[Null define]  The \verb+#define+ gives only an
 identifier name.  Such macros appear most frequently in Cpp directives
 (such as \verb|#ifdef|), but may also appear in code.  For instance,
-macro \verb|private| to expand either to \verb|static| or to nothing,
+macro \verb|private| may expand either to \verb|static| or to nothing,
 depending on whether a debugging mode is set, or macro \verb|then| might
 expand to nothing for programmers who like \verb|else| to be offset by
-\verb|then|.  Macros with null definitions are often used as boolean
+\verb|then|.\footnote{Recall that we are empirically studying the way
+in which macros are used rather than assessing the ``goodness'' of any
+particular usage style.}  Macros with null definitions are often used as boolean
 variables by the preprocessor.
 
 \item[Literal]  The macro is defined to be a specific constant
@@ -459,17 +481,18 @@ variables by the preprocessor.
   without type information, debugging information in the symbol table, and
   so forth.  Macros with constant expression bodies, such as \verb|#define
   RE_DUP_MAX ((1<<15)-1)|, are included, but not macros with arguments
-  that are literals or constants, so this number is an underestimate of the
+  that are literals or constants, so this number underestimates the
   number of macros with constant values.
 
 \item[Expression]  The macro body is an expression.  This expression
   might have a single constant value everywhere (the usual case for
   expression macros without arguments), or might have a different value on
   each use (the usual case for expression macros with arguments).  Of
-  expression macros, n% [fix: need this number!] use assignment operators,
-  which have potentially unexpected results.  A macro argument which is
+  expression macros, n\% [fix: need this number!] 
+use assignment operators,
+  which have potentially unexpected results.  A macro argument that is
   assigned to is like a pass-by-reference function argument and need only
-  be noted in the macro's documentation.  A global variable which is
+  be noted in the macro's documentation.  A global variable that is
   assigned to also presents no difficulties in understanding.  Assignment
   to a local variable, however, demands that such a variable exist wherever
   the macro is invoked, and assigns to different variables at different
@@ -483,10 +506,10 @@ variables by the preprocessor.
 \item[Statement]  The macro body is a statement.  Such macros can be
   confusing to use, because programmers are inclined to add a semicolon
   after a call to such a macro, which can cause problems such as 
-  misparsing of nested \verb|if| statements).  The
+  misparsing of nested \verb|if| statements.  The
   well-known \verb|do {|\ldots\verb|} while (0)| partial statement trick
   solves this problem.  To our surprise, we found very few uses of that
-  construct, but many instances of a macro which expanded to a statement
+  construct, but many instances of a macro that expanded to a statement
   like \verb|{|\ldots\verb|}| in which a call to the macro was immediately
   followed by a semicolon.
 
@@ -506,15 +529,16 @@ variables by the preprocessor.
   that must occur at its beginning and end, such as \verb|BEGIN_GCPRO| and
   \verb|END_GCPRO|.)
 
-\item[Classification failure]  Frequent reasons for classification failure
-  included multiple adjacent tokens
+\item[Classification failure]  Frequent reasons that our
+classification heurisitcs failed
+  include multiple adjacent tokens
   (\verb|#define EXFUN(name, proto) name proto|,
   \verb|#define DO_OP(OP,a,b) ((a) OP (b))|) and illegal identifier
   names (\verb|#define FAT$C_VFC 3| for VMS compilation), tokens
   (\verb|#define| \verb|LIB_PATH| \verb|/usr/ucblib|), and constants (\verb|1ULL| for
   \verb|unsigned long long|).  Of the fewer than 1000 classification
   failures in the 23 packages, over half appeared in gnuplot; gnuplot, cvs,
-  and grof accounted for over 75% of the failures, many of which could be
+  and grof accounted for over 75\% of the failures, many of which could be
   eliminated by relaxing the parsing rules.  Only 5 packages had no
   macro classification failures at all.
 
@@ -553,11 +577,13 @@ variables by the preprocessor.
 
 \end{description}
 
-In anticipation of the translator tool, the analysis tool infers
-types, using techniques similar to those of Siff and Reps~\cite{Siff-fse96}
-and O'Callahan and Jackson~\cite{OCallahan-icse97}.  Our use of the
-type information is in the early stages, however, and we do not report
-on the preliminary results in this paper.
+[Fix: Probably need something here.]
+
+%In anticipation of the translator tool, the analysis tool infers
+%types, using techniques similar to those of Siff and Reps~\cite{Siff-fse96}
+%and O'Callahan and Jackson~\cite{OCallahan-icse97}.  Our use of the
+%type information is in the early stages, however, and we do not report
+%on the preliminary results in this paper.
 
 % [FIX: Benefits even from simple literal constant conversion -- exposes
 % symbolic information to the debugger]
@@ -565,7 +591,7 @@ on the preliminary results in this paper.
 %[FIX: Should this also include Mike's manual breakdown into categories
 %for gzip.  --not tonight!]
 
-\section{Discussion}\label{sec:discussion}
+\section{Conclusion}\label{sec:discussion}
 
 Even with significant expertise in using C, C++, and the Cpp macro
 preprocessor, these data showed us a far broader and diverse use of
@@ -586,7 +612,7 @@ since we look at all branches.]
 
 [FIX: Harsh macro examples?]
 
-\section{Conclusion}\label{sec:conclusion}
+%\section{Conclusion}\label{sec:conclusion}
 
 \small \bibliography{evil}
 
