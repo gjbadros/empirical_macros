@@ -86,10 +86,11 @@ Tools may ignore macro definitions altogether, accept only preprocessed
 code (perhaps by running Cpp on their input), or attempt to emulate the
 preprocessor.
 
-Ignoring preprocessor directives is an option for approximate tools (that
-is, those that are based on lexical or approximate parsing technique), but
-accurate information about function extents, scope nesting, declared
-variables and functions, and so forth requires addressing the preprocessor.
+Ignoring preprocessor directives is an option for approximate tools
+(that is, those that are based on lexical or approximate parsing
+techniques), but accurate information about function extents, scope
+nesting, declared variables and functions, and so forth requires
+addressing the preprocessor.
 
 Operating on preprocessed code, the most common strategy, is simple to
 implement, but then the tool's input differs from what the
@@ -165,6 +166,7 @@ length, since that focuses more clearly on the essential source text of a
 package.
 
 \begin{figure}
+\centering
 {\small
   \setlength{\tabcolsep}{.25em}
   \input{package_and_sizes-tbl.tex}
@@ -191,20 +193,22 @@ Section~\ref{sec:directives}). It was not unusual to find C programs
 in which over 10\% of the total lines were preprocessor directives, and 
 three of the 23 packages had directives as over 20\% of their lines.
 
-\item We computed how often each macro was
-defined,  undefined, and
-were expanded both from other preprocessor directives and also from
-true C source code (see Section~\ref{sec:usage}).
-[FIX: pithy observation goes here]
+\item We computed how often each macro was defined and expanded (see
+Section~\ref{sec:usage}).  In general we found that identifiers are in
+general \verb+#define+d relatively few times (almost always there were
+five or fewer definitions for over 90\% of the macro identifiers).  We
+also found that many packages have a significant number of
+macros that are never expanded.  
 
-\item We categorized macro definitions according to their expansions; 
-      for example, we determined which macros simply
-      defined a preprocessor symbol, which defined constants, etc.~(see
-      Section~\ref{sec:categorization}).  We
-      were particularly interested in determining which macros are
-      difficult to convert to other language
-      features.  [FIX: pithy observation goes here]
 
+\item We categorized macro definitions according to their expansions;
+for example, we determined which macros simply defined a preprocessor
+symbol, which defined literals, etc.~(see
+Section~\ref{sec:categorization}).  We were particularly interested in
+determining the frequency of use of macros are difficult to convert to
+other language features, such as those that string together characters
+(as opposed to manipulating lexemes or syntactic units).  We found a
+very small number of macros of this type.
 \end{itemize}
 
 Overall, our analysis confirms that the C preprocessor is used in
@@ -331,7 +335,7 @@ compilation directives are grouped together, as are ``other'' directives.
 %and (e) any other directives in the bottom row. 
 
 \begin{figure}
-blank page goes here
+\vspace{8in}
 \caption{Percentages of Directives\label{fig:directives}}
 \end{figure}
 
@@ -356,7 +360,7 @@ package; this is accounted for by its aggressive use of the
 percentage (0.04\%) of \verb+#include+s.
 
 \begin{figure}
-need 4.5 inches, I think
+\vspace{4.5in}
 \caption{Percentages of Total Directives\label{fig:total_directives}}
 \end{figure}
 
@@ -418,9 +422,6 @@ Figure~\ref{fig:use_count} is structured as the last figure, but it
 represents the number of times that a defined name is expanded in
 either C code or preprocessor directives.  For instance, in the bc
 package, 74.58\% of the macros were expanded eight or fewer times.
-(Slightly more than half of the packages are included in this figure;
-the analysis requires a second pass that does not yet handle all
-packages.) 
 
 One of the more noticeable points about these data are that almost all
 packages have a significant number of defined macros that are never
@@ -441,13 +442,16 @@ macros with 10 or fewer uses covers approximately 75-80\% of the cases.
 
 Figure~\ref{fig:define_usage} shows the percentage of defined macros
 that are used in C code, in Cpp code, in both, or in neither (i.e. no
-uses).
+uses).  (Slightly more than half of the packages are included in this
+figure; the analysis requires a second pass that does not yet handle
+all packages.)
 
 \begin{figure}
-{\small
-  \setlength{\tabcolsep}{.25em}
-  \input{where_uses-tbl.tex}%
-}
+\vspace{4.5in}
+%{\small
+%  \setlength{\tabcolsep}{.25em}
+%  \input{where_uses-tbl.tex}%
+%}
 \caption{Where Macro Uses Occur\label{fig:define_usage}}
 \end{figure}
 
@@ -490,14 +494,14 @@ in which macros are used rather than assessing the ``goodness'' of any
 particular usage style.}  Macros with null definitions are often used as boolean
 variables by the preprocessor.
 
-\item[Literal]  The macro is defined to be a specific constant
-  value; for instance, \verb|#define NULL 0| or \verb|#define ETCHOSTS
+\item[Literal] The macro is defined to be a specific constant value;
+  for instance, \verb|#define NULL 0| or \verb|#define ETCHOSTS
   "/etc/hosts"|.  Such macros act like \verb|const| variables, albeit
-  without type information, debugging information in the symbol table, and
-  so forth.  Macros with constant expression bodies, such as \verb|#define
-  RE_DUP_MAX ((1<<15)-1)|, are included, but not macros with arguments
-  that are literals or constants, so this number underestimates the
-  number of macros with constant values.
+  without type information, debugging information in the symbol table,
+  and so forth.  Macros with constant expression bodies, such as
+  \verb|#define RE_DUP_MAX ((1<<15)-1)|, are included, but not macros
+  with arguments that are literals or constants, so this number
+  underestimates the number of macros with constant values.
 
 \item[Expression]  The macro body is an expression.  This expression
   might have a single constant value everywhere (the usual case for
@@ -545,7 +549,7 @@ use assignment operators,
   \verb|END_GCPRO|.)
 
 \item[Classification failure]  Frequent reasons that our
-classification heurisitcs failed
+classification heuristics failed
   include multiple adjacent tokens
   (\verb|#define EXFUN(name, proto) name proto|,
   \verb|#define DO_OP(OP,a,b) ((a) OP (b))|) and illegal identifier
@@ -617,15 +621,20 @@ data.  As we developed them, we slowly shifted from a lexical analysis
 of the source to a syntactic analysis of the source.  For example, we
 now properly parse virtually all declarations in every package.  We're
 pursuing even more analysis, pushing into semantics.  For instance, we
-can now determine which identifiers are free variables within a defined
-macro.  We are also close to being able to infer the types of the bodies
-of defined macros, one of several steps necessary before we can attempt
-to build a converter from C to C++.
+can now determine which identifiers are free variables within a
+defined macro.  We are also close to being able to infer the types of
+the bodies of defined macros, one of several steps necessary before we
+can attempt to build a converter from C to C++.  Once we can usefully
+convert C to C++, eliminating most macro usages (except for
+\verb+#include#s), this would not only programmers to shift to C++ and
+its constructs more easily, but even more importantly, it would
+greatly simplify the development of source-level debuggers, call graph
+extractors, and other programming support tools.
 
-[FIX: We catch errors that you miss when you look at post-processed code
-since we look at all branches.]
-
-[FIX: Harsh macro examples?]
+%[FIX: We catch errors that you miss when you look at post-processed code
+%since we look at all branches.]
+%
+%[FIX: Harsh macro examples?]
 
 %\section{Conclusion}\label{sec:conclusion}
 
