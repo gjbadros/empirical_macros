@@ -31,7 +31,8 @@ PERR := $(addsuffix .perr,$(PKGS))
 TEXT_TABLES :=	tbl-package-sizes \
 		tbl-def-frequency \
 		tbl-use-frequency \
-		tbl-where-used
+		tbl-where-used \
+		tbl-ccd-categories
 
 RAW_TABLES := raw-directives-hist tbl-directives-breakdown \
 		tbl-def-categories tbl-subset-categories
@@ -48,6 +49,7 @@ PAPER_TABLES :=  \
 	tbl-directives-breakdown \
 	tbl-where-used \
 	tbl-def-categories \
+	tbl-ccd-categories \
 	tbl-subset-categories.tex
 
 
@@ -88,6 +90,9 @@ tbl-use-frequency: $(USECUM)
 
 tbl-where-used: $(MAC)
 	macros-make-how-used-ni-tbl-from-mac $^ > $@
+
+tbl-ccd-categories: $(CCD)
+	( head -1 $< && grep -v '^#' $^ | sed -e 's/:/	/' -e 's/.ccd//' ) > $@
 
 ###########################################################################
 ### Raw tables
