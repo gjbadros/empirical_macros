@@ -321,10 +321,11 @@ sub do_if {
   pcp3::YYPushStackState();
   @state_stack = pcp3::ParseStateStack();
   print CPP ": Stack: @state_stack\n";
-#  print STDERR "Value: $value\n";
-  if ($value == 0 && $conditional ne "0") {
+  print STDERR "Value: $value, conditional: $conditional\n";
+  my $fTriviallyFalse = cpp_trivially_false_condition($conditional);
+  if ($value == 0 && !$fTriviallyFalse) {
      handle_unincluded_block($s_branch_start,$s_branch_end,$skipped,"If",$conditional);
-  } elsif ($conditional eq "0") {
+  } elsif ($fTriviallyFalse) {
     print STDERR "Skipped comment-like conditional: $conditional\n";
   }
   push @got_c_token, 0;
@@ -517,6 +518,47 @@ sub cmd_line_def {
   my ($def) = @_;
   print CMDLNDEFS "#define $def\n";
 }
+
+# Not sure whether it would be faster and just as effective to merely check
+# for a set of common trivially false conditions, like this used to do.
+sub cpp_trivially_false_condition ( $ )
+{ my ($cond) = @_;
+  if (($cond eq "0") || ($cond =~ /^0\s*&&/))
+    { return $true; }
+  elsif ($cond =~ /^\(\s*(.*)\s*\)$/)
+    { return cpp_trivially_false_condition($1); }
+  elsif ($cond =~ /^!\s*1$/)
+    { return $true; }
+  elsif ($cond =~ /^!\((.*)\)$/)
+    { my $negated = $1;
+      if (paren_change($negated))
+	{ return $false; }
+      else
+	{ return cpp_trivially_true_condition(negate_cpp_if_condition($cond)); } }
+  else
+    { return $false; }
+}
+
+
+# Just like the above, with 0 and 1 reversed
+sub cpp_trivially_true_condition( $ )
+{ my ($cond) = @_;
+  if (($cond eq "1") || ($cond =~ /^1\s*\|\|/))
+    { return $true; }
+  elsif ($cond =~ /^\(\s*(.*)\s*\)$/)
+    { return cpp_trivially_true_condition($1); }
+  elsif ($cond =~ /^!\s*0$/)
+    { return $true; }
+  elsif ($cond =~ /^!\((.*)\)$/)
+    { my $negated = $1;
+      if (paren_change($negated))
+	{ return $false; }
+      else
+	{ return cpp_trivially_false_condition(negate_cpp_if_condition($cond)); } }
+  else
+    { return $false; }
+}
+
 
 
 # Add the hooks, now
