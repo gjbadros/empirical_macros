@@ -1808,7 +1808,10 @@ sub get_fulltoken_line (;$)
     { $current_raw_fulltoken_line = $raw_result; }
 
   if ($debug_getline)
-    { print STDERR "get_fulltoken_line $phys_lines, $finding_macro_defs: <<$simple_result>><<$raw_result>>"; }
+    { print STDERR "in get_fulltoken_line $phys_lines, finding",
+        ($finding_macro_defs ? " defs" : ""),
+        ($finding_macro_uses ? " uses" : ""),
+        ": <<$simple_result>><<$raw_result>>\n"; }
 
   {
     # First pass
@@ -1825,6 +1828,7 @@ sub get_fulltoken_line (;$)
 	if (!defined($simple_result))
 	  { mdie("How can $simple_result not be defined??"); }
 	analyze_for_macro_use($simple_result);
+	# print STDERR "analyze_for_macro_use returned from $simple_result";
       }
     }
 
@@ -1834,7 +1838,10 @@ sub get_fulltoken_line (;$)
 	  $rg_cpp_phys_lines[$current_ftype_index] += $phys_lines;
 	  $rg_cpp_phys_ncnb_lines[$current_ftype_index] += $ncnb_lines;
 	}
-	return getline_handle_preprocessor_line($raw_result, $simple_result, $phys_lines, $ncnb_lines);
+	my $result = getline_handle_preprocessor_line($raw_result, $simple_result, $phys_lines, $ncnb_lines);
+	if ($debug_getline)
+	  { print "get_fulltoken_line returning (via getline_handle_preprocessor_line) <<$result>>\n"; }
+	return $result;
       }
   }
 
@@ -1843,7 +1850,10 @@ sub get_fulltoken_line (;$)
   elsif ($simple_result eq "")
     { mdie("empty get_fulltoken_line result '$simple_result'"); }
   if ($debug_getline)
-    { print "get_fulltoken_line returning <<$simple_result>>\n"; }
+    { print "get_fulltoken_line returning <<$simple_result>>\n";
+      if ($simple_result eq "EXT char *sig_name[] = { SIG_NAME };\n")
+	{ carp "here!\n"; } }
+
   return ($simple_result);
 }
 
@@ -1885,11 +1895,15 @@ sub find_close_paren_read ($;$)
 { my ($exp, $pos) = check_args_range(1, 2, @_);
   if (!defined($pos))
     { $pos = 0; }
+  if ($debug_getline)
+    { print "find_close_paren_read $exp $pos\n"; }
   my $index = find_close_delimiter('(', $exp, $pos);
   while ($index eq $false)
     { my $nextline = get_fulltoken_line($true);
       $exp .= $nextline;
       $index = find_close_delimiter('(', $exp, $pos); }
+  if ($debug_getline)
+    { print "find_close_paren_read $exp returned $index in $exp\n"; }
   return ($index, $exp);
 }
 
@@ -1897,14 +1911,16 @@ sub find_close_brace_read ($;$)
 { my ($exp, $pos) = check_args_range(1, 2, @_);
   if (!defined($pos))
     { $pos = 0; }
+  if ($debug_getline)
+    { print "find_close_paren_read $exp $pos\n"; }
   my $index = find_close_delimiter('{', $exp, $pos);
-  # print "find_close_brace_read ($pos) <= $exp\n";
   while ($index eq $false)
     { my $nextline = get_fulltoken_line($true);
       # print "find_close_brace_read ($pos) adding '$nextline' to '$exp'.\n";
       $exp .= $nextline;
       $index = find_close_delimiter('{', $exp, $pos); }
-  # print "find_close_brace_read ($pos) => $index + $exp\n";
+  if ($debug_getline)
+    { print "find_close_brace_read $exp returned $index in $exp\n"; }
   return ($index, $exp);
 }
 
@@ -2115,7 +2131,9 @@ XK_.*
 sub getline_handle_preprocessor_line ( $$$$ )
 {
   my ($line, $line_noc, $phys_lines, $ncnb_lines) = check_args(4, @_);
-  # print "getline_handle_preprocessor_line: $line == $line_noc"; # $line ends with newline
+  if ($debug_getline)
+    { # $line ends with newline
+      print "getline_handle_preprocessor_line: $line == $line_noc"; }
   if ($line_noc =~ /^\s*\#\s*$/)
     { # null preprocessor command; do nothing
       return "\n";
@@ -2159,7 +2177,8 @@ sub getline_handle_preprocessor_command ( $$$$$ )
   # $cpp_cmd and $cpp_cmd_arg contain no leading or trailing space.
   my ($cpp_cmd, $cpp_cmd_arg, $cpp_cmd_arg_noc, $phys_lines, $ncnb_lines) = check_args(5, @_);
 
-  # print "getline_handle_preprocessor_command (", scalar(@current_inclusion_dependenton), "): $cpp_cmd $cpp_cmd_arg == $cpp_cmd_arg_noc\n";
+  if ($debug_getline)
+    { print "getline_handle_preprocessor_command (", scalar(@current_inclusion_dependenton), "): $cpp_cmd $cpp_cmd_arg == $cpp_cmd_arg_noc\n"; }
 
   if ($finding_macro_defs) {
     # handle @rg_cpp_cmds and @%rg_cppcmdcounts
@@ -2200,6 +2219,8 @@ sub getline_handle_preprocessor_command ( $$$$$ )
 	    # Count this as a comment, not NCNB, line.
 	    { $rg_ncnb_lines[$current_ftype_index] -= $ncnb_lines; }
 	  my $cond = discard_to_endif_or_else();
+	  if ($debug_getline)
+	    { print "discard_to_endif_or_else returned '$cond'"; }
 	  if ($cond)
 	    { # What are the right fourth and fifth arguments here?
 	      return getline_handle_preprocessor_command("if", $cond, $cond, $phys_lines, $ncnb_lines); } }
@@ -2428,7 +2449,7 @@ sub discard_to_endif_or_else ( )
 	{ evilprint($warning); }
       if (not $raw_line)
 	{ evilprint("File ends in \#if 0\n");
-	  return; }
+	  return $false; }
       cline_resetinvars();		# Abandon changes by get_spliced_cline
       if ($debug_cpp_if_comments)
 	{ print input_file_and_line(), ": discarding (to endif or else; inclusion_dependenton @current_inclusion_dependenton) $raw_line"; }
@@ -3091,6 +3112,8 @@ sub parse_exp ($;$)
       # (This assumes that parse_exp isn't called until all macros bodies
       # have been discovered; I think this is reasonable, as the first pass
       # does no parsing.)
+      if ($debug_parse_expression)
+	{ print "categorizing potential macro $var; remaining $remaining\n"; }
       categorize_macro_name($var);
       my $vartype = $mntype{$var};
       my $is_macro = defined($vartype);
@@ -3167,7 +3190,7 @@ sub parse_array_initializer ( $ )
   my ($initlist) = check_args(1, @_);
 
   if ($debug_parse_array_init)
-    { print "parse_array_initializer $initlist"; } # $initlist ends in newline
+    { print "parse_array_initializer $initlist\n"; } # $initlist ends in newline -- not necessarily!
 
   # C allows an extra comma at the end of the initializer list.
   if ($initlist =~ /^\s*(,\s*)?\}/)
@@ -3700,7 +3723,8 @@ sub process_macro_calls ( )
       my $line;
       while ($line = get_fulltoken_line())
 	{
-	  # print "GOTLINE <<$line>>\n";
+	  if ($debug_getline)
+	    { print "GOTLINE <<$line>>\n"; }
 	  # The line number $. isn't quite right, as we may have peeked ahead
 	  # print "line ", current_line_no(), ": $line"; # no newline, since $line contains one
 	  if ($line =~ /^\s*$/)
@@ -3766,6 +3790,7 @@ PROCESSLINE:
 		    $line = simple_macro_substitute($line);
 		    $line = simple_macro_substitute_2($line);
 		    $repeat = ($unsimp_line ne $line); } }
+	      # print "Substituted: $line\n";
 	      if ($line =~ /^\s*$/)
 		{ # do nothing; maybe this was a preprocessor directive
 		  # print "empty line ", current_line_no(), ":\n";
@@ -3888,10 +3913,12 @@ PROCESSLINE:
 		      # don't want to mdie here).
 		      # print "rejected special case";
 		    }
+		  # I think this may be intentionally unanchored (no ^...$)
 		  elsif ($typespec =~ /$reserved_nontype_word_re/o)
 		    { # "else if (...)", "return foo;", "sizeof(buf)", etc.
 		      # print "rejected typespec $typespec\n";
 		    }
+		  # I think this may be intentionally unanchored (no ^...$)
 		  elsif ($declarator =~ /$reserved_nontype_word_re/o)
 		    {
 		      # print "rejected declarator $declarator\n";
@@ -4472,13 +4499,13 @@ sub simple_macro_substitute ( $ )
     { if ($text =~ /\b$fdmacro\s*\(/)	# no /o
 	{ my $prematch = $PREMATCH;
 	  my $postmatch = $POSTMATCH;
-	  print "Found fun_decl_arg_macro $fdmacro in $text\n";
+	  # print "Found fun_decl_arg_macro $fdmacro in $text\n";
 	  my $close_paren_pos;
 	  ($close_paren_pos, $postmatch) = find_close_paren_read($postmatch);
-	  print "close paren at $close_paren_pos in $postmatch\n";
+	  # print "close paren at $close_paren_pos in $postmatch\n";
 	  my $result = $prematch . substr($postmatch, 0, $close_paren_pos)
 	    . substr($postmatch, $close_paren_pos+1);
-	  print "simple_macro_substitute $text\n ===> $result\n";
+	  # print "simple_macro_substitute $text\n ===> $result\n";
 	  return $result; } }
   return $text;
 }
@@ -4491,7 +4518,7 @@ sub simple_macro_substitute_2 ( $ )
   if ($text !~ /^($identifier_re)\s*\(/)
     { return $text; }
 
-  print "simple_macro_substitute_2: $text\n";
+  # print "simple_macro_substitute_2: ", add_newline($text);
 
   $text =~ /^($identifier_re)\s*\(/; # is this necessary?
   my $name = $1;
@@ -4540,7 +4567,7 @@ sub simple_macro_substitute_2 ( $ )
   for my $i (0 .. $#formals)
     { $result =~ s/\b$formals[$i]\b/$actuals[$i]/g; }
 
-  print "Expanded ", add_newline($text), "to ", add_newline($result);
+  # print "Expanded ", add_newline($text), "to ", add_newline($result);
 
   return $result;
 }
@@ -4550,7 +4577,8 @@ sub simple_macro_substitute_2 ( $ )
 sub process_function_definition_or_declaration ( $$$ )
 {
   my ($type, $identifier, $remaining) = check_args(3, @_);
-  # print "process_fun_def_or_decl $type $identifier (", exists($macros{$identifier}), add_newline(") $remaining");
+  if ($debug_parse_function)
+    { print "process_fun_def_or_decl $type $identifier (", exists($macros{$identifier}), add_newline(") $remaining\n"); }
 
   # found (start of) function definition or prototype
   # Only need to check the new stuff, not the whole thing.
@@ -5065,7 +5093,7 @@ sub categorize_macro_def ( $ )
 { my ($index) = check_args(1, @_);
 
   if ($debug_categorize_macro)
-    { print "Categorizing $index $mdef_name[$index]$mdef_formals[$index] $mdef_body[$index] from $files[$mdef_fileno[$index]]\n"; }
+    { print "Categorizing $index $mdef_name[$index]$mdef_formals[$index] $mdef_body[$index]\n  simple:$mdef_body_simple[$index]\n  from $files[$mdef_fileno[$index]]\n"; }
 
   if ($mdef_fileno[$index] eq $built_in_fake_fileno)
     { mdie("Trying to categorize built-in."); }
@@ -5159,11 +5187,14 @@ sub categorize_macro_def ( $ )
     { $category = $catUNBALANCED; }
   # Not caught by previous tests, so an expression, statement, or failure.
   else {
+    if ($debug_categorize_macro)
+      { print "Falling back on parse_expression\n"; }
     my $remaining;
     reset_parse_vars();
     local $commaop = $true;
     ($type, $remaining) = parse_expression($body);
-    # print "type = $type; remaining = $remaining\n";
+    if ($debug_categorize_macro)
+      { print "parse_expression called by categorize_macro_def returned\n  type = $type; remaining = $remaining\n"; }
     # $type was ($type != $typeFAIL)
     if ($type && ($remaining =~ /^\s*$/))
       # Expression
@@ -5190,7 +5221,11 @@ sub categorize_macro_def ( $ )
     # Not an expression; try statements
     else
       { my $stmt_remaining;
+	if ($debug_categorize_macro)
+	  { print "Falling back on parse_statements\n"; }
 	($category, $stmt_remaining) = parse_statements($body);
+	if ($debug_categorize_macro)
+	  { print "parse_statements called by categorize_macro_def returned\n  category = $category; remaining = $stmt_remaining\n"; }
 	if ($stmt_remaining !~ /^\s*$/)
 	  { if ($body =~ /^(__)?asm(__)?/)
 	      { $category = $catASSEMBLY_CODE; }
@@ -5201,7 +5236,10 @@ sub categorize_macro_def ( $ )
 		  { $category = $catSYMBOLS; } }
 	    else
 	      # try parsing as declaration
-	      { my ($decl_remaining, $warnings, %nametype) = parse_declarations($body);
+	      {
+		if ($debug_categorize_macro)
+		  { print "Falling back on parse_declarations\n"; }
+		my ($decl_remaining, $warnings, %nametype) = parse_declarations($body);
 		if ($debug_parse_declaration)
 		  { if (scalar(@$warnings) == 0)
 		      { print "parse_declarations: no warnings\n"; }
@@ -5213,7 +5251,10 @@ sub categorize_macro_def ( $ )
 		  { $category = $catDECLARATION; }
 		else
 		  # add semicolon and try parsing as declaration
-		  { my ($decl_remaining, $warnings, %nametype) = parse_declarations("$body;");
+		  {
+		    if ($debug_categorize_macro)
+		      { print "Adding semicolon and falling back on parse_declarations\n"; }
+		    my ($decl_remaining, $warnings, %nametype) = parse_declarations("$body;");
 		    if ($debug_parse_declaration)
 		      { if (scalar(@$warnings) == 0)
 			  { print "parse_declarations: no warnings\n"; }
@@ -6421,6 +6462,9 @@ sub test_categorize_macro_defs ( )
   test_cat($catSTATEMENT, $propNONE, "while ((wait3(NULL, WNOHANG, NULL)) > 0);");
   # This is deeply broken:  that trailing semicolon is a killer
   test_cat($catSTATEMENTS, $propASSIGN, "if((nodes[J].flag & 0x20) != 0) { x = nodes[J].x; y = nodes[J].y; nodes[J].flag -= 0x20; if (!clip_point(x,y) && !IFSET(XREDUCE(x)-XREDUCE(xleft),YREDUCE(y)-YREDUCE(ybot))) (*t->point)(x,y, plot_info[nplot].point_type); };");
+
+  test_cat(0,0, '"ZERO","HUP","INT","QUIT","ILL","TRAP","ABRT","BUS","FPE","KILL","USR1","SEGV","USR2","PIPE","ALRM","TERM","STKFLT","CHLD","CONT","STOP","TSTP","TTIN","TTOU","URG","XCPU","XFSZ","VTALRM","PROF","WINCH","IO","PWR","UNUSED","IOT","CLD","POLL",0	/**/');
+  test_cat(0,0, '"`echo $sig_name | sed \'s/ /","/g\'`",0	/**/');
 }
 
 
@@ -7059,6 +7103,7 @@ if ($opt_T)
   test_parse_expressions();
   test_categorize_macro_defs();
   test_misc();
+
   exit -1;			# Don't run following programs, eg from gzip.
   # exit;			# Find this via search for the string "exit;".
 }
@@ -7108,8 +7153,9 @@ for my $name (keys %macros)
 # for my $i (0..$cMacrosInTables)
 #   { print "$i $mdef_formals[$i] $mdef_body_noc[$i]\n"; }
 
-# Save some space: output and undefine variables not needed for the second pass
-save_variables(extra_state_file_name($statename), @extra_state_file_vars);
+# For now, when debugging, move this to near the end.
+# # Save some space: output AND UNDEFINE variables not needed for the second pass
+# save_variables(extra_state_file_name($statename), @extra_state_file_vars);
 
 if (!$opt_1)
 { if ($opt_v) { print STDERR "done with that loop; now finding macro uses...\n"; }
@@ -7162,6 +7208,7 @@ select(PARSE_ERRS); $| = 1; print PARSE_ERRS "\n";
 # # close(EVIL);
 # # close(PARSE_ERRS);
 
+save_variables(extra_state_file_name($statename), @extra_state_file_vars);
 print STDERR "Save macro analysis state\n";
 SaveMacroAnalysisState($statename);
 print STDERR "Successful completion!\n";

@@ -509,11 +509,15 @@ $number_literal_re = '((' . join(')|(', $float_literal_whole_re, $float_literal_
 $char_literal_contents_re = '(\\\\?.|\\\\[0-7]{3})';
 $char_literal_re = "L?'" . $char_literal_contents_re . "'";
 $non_escaped_double_quote_re = '(^|[^\\\\])(\\\\\\\\)*\"';
-# non-greedy '.*?' because '.*' matches too much, skips over intervening quotes
-$string_literal_re = 'L?\"(|.*?[^\\\\])(\\\\\\\\)*\"'; # string literal
-## I'm getting errors when I use this, so avoid it.
-# # Changed to value suggested in _Mastering Regular Expressions_
-# $string_literal_re = 'L?\"([^"\\]|\\[\000-\377])*\"'; # string literal
+
+## String literals
+# This one is correct, but slow.
+# # non-greedy '.*?' because '.*' matches too much, skips over intervening quotes
+# $string_literal_re = 'L?\"(|.*?[^\\\\])(\\\\\\\\)*\"'; # string literal
+# This one is suggested in _Mastering Regular Expressions_.
+$string_literal_re = 'L?"[^"\\\\]*(?:\\.[^"\\\\]*)*"'; # string literal
+# This is perhaps *not* what _MRE_ actually suggests.
+
 
 ### Types
 
