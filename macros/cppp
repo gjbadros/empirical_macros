@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 # cppp -- Partial CPP (expands specified C preprocessor macros)
 # Michael Ernst <mernst@cs.washington.edu>
-# Time-stamp: <2003-09-28 11:53:22 mernst>
+# Time-stamp: <2003-09-28 12:58:17 mernst>
 
 # cppp simplifies the conditional compilation structure (#if, #ifdef, etc.)
 # of a C file by eliminating CPP conditional directives, based on the
@@ -157,8 +157,7 @@ sub process_file ( $ );
 ### Boolean
 my $true = 1;
 my $false = 0;
-my $unknown = 'unknown';	# maybe use undef instead?  Problem: undef
-				# is a bad arg some places.
+my $unknown = 'unknown';	# not undef: it is a bad arg some places.
 
 my $debug_cppp = $false;
 # $debug_cppp = $true;
@@ -706,9 +705,12 @@ sub process_file ( $ )
 				# each is $true, $false, or $unknown
   my @condition_value_stack = ($true); # the AND of @condition_stack
   my $current_condition_value = $true; # the top of @condition_value_stack
-  my @elif_needs_endif = ();	# set when "if unknown elif known endif"
+  my @elif_needs_endif = ();	# set when "if unknown elif known endif",
+                                # so final endif is necessary
+  my @true_elif_found = ();	# set when "if true elif **** endif",
+                                # so no more branches need be output
   # Invariants:
-  #  @condition_stack and @elif_needs_endif have the same size
+  #  @condition_stack, @elif_needs_endif, @true_elif_found have the same size
   #  @condition_value_stack is one element larger than those
 
   while ($true)
@@ -726,6 +728,9 @@ sub process_file ( $ )
       if (scalar(@condition_stack) ne scalar(@elif_needs_endif))
 	{ die "bad sizes for condition_stack (", scalar(@condition_stack),
 	      "), elif_needs_endif (", scalar(@elif_needs_endif), ") in $file"; }
+      if (scalar(@condition_stack) ne scalar(@true_elif_found))
+	{ die "bad sizes for condition_stack (", scalar(@condition_stack),
+	      "), true_elif_found (", scalar(@true_elif_found), ") in $file"; }
 
       if ($simple =~ /^\s*\#\s*(if(n?def)?|el(se|if)|endif)\b/)
 	{ $simple =~ s/^\s*\#\s*//;
@@ -741,6 +746,7 @@ sub process_file ( $ )
 	    { my $thisvalue = pop(@condition_stack);
 	      my $needs_endif = pop(@elif_needs_endif);
 	      pop(@condition_value_stack);
+              pop(@true_elif_found);
 	      $current_condition_value = $condition_value_stack[$#condition_value_stack];
 	      if (($needs_endif || is_unknown($thisvalue))
                   && is_nonfalse($current_condition_value))
@@ -757,11 +763,15 @@ sub process_file ( $ )
 	      if (($needs_endif || is_unknown($thisvalue))
                   && is_nonfalse($current_condition_value))
 		{ print OUTPUT $raw; }
-	      if (!is_unknown($thisvalue))
-		{ $thisvalue = !$thisvalue;
-		  $condition_stack[$#condition_stack] = $thisvalue; }
+
+              if ($true_elif_found[$#true_elif_found])
+                { $thisvalue = $false; }
+	      elsif (!is_unknown($thisvalue))
+		{ $thisvalue = !$thisvalue; }
+              $condition_stack[$#condition_stack] = $thisvalue;
 	      $current_condition_value = combine_conditional($current_condition_value, $thisvalue);
 	      push(@condition_value_stack, $current_condition_value);
+
 	      if ($debug_cppp)
 		{ print "After else:\n";
 		  print "  condition_stack = @condition_stack\n";
@@ -773,6 +783,10 @@ sub process_file ( $ )
 	      $ifarg =~ s/\s+$//;
 	      my $oldvalue = $condition_stack[$#condition_stack];
 	      my $thisvalue = evaluate_conditional($ifarg);
+              if ($true_elif_found[$#true_elif_found])
+                { $thisvalue = $false; }
+              elsif (is_true($thisvalue))
+                { $true_elif_found[$#true_elif_found] = $true; }
 	      # my $old_current_condition_value = $current_condition_value;
 	      my $prev_current_condition_value =
 		$condition_value_stack[$#condition_value_stack - 1];
@@ -788,6 +802,14 @@ sub process_file ( $ )
 	      # but this includes extraneous text
 	      #   if unknown elif **** => if unknown
 	      # so we need separate conditions for the text and the endif.
+
+              # It is wrong to just do
+	      #   if true elif **** => if false
+              # because then in
+              #   if true elif **** else XXX endif
+              # the XXX gets output, because it's in the else of an "if false".
+              # So remember if we are in a false branch (regardless
+              # of what the current value is).
 
 	      { $condition_stack[$#condition_stack] =
 		  is_true($oldvalue) ? $false : $thisvalue;
@@ -862,6 +884,7 @@ sub process_file ( $ )
 	      push(@condition_stack, $thisvalue);
 	      push(@condition_value_stack, $current_condition_value);
 	      push(@elif_needs_endif, $false);
+              push(@true_elif_found, is_true($thisvalue));
 
 	      if ($debug_cppp)
 		{ print "After ifarg $ifarg:\n";
