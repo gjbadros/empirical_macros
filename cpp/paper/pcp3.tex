@@ -52,7 +52,6 @@
 \newcommand{\figref}[1]{Figure~\ref{#1}}
 \setlength{\fboxsep}{.1in}
 
-%FIXGJB: Framework for?
 \title{\pcp{}: A \C{} Front End for \\ Preprocessor Analysis and Transformation}
 \author{Greg J. Badros%
   \thanks{\tiny Supported by a National Science Foundation
@@ -74,11 +73,10 @@ Though the \C{} preprocessor provides necessary language features, it
 does so in an unstructured way.  The lexical nature of \Cpp{} creates
 numerous problems for software engineers and their tools, all stemming
 from the chasm between the engineer's view of the source code and the
-%%FIXGJB: chasm hyperbole
 compiler's view.  The simplest way to reduce this problem is to minimize
 use of the preprocessor.  In light of the data collected in a prior
 empirical analysis, this paper describes a tool to aid the software
-engineer in replacing preprocessor constructs with language features.
+engineer in analyses targeted at replacing preprocessor constructs with language features.
 Existing tools for analyzing \C{} source in the context of the
 preprocessor are unsuitable for such transformations. This work
 introduces a new approach: tightly integrating the preprocessor with a
@@ -119,7 +117,6 @@ problem to programmers, maintainers, people porting code, and tool
 builders~\cite[p.~424]{Stroustrup94}.
 \end{quotation}
 
-%% FIXGJB: is \ldots too cute?
 \subsection{Why \Cpp{} is good $\ldots$ \emph{and} bad}
 
 The intrinsic problem with \Cpp{} is also its fundamental strength: it
@@ -136,8 +133,6 @@ undefined in light of \Cpp{}.  When compiled using \texttt{cc
 world'' message. (Adapted from an example given by
   Stroustrup~\cite[p.~423]{Stroustrup94}.)  What \emph{you} see is not
 what the \emph{compiler} gets.
-
-%FIXGJB: In this case, what you see... ?
 
 \begin{figure}[hbtp]
 \begin{center}
@@ -213,7 +208,6 @@ artifact.
 
 %Syntax errors can lurk in code hidden from the compiler by
 %\Cpp{} (in fact we found instances of this in \cite{EmpCpp}).
-%%FIXGJB: Last sentence needed?
 
 
 Some tools choose a different tradeoff and operate instead on the
@@ -223,12 +217,9 @@ cannot use a straightforward parser or construct an accurate abstract
 syntax tree because the source is not grammatically-correct \C{} code.
 Lexical tools such as \texttt{etags}, LSME~\cite{Murphy96}, and
 \texttt{font-lock-mode} for Emacs and approximate parsers such as
-\texttt{a*},
-%% FIXGJB ref for a*
 \texttt{Genoa}~\cite{Devanbu92}, and \texttt{LCLint}~\cite{LCLint}
 use this approach.  In general, this leads to greater speed (especially
-for the lexical approach) and improved robustnes in handling syntax errors and
-%%FIXGJB: robustness?
+for the lexical approach) and improved robustness in handling syntax errors and
 language variants (approximate parsers generally lose the current top
 level construct at worst, and often do better). Additionally, because
 the input is unprocessed, the extracted information is presented to the
@@ -280,14 +271,11 @@ shortcomings, and some directions for possible future progress. The two appendic
 provide more details about the \pcp{} interfaces.
 
 
-%%FIXGJB: related works too late?
-
-%%FIXGJB: too chatty?
 %\section{How pervasive and perverse is preprocessor use?}
 \section{How the preprocessor is used in practice}
 \label{sec:feasibility}
 Many \Cpp{} constructs have analogues in newer language
-features.  Carrol and Ellis list several preprocessor uses and explain
+features.  Carroll and Ellis list several preprocessor uses and explain
 what \CPP{} features could be used instead~\cite{Carroll95}. For
 example, \ppd{define}s of simple numeric and string constants can often
 be replaced with enumeration declarations or static constant variable
@@ -328,15 +316,14 @@ function prototypes for non-ANSI \C{} compilers (see
 used fewer than three times (over 10\% are never used), this macro is used
 frequently and can cause a parsing problem or a lexical mismatch at each
 function prototype.  The declaration no longer appears to be a function
-prototype to tools operating on unprocessed source code.  As this is a
-common case, tools can try to hack around the problem in a
-package-dependent way.  Interestingly, the use of the \texttt{\_\_P}
+prototype to tools operating on unprocessed source code.  
+Interestingly, the use of the \texttt{\_\_P}
 macro hardly affects readability of code at all;
 humans compensate easily for this alternate form of declarations.
 
 %% Emacs font-lock-mode actually gets it wrong
 
-\begin{figure}[hbtp]
+\begin{figure}[bhtp]
 \begin{center}
 \begin{small}
 \begin{pseudocode}[4in]
@@ -351,14 +338,14 @@ humans compensate easily for this alternate form of declarations.
 #endif
 
 /* Below has no prototype for non-ANSI compilers */
-int strcmp __P((__const char *sz1, __const char *sz2));
+int strcmp __P((const char *sz1, const char *sz2));
 \end{pseudocode}
 \end{small}
 \caption{Common use of macro for backward compatibility with non-ANSI
   \C{} compilers.  Note the double parenthesization of the argument to
   macro \texttt{\_\_P}; this permits in the entire formal parameter list
-  to be used as the single argument to the macro. This example is
-  adapted from code in the \texttt{bash} package.}
+  to be used as the single argument to the macro. (Adapted from
+  \texttt{string.h} header.)}
 \label{fig:prototype_example}
 \end{center}
 \end{figure}
@@ -403,7 +390,7 @@ manipulate their arguments as symbols using the \Cpp{} stringization
 Figure~\ref{fig:worstcase} shows how damaging overuse of such features
 can be to human program-understanding.  Also, approximate parsers operating on
 the unprocessed code would have to expand many macros in order to make
-sense of the code.
+sense of the code, and lexical tools would be virtually useless.
 
 Our study of how programmers actually use
 \Cpp{} observed that macros are often used in benign ways.  Over 43\% of macro
@@ -443,13 +430,6 @@ between these two extremes.
 %% FIXGJB: unfortunately, we don't have number of uses as a percent of
 %% lines so package size affects the above numbers (dougz points this
 %% out, too)
-
-%%FIXGJB: Kill this paragraph?
-%The tool used to analyze the packages approximates a parse of the
-%unprocessed source code of the entire package.  It makes multiple passes
-%over each file, and assumes that a \ppd{define} line occurring anywhere
-%in the source code will result in that identifier expanding anywhere
-%else in the source.  Such assumptions are wholly inappropriate.
 
 % PCP^3
 \section{The \pcp{} Infrastructure}
@@ -509,13 +489,6 @@ bodies, arguments of macros, \etc.
 %  Research is using trying to recover preprocessor ``intentions'' from
 %  fully preprocessed code annotated with this mapping
 %  information~\cite{MSIPPersonal}.}
-
-% FIXGJB
-%By communicating annotated tokens
-%and exposing the state of the preprocessor to the parser and vice-versa,
-%the communication between \Cpp{} and the \C{} language parser is widened
-%from the thin straw of tokens passed via a Unix pipe that plagues other
-%tools choosing to operate on preprocessed code.
 
 The implementation of \texttt{cpplib} grew from about 7,000 lines of
 code as distributed with \texttt{gcc} to almost 8,000 lines.  Most of
@@ -617,7 +590,6 @@ code.  About 60\% of this code deals directly with passing arguments
 between \C{} and \Perl{}.
 
 
-%% FIXGJB: move to appendix?
 \subsection{Macro expansion mappings}
 To support useful interactions between the parser and preprocessor, it
 is essential that \pcp{} maintain an accurate mapping between the
@@ -785,7 +757,7 @@ Given a straightforward preprocessor and parser front end, some analyses
 are impossible.  For example, since the preprocessor will skip code if
 instructed by conditional compilation directives, that source will never
 be seen by the parser, leaving unprocessed code.  The
-\texttt{DO\_XIFDEF} and \texttt{DO\_IF} hooks are provided the code that is
+\texttt{DO\_XIFDEF} and \texttt{DO\_IF} hooks do receive the code that is
 skipped as an argument, but only as literal text.  For an analysis to
 reason about the whole source program (not just one configuration), the
 skipped code must be exposed to the parser as if it were not removed by
@@ -814,12 +786,12 @@ list of states in the parsers stack; this exposes information about
 what constructs might be legal at the current location (for example, determining whether
 declarations may be permitted).  \texttt{SetStateStack()} permits
 explicitly changing the parser's stack of states, perhaps to reset to a
-top level construct or attempt to reparse text using a different start
-state of the parser.  Using \texttt{YYFCompareTopStackState}, an
-analysis can efficiently check whether a previously saved parser state
+top level construct or attempt to reparse text using a different configuration
+of the parser.  Using \texttt{YYFCompareTopStackState}, an action hook
+can efficiently check whether a previously saved parser state
 matches the current configuration.  For example, an analysis can easily
-provide a warning if the ``if'' block and the ``else''
-block of an \ppd{ifdef} directive leave the parser in states which differ.
+provide a warning whenever the ``if'' block and the ``else''
+block of an \ppd{ifdef} directive leave the parser in different states.
 
 % PushBuffer
 
@@ -837,11 +809,11 @@ block of an \ppd{ifdef} directive leave the parser in states which differ.
 % Permits using the parser to parse individual pieces of code you're
 % interested in
 
-\section{Transformations of preprocessor constructs into language features}
+\section{Converting preprocessor uses into language features}
 \label{sec:xform}
 
 %% Transformations really about understanding
-The \pcp{} framework makes performing many kinds of analyses
+The \pcp{} framework makes performing many kinds of analysis
 particularly easy.  Certain analyses are especially useful when
 considering source code transformations.  To safely replace a \Cpp{}
 construct with a language feature, we must be sure that doing so does
@@ -854,21 +826,18 @@ mostly as an editing aid, largely disregarding semantics~\cite{C2J,C2JPP}.
 
 Software engineering source-to-source transformations can afford to be
 slightly less stringent than a compiler, but should strive to be more
-than just an editing tool.  \pcp{} provides an analysis
-framework powerful enough to be as accurate as a compiler, while
-requiring minimal programming effort to implement an analysis.  The
-current analysis to support replacing \ppd{define}s The
-standard module of action hooks focuses on assisting a knowledgeable
-user understand code and locate areas which might cause difficulty.
-Nothing inherent to the framework disallows completely automatic
-conversions of entire packages, but an interactive editing-based
-approach is preferable while the analyses and
-transformations are still being refined.
+than just an editing tool.  \pcp{} provides an analysis framework
+powerful enough to be as accurate as a compiler, while requiring minimal
+programming effort to implement an analysis.  Nothing inherent to the
+framework disallows completely automatic conversions of entire packages,
+but \pcp{} better supports interactive editing-based approach.  This
+seems preferable especially while the analyses and transformations are
+still being refined.
 
 A fairly simple transformation that is well within \pcp{}'s capabilities
 is replacing \ppd{define}s of constant symbols with language-proper
-constant variables.  Though the transformation sounds trivial, there are
-several subtleties.  Consider the example in
+constant variables.  Though the transformation sounds straightforward,
+there are several subtleties.  Consider the example in
 \figref{fig:def_example}.  Each of \texttt{FOO}, \texttt{FUD},
 \texttt{BAR}, \texttt{BAZ}, \texttt{BING}, and \texttt{BONG} expand to
 integers, and so are candidates for replacement with \C{} \texttt{const
@@ -924,7 +893,7 @@ corresponding static variables:
 \item \texttt{BAR} is redefined (this definitely produces a \Cpp{}
       warning).  Additionally, the location of the second definition is
       inappropriate for a \C{} declaration (this is irrelevant if we
-      really are converting to \CPP{}).
+      are converting to \CPP{}).
 \item \texttt{BING} is used as an array bounds specifier in the
       declaration of \texttt{rgi}.  Array bounds specifiers are required
       to be ``constant expressions'', which ANSI \C{} does not consider
@@ -950,10 +919,12 @@ the user's cursor is resting on a definition, Emacs presents the
 warnings and other messages related to that definition.  Also tracked
 are the definition and use chains of the macro names.  Thus, when the
 software engineer would like to perform the suggested transformation, a
-single Emacs command makes the necessary changes.  \pcp{} will suggest
+single Emacs command makes all the necessary changes.  \pcp{} will suggest
 using a \texttt{static const int} variable if there are no uses in
 array-bounds specifiers, otherwise it will suggest using an anonymous
 \texttt{enum} declaration (which is an ANSI \C{} constant expression).
+(Note that the former also raises some issues about declarations vs.\
+definitions that we will ignore here.)
 
 Converting a \ppd{define} into a variable or \texttt{enum} declaration
 using the same identifier is not ideal.  Naming convention dictates that only
@@ -961,7 +932,7 @@ macros be all uppercase, so the identifier should be changed when it
 names a language-proper variable.  If there are no name conflicts, the analysis will recommend
 the old name translated into all lowercase.  For example, \texttt{BING} will be renamed
 \texttt{bing}, and all the uses will be marked for update.  Note, though, that
-replacing \texttt{FUD} with \texttt{fud} will result in a name conflict
+replacing \texttt{FUD} with \texttt{fud} would result in a name conflict
 not unlike the problem with \texttt{BONG}, above.  In such instances,
 the analysis records the potential name conflict and does not
 alter the variable name.  See the code resulting from the analysis's
@@ -973,8 +944,8 @@ transformations in \figref{fig:xformed}
     \includegraphics{figs/xformed.ps}
     \caption{The code from \figref{fig:def_example} after being transformed
       by the \pcp{} analysis. Note that \texttt{FOO}, \texttt{BAR}, and
-      \texttt{BONG} are conservatively not converted because there are
-      complications. Blue text (highlighted by the analysis) indicates
+      \texttt{BONG} are conservatively not converted because they are
+      used specially.  Text coloring is done by the analysis:  blue text indicates
       macros that expand.  Dark green text marks macro definitions,
       while light green text notates code that was skipped in the main
       parse (here because \texttt{CCD1} was not defined). The
@@ -984,17 +955,11 @@ transformations in \figref{fig:xformed}
   \end{center}
 \end{figure}
 
-
-
-%%FIXGJB: another figure showing conservatively transformed code?
-%%FIXGJB: another graphic showing another view of emacs w/ the #define
-%%annotations?
-
 Because all of the heuristics for the transformation are implemented in
 \Perl{} action code, they are easy to develop, test, and refine.  Since
 the \pcp{} framework does not specifically provide mechanisms for
 altering source code, analyses supporting transformations can instead
-leverage the power of Emacs and its editing capabalities.  When provided
+leverage the power of Emacs and its editing capabilities.  When provided
 accurate annotations and appropriate instructions for safe
 transformations, the actual editing of the code can be done
 interactively with simple Emacs support overseeing the changes.
@@ -1238,7 +1203,6 @@ thoughtful comments on early drafts of this paper.
 \appendix
 \newpage
 
-%%FIXGJB: order and organize these; use definition env
 \section{Action hooks called by \pcp}
 \begin{footnotesize}
 \label{sec:hooks}
@@ -1251,7 +1215,6 @@ thoughtful comments on early drafts of this paper.
 
 \newpage
 
-%%FIXGJB: order and organize these; use definition env
 \section{Subroutines provided by \pcp}
 \label{sec:backcalls}
 \begin{footnotesize}
@@ -1301,3 +1264,4 @@ thoughtful comments on early drafts of this paper.
 %%% End: 
 % LocalWords:  stringization tex fancybox gjb endif cpplib backcall Pentium AST
 % LocalWords:  MacroExpansionHistory Linux Simonyi analogues disorienting hbtp
+% LocalWords:  Michalowski
