@@ -208,6 +208,11 @@ Uses
 	  gnuplot.  Gnuplot uses macros less, on average, than other packages
 	  do.  Over 40% of the macros it defines are never used at all --
 	  say why.
+ * number of arguments
+	You might wonder whether macros are used like functions (taking
+	arguments) or like constants (taking no arguments).  We graphed
+	that.  This seems irrelevant to me; I don't see where to fit it in,
+	or what to say about it.
  * inconsistent usage
     Macros have two general purposes:  they can control the inclusion of
 	lines of code (by appearing in a #if condition that controls that
@@ -219,13 +224,16 @@ Uses
 	and to analyze a macro that's used in both ways than one that is
 	only used in one way or the other.)
     We split macro uses into three categories:  
-	* uses in C code, where the macro's expansion controls textual replacement
+	* uses in C code, where the macro's expansion controls textual
+	    replacement
 	* uses in #if, #ifdef, #ifndef, #elsif conditions
-	* uses in a macro body
+	* uses in a macro body, which eventually bottom out to one of the
+	    others (unless that macro is never used...)
       We discarded uses in CPP conditionals whose only purpose was to
 	prevent redefinition.  (More specifically, if the condition tested
-	only definedness, the next line defined the macro, and the line
-	after that ended the CPP conditional.)
+	only definedness, the next line defined the macro just tested, and
+	the line after that ended the CPP conditional.  This is a bit
+	overrestrictive, but conservative, and in practice fairly accurate.)
       Uses in a macro body generally are intended to be used however the
 	containing macro is.  Since those uses also appear in this chart,
 	we did not attempt to track each such use in a body to some macro's
@@ -236,15 +244,19 @@ Uses
 	inclusion, by a factor of ten to one.  (However, each inclusion use
 	can control many lines of code; see the dependence section, below.)
       A surprising number -- nearly 12% -- of macros defined in a package
-	are never used at all.  For gnuplot, this number is over 40%,
-	because it includes a standard set of headers from the company that
-	wrote part of the code, and which that company includes in all its
-	products.  [Make sure that is true.]  Even discounting that
-	package, though, the numbers are remarkably high.  We would be
-	surprised if one in eight functions and variables in a package were
-	never used, even in testing code.  (The percentage of macros
-	defined in libraries/standard header files which are never used in
-	the code is enormous, but that is expected.)
+	are never used at all.  Sometimes this is a result of shipping a
+	standard set of headers with the package -- it's like a library for
+	that development team, but one that can't be counted upon to exist
+	everywhere, so it has to be provided.  For gnuplot, over 40\% of
+	macros are never used because the package's support for several
+	terminal types, such as tgif, is unfinished (and thus unused).
+	Even discounting that package, though, the numbers are remarkably
+	high.  We would be surprised if one in eight functions and
+	variables in a package were never used, not even in testing code.
+	[David, do you have any idea what fraction this is in practice?]
+	(The percentage of macros defined in libraries/standard header
+	files which are never used in the code is enormous, but that is
+	expected.)
       The potentially problematic uses are those for which a macro appears
         both in code and in a conditional; these comprise only 3.4% of all
         macro names.
@@ -255,7 +267,7 @@ Uses
         of mixed usage as packages which make heavy use of CPP.  (There is
         a very slight tendency for the less aggressive packages to have
         more uses in code, fewer uses in conditionals, and fewer macros
-        that are not used at all.)
+        that are never used.)
  * mixed usage in conditional (control)
     Conditionals are used to check for a bunch of things (examples); but a
       single conditional generally checks just one of these categories.  We
@@ -263,6 +275,9 @@ Uses
       falling in multiple categories.
     Few mixed categories.
     Lots of variation overall.
+    The macros with mixed usage (especially here, but also in the previous
+      section) are akin to Krone & Snelting's anomalous macros that
+      interfere in the lattice.
     What else to say about this chart?
 
 Dependences
@@ -275,24 +290,105 @@ Dependences
    information for each overran the virtual memory available on the machine
    on which we ran our experiments.  This was in large part due to
    dependences in libraries; the Motif library is a particular problem.
-   (We had no trouble computing dependence information for Plan, which is
-   the third of our 30 packages which uses the Motif library.)
+   (We did compute dependence information for Plan, which is
+   the third of our 30 packages which uses the Motif library.)  So these
+   numbers are smaller than they might be with more complete information.
 
  * line dependent on many macros
-    We computed, for each line, the number of macros it depends on
+    [Gloss over what kind of line; I think it's a physical line, but each
+      physical line is coalesced with other parts of its logical line for
+      the purpose of computing dependence info.]
+    We computed, for each line, the number of macros it depends on.
+    Describe the matrix:  ExE=E, Cx?=C, ?xC=C; plus, we sum across
+      conditional compilations and alternate definitions.
     The log scale is shifted by unity in order to place 0 on the scale; most
-      (abut 57%) lines have no dependence on macros at all.  (Most lines that
+      58% of lines have no dependence on macros at all.  (Most lines that
       don't expand any macros and appear in C files fall into this category.)
     Overall, 28% of lines expand a macro -- that's quite a few.
-    The average number of macros dependent on is XXX.
+    5% of all lines depend on at least 134 macros.
+    On average, each line is expansion-dependent on .040 macros,
+      inclusion-dependent on .31 macros, and any-dependent on .34 macros.
+      (These numbers don't add up because a line may be both expansion and
+      inclusion dependent on a macro, but that macro is only counted once
+      in the "any dependence" number.)
+
+	Greg wondered which line of gcc is expansion-dependent on the
+	expansions of 187 macros.  (This is an outlier:  of the 297760 lines in
+	gcc, only 13 are expansion-dependent on more than 100 macros -- all of
+	which fall in the range of 159 to 187 such dependences.)
+
+	It's this one, whose mere appearance in the final source is
+	dependent on 182 macros (not such an outlier: over 10,000 lines are
+	inclusion-dependent on more than that many macros):
+
+	gcc-2.7.2.1/explow.c:430: dependences incl=182; exp=187; either=356
+	      LEGITIMIZE_ADDRESS (x, oldx, mode, win);
+
+	LEGITIMIZE_ADDRESS is defined 30 times in gcc, and one randomly-selected
+	definition was 37 line long (and chock full of other macro invocations).
 
  * macro controlling many lines
-    Two charts for this.
+    We combined these charts for the different packages, because the shapes
+      of each were quite similar for each package.  In order to permit
+      combining charts across quite different package sizes, we computed
+      values that were percentages of package size.
+    Each bar represents all macros that control less than the bar label
+      percent of the lines in its package (but more than the previous
+      label).  For instance, the .17 bar in the red chart indicates that
+      there are 286 macros that each control between .11% and .17% of the
+      entire package containing that macro.
+
+    * expansion
+	This exponential decay indicates that, as expected, there are more
+	  macros which control just a few lines and fewer macros that
+	  control a lot of lines.
+	Outliers (> 6% of all lines expand):
+	  int in gcc (14.85% !)
+	  NULL, ANY, object in python
+	Above 5%: 
+	  SvANY in Perl
+	  const in RCS
+	  ip in workman -- bogus, as defined just twice, then undefined;
+		  most places it is a formal parameter and out of the scope
+		  of the macro definition.
+	  ArgCount, Args in xfig
+	  rtx in gcc (defined to int or int*)
+    * inclusion
+	For each package, the graph is bimodal (so much so that this even
+	  shows up a bit on the combined chart; it's more marked in the
+	  individual packages, I think).  Most macros control inclusion of
+	  no, or very few, lines; but quite a few control a substantial
+	  fraction of the package (around 10%).
+	All the headviest dependences are on header files (for instance,
+	  H_PERL controls inclusion of over 53% of Perl's lines).
+	[It would have been intersting to run these numbers for everything
+	  but include file multiple inclusion prevention macros.]
+
 
  * cppp experiment
-    Didn't make much of a difference at all.  Conclusion:  no one single
-      point of attack.
-
+    [After the above, this experiment doesn't sound like such a smart thing
+      to try any more; its results certainly aren't unexpected.]
+    We had noticed in our programming that a particularly heavy use of the
+      preprocessor is to handle mutiple dialects of a language.  These uses
+      tend to be less structured:  they don't have a simple pattern.  And
+      this work must be done in the preprocessor:  there's no hope of
+      integrating it into the language.  So we performed an experiment to
+      see whether standardizing on a single language would reduce
+      dependences, failed classifications, etc.
+    We built a CPPP partial evaluator (called cppp) which, given a set of
+      macros known to be defined or undefined (and, optionally, their
+      expansions), eliminates all possible CPP conditionals.  We defined
+      all the macros that can be depended on if using ANSI standard C or
+      C++ with POSIX-compliant libraries, preprocessed all the source (and
+      all library header files), and reran our experiments.
+    The results were disappointing:  while some numeric measures of how
+      complicated the resulting program's dependences are decreased, most
+      remained at about their previous level.  The number of multiple
+      definitions of macros, and the number of failed classifications, did
+      not decrease as much as anticipated.
+    From this we can conclude that there is no one obvious single point of
+      attack:  even eliminating what seems most prevalent to us doesn't
+      make a sufficient difference.
 
 Discussion
   Related work
@@ -313,29 +409,6 @@ Conclusion
 ===========================================================================
 
 Take a stand about whether it's hard or not, and whether it's worthwhile or
-not.
-
-===========================================================================
-
-Date: Fri, 12 Sep 1997 09:11:25 -0700
-From: Michael Ernst <mernst@cs.washington.edu>
-To: Greg Badros <gjb@cs.washington.edu>,
-        David Notkin <notkin@cs.washington.edu>
-Subject: Heavily dependent line
-
-Greg wondered which line of gcc has an expansion dependent on the
-expansions of 187 macros.  (This is an outlier:  of the 297760 lines in
-gcc, only 13 are expansion-dependent on more than 100 macros -- all of
-which fall in the range of 159 to 187 such dependences.)
-
-It's this one, whose mere appearance in the final source is dependent on
-182 macros (not such an outlier: over 10,000 lines are inclusion-dependent
-on more than that many macros):
-
-gcc-2.7.2.1/explow.c:430: dependences incl=182; exp=187; either=356
-      LEGITIMIZE_ADDRESS (x, oldx, mode, win);
-
-LEGITIMIZE_ADDRESS is defined 30 times in gcc, and one randomly-selected
-definition was 37 line long (and chock full of other macro invocations).
-
-===========================================================================
+not.  (We should conclude that it's not as hard as we thought it would be,
+though we had to do a fair amount of engineering and examination of data to
+find that what initially appeared problematic really wasn't after all.)
