@@ -4957,10 +4957,12 @@ AnnotatePcat(cpp_annotated_token *pcat, cpp_reader *pfile, cpp_expand_info *pcei
   if (pfile && pfile->buffer && pfile->buffer->data)
     {
     HASHNODE *macro = pfile->buffer->data;
+    int cargs_or_negative = -1;
     pcat->szMnameFrom = macro->name;
+    if (macro->type == T_MACRO || macro->type == T_DISABLED)
+      cargs_or_negative = macro->value.defn->nargs;
     pcat->from_what = 1 + IargWithOffset(pfile->buffer->cur - pfile->buffer->buf,
-					 macro->type==T_MACRO?macro->value.defn->nargs:
-					 -macro->type, pfile->buffer->args);
+					 cargs_or_negative, pfile->buffer->args);
     pcat->args = pfile->buffer->args;
     }
   else
