@@ -22,10 +22,12 @@ BEGIN { if (defined $ENV{"PERLINC"})
 #  Turned off testing for:
 #   Empty string
 
-my $getopts_option_letters = "ihvtIuD:S:F:c:e:";
+my $getopts_option_letters = "ihvtIAauD:S:F:C:E:";
 
 # Remove the asterisks below when the options
 # are known to the users
+
+# FIX: implement -a option
 sub usage {
   die "@_\nUsage: $0 [-$getopts_option_letters] <files>
 New options marked with *, options with ':', above, take an argument
@@ -34,12 +36,14 @@ New options marked with *, options with ':', above, take an argument
   -v  be verbose and list files as they are processed to stderr
 * -t  use [TAB] as the OFS for the statistics files (not space)
   -I  ignore include files--just parse files passed in
+* -A  do the second pass on all files, not just those passed in
+* -a  do macro statistics on all files, not just those passed in
   -u  ignore usage--do only a single pass
   -D [file]  output the names of the macros (and number of times defined)
   -S [file]  output the per directive statistics to file
   -F [file]  output the function information to a file
-  -c [file]  show categorizations to file
-  -e [file]  send evil macros to file instead of stdout
+  -C [file]  show categorizations to file
+  -E [file]  send evil macros to file instead of stdout
 ";
 }
 
@@ -503,7 +507,16 @@ my $physical_lines = 0;		# as they appear to tools
 my $ncnb_physical_lines = 0;	# non-comment, non-blank lines
 my $cpp_physical_lines = 0;	# cpp physical lines
 my $cpp_physical_code_lines = 0; # cpp physical lines
+
+# Not-include file version of the above
+my $logical_lines_ni = 0;	# line continuation doesn't increment
+my $physical_lines_ni = 0;	# as they appear to tools
+my $ncnb_physical_lines_ni = 0;	# non-comment, non-blank lines
+my $cpp_physical_lines_ni = 0;	# cpp physical lines
+my $cpp_physical_code_lines_ni = 0; # cpp physical lines
+
 my $cpp_cmds = 0;		# total preprocessor commands
+my $cpp_cmds_ni = 0;		# total preprocessor commands
 my $symtab_scopes = 0;		# the number of scopes, less the global scope
 ## Strings:
 my $line = "";			# current line
@@ -555,6 +568,9 @@ use vars '@include_path';
 # Initialize cppcmdcount{"define"} so that we don't get uninitialized values
 # when we try processing the macros (in case there were no macros)
 my %cppcmdcount = ("define" => 0); # number of uses of each cpp command
+# cppcmdcount_ni is like cppcmdcount, but only for files listed on cmd line
+# ni == "not includes"
+my %cppcmdcount_ni = ("define" => 0); # number of uses of each cpp command
 
 # perhaps make %macros proper just index into other arrays.
 
@@ -583,7 +599,8 @@ my $debug_parse_function = $false;
 
 ## Command-line processing
 use vars qw($opt_i $opt_I $opt_h $opt_v $opt_t 
-	    $opt_D $opt_S $opt_F $opt_c $opt_e $opt_u);
+	    $opt_D $opt_S $opt_F $opt_C $opt_E 
+	    $opt_u $opt_A $opt_a);
 my $fIgnoreIncludes = $false;
 
 
@@ -626,9 +643,15 @@ sub find_macro_definitions
 #  foreach $this_file (@files)
   for (; $ifiles <= $#files; $ifiles++)
     { $current_file = $files[$ifiles];
-      if ($opt_v)
-	{ print STDERR "file: \"$current_file\"\n"; }
-      open(INPUT,$current_file) or next; # skip to next file if open fails
+
+      print STDERR "file: \"$current_file\"" if $opt_v;  
+      if (!open(INPUT,$current_file)) {
+	print STDERR " -- failed open\n" if $opt_v;
+	next; # skip to next file if open fails
+      } else {
+	print STDERR "\n" if $opt_v;
+      }
+
       # Commented out to quiet compiler
       # $files{$current_file} = 1;
       if (@dependenton > 0)
@@ -656,7 +679,7 @@ sub process_macro_definition
   # print "parsed: |$name|$args|$body|\n";
   # Do not just use $cppcmdcount{"define"}, since our builtins require
   # some space in the @mXXXXX arrays
-  my ($thisnum) = $cppcmdcount{"define"}+$cBuiltinMacros-1;
+  my ($thisnum) = next_available_macro_index();
   if (!defined($macros{$name}[0]))
     { $macros{$name}[0] = 0; }
   $macros{$name}[0] += 1;
@@ -699,6 +722,8 @@ sub process_macro_definition
 
 #FIX:  Write this for #undef-s
 # Write process_macro_undefinition to handle #undef-s
+#FIX: count the number of #undef-s for each macro, too
+#FIX: Get stats on number of macros only #undef-d, etc.
 sub process_macro_undefinition {
   my ($name) = check_args(1,"process_macro_undefinition",caller,@_);
   die "Function not written; $!";
@@ -714,7 +739,7 @@ sub macro_dependenton
   shift(@indices);
   my @result = ($false);
   # scratch indices, since I must pass in at least one index.
-  my $extraindexmin = $cppcmdcount{"define"}+$cBuiltinMacros+10;
+  my $extraindexmin = next_available_macro_index() + 10;
   my $extraindexmax = $extraindexmin-1;
   if (@dependenton > 0)
     { $extraindexmax++;
@@ -851,46 +876,50 @@ sub output_stats
     my ($h, $v);
     # Dump statistics on frequencies of directives
     printf STATS "DIRECTIVES#: ";
-    while ( ($h,$v) = each(%cppcmdcount) ) {
+    while ( ($h,$v) = each(%cppcmdcount_ni) ) {
       print STATS "$h ";
     }
     print STATS "\n";
     printf STATS "DIRECTIVES: ";
-    while ( ($h,$v) = each(%cppcmdcount) ) {
+    while ( ($h,$v) = each(%cppcmdcount_ni) ) {
       print STATS "$v ";
     }
     print STATS "\n";
-    printf STATS "DIRECTIVES%: ";
-    while ( ($h,$v) = each(%cppcmdcount) ) {
-      printf STATS "%2.2f ", (100*$v/$logical_lines);
+    print STATS "DIRECTIVES%LL: ";
+    while ( ($h,$v) = each(%cppcmdcount_ni) ) {
+      printf STATS "%2.2f ", pct2($v,$logical_lines_ni);
+    }
+    print STATS "\n";
+
+    print STATS "DIRECTIVES%NCNB: ";
+    while ( ($h,$v) = each(%cppcmdcount_ni) ) {
+      printf STATS "%2.2f ", pct2($v,$ncnb_physical_lines_ni);
+    }
+    print STATS "\n";
+
+    print STATS "DIRECTIVES%PHYS: ";
+    while ( ($h,$v) = each(%cppcmdcount_ni) ) {
+      printf STATS "%2.2f ", pct2($v,$physical_lines_ni);
     }
     print STATS "\n";
     
     print STATS "LINES#: physical logical ncnb_phys cpp_phys cpp_phys_code\n";
     print STATS "$physical_lines $logical_lines $ncnb_physical_lines $cpp_physical_lines $cpp_physical_code_lines\n";
-    printf STATS "GLOBAL: $cppcmdcount{'define'} define-s (%2.2f%), " . ($cpp_cmds - $cppcmdcount{"define"}) . " other (%2.2f%), $logical_lines lines (%2.2f%), %d files\n",
-    100*$cppcmdcount{"define"}/$logical_lines, 100*($cpp_cmds - $cppcmdcount{"define"})/$logical_lines,
-    100*($cpp_cmds)/$logical_lines, $#ARGV+1;
+    print STATS "LINESNI#: physical logical ncnb_phys cpp_phys cpp_phys_code\n";
+    print STATS "$physical_lines_ni $logical_lines_ni $ncnb_physical_lines_ni $cpp_physical_lines_ni $cpp_physical_code_lines_ni\n";
     # printf STATS "EVILSTATS: $cObsoleted obsoleted (%2.2f%), $cDanger dangerous (%2.2f%), $cEvil evil (%2.2f%), $cIllegal illegal (%2.2f%)\n",
     # pct($cObsoleted), pct($cDanger), pct($cEvil), pct($cIllegal);
     
     # Show categorization
-    print STATS "CATEGORIZATION:";
-    my $catname;
-    foreach $catname (@categoryname) {
-      print STATS "\t$catname"; 
-    }
-    print STATS "\n";
-    print STATS "CATEGORIZATION#:";
+    #print STATS "CATEGORIZATION:";
+    #my $catname;
+    #foreach $catname (@categoryname) {
+    #  print STATS "\t$catname"; 
+    #}
+    #print STATS "\n";
+    ##print STATS "CATEGORIZATION#:";
     # Need to count up total numbers for each categorization.
     # print STATS "CATEGORIZATION: $cppcmdcount{"define"} $cNullDefine $cPreventMI $cSimpleConstant $cSimpleConstantWithDefault $cSimpleStrConstant $cCastedConstant $cSimpleExpression $cWithNullArgs $cWithArgs $cUncategorized\n";
-    print STATS "\n";
-    print STATS "CATEGORIZATION%:";
-    # Need to count up percentages for each categorization.
-    #     printf STATS "CATEGORIZATION%: %2.2f %2.2f %2.2f %2.2f %2.2f %2.2f %2.2f %2.2f %2.2f %2.2f %2.2f\n",
-    #     pct($cppcmdcount{"define"}),pct($cNullDefine),pct($cPreventMI),pct($cSimpleConstant),
-    #     pct($cSimpleConstantWithDefault),pct($cSimpleStrConstant),pct($cCastedConstant),
-    #     pct($cSimpleExpression),pct($cWithNullArgs),pct($cWithArgs),pct($cUncategorized);
     print STATS "\n";
   }
   
@@ -921,14 +950,13 @@ sub output_stats
 	}
       }
     }
-    
   }
   
   # -F = dump the function information
   if ($opt_F) {
     my $filename;
     foreach $filename (sort keys %files_lines) {
-      print FUNCTIONS "file: $filename", join(', ',@{$files_lines{$filename}}), "\n";
+      print FUNCTIONS "file: $filename\n", join("\n ",@{$files_lines{$filename}}), "\n";
     }
     my $function;
     foreach $function (sort keys %functions) {
@@ -937,7 +965,7 @@ sub output_stats
       foreach $info (@{$functions{$function}}) {
 	print FUNCTIONS join(', ',@$info);
       }
-      print FUNCTIONS "; ";
+      print FUNCTIONS "\n";
     }
     
     # FIXPERL: Why does this give me an unitialized variable warning?
@@ -946,15 +974,17 @@ sub output_stats
 }
 
 
-# pct(x) returns a percentage of macros defined
-sub pct {
-  my ($x) = check_args(0, "pct", caller, @_);
-  if (!defined($x))
-{ return; }
-if ($x < 0 || $x > $cppcmdcount{"define"}) {
-    print STDERR "Percentage out of range: $x / $cppcmdcount{'define'}\n";
+# pct2(x) returns an integer corresponding to a pct of the first arg of the 2nd arg
+sub pct2 {
+  my ($x,$w) = check_args(2, "pct2", caller, @_);
+  if ($w <= 0) { 
+    print STDERR "pct2: Divisor out of range: $x / $w\n";
+    return 0;
   }
-  return (100*$x/$cppcmdcount{"define"});
+  if ($x < 0 || $x > $w) {
+    print STDERR "pct2: Percentage out of range: $x / $w\n";
+  }
+  return (100*$x/$w);
 }
 
 sub test_typedecl_regexp
@@ -1018,7 +1048,6 @@ $commaop = $true;		# whether commas should be operators or not
 #   and not in string or comment.
 # Result ends with newline.
 # With argument, doesn't pop (actually, shift) from getline_ungotlines.
-# FIX: need to track cpp_physical_lines, ncnb_physical_lines
 sub getline
 { my ($dont_pop) = check_args_range(0, 1, "getline", caller, @_);
   if (!defined($dont_pop))
@@ -1042,7 +1071,10 @@ sub getline
     { if (not ($result = <INPUT>)) #do not update physical lines -- failed read
 	{ return $result; }
       $getline_physical_lines++;
-      $logical_lines++ if $finding_macro_defs;
+      if ($finding_macro_defs) {
+	$logical_lines++;
+	$logical_lines_ni++ if !current_file_was_included();
+      }
 
       $result = updateinvars($result);
       # perhaps check for $mname and mention it in message if it's set
@@ -1074,7 +1106,10 @@ sub getline
 	    { my $nextline;
 	      if ($nextline = <INPUT>)
 		{ $getline_physical_lines++;
-		  $logical_lines++ if $finding_macro_defs;
+		  if ($finding_macro_defs) {
+		    $logical_lines++;
+		    $logical_lines_ni++ if !current_file_was_included();
+		  }
 		  $nextline = updateinvars($nextline);
 		  $result = append_lines($result, $nextline); }
 	      else
@@ -1087,7 +1122,10 @@ sub getline
 	    { my $nextline;
 	      if ($nextline = <INPUT>)
 		{ $getline_physical_lines++;
-		  $logical_lines++ if $finding_macro_defs;
+		  if ($finding_macro_defs) {
+		    $logical_lines++;
+		    $logical_lines_ni++ if !current_file_was_included();
+		  }
 		  $nextline = updateinvars($nextline);
 		  # Strict ANSI C does not permit newlines in string constants;
 		  # perhaps warn.
@@ -1102,14 +1140,21 @@ sub getline
   #print STDERR "GETLINE $getline_physical_lines, $finding_macro_defs: $result";
   if ($finding_macro_defs) {
     $physical_lines += $getline_physical_lines;
+    $physical_lines_ni += $getline_physical_lines if !current_file_was_included();
   }
 
   # FIX: Check for macro uses here
 
   if (($result =~ /^\#/) && !$getline_nocpp)
     { # Preprocessor line; usually just return "\n";
-      $cpp_physical_lines += $getline_physical_lines if $finding_macro_defs;
-      $cpp_physical_code_lines += $getline_physical_code_lines if $finding_macro_defs;
+      if ($finding_macro_defs) {
+	$cpp_physical_lines += $getline_physical_lines;
+	$cpp_physical_code_lines += $getline_physical_code_lines;
+	if (!current_file_was_included()) {
+	  $cpp_physical_lines_ni += $getline_physical_lines;
+	  $cpp_physical_code_lines_ni += $getline_physical_code_lines;
+	}
+      }
       return getline_handle_preprocessor_line($result);
     }
 
@@ -1380,7 +1425,10 @@ sub updateinvars
   
   UIV_RETURN: 
   if ($uiv_seen_code) {
-    $ncnb_physical_lines++ if $finding_macro_defs;
+    if ($finding_macro_defs) {
+      $ncnb_physical_lines++;
+      $ncnb_physical_lines_ni++ if !current_file_was_included();
+    }
     $getline_physical_code_lines++;
     #print STDERR "SC: $result" if $finding_macro_defs;
   }
@@ -1486,10 +1534,20 @@ sub getline_handle_preprocessor_command
     { # Perhaps keep a list of each use, with line numbers (could help when
       # determining if it is a preventMI).
       # This code avoids warnings about using uninitialized values
-      if (!defined($cppcmdcount{$cpp_cmd}))
-	{ $cppcmdcount{$cpp_cmd} = 0; }
+      if (!defined($cppcmdcount{$cpp_cmd})) {
+	$cppcmdcount{$cpp_cmd} = 0;
+      }
       $cppcmdcount{$cpp_cmd}++;
       $cpp_cmds++;
+
+      # Now analogous code only for files explicitly asked to be parsed
+      if (!current_file_was_included()) {
+	if (!defined($cppcmdcount_ni{$cpp_cmd})) {
+	  $cppcmdcount_ni{$cpp_cmd} = 0;
+	}
+	$cppcmdcount_ni{$cpp_cmd}++;
+	$cpp_cmds_ni++;
+      }
     }
 
   if ($cpp_cmd eq "if")
@@ -1594,7 +1652,10 @@ sub discard_to_endif
   while ($if0depth > 0)
     { if (not ($line = <INPUT>))
 	{ mdie("File ends in \#ifdef 0"); }
-      $logical_lines++ if $finding_macro_defs;
+      if ($finding_macro_defs) {
+	$logical_lines++;
+	$logical_lines_ni++ if !current_file_was_included();
+      }
       # I'll trust that no comment or string contains anything that
       # looks like a preprocessor command.  Strictly speaking, I should
       # use getline and/or updateinvars, because anything in an #ifdef
@@ -2227,10 +2288,19 @@ sub get_macro_call_types
 #  foreach $this_file (@files)
   for (; $ifiles <= $#files; $ifiles++)
     { $current_file = $files[$ifiles];
-      if ($opt_v)
-	{ print STDERR "file: \"$current_file\" ($files{$current_file})\n"; }
-      # open(INPUT,$current_file) or next; # skip to next file if open fails
-      open(INPUT,$current_file) or next; # skip to next file if open fails
+      if ($opt_v) {
+	print STDERR "file: \"$current_file\" ($files{$current_file})"; 
+      }
+      # do not do the second pass on included files
+      if ( current_file_was_included() && !$opt_A) {
+	print STDERR " -- skipping (use -A option to not skip)\n" if $opt_v;
+	next;
+      } elsif (!open(INPUT,$current_file)) {
+	print STDERR " -- open failed\n" if $opt_v;
+	next;
+      } else {
+	print STDERR "\n" if $opt_v;
+      }
       # Commented out to quiet compiler
       # $files{$current_file} = 1;
       if (@dependenton > 0)
@@ -2364,6 +2434,8 @@ PROCESSLINE:
 		  elsif (($nextchar eq "(")
 			 # Implied by "defined($macros{$declarator}[0])"
 			 # && ($declarator =~ /^$identifier_re$/o)
+			 && defined($macros{$declarator})
+			 # FIX: might not need below line, now that we have above line
 			 && defined($macros{$declarator}[0])
 			 && (!macro_dependenton($declarator, @dependenton)))
 		    { # The function being defined is actually a macro.
@@ -2378,7 +2450,8 @@ PROCESSLINE:
 		      # There is only one expansion for the macro.  Expand it.
 		      # This isn't quite right if the dependentons aren't
 		      # compatible.
-		      if ($macros{$identifier}[0] == 1)
+		      if (exists $macros{$identifier} && 
+			  $macros{$identifier}[0] == 1)
 			{ # ... expand macro ...;
 			  # goto PROCESSLINE;
 			}
@@ -2560,14 +2633,15 @@ ATCOMMA:
 		      else {
 			# if we were in a function, we need to save some info
 			if ($symtab_scopes == 1 && defined($current_function)) {
+			  my $end_line = current_line_no();
 			  # update our per-file list of function locations
 			  if (!defined($files_lines{$current_file})) {
 			    $files_lines{$current_file} = ();
 			  }
 			  # update our per-file list of functions
 			  push @{$files_lines{$current_file}}, 
-			  ("$current_function_start_line^{$current_function",
-			   current_line_no() . "}$current_function");
+			  ("$current_function_start_line:{$current_function",
+			   "$end_line:}$current_function");
 			  #print STDERR "FN: $current_function $current_file [$current_function_start_line,", current_line_no(), "]\n";
 			  # update our per-function list of [file,startline,endline]
 			  push @{$functions{$current_function}}, 
@@ -2974,7 +3048,15 @@ sub categorize_macro_name
       # hash %macros, even though the value is undefined
       return; }
   my $numdefs = $macros{$name}[0];
-  die if !defined($numdefs); #FIXNOW
+  # if the assertion below gets tripped, it's likely that
+  # somewhere we're mistakenly adding to %macros unintentionally
+  die "numdefs not defined for $name" if !defined($numdefs); #FIXNOW
+  # Use this block instead to help debug the above problem
+  #if (!defined($numdefs)) {
+  #  print STDERR "numdefs not defined for $name\n";
+  #  delete $macros{$name};
+  #  return;
+  #}
   my $type;
   my $category;
   { my $i;
@@ -3159,6 +3241,8 @@ sub is_fun_decl_arg_macro
   # check that all definitions
   # return either the single arg or "()"
   # __P in /usr/include/{sys/cdefs,ctype}.h is defined 5 times
+
+  die "is_fun_decl_arg_macro: $identifier" if (!exists $macros{$identifier});
 
   # FIX: use $m_i = $macros{$identifier}
   my $cMacroDefs = $macros{$identifier}[0];
@@ -3443,6 +3527,15 @@ sub current_line_no {
   return ($. - $#getline_ungotlines - 1);
 }
 
+
+# Tell us if the current file was added by a #include directive
+# (as opposed to passed in to evilmacros on the cmd line or in STDIN w/ -i )
+sub current_file_was_included {
+  check_args(0,"current_file_not_included",caller,@_);
+  if ($files{$current_file} =~ /^FromInclude/) { return $true; }
+  return $false;
+}
+
 # Return the number of arguments, given a macro argument
 # declaration.  Just counts number of commas, and adds 1,
 # or zero if we were passed "".
@@ -3459,6 +3552,13 @@ sub count_macro_args {
   }
   #print STDERR "cma: $retval for $arg_decl\n"; #FIXNOW
   return $retval;
+}
+
+# Return the next available macro index for 
+# the @mXXXX arrays
+sub next_available_macro_index {
+  check_args(0,"next_available_macro_index",caller,@_);
+  return $cppcmdcount{"define"}+$cBuiltinMacros-1;
 }
 
 # Initialize the macros structures for the builtin macros of gcc
@@ -3674,7 +3774,7 @@ getopts($getopts_option_letters);
 
 usage() if ($opt_h);
 
-$fShowCategorization = $opt_c;
+$fShowCategorization = $opt_C;
 
 if ($opt_i) {
   while (<STDIN>) {
@@ -3685,12 +3785,12 @@ if ($opt_i) {
   }
 }
 
-if ($opt_e) { open(EVIL,">$opt_e") || die "Failed opening $opt_e"; }
+if ($opt_E) { open(EVIL,">$opt_E") || die "Failed opening $opt_E"; }
   else { open(EVIL,">-") || die "Failed opening stdout!"; }
 if ($opt_S) { open(STATS,">$opt_S") || die "Failed opening $opt_S"; }
 if ($opt_F) { open(FUNCTIONS,">$opt_F") || die "Failed opening $opt_F"; }
 if ($opt_D) { open(DEFINES,">$opt_D") || die "Failed opening $opt_D"; }
-if ($opt_c) { open(CATEG,">$opt_c") || die "Failed opening $opt_c"; }
+if ($opt_C) { open(CATEG,">$opt_C") || die "Failed opening $opt_C"; }
 if ($opt_I) { $fIgnoreIncludes = $true; }
 if ($opt_t) { $outOFS = "	"; } # use tab for OFS
 
