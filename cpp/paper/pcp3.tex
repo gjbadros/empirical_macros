@@ -261,7 +261,7 @@ provide more details about the \pcp{} interfaces.
 Section~\ref{sec:xform} discusses using the tool to assist automating
 safe conversion of some simple uses of \Cpp{} into language constructs.
 Section~\ref{sec:related} describes related work, and
-section~\ref{sec:summary} discusses the contribution of this work, its
+section~\ref{sec:conclusion} discusses the contribution of this work, its
 shortcomings, and some areas for possible future work.
 
 
@@ -785,7 +785,7 @@ Software engineering source-to-source transformations can afford to be
 slightly less stringent.  \pcp{} attempts to provide an analysis
 framework powerful enough to be as accurate as a compiler, while
 requiring minimal programming effort to perform the analysis.  The
-standard module of action hooks focusses on assisting a knowledgeable
+standard module of action hooks focuses on assisting a knowledgeable
 user understand the code and locate areas which might cause difficulty.
 Nothing inherent to the framework disallows completely automatic
 conversions of entire packages, but while the analyses and
@@ -895,6 +895,10 @@ replacing \texttt{FUD} with \texttt{fud} will result in a name conflict
 not unlike the problem with \texttt{BONG}, above.  In such instances,
 the problem is annotated, and the change is made to the \ppd{define}
 without the corresponding name change.
+
+%%FIXGJB: another figure showing conservatively transformed code?
+%%FIXGJB: another graphic showing another view of emacs w/ the #define
+%%annotations?
 
 Because all of the heuristics for the transformation are implemented in
 \Perl{} action code, they are easy to develop, test, and refine.  Other
@@ -1006,10 +1010,57 @@ visualizing the relationships with the goal of improving the
 programmer's understanding of the structure and properties of the
 configurations~\cite{Krone94}.
 
-% Summary & Future work
-\section{Summary and Future Work}
-\label{sec:summary}
+\section{Conclusion}
+\label{sec:conclusion}
+\pcp{} has proven to be a highly flexible infrastructure for
+simultaneously dealing with the \C{} preprocessor while performing an
+accurate parse and creating an abstract syntax tree.  Though its
+applications are somewhat immature, the framework holds great promise due
+to the ease of programming in its action language, and the large number
+of details offloaded from the analysis itself.  Nevertheless, there are several
+problems with the \pcp{} framework as it currently exists.
 
+First, sophisticated analyses tend to be dependent on the order that
+action hooks are called.  This in turn requires an intimate
+understanding of the tool, and its preprocessing and parsing
+peculiarities.  Fortunately, the fast development time provided by the
+scripting language permits easy exploration and testing.
+
+The hooks and backcalls interfaces are incomplete.  It would be useful
+to have a hook associated with each parse rule.  This is probably best
+done by modifying \texttt{YACC}, or by automatic insertion of code in
+the automatically generated parser.  Additionally, not all of the data
+structures from the parser and preprocessor are made available to the
+\Perl{} script;  ideally more of these would be shared through ``magic''
+\Perl{} variables, instead of the existing function call interface.
+
+Finally, the abstract syntax tree that the \texttt{CTree} parser
+constructs is currently unused.  More backcalls and \Perl{} utility
+subroutines need to be written to permit useful manipulation of the
+abstract syntax tree to avoid many of the problems that the current
+limitation of a single pass over the source creates.  To make the AST
+more useful, some generalization of the tree would need to be
+constructed (perhaps similar to the Microsoft Intentional Programming
+group's) so that preprocessor-level annotations and constructs could be
+represented.  Using the \texttt{Tk} widget set's \Perl{} interface could
+provide a reasonable platform for experimentation with visualizing and
+manipulating the AST.
+
+Better support for versioning would be useful. The mechanisms for
+handling multiple configurations are primitive---there is a
+distinguished path (a version) through the source code which is treated
+specially.  Ideally, multiple versions could be considered.  This would
+permit future blocks of code that are \ppd{ifdef}ed out to be properly
+influenced by prior blocks of code using the same guard.  Krone and
+Snelting's work suggests that the number of distinct paths through the
+source is reasonably bounded~\cite{Krone94}.
+
+Converting to language features need not be limited to using \CPP{}.
+Many are interested in converting legacy \C{} code into Java code.  Such
+transformations would also greatly benefit from a generalized AST since
+the \texttt{TXL} paradigm of parse, process, unparse \cite{TXL} seems
+more appropriate for converting between source languages with
+significant differences.
 
 % Framework problems
 %** Fairly dependent on internals of the preprocessing and parsing peculiarities of the tools
@@ -1018,10 +1069,7 @@ configurations~\cite{Krone94}.
 %** AST going to waste for now; ast viewing w/ Tk?
 
 % Possible applications
-%** Syntax highlighting
-%** Source + output annotations
 %** Tags generation
-%** Call graph extraction (add summaries to fns)
 %** parser debugging, teaching
 %** multi-version reasoning
 
@@ -1031,6 +1079,10 @@ configurations~\cite{Krone94}.
 
 %* Use configuration structures to bound the number of cpp tables and
 %scope table variants required
+
+\noindent \textbf{Acknowledgments:  Thanks to David Notkin and Michael
+  Ernst for their insight and guidance through this project.}
+
 
 \appendix
 \newpage
@@ -1095,5 +1147,5 @@ configurations~\cite{Krone94}.
 %%% mode: latex
 %%% TeX-master: t
 %%% End: 
-% LocalWords:  stringization tex fancybox gjb endif cpplib backcall
-% LocalWords:  MacroExpansionHistory
+% LocalWords:  stringization tex fancybox gjb endif cpplib backcall Pentium AST
+% LocalWords:  MacroExpansionHistory Linux Simonyi
