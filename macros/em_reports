@@ -508,7 +508,9 @@ sub output_dependences ( )
   print "depees is a list of macros that depend on this one\n\n";
 
   for my $macro_name (sort keys %macros)
-    { print "$macro_name\n";
+    { 
+      next if MacroNotDefinedInsidePackage($macro_name);
+      print "$macro_name\n";
       if (scalar(@{$macros{$macro_name}}) > 0)
 	{ for my $i (@{$macros{$macro_name}})
 	    { print "  def #$i: incl_dep: @{$mdef_direct_inclusion_dependenton[$i]}\n";
@@ -543,7 +545,8 @@ sub output_dependences ( )
   my %mndistinct_defs = ();
   { my $total_product = 0;
     for my $macro_name (keys %macros)
-      { my $num_defs = scalar(@{$macros{$macro_name}});
+      { next if MacroNotDefinedInsidePackage($macro_name);
+	my $num_defs = scalar(@{$macros{$macro_name}});
 	$mndefs{$macro_name} = $num_defs;
 	my $num_distinct_defs;
 	if ($num_defs < 2)
@@ -579,7 +582,9 @@ sub output_dependences ( )
 				 || ($a cmp $b) }
 			     (keys %macros))
       # At this point we are at the end, not beginning, of an output line
-      { my $this_product = $defs_lines{$macro_name};
+      { 
+	next if MacroNotDefinedInsidePackage($macro_name);
+	my $this_product = $defs_lines{$macro_name};
 	## Print one line per product
 	#  if ($this_product == $prev_product)
 	#	{ print ", ", $macro_name; }
