@@ -4275,7 +4275,7 @@ sub categorize_macro_def
       $type = $typeCHAR; }
   elsif ($body =~ /^$c_reserved_nontype_word_re|$c_reserved_type_word_re$/)
     { # $failure_type = "expands_to_reserved_word";
-      $category = harder_category($category,$catRESDWORD);
+      $category = $catRESDWORD;
       evilprint("expands to reserved word\n    $body\n");
     }
   else
