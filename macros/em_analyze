@@ -5048,6 +5048,8 @@ sub categorize_macro_def ( $ )
     # Null define
     { # print "Null define $mdef_name[$index]: '$body'\n";
       $category = $catNULL_DEFINE; }
+  # FIX: A semicolon alone might be a null statement rather than punctuation.
+  #      It's impossible to tell for sure...
   elsif ($body =~ /^[\(\);, .\*\?]+$/)
     # Easy test, so it appears early
     { $category = $catPUNCTUATION; }

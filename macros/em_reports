@@ -194,7 +194,7 @@ sub output_statistics ( )
   output_frequse();
   output_freqdef();
 
-  { my %unused_by_file = {};
+  { my %unused_by_file = ();
     select UNUSED;
     for my $macro_name (sort @unused_macros)
       { print "$macro_name";
@@ -1135,6 +1135,9 @@ sub compute_global_cpp_sums ( ) {
 }
 
 # sets %mndistinct_defs
+# Like much other code, this isn't quite right, and for the same reason:
+# there may be more distinct defs than there are definitions in the package
+# (but not more distinct defs than there are overall).
 sub compute_num_defs_distinct ( )
 {
   for my $macro_name (keys %macros)
@@ -1145,7 +1148,8 @@ sub compute_num_defs_distinct ( )
       else
 	{ my %def_hash;
 	  for my $i (@{$macros{$macro_name}})
-	    { my $body = $mdef_body_simple[$i];
+	    { # next if ($file_inclusion_method[$mdef_fileno[$i]] eq "FromInclude<>");
+	      my $body = $mdef_body_simple[$i];
 	      my $args = $mdef_formals[$i];
 	      # Canonicalize formal names to avoid gratuitous differences
 	      if ($args)
@@ -1154,7 +1158,8 @@ sub compute_num_defs_distinct ( )
 		    { $body =~ s/\b$formals[$fno]\b/EM_ARG_NUM_$fno/g; } }
 	      $body =~ s/\s+//g; # collapse all spaces
 	      $def_hash{$body} = $true; }
-	  $num_distinct_defs = scalar(keys %def_hash); }
+	  $num_distinct_defs = scalar(keys %def_hash);
+	}
       $mndistinct_defs{$macro_name} = $num_distinct_defs; }
 }
 

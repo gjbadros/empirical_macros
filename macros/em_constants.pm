@@ -23,7 +23,7 @@ use checkargs;
  $catRESERVED_WORD $catFUNCTION_NAME $catSYMBOL_UNKNOWN $catSYMBOLS
  $catUNBALANCED $catPUNCTUATION $catCOMMAND_LINE $catASSEMBLY_CODE
  $catMULTIPLE $catFAILURE $catLast @categoryname
- &category_lub
+ &category_is_expression &category_lub
 
  @mcat_NULL @mcat_CONSTANT @mcat_NONCONSTANT_EXPRESSION
  @mcat_STATEMENT @mcat_SYNTAX @mcat_TYPE
@@ -202,7 +202,7 @@ if ((not defined($categoryname[$catLast]))
 ####   for the given meta categories.  Use:
 ####   map { $categoryname[$mcat_FAILURE[$_]] } @mcat_FAILURE
 @mcat_FAILURE = qw( catNOT_YET catIN_PROCESS catNO_DEF catFAILURE
-		       catMULTIPLE );
+		       catMULTIPLE catSYMBOLS );
 @mcat_NULL = qw( catNULL_DEFINE );
 @mcat_CONSTANT = qw( catCONSTANT catLITERAL catSOME_CONSTANT );
 @mcat_NONCONSTANT_EXPRESSION = qw( catEXP );
@@ -214,7 +214,7 @@ if ((not defined($categoryname[$catLast]))
 @mcat_SYNTAX = qw( catUNBALANCED catPUNCTUATION );
 @mcat_NON_C_CODE = qw( catCOMMAND_LINE catASSEMBLY_CODE );
 @mcat_SYMBOL_UNKNOWN = qw( catSYMBOL_UNKNOWN );
-@mcat_SYMBOL = qw( catRESERVED_WORD catFUNCTION_NAME catSYMBOLS);
+@mcat_SYMBOL = qw( catRESERVED_WORD catFUNCTION_NAME );
 
 
 
@@ -283,6 +283,18 @@ $ccatOTHER,
 $ccatMIXED,
  ) = (0..$#cond_category_name);
 
+
+
+sub category_is_expression ( $ )
+{ my ($cat) = check_args(1, @_);
+  return (($cat == $catLITERAL)
+	  || ($cat == $catCONSTANT)
+	  || ($cat == $catSOME_CONSTANT)
+	  || ($cat == $catEXP)
+	  || ($cat == $catFUNCTION_NAME));
+}
+
+# Perhaps, if one is $catCOMMAND_LINE, return that.
 sub category_lub ( $$ )
 { my ($c1, $c2) = check_args(2, @_);
   if ($c1 == $c2)
@@ -311,10 +323,8 @@ sub category_lub ( $$ )
 	     || ($c2 == $catSOME_CONSTANT)))
      { return $catSOME_CONSTANT; }
 
-  my $c1_is_exp = (($c1 == $catLITERAL) || ($c1 == $catCONSTANT)
-		   || ($c1 == $catSOME_CONSTANT) || ($c1 == $catEXP));
-  my $c2_is_exp = (($c2 == $catLITERAL) || ($c2 == $catCONSTANT)
-		   || ($c2 == $catSOME_CONSTANT) || ($c2 == $catEXP));
+  my $c1_is_exp = category_is_expression($c1);
+  my $c2_is_exp = category_is_expression($c2);
 
   # If both are constants or expressions, return expression
   if ($c1_is_exp && $c2_is_exp)
