@@ -308,7 +308,10 @@ typedef enum hook_index_constants {
 ///% body of a macro expansion (i.e., not an argument), or positive and equal
 ///% to the argument number that produced the token, if from an substitution
 ///% of an argument in a macro expansion; @history is obsoleted, use the
-///% MacroExpansionHistory() backcall instead.
+///% MacroExpansionHistory() backcall instead.  Note that the token "CPP_POP"
+///% means that an expansion buffer has been popped from the stack of expansions,
+///% and is not a real lexical token.  This may be removed from future version
+///% so use the POP_BUFFER hook to handle those events.
 
   HI_FUNCTION,
 ///% {$name,$fStatic}
