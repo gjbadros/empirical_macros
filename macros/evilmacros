@@ -502,21 +502,86 @@ sub parse_type
 ###
 
 ## Integers:
-my $logical_lines = 0;		# line continuation doesn't increment
-my $physical_lines = 0;		# as they appear to tools
-my $ncnb_physical_lines = 0;	# non-comment, non-blank lines
-my $cpp_physical_lines = 0;	# cpp physical lines
-my $cpp_physical_code_lines = 0; # cpp physical lines
 
-# Not-include file version of the above
-my $logical_lines_ni = 0;	# line continuation doesn't increment
-my $physical_lines_ni = 0;	# as they appear to tools
-my $ncnb_physical_lines_ni = 0;	# non-comment, non-blank lines
-my $cpp_physical_lines_ni = 0;	# cpp physical lines
-my $cpp_physical_code_lines_ni = 0; # cpp physical lines
+## Five different kinds of line counts that we care about are:
+# (physical,logical,ncnb_phys,cpp_phys,cpp_phys_code)
+# We care about these five line counts, %cppcmdcount, $cpp_cmds
+# in each of the 8 possible kinds of file-types
+# Dimension 1: header file vs code file (use regexp-s)
+# Dimension 2: method of inclusion: (input,arg,#include<>,#include"")
+#              maybe only care about first 2 kinds vs. last 2 kinds
+# Note: #include"" or <> is only our filetype if the file was included
+# from another file we parsed and it was not given as an input/arg file
+# Generalize the variables for each of these to be lists of eight values
 
-my $cpp_cmds = 0;		# total preprocessor commands
-my $cpp_cmds_ni = 0;		# total preprocessor commands
+# This enumeration gives indices into the lists
+
+# 2 (1st dim) times 4 (2nd dim) file types
+my $c_ft = 2 * 4;
+
+my @ft_ALL = (0..$c_ft-1);
+
+my ($ft_HEAD_INPUT, $ft_HEAD_ARG, $ft_HEAD_INCB, $ft_HEAD_INCQ,
+    $ft_CODE_INPUT, $ft_CODE_ARG, $ft_CODE_INCB, $ft_CODE_INCQ) = @ft_ALL;
+
+my %InclusionMethod_to_Index = 
+  ("FromCmdLine" => $ft_HEAD_ARG,
+   "FromStdin" => $ft_HEAD_INPUT,
+   "FromInclude<>" => $ft_HEAD_INCB,
+   "FromInclude\"\"" => $ft_HEAD_INCQ);
+
+my $ft_HEAD_Start = $ft_HEAD_INPUT;
+my $ft_CODE_Start = $ft_CODE_INPUT;
+
+# make slices for common uses
+my @ft_CODE = ($ft_HEAD_INPUT..$ft_HEAD_INCQ);
+my @ft_HEAD = ($ft_CODE_INPUT..$ft_CODE_INCQ);
+my @ft_NOT_INCLUDED = ($ft_HEAD_INPUT,$ft_HEAD_ARG,$ft_CODE_INPUT,$ft_CODE_ARG);
+my @ft_INCLUDED = ($ft_HEAD_INCB,$ft_HEAD_INCQ,$ft_CODE_INCB,$ft_CODE_INCQ);
+my @ft_CODE_NOT_INCLUDED = ($ft_CODE_INPUT,$ft_CODE_ARG);
+my @ft_CODE_INCLUDED = ($ft_CODE_INCB,$ft_CODE_INCQ);
+my @ft_HEAD_NOT_INCLUDED = ($ft_HEAD_INPUT,$ft_HEAD_ARG);
+my @ft_HEAD_INCLUDED = ($ft_HEAD_INCB,$ft_HEAD_INCQ);
+
+my @rg_logl_lines = (0) x $c_ft;
+my @rg_phys_lines = (0) x $c_ft;
+my @rg_ncnb_lines = (0) x $c_ft;
+my @rg_cp_phys_lines = (0) x $c_ft;
+my @rg_cp_phys_code_lines = (0) x $c_ft;
+
+my @rg_cpp_cmds = (0) x $c_ft;
+
+my @rg_cppcmdcounts = { "define" => 0 } x $c_ft;
+
+#my $logical_lines = 0;		# line continuation doesn't increment
+#my $physical_lines = 0;		# as they appear to tools
+#my $ncnb_physical_lines = 0;	# non-comment, non-blank lines
+#my $cpp_physical_lines = 0;	# cpp physical lines
+#my $cpp_physical_code_lines = 0; # cpp physical lines
+#
+## Not-include file version of the above
+#my $logical_lines_ni = 0;	# line continuation doesn't increment
+#my $physical_lines_ni = 0;	# as they appear to tools
+#my $ncnb_physical_lines_ni = 0;	# non-comment, non-blank lines
+#my $cpp_physical_lines_ni = 0;	# cpp physical lines
+#my $cpp_physical_code_lines_ni = 0; # cpp physical lines
+
+
+### These variables (cppBLAH) now get summed
+# from the rg_XXX variables, above.
+# See compute_global_cpp_sums
+
+my $cpp_cmds;			# total preprocessor commands
+my $cpp_cmds_ni;		# total preprocessor commands
+
+# Initialize cppcmdcount{"define"} so that we don't get uninitialized values
+# when we try processing the macros (in case there were no macros)
+my %cppcmdcount = (); # number of uses of each cpp command
+# cppcmdcount_ni is like cppcmdcount, but only for files listed on cmd line
+# ni == "not includes"
+my %cppcmdcount_ni = (); # number of uses of each cpp command
+
+
 my $symtab_scopes = 0;		# the number of scopes, less the global scope
 ## Strings:
 my $line = "";			# current line
@@ -529,6 +594,7 @@ my $cBuiltinMacros = 0;		# The number of macros that we define
 				# before parsing-- need to be sure not
 				# to use the first $cBuiltinMacros elements of 
 				# @mXXXXX arrays
+my $cMacrosInTables = 0;
 # Highly unlikely filename, used for $mfile[$i] for builtin macros
 my $szBuiltInFakeFile = "%Built In%";
 
@@ -542,6 +608,8 @@ my %functions;
 
 # If remove "current" from these names, look for other vars of those names.
 my $current_file;		# the current file name
+my $current_ft_index;		# the index of the @ft_'s for the current file
+
 # current_line_no is now a function
 #my $current_line_no;		# the current line number
 my $current_function;		# the current function
@@ -565,12 +633,6 @@ use vars '@include_path';
 
 
 ## Arrays
-# Initialize cppcmdcount{"define"} so that we don't get uninitialized values
-# when we try processing the macros (in case there were no macros)
-my %cppcmdcount = ("define" => 0); # number of uses of each cpp command
-# cppcmdcount_ni is like cppcmdcount, but only for files listed on cmd line
-# ni == "not includes"
-my %cppcmdcount_ni = ("define" => 0); # number of uses of each cpp command
 
 # perhaps make %macros proper just index into other arrays.
 
@@ -643,6 +705,7 @@ sub find_macro_definitions
 #  foreach $this_file (@files)
   for (; $ifiles <= $#files; $ifiles++)
     { $current_file = $files[$ifiles];
+      $current_ft_index = compute_current_ft_index($current_file);
 
       print STDERR "file: \"$current_file\"" if $opt_v;  
       if (!open(INPUT,$current_file)) {
@@ -866,12 +929,29 @@ sub output_stats
   } else {
     $OFS = " ";
   }
+
+  my $logical_lines = sum_array(@rg_logl_lines);
+  my $physical_lines = sum_array(@rg_phys_lines);
+  my $ncnb_physical_lines = sum_array(@rg_phys_lines);
+  my $cpp_physical_lines = sum_array(@rg_cp_phys_lines);
+  my $cpp_physical_code_lines = sum_array(@rg_cp_phys_code_lines);  
+
+  my $logical_lines_ni = 
+    sum_array(@rg_logl_lines[@ft_NOT_INCLUDED]);
+  my $physical_lines_ni =
+    sum_array(@rg_phys_lines[@ft_NOT_INCLUDED]);
+  my $ncnb_physical_lines_ni =
+    sum_array(@rg_phys_lines[@ft_NOT_INCLUDED]);
+  my $cpp_physical_lines_ni =
+    sum_array(@rg_cp_phys_lines[@ft_NOT_INCLUDED]);
+  my $cpp_physical_code_lines_ni =
+    sum_array(@rg_cp_phys_code_lines[@ft_NOT_INCLUDED]);  
   
   if ($logical_lines == 0) {
     print STDERR "No lines read! Perhaps you meant to use the -i option?\n";
     return;
   } 
-  
+
   if ($opt_S) {
     my ($h, $v);
     # Dump statistics on frequencies of directives
@@ -987,6 +1067,20 @@ sub pct2 {
   return (100*$x/$w);
 }
 
+
+# sum_array just sums all the elements of an array
+# pass in a slice if you only want part of the array summed
+sub sum_array {
+  check_args_at_least(0,"sum_array", caller, @_);
+  my $sum = 0;
+  my $i = 0;
+  for (; $i <= $#_; $i++) {
+    $sum += $_[$i];
+  }
+  return $sum;
+}
+
+# FIX: Comment this better
 sub test_typedecl_regexp
 {
   check_args(0, "test_typedecl_regexp", caller, @_);
@@ -994,6 +1088,7 @@ sub test_typedecl_regexp
 #  foreach $this_file (@files)
   for (; $ifiles <= $#files; $ifiles++)
     { $current_file = $files[$ifiles];
+      $current_ft_index = compute_current_ft_index($current_file);
       if ($opt_v)
 	{ print STDERR $current_file . "\n"; }
       open(INPUT,$current_file) or next; # skip to next file if open fails
@@ -1072,8 +1167,7 @@ sub getline
 	{ return $result; }
       $getline_physical_lines++;
       if ($finding_macro_defs) {
-	$logical_lines++;
-	$logical_lines_ni++ if !current_file_was_included();
+	$rg_logl_lines[$current_ft_index]++;
       }
 
       $result = updateinvars($result);
@@ -1107,8 +1201,7 @@ sub getline
 	      if ($nextline = <INPUT>)
 		{ $getline_physical_lines++;
 		  if ($finding_macro_defs) {
-		    $logical_lines++;
-		    $logical_lines_ni++ if !current_file_was_included();
+		    $rg_logl_lines[$current_ft_index]++;
 		  }
 		  $nextline = updateinvars($nextline);
 		  $result = append_lines($result, $nextline); }
@@ -1123,8 +1216,7 @@ sub getline
 	      if ($nextline = <INPUT>)
 		{ $getline_physical_lines++;
 		  if ($finding_macro_defs) {
-		    $logical_lines++;
-		    $logical_lines_ni++ if !current_file_was_included();
+		    $rg_logl_lines[$current_ft_index]++;
 		  }
 		  $nextline = updateinvars($nextline);
 		  # Strict ANSI C does not permit newlines in string constants;
@@ -1139,8 +1231,7 @@ sub getline
 
   #print STDERR "GETLINE $getline_physical_lines, $finding_macro_defs: $result";
   if ($finding_macro_defs) {
-    $physical_lines += $getline_physical_lines;
-    $physical_lines_ni += $getline_physical_lines if !current_file_was_included();
+    $rg_phys_lines[$current_ft_index] += $getline_physical_lines;
   }
 
   # FIX: Check for macro uses here
@@ -1148,12 +1239,10 @@ sub getline
   if (($result =~ /^\#/) && !$getline_nocpp)
     { # Preprocessor line; usually just return "\n";
       if ($finding_macro_defs) {
-	$cpp_physical_lines += $getline_physical_lines;
-	$cpp_physical_code_lines += $getline_physical_code_lines;
-	if (!current_file_was_included()) {
-	  $cpp_physical_lines_ni += $getline_physical_lines;
-	  $cpp_physical_code_lines_ni += $getline_physical_code_lines;
-	}
+	$rg_cp_phys_lines[$current_ft_index] +=
+	  $getline_physical_lines;
+	$rg_cp_phys_code_lines[$current_ft_index] +=
+	  $getline_physical_code_lines;
       }
       return getline_handle_preprocessor_line($result);
     }
@@ -1426,8 +1515,7 @@ sub updateinvars
   UIV_RETURN: 
   if ($uiv_seen_code) {
     if ($finding_macro_defs) {
-      $ncnb_physical_lines++;
-      $ncnb_physical_lines_ni++ if !current_file_was_included();
+      $rg_ncnb_lines[$current_ft_index]++;
     }
     $getline_physical_code_lines++;
     #print STDERR "SC: $result" if $finding_macro_defs;
@@ -1530,25 +1618,10 @@ sub getline_handle_preprocessor_command
   # $cpp_cmd and $cpp_cmd_arg contain no leading or trailing space.
   my ($cpp_cmd, $cpp_cmd_arg) = check_args(2, "getline_handle_preprocessor_command", caller, @_);
 
-  if ($finding_macro_defs)
-    { # Perhaps keep a list of each use, with line numbers (could help when
-      # determining if it is a preventMI).
-      # This code avoids warnings about using uninitialized values
-      if (!defined($cppcmdcount{$cpp_cmd})) {
-	$cppcmdcount{$cpp_cmd} = 0;
-      }
-      $cppcmdcount{$cpp_cmd}++;
-      $cpp_cmds++;
-
-      # Now analogous code only for files explicitly asked to be parsed
-      if (!current_file_was_included()) {
-	if (!defined($cppcmdcount_ni{$cpp_cmd})) {
-	  $cppcmdcount_ni{$cpp_cmd} = 0;
-	}
-	$cppcmdcount_ni{$cpp_cmd}++;
-	$cpp_cmds_ni++;
-      }
-    }
+  if ($finding_macro_defs) {
+    # handle @rg_cpp_cmds and @%rg_cppcmdcounts
+    update_cpp_directives_for($cpp_cmd);
+  }
 
   if ($cpp_cmd eq "if")
     { push(@dependenton, $cpp_cmd_arg);
@@ -1653,8 +1726,7 @@ sub discard_to_endif
     { if (not ($line = <INPUT>))
 	{ mdie("File ends in \#ifdef 0"); }
       if ($finding_macro_defs) {
-	$logical_lines++;
-	$logical_lines_ni++ if !current_file_was_included();
+	$rg_logl_lines[$current_ft_index]++;
       }
       # I'll trust that no comment or string contains anything that
       # looks like a preprocessor command.  Strictly speaking, I should
@@ -2288,6 +2360,7 @@ sub get_macro_call_types
 #  foreach $this_file (@files)
   for (; $ifiles <= $#files; $ifiles++)
     { $current_file = $files[$ifiles];
+      $current_ft_index = compute_current_ft_index($current_file);
       if ($opt_v) {
 	print STDERR "file: \"$current_file\" ($files{$current_file})"; 
       }
@@ -2909,7 +2982,7 @@ sub skip_expression_nocommaop
 
 
 ### Symbol table
-
+# FIX: Improve the representation of the symbol table
 # The symbol table is two parallel arrays:
 my @symtab_identifiers = ();
 my @symtab_types = ();
@@ -3050,7 +3123,7 @@ sub categorize_macro_name
   my $numdefs = $macros{$name}[0];
   # if the assertion below gets tripped, it's likely that
   # somewhere we're mistakenly adding to %macros unintentionally
-  die "numdefs not defined for $name" if !defined($numdefs); #FIXNOW
+  die "numdefs not defined for $name" if !defined($numdefs);
   # Use this block instead to help debug the above problem
   #if (!defined($numdefs)) {
   #  print STDERR "numdefs not defined for $name\n";
@@ -3527,12 +3600,32 @@ sub current_line_no {
   return ($. - $#getline_ungotlines - 1);
 }
 
+# return the index into the @ft_ arrays for the current filename
+# consider how it was included, and whether it's a header or code
+sub compute_current_ft_index {
+  my ($filename) = check_args(1,"compute_current_ft_slice",caller,@_);
+
+  my $offset = current_file_is_header()? $ft_HEAD_Start: $ft_CODE_Start;
+
+  # FIXMSG
+  die if !exists $InclusionMethod_to_Index{$files{$filename}};
+
+  return $offset + $InclusionMethod_to_Index{$files{$filename}};
+}
+
 
 # Tell us if the current file was added by a #include directive
 # (as opposed to passed in to evilmacros on the cmd line or in STDIN w/ -i )
 sub current_file_was_included {
   check_args(0,"current_file_not_included",caller,@_);
   if ($files{$current_file} =~ /^FromInclude/) { return $true; }
+  return $false;
+}
+
+# Tell if the current filename looks like a header file
+sub current_file_is_header {
+  check_args(0,"current_file_not_included",caller,@_);
+  if ($current_file =~ /.[hH].?.?$/) { return $true; }
   return $false;
 }
 
@@ -3550,7 +3643,7 @@ sub count_macro_args {
     # (tr returns the number of deletions or substitutions)
     $retval = ($arg_decl =~ tr/,//d) + 1;
   }
-  #print STDERR "cma: $retval for $arg_decl\n"; #FIXNOW
+  #print STDERR "cma: $retval for $arg_decl\n";
   return $retval;
 }
 
@@ -3558,7 +3651,7 @@ sub count_macro_args {
 # the @mXXXX arrays
 sub next_available_macro_index {
   check_args(0,"next_available_macro_index",caller,@_);
-  return $cppcmdcount{"define"}+$cBuiltinMacros-1;
+  return $cMacrosInTables++;
 }
 
 # Initialize the macros structures for the builtin macros of gcc
@@ -3613,8 +3706,71 @@ sub initialize_builtin_macros {
   # This works:
   # print "HERE:", join(',',@$macros{"__LINE__"}), "\n";
 
+  $cMacrosInTables = $cBuiltinMacros;
+
   return undef;
 }
+
+###########################################################################
+### data structure ops for orthogonal file types
+###
+
+sub update_cpp_directives_for {
+  my ($cpp_cmd) = check_args(1,"update_cpp_directives_for",caller,@_);
+
+  # This code avoids warnings about using uninitialized values
+  if (!defined($ {$rg_cppcmdcounts[$current_ft_index]}{$cpp_cmd})) {
+    $ {$rg_cppcmdcounts[$current_ft_index]}{$cpp_cmd} = 0;
+  }
+  $ {$rg_cppcmdcounts[$current_ft_index]}{$cpp_cmd}++;
+
+  $rg_cpp_cmds[$current_ft_index]++;
+  #print STDERR "GOTCPP: $cpp_cmd, for $current_ft_index, so have $rg_cpp_cmds[$current_ft_index]\n";
+}
+
+# compute $cpp_cmds, $cpp_cmds_ni
+# %cppcmpdcount, %cppcmdcount_ni
+sub compute_global_cpp_sums {
+  check_args(0,"compute_global_cpp_sums",caller,@_);
+
+  $cpp_cmds = sum_array(@rg_cpp_cmds[@ft_ALL]);
+  $cpp_cmds_ni = sum_array(@rg_cpp_cmds[@ft_NOT_INCLUDED]);
+
+  #FIXNOW: cppcmdcount needs to be computed
+  # for each key, needs to sum the values across a set of
+  # hashes
+
+  my $hashref;
+  my $key;
+
+  my $i = 0;
+  no strict 'refs';  #FIX: Must I do this?
+  foreach $hashref (@rg_cppcmdcounts[@ft_ALL]) {
+    #  for (;  $i < $#rg_cppcmdcounts; $i++) {
+    #    foreach $key (keys %{$rg_cppcmdcounts[$i]}) {
+    foreach $key (keys %{$hashref}) {
+      if (!defined($cppcmdcount{$key})) {
+	$cppcmdcount{$key} = 0;
+      }
+      $cppcmdcount{$key} += $ {$hashref}{$key};
+      #print STDERR "KEY=$key, adding ", $ {$hashref}{$key}, "\n"; #FIXNOW
+    }
+  }
+
+  foreach $hashref (@rg_cppcmdcounts[@ft_NOT_INCLUDED]) {
+    #  for (;  $i < $#rg_cppcmdcounts; $i++) {
+    #    foreach $key (keys %{$rg_cppcmdcounts[$i]}) {
+    foreach $key (keys %{$hashref}) {
+      if (!defined($cppcmdcount_ni{$key})) {
+	$cppcmdcount_ni{$key} = 0;
+      }
+      $cppcmdcount_ni{$key} += $ {$hashref}{$key};
+      #print STDERR "KEY=$key, adding ", $ {$hashref}{$key}, "\n"; #FIXNOW
+    }
+  }
+}
+
+  
 
 
 
@@ -3833,6 +3989,8 @@ find_macro_definitions();	# also counts other preprocessor usage
 #     { print "$name $macros{$name}[0]\n"; } }
 
 get_macro_call_types() if (!$opt_u);
+
+compute_global_cpp_sums();
 
 ### All the files have been read; now process the macros
 # We initialized $cppcmdcount{"define"}, so it will be defined
