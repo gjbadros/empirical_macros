@@ -71,7 +71,7 @@ Department of Computer Science and Engineering \\
 University of Washington \\
 Box 352350, Seattle, WA  98195-2350  USA \\
 {\small \{{\tt mernst},{\tt gjb},{\tt notkin}\}{\tt @cs.washington.edu}} \\
-17 February 1999}  
+24 March 1999}  
 
 \maketitle
 
@@ -439,7 +439,7 @@ main purposes.  First, it identifies the code and header files processed by
 the compiler; see below for details.  Second, the flags passed to the
 compiler indicate which preprocessor macros are defined or undefined on the
 command line.  Third, our extension to \pcp\ created a copy of the source
-tree in which identifiers that are possibly macro-expanded are specially
+code in which identifiers that are possibly macro-expanded are specially
 marked (but no macros are expanded or conditionals discharged).  This \pcp\ 
 analysis performs a conservative reaching-definitions analysis:  it
 examines both sides of every Cpp conditional, and an identifier is marked
@@ -491,7 +491,8 @@ partial constructs in conditional compilation branches.
 The results repored in this paper omit macros defined only in external
 libraries (such as the \file{/usr/include/} hierarchy), even when used in
 the package source code; we also omit all macro uses in libraries.  This
-prevents library header files and usees of macros defined in them from swamping the characteristics of the
+prevents library header files and uses of macros defined in them from
+swamping the characteristics of the
 package code, which is our focus in this study.  The programmer generally
 has no control over libraries and their header files, and may not even know
 whether a library symbol is defined as a macro.
@@ -1098,22 +1099,18 @@ Figure~\ref{fig:subset-properties}.
 \item[Use argument as type]
   This macro uses one of its arguments as a type, as in a declaration or
   cast.  Like using a macro result as a type, this is impossible in C\@.
-
 \begin{verbatim}
     #define dda_step_struct(sname, dtype, ntype) struct sname { dtype dQ; ntype dR, NdR; }
-    #define REVERSE_LIST(list, type) ((list && list->next) ? (type)reverse_list ((GENERIC_LIST *)list) : (type)(list))
+    #define REVERSE_LIST(list, type) ((list && list->next) ? \
+                 (type)reverse_list ((GENERIC_LIST *)list) : (type)(list))
 \end{verbatim}
-
-  \comment{Move some of this to the methodology section; also some text
-  from end of first paragraph of next subsection, too, perhaps.}
-  Not all uses can be unambiguously identified lexically\comment{we
-  don't do ``whole-program'' analysis:  we want to know about the macros
-  themselves and how they can be used, not how they happen to be used; for
-  instance, we're concerned with understanding and maintenance}.  For
-  instance, the macro {\tt \#define \verb|MAKE_DECL|(type, name) type
-  name;} is not identified as necessarily using its first argument as a
-type, for it might be invoked as {\tt \verb|MAKE_DECL|(printf, ("hello
-world\verb|\|n"))} or as {\tt \verb|MAKE_DECL|(x =, y+z)}.
+  Not all uses can be unambiguously identified lexically, because our
+  analysis focusses on macro definitions and potential uses, not only on
+  uses that happen to appear in the program.  For instance, the macro {\tt
+  \#define \verb|MAKE_DECL|(type, name) type name;} is not identified as
+  necessarily using its first argument as a type, for it might be invoked as
+  {\tt \verb|MAKE_DECL|(printf, ("hello world\verb|\|n"))} or as {\tt
+  \verb|MAKE_DECL|(x =, y+z)}.
 
 \item[Pasting]\label{def:pasting}
   The body uses symbol pasting ({\tt \#\#}), which treats its arguments not
@@ -1518,6 +1515,7 @@ their bodies are similar or identical.
 % \end{figure}
 
 \begin{figure}
+  % This table is made from tbl-avg-{def,ddf}-frequency.
   {\small\centerline{\input{tbl-summarize-frequency.tex}}}
   %%Numbers: read them off the table.
   \captionsmall{Average number of definitions of macros in each category.
@@ -1664,16 +1662,18 @@ with incompatible definitions.
   %%Numbers: read them off tbl-subset-categories.tex
   %% 2.0%: read off caption of fig/cat-def-frequency.eps
   \captionsmall{Categorization of definitions for each macro name with more
-    than one definition.\comment{Say why we bother to present info in this
-    format.}
+    than one definition.
     For instance, for 869 macro names (28\% of multiply-defined macro
     names), all definitions fall into the expression category, and for 183
-    macro names (6.0\%
-    of multiply-defined macro names), all definitions are either expressions or constants.
+    macro names (6.0\% of multiply-defined macro names), all definitions
+    are either expressions or constants.
     Rows less than .2\%, representing 5 or fewer macro names, are omitted.
     The arrows indicate macros for which the
     names are categorized as ``other'' (4.4\% of all multiply-defined
-    macro names; overall, 2.0\% of all macro names are so categorized).}
+    macro names; overall, 2.0\% of all macro names are so categorized).
+    This chart shows which different macro definition categories tend
+    to co-occur and assists in understanding the reasons for macro names
+    whose multiple definitions case them to be categorized as ``other''.}
 
   \label{fig:subset-categories}
 \end{figure}
@@ -2092,16 +2092,30 @@ collected for software that targets only a single specific platform.
 \label{sec:dependence}
 \label{sec:last-content-section}
 
-Macros control the program that results from running Cpp in two distinct
-ways.  \emph{Inclusion} dependence results from Cpp conditionals which test
-macros to determine which
-lines of the Cpp input appear in the output.  \emph{Expansion} dependence
-results from replacement of macros outside Cpp conditionals by their
-definition bodies, which controls the content of the lines on which the
-macros appear.  This section reports the incidence of these dependences,
-both by macro and by line.
+Macros control the program that results from running Cpp via inclusion
+dependences and expansion dependences.  This section reports the incidence
+of these dependences, both by macro and by line.
 
-\comment{Give formal definitions here.}
+\emph{Inclusion} dependence results from Cpp conditionals which test macros
+to determine which lines of the Cpp input appear in the output.  A line is
+inclusion-dependent on a macro name if and only if the macro's definedness
+or its expansion can affect whether the line appears in the preprocessor
+output.  In other words, there is a set of values for all other macros such
+that the line appears in the output for one value of the macro (or for the
+case of the macro being undefined) and does not appear in the output for
+the other value of the macro (or for the case of the macro being
+undefined).  This notion is related to control dependence in program
+analysis.
+
+\emph{Expansion} dependence results from replacement of macros outside Cpp
+conditionals by their definition bodies, which controls the content of the
+lines on which the macros appear.  A line is expansion-dependent on a macro
+name if the macro's definedness or value affects the text of the line after
+preprocessing.  In other words, for some set of values for all other
+macros, setting the macro to one value (or undefining it) results in a
+different final text for the line than setting the macro to a different
+value (or undefining it).  This notion is related to data dependence in
+program analysis.
 
 We report both direct and indirect dependences.  A line directly depends
 upon macros that appear in the line or in a {\tt \#if} condition whose
@@ -2113,14 +2127,15 @@ uses \verb|S_ISBLK| depends not just on its definition but also on that of
 dependence in the chain is an expansion dependence; otherwise, the indirect
 dependence is an inclusion dependence.
 
-We distinguish \emph{must} from \emph{may} dependences.  A must dependence links a use
-to the macro's known single definition site; a may dependence links a use
-to multiple definition sites, when it is not known which definition is in
-effect at the point of use.  When a macro is defined on both branches of a
-{\tt \#if} conditional, the macro's definedness does not depend on the
-values tested in the conditional, though its value does.  We do track
-dependences across file boundaries: if a macro controls whether a file is
-{\tt \#include}d, then the macro also controls every line of that file.
+We distinguish \emph{must} from \emph{may} dependences.  A must dependence
+links a use to the macro's known single definition site; a may dependence
+links a use to multiple definition sites, when it is not known which
+definition is in effect at the point of use.  When a macro is defined on
+both branches of a {\tt \#if} conditional, the macro's definedness does not
+depend on the values tested in the conditional, though its value does.  We
+do track dependences across file boundaries: if a macro controls whether a
+file is {\tt \#include}d, then the macro also controls every line of that
+file.
 
 %% This makes absolutely no sense.  What is going on here?
 %% I think there's something meaningful about lopping off prefixes of must
@@ -2516,35 +2531,130 @@ for understanding and exploring C source code that uses the preprocessor.
 
 \subsection{Style guidelines}
 
-\comment{Compare all these with ours.  Explicitly list their taxons, I
-  suppose.}
-
-A number of organizations provide hints about effective ways to the use the
-C preprocessor.  The GNU C preprocessor manual~\cite{cpp-manual} discusses
-a set of techniques including simple macros, argument macros, predefined
-macros, stringization macros, concatenation macros, and undefining and
-redefining macros.  It also identifies a set of ``pitfalls and subtleties
-of macros'', similar to some of the problems our analysis tool identifies.
 Several coding style guides make recommendations on preprocessor use and on
 ways to reduce unexpected behavior resulting from poorly designed
-constructs~\cite{Stallman97,ellemtel92,Cannon95,Dolenc90}.  Our empirical
-data might\comment{figure out whether they do, and say so} help refine
-these sets of suggestions.
+constructs~\cite{Cannon90}.  Our empirical data help refine these sets of
+suggestions, both by extending their taxonomies and recommendations and by
+indicating which problems occur in practice.
 
-Carroll and Ellis state that ``almost all uses of macros can be eliminated
-from C++ libraries''~\cite[p.~146]{Carroll95}.  They list eight varieties
-of macro usage and explain how the software engineer can use C++ language
-features instead of using the preprocessor.  Our taxonomies focus on actual
-use in C programs rather than potential uses in C++ programs.
+The GNU C preprocessor manual~\cite{cpp-manual} discusses
+a set of techniques including simple macros, argument macros, predefined
+macros, stringization macros, concatenation macros, and undefining and
+redefining macros.  Its ``pitfalls and subtleties of macros'' include
+unmatched parentheses, unparenthesized formals and bodies, dangling
+semicolons, multiple formal uses, and self-referential macros.  It also
+discusses three issues not addressed in this paper:  argument prescan
+(macro arguments are actually scanned for macro expansions twice), cascaded
+macros (macro bodies use the current definition of other macro, not the
+ones in effect at the definition site), and newlines in macro invocations
+(which can throw off error line reporting).
 
-Spencer and Collyer provide a set of techniques for achieving portability
-without using \texttt{\#ifdef}~\cite{SpencerC92}, which they recommend only
-for providing default values for macros and preventing multiple inclusion
-of header files.  They suggest using standard interfaces, using separate
-files instead of merging them with Cpp conditionals, and testing for
-specific features instead of machines in conditional compilation
-directives, as we do in Section~\ref{sec:ccd}.  They also break down the
-uses of \texttt{\#ifdef} in the 21,000 lines of C News.
+The GNU coding standards~\cite{Stallman97} mention Cpp only to recommend
+upper case for macros and use of macros to provide meanings for standard
+symbols on platforms that don't support ANSI C\@.
+The Ellemtel coding standards~\cite{ellemtel92} recommend that inline
+definitions appear in separate files of their own (not in \file{.h} header
+files) which never include other files, that inline functions and {\tt
+const} or {\tt enum} constants be used in place of {\tt \#define}, and that
+preprocessor macro names be prefixed to avoid name clashes.
+
+An adaptation of the Indian Hill C Style and Coding
+Standards~\cite{Cannon90} suggests using all capital letters for macro
+names except for macros that behave like function calls, which are
+acceptable only for short functions.  Statement macros should be wrapped in
+{\tt do \{ \ldots{} \} while (0)}, particularly when they contain keywords.
+Conditional bodies should be fully bracketed to avoid dangling semicolons.
+Macros should evaluate their parameters exactly once and arguments should
+not have side effects.  Side effects to macro paramters should be
+documented.  Macros should avoid using globals, since the global name may
+be hidden by a local declaration.  Macros with bodies that are long or
+reference variables should take an empty parameter list.  Programmers
+should use the ANSI specification rather than preprocessor tricks such as
+using {\tt /**/} for token pasting and macros that rely on argument string
+expansion.  Syntax should not be changed by macro substitution (except for
+the {\tt PROTO} macro).  While {\tt \#ifdef} is to be avoided, it should
+appear in header files (which should not be nested) rather than source
+code.  It can be used to protect {\tt \#pragma} and to define macros which
+are used uniformly in the code, without need for further {\tt \#ifdef}.  If
+a machine is not specified, compilation should fail rather than using a
+default; but conditional compilation should generally test features, not
+machines or operating systems.  The text inside an {\tt \#ifdef}fed section
+should be parsable code, not arbitrary text.
+
+Stroustrup~\cite{Stroustrup-DesignEvolution} lists 14 tasks supported by
+the C preprocessor and notes C++ alternatives for 5 of the 8 uses of {\tt
+\#define}:  constants, inline subroutines, parameterized types and
+functions, and renaming.  While a principle of C++'s design was elimination
+of the preprocessor, C++ continues to rely on it for the other uses
+Stroustrup lists:  {\tt \#define} for string concatenation, new syntax, and
+macro processing, {\tt \#ifdef} for version control and commenting, {\tt
+\#pragma} for layout and control flow hints (though pragmas are
+disparaged), and {\tt \#include} for exporting declarations and composing
+source text.  Stroustrup proposes moving {\tt \#include} into the language,
+which could eliminate some of its quirks and simplify the task of
+programmers and tool writers, as the {\tt \#import} directive does for
+Objective-C~\cite{CoxN91}.  Stroustrup remarkss that ``In retrospect,
+perhaps the worst aspect of Cpp is that it has stifled the development of
+programming environments for C.''
+
+Carroll and Ellis~\cite{Carroll95} list eight varieties of non-{\tt
+\#include} macro usage, culled in part from Stroustrup's
+list~\cite{Stroustrup-DesignEvolution}.  They say that C++ can replace
+these uses of the preprocessor other than declaration macros (such as
+declaring a class constructor and destructor via a macro call) and code
+versioning (such as debugging versions).  They also recommend the use of
+corporation- and project-specific prefixes to avoid macro name and header
+file name conflicts.
+
+
+\subsection{Portability}
+
+Two other style guidelines focus on portability concerns.
+Dolenc et al.~\cite{Dolenc90} warn of permitted implementation limits such
+as 32~nesting levels of parenthesized expressions, 1024~macro identifiers,
+and 509~characters in a logical source line.  They also note
+incompatibilities among preprocessors which usually result from failure of
+implementations to conform to the specification.  For instance, some
+preprocessors do not support the {\tt defined} operator or the {\tt
+\#pragma} or {\tt \#elif} directives, ignore text after the {\tt
+\#else}, {\tt \#elif}, and {\tt \#endif} directives, or perform
+concatenation and stringization in nonstandard orders during macro
+substitution.  The authors recommend using some of these
+incompatibilities\,---\,such as accepting only directives staring in the
+first column, without leading whitespace\,---\,along with {\tt \#ifdef} to
+hide modern Cpp features from older preprocessors.  The paper also treats
+in detail specific header files that may cause portability problems,
+showing how to overcome these difficulties, generally by usually by using
+the macro preprocessor to define some symbols (more) correctly.
+
+
+Spencer and Collyer~\cite{SpencerC92} provide a set of techniques for
+achieving portability without using \texttt{\#ifdef}, which they recommend
+only for providing default values for macros and preventing multiple
+inclusion of header files.  The paper is as much about good software
+engineering, such as advance planning, as the preprocessor per se, but does
+contain preprocessor-specific recommendations.  The authors suggest using
+standard interfaces, then providing multiple implementations if necessary.
+These implementations should appear in separate files rather than sharing
+code via {\tt \#ifdef}, and the build or configure script should select
+among them; thus, a choice of files replaces Cpp conditionals.  An override
+directory early in the search path permits bad include files to be replaced
+rather than selectively overridden.  More uses of {\tt \#ifdef} can be
+eliminated by moving System-specific tests and operations into shell
+scripts or by using standard programs (such as {\sf ls} or {\sf df})
+instead of accessing system services from C code.  (These strategies can
+complicate porting to non-Unix systems, and even standard programs may have
+different behavior in different places.)  Use of the preprocessor to
+establish numeric constants should be viewed with suspicion;
+dynamically-sized objects are a better approach.  Uses of {\tt \#ifdef}
+should test for features or characteristics, not machines, and an error is
+desirable to selecting a default machine.  Spencer and Collier recommend
+that {\tt \#ifdef} be restricted to declarations and macro definitions,
+never used at call sites, and that {\tt \#include} never appear inside {\tt
+\#ifdef}.  Spencer and Collier also break down the uses of \texttt{\#ifdef}
+in the 20,717 lines of C News.  Of the 166 uses, 36\% protected a default
+value for a preprocessor symbol, 34\% were used for configuration, 15\%
+commented out code, and 3\% prevented multiple inclusion of header files.
 
 
 \subsection{Error checking}
@@ -2597,10 +2707,6 @@ tried to run LCLint version 2.3i on our set of packages with its macro diagnosti
 enabled, but LCLint reported either a parse error or an internal bug on
 92\% of the files in our test suite.
 
-\comment{Run PC-lint and report on its results?  At least look at its error
-  messages!}
-
-
 %LCLint considers assignment to a macro argument dangerous but does not
 %appear to check for assignments to local variables.~\cite[\S
 %8]{Evans:LCLint} [[Should we mention these things?  I do not want to seem
@@ -2624,6 +2730,24 @@ enabled, but LCLint reported either a parse error or an internal bug on
 
 %% FIX: If we could also list the platforms for which each can compile,
 %% that would be great, but I doubt the benefit is worth the effort for now.
+
+PC-Lint/FlexeLint~\cite{Gimpel} is a commercial program checker.  Among the
+macro errors and problematic uses identified by our tool, PC-Lint/FlexeLint
+warns about unparenthesized bodies, multiple macro definitions (classifying
+them as "identical" or "inconsistent"), unreferenced defined macros, and
+macros that could probably be replaced by a const variable.  It also warns
+of non-syntactic arguments to the {\tt \#include} directive, header files
+none of whose declarations are used in a module, and names defined as both
+C variables and macros.  At macro definitions, it warns of multiple formals
+with the same name, use of {\tt defined} as a macro name, and formal names
+that appear in strings (because some non-compliant preprocessors perform
+substitution even in strings).  At call sites, it warns of incorrect number
+of arguments, unparenthesized macro arguments (``when the actual macro
+argument sufficiently resembles an expression and the expression involves
+binary operators,'' but ignoring operator precedence), and arguments with
+side effects (when the formal parameter is used multiple times in the
+expression body).  Its warnings can be individually suppressed to
+accommodate intentional uses of these paradigms.
 
 Check is a C macro checker that detects some instances of multiple
 statements, dangling {\tt \#else}, side effects, and precedence errors
@@ -2741,7 +2865,7 @@ for 4\% of non-header-file uses.
 
 The combination of C and Cpp makes a source text unnecessarily difficult
 to understand.  A good first step is to eliminate Cpp uses where an
-equivalent C or C++ construct exists, and to apply tools to explicate
+equivalent C or C++ construct exists, then to apply tools to explicate
 the remaining uses.  Here we discuss a few approaches to reducing the
 need for the preprocessor by better changing the state of the art in C
 programming, rather than applying tools to a specific source code
@@ -2754,23 +2878,21 @@ in the base language.
   simple for other tools to cope with, too, so we shouldn't get all
   exercised about them.)}
 
-\comment{Say exactly what each would save us.}
-
-\comment{37\% of conditionals}
 Since many of the most problematic uses of Cpp provide portability across
 different language dialects or different operating environments,
 standardization can obviate many such uses.  Canonicalizing library
 function names and calling conventions makes conditional compilation less
-necessary and incidentally makes all programs more portable, even those
-which have not gone to special effort to achieve portability.  This
-proposal moves the responsibility for portability (really, conformance to a
-specification) from the application program into the library or operating
-system.
+necessary (37\% of conditionals test operating system variances) and
+incidentally makes all programs more portable, even those which have not
+gone to special effort to achieve portability.  This proposal moves the
+responsibility for portability (really, conformance to a specification)
+from the application program into the library or operating system.
 
-\comment{commonly used, cluttering macros that trip up people and tools at
-declaration sites}
 Likewise, one of the most common uses of Cpp macros could be eliminated if
 the C language and its dialects had only a single declaration syntax.
+Declarations are particularly important to tools and humans, who examine
+them more often than the implementation, and declaration macros are
+particularly cluttering.
 Because most C compilers, and all C++ compilers, accept ANSI-style
 declarations, support for multiple declaration styles may have outlived its
 usefulness.  The ansi2knr tool~\cite{Deutsch90} translates a C program
@@ -2778,35 +2900,37 @@ using ANSI style function declarations into one using classical function
 declarations.  This tool frees authors from maintaining two commonly
 required configurations.
 
-\comment{{\tt \#default}: 17\% of conditionals}
-\comment{6.2\% of conditionals for multiple inclusion prevention}
-Some Cpp directives, such as {\tt \#include}, can be moved into the
-language proper\comment{note that that's what other languages and
-environments do}; this would also eliminate the need for Cpp constructs
-that prevent multiple inclusion of header files.  Likewise, compilers
-that do a good job of constant-folding\comment{What \% of constants have
-just one definition?}
- and dead code elimination\comment{save many \#if, in particular all
-debugging ones, but many, many others to boot} can
-encourage programmers to use language constructs rather than relying on
-the guarantees of an extra-linguistic tool like Cpp.  It is not
-sufficient for the compiler to perform appropriate
+Some Cpp directives can be moved into the language proper or be replaced by
+more specialized directives.  For instance, Objective-C~\cite{CoxN91} uses
+{\tt \#import} in place of {\tt \#include}
+Stroustrup~\cite{Stroustrup-DesignEvolution} also proposes putting {\tt
+include} in the C++ language; both approaches eliminate the need for the
+6.2\% of Cpp conditionals (and the related definitions) that prevent
+multiple inclusion of header files.  A {\tt \#default} or {\tt \#ifndefdef}
+directive would obviate another 17\% of conditionals.  Compilers that do a
+good job of constant-folding (42\% of macros are defined as constants) and
+dead code elimination (eliminating many uses of {\tt \#if}, for debugging
+and other purposes) can encourage programmers to use language constructs
+rather than relying on the guarantees of an extra-linguistic tool like Cpp.
+It is not sufficient for the compiler to perform appropriate
 optimizations\,---\,the programmer must also have confidence that the
-compiler will apply those optimizations; skeptical programmers will
-instead use Cpp to hide computations from the compiler to 
-guarantee code is not generated.
+compiler will apply those optimizations; skeptical programmers will instead
+use Cpp to hide computations from the compiler to guarantee code is not
+generated.
 
-Common Cpp constructs could be replaced by a special-purpose
-syntax\comment{Be specific, and argue why this is a good idea (I do that
-  below).}.  For instance, declarations or partial declarations could be
-made explicit objects; similar support could be provided for repetitive
-constructs and dynamic scoping.  Manipulations of these objects would then
-be performed through a clearly-specified interface rather than via string
-and token concatenation, easing the understanding burden on the programmer
-or tool.  Such uses would also be visible to the compiler and to program
-checkers such as lint.  The downside of this approach is the introduction
-of a new syntax or new library functions which may not simplify the program
-text and which cannot cover every possible case.
+Common Cpp constructs could be replaced by a special-purpose syntax.  For
+instance, declarations or partial declarations could be made explicit
+objects, such as by making type modifiers first-class at compile (or, more
+likely, preprocess) time; the language or the preprocessor could include a
+construct for dynamic binding (as Scheme does~\cite{Kelsey:1998:RRA}); and
+similar support could be provided for repetitive constructs.  Manipulations
+of these objects would then be performed through a clearly-specified
+interface rather than via string and token concatenation, easing the
+understanding burden on the programmer or tool.  Such uses would also be
+visible to the compiler and to program checkers such as lint.  The downside
+of this approach is the introduction of a new syntax or new library
+functions which may not simplify the program text and which cannot cover
+every possible case.
 
 The Safer\_C language~\cite{ICCC::Salomon1996} uses partial evaluation as a
 replacement for preprocessing and for source-code templates, in order to
@@ -2910,10 +3034,14 @@ programmers becoming C++ programmers without changing their habits.  A
 useful analysis of C++ packages would consider the code in the context of
 both the history of the package and the background of its authors.
 
+% Numbers:  read off tbl-properties-percents after setting
+% $properties_only_* variables appropriately.
+% Expressions: 1405     (16.23%)                free_var
+% Statements: 497       (36.84%)                free_var
+
 Further analysis of the macros with free variables is needed to see which
-of the roughly \comment{How did I compute this?  Get the new number.}32\%
-of expression macros that lack free variables should be easy to convert to
-inline functions.
+of the roughly 84\% of expression macros and 63\% of statement macros that
+lack free variables should be easy to convert to inline functions.
 
 Our framework currently does not benefit from analyzing the context of
 macro expansions in determining a macro's category.  For example, a
@@ -2925,9 +3053,9 @@ declarator.
 \section*{Acknowledgments}
 
 This work was supported by an IBM Cooperative Fellowship and a National
-Science Foundation Graduate Fellowship.  We thank Netta Shani and the
-anonymous referees for their comments, which substantially improved the
-presentation.
+Science Foundation Graduate Fellowship.  We thank Robert Bowdidge, Netta
+Shani, and the anonymous referees for their comments, which substantially
+improved the presentation.
     
 % Any opinions, findings, conclusions, or recommendations expressed in
 % this publication are those of the author, and do not necessarily

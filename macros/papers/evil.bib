@@ -38,6 +38,15 @@ Software Engineering"}
   year = 	 1992,
   address =	 {Sweden}
 }
+Available various places on the WWW.
+Rule 35 Do not use the preprocessor directive #define to obtain more efficient
+code; instead, use inline functions.
+Rule 36: Constants are to be defined using const or enum; never using #define.
+Rule 3 Inline definition files always have the file name extension ".icc".
+  [ie, separate from ordinary .hh files.]
+Rec. 13 Never include other files in an ".icc" file.
+Name for preprocessor macros (#define) should be prefixed.
+[Rule 10 Never specify relative UNIX names in #include directives.]
 
 
 Update according to GCC manual?
@@ -46,6 +55,20 @@ Update according to GCC manual?
   author =	 {{GNU~P}roject},
   edition =	 {v2.7.2}
 }
+Pitfalls and Subtleties of Macros:
+* Misnesting::        Macros can contain unmatched parentheses.
+* Macro Parentheses:: Why apparently superfluous parentheses
+                         may be necessary to avoid incorrect grouping.
+* Swallow Semicolon:: Macros that look like functions
+                         but expand into compound statements.
+* Side Effects::      Unsafe macros that cause trouble when
+                         arguments contain side effects.
+* Self-Reference::    Macros whose definitions use the macros' own names.
+* Argument Prescan::  Actual arguments are checked for macro calls
+                         before they are substituted.
+* Cascaded Macros::   Macros whose definitions use other macros.
+* Newlines in Args::  Sometimes line numbers get confused.
+
 
 @Manual{GCC,
   title = 	 "Using and Porting {GNU} {CC}",
@@ -65,8 +88,11 @@ Update according to GCC manual?
   month =	 {July},
   note =	 {\relax{}ftp://prep.ai.mit.edu/\discretionary{}{}{}pub/\discretionary{}{}{}gnu/\discretionary{}{}{}standards/\discretionary{}{}{}standards.texi}
 }
-The use of "\relax{}" in the note prevents BibTeX from making a bad break
-(in the middle of a TeX \discretionary macro).  Don't change!
+[[The use of "\relax{}" in the note prevents BibTeX from making a bad break
+(in the middle of a TeX \discretionary macro).  Don't change!]]
+GNU coding standards don't mention macros or CPP except to recommend use of
+upper case for macros and use of macros to provide meanings for standard
+symbols on platforms that don't support ANSI C.
 
 
 @Misc{Deutsch90,
@@ -79,22 +105,83 @@ The use of "\relax{}" in the note prevents BibTeX from making a bad break
 }
 
 
-@Manual{Cannon95,
+@Manual{Cannon90,
   title = 	 {Recommended {C} Style and Coding Standards},
   author =	 {Cannon, L.W. and Elliott, R.A. and Kirchoff, L.W. and Miller, J.H. and Mitze, R.W. and Schan, E.P. and Whittington, N.O. and Spencer, Henry and Keppel, David and Brader, Mark},
   edition =	 {6.0},
-  year =	 1995,
-  month =	 {14 February}
+  year =	 1990,
+  month =	 jun # "~25,"
 }
+[[Date should not be Feb 10, 1995; that was an HTML conversion date.]]
+http://dogbert.comsc.ucok.edu/~mccann/cstyle.html (and other places)
+Lower-case macro names are only acceptable if the macros behave
+     like a function call
+There is little that can be done about the problems caused by side
+effects in parameters except to avoid side effects in expressions (a good idea
+anyway) and, when possible, to write macros that evaluate their parameters
+exactly once.
+Macros should avoid using globals, since the global name may be hidden by a
+local declaration. Macros that change named parameters (rather than the storage
+they point at) or may be used as the left-hand side of an assignment should
+mention this in their comments. Macros that take no parameters but reference
+variables, are long, or are aliases for function calls should be given an empty
+parameter list, e.g.,
+Don't use macros for long functions, only for short ones.
+Use a STMT macro which wraps a statement macro in do { ... } while (0)
+Except for type casts, sizeof, and hacks such as the above, macros should
+contain keywords only if the entire macro is surrounded by braces.
+Conditional compilation should generally be on a feature-by-feature
+basis. Machine or operating system dependencies should be avoided in most
+cases.
+If absolutely necessary, machine-dependent code should be
+     #ifdeffed or operations should be performed by #ifdeffed macros.
+Avoid preprocessor tricks. Tricks such as using /**/ for token pasting and
+     macros that rely on argument string expansion will break reliably.
+Don't change syntax via macro substitution (except via the PROTO macro). It makes the program
+     unintelligible to all but the perpetrator.
+Header files should not be nested.
+Make code (eg, conditional bodies) fully-bracketed.
+#define constants should be in all CAPS.
+Build in the debug code using as few #ifdefs as possible. 
+If you #ifdef machine dependencies, make sure that when no machine is
+specified, the result is an error, not a default machine.
+Note that the text inside of an #ifdeffed section may be scanned (processed) by
+the compiler, even if the #ifdef is false. Thus, even if the #ifdeffed part of
+the file never gets compiled (e.g., #ifdef COMMENT), it cannot be arbitrary
+text.
+Put #ifdefs in header files instead of source files when possible. Use the
+#ifdefs to define macros that can be used uniformly in the code. For instance,
+Protect #pragma with #ifdef.
 
 @Manual{Dolenc90,
   title = 	 {Notes on Writing Portable Programs in {C}},
   author =	 {Dolenc, A. and Keppel, D. and Reilly, G. V.},
   edition =	 {8th Revision},
   year =	 1990,
-  month =	 {November},
+  month =	 nov,
   note =         {\relax{}http://www.apocalypse.org/\discretionary{}{}{}pub/\discretionary{}{}{}u/\discretionary{}{}{}paul/\discretionary{}{}{}docs/\discretionary{}{}{}cport/\discretionary{}{}{}cport.htm}
 }
+Original source: ftp.cs.washington.edu:/pub/cport.tar.Z
+32~nesting levels of parenthesized expressions
+{\em 1024~macro identifiers simultaneously.}
+{\em 509~characters in a logical source line.}; in most implementations this limit will probably apply {\em before\/} macro expansion.
+The order in which the preprocessor concatenation operators
+\<\#> and \<\#\#> are evaluated during macro substitution.
+The \<\#pragma> directive should pose no problems even to old
+preprocessors {\em if it comes indented}.\footnote{Old
+preprocessors only take directives that begin with \<\#> in the
+first column.} Furthermore, it is advisable to enclose them with
+\<\#ifdef>s in order to document under which platform they make
+sense.
+ some preprocessors may not know about the \<defined>
+operator in a \<\#if> directive nor about the \<\#pragma> and
+\<\#elif> directives.
+Many preprocessors ignored, or still ignore, text after the
+\<\#else>, \<\#elif>, and \<\#endif> directives. However, the
+Standard forbids anything but comments after these directives.
+Plus, long sections about how to deal with particular header files, usually
+  by using the macro preprocessor to define some symbols (more) correctly.
+Use an \<\#if~0> and \<\#endif> pair instead of nested comments.
 
 @InProceedings( Murphy-icse18,
   author= 	"Murphy, Gail C. and Notkin, David and Lan, Erica S.-C.",
@@ -112,6 +199,29 @@ The use of "\relax{}" in the note prevents BibTeX from making a bad break
   address =	aw:adr,
   year=         1994
 )
+Chapter 18 is about the C preprocessor.
+Not much guidance or discussion of the preprocessor, except page 424 lists
+uses of the preprocessor.
+One principle of C++'s design was elimination of the preprocessor.
+"In retrospect, perhaps the worst aspect of Cpp is that it has stifled the
+development of programming environments for C.  The anarchic and
+character-level operation of Cpp makes nontrivial tools for C and C++
+larger, slower, less elegant, and less effective than one would have
+thought possible."  (page 424)
+Suggests putting "include" in the C++ language (as #import is for Objective C).
+
+
+@Book{CoxN91,
+  author =	 "Brad J. Cox and Andrew J. Novobilski",
+  title = 	 "Object Oriented Programming:  An Evolutionary Approach",
+  publisher = 	 "Addison-Wesley",
+  year = 	 1991,
+  address =	 "Reading, Massachusetts"
+}
+ISBN: 0-201-54834-8 (Japanese: 4-8101-8046-8).
+This is the original book on Objective-C, which actually is a
+book on object oriented system development using Objective-C.
+
 
 @InProceedings( Siff-fse96,
   author= 	"Siff, Michael and Reps, Thomas",
@@ -149,6 +259,11 @@ The use of "\relax{}" in the note prevents BibTeX from making a bad break
   address =	 aw:adr,
   year = 	 1995
 }
+Discusses macro name and header file name conflicts:  says to use prefixes.
+The 8 non-#include categories they list are among the 14 (12 non-#include)
+uses listed by Stroustrup (Design & Evolution); or at least, they cite
+Stroustrup.  "All these uses of the preprocessor other than declaration
+macro and code versioning are rendered obsolete in C++."
 
 @Book{Harbison91,
   author = 	 "Harbison, Samuel P. and Guy L. {Steele Jr.}",
@@ -327,6 +442,13 @@ which implements the tests in Scott Myers's books; but I don't see the
 relevance, except that they are other kinds of lint checkers for style.
 
 
+
+@Misc{Gimpel,
+  author =	 "Gimpel Software",
+  title =	 "PC-lint/FlexeLint",
+  howpublished = "http://www.gimpel.com/\discretionary{}{}{}lintinfo.htm",
+  year =	 1999
+}
 PC-Lint:
 See http://www.gimpel.com, or call (610) 584-4261;  PC-Lint (runs on PCs
 under NT) is $239, FlexeLint (the Unix offering) is more (they don't say
@@ -360,15 +482,29 @@ concluding paragraph:
   almost as badly as the notorious goto statement.  Like the goto, the
   #ifdef often degrades modularity and readability (intentionally or not).
   Given some advance planning, there are better ways to be portable.
-The authors provide a number of principles to follow, such as
+The authors provide a number of principles to follow, namely
  * define a portable interface used everywhere, then provide multiple
    implementations of that interface for different systems.
+ * put different implementations in different source files, so #ifdef
+   doesn't appear in the implementation at all; ie, don't bother trying to
+   share a small amount of code among the implementations.
  * use #ifdef only in declarations and macro definitions, never at call sites.
  * choose a standard interface, implementing it if your system's is broken
    or missing.
- * write shell scripts or use standard programs (ls, du) instead of C code
+ * write shell scripts or use standard programs (ls, df) instead of C code.
+   (This can make it harder to port to non-Unix systems, though, and those
+   standard programs may have different behavior in different places.
  * abolish arbitrary numeric limits; use dynamically-sized objects instead
+ * test for specific features or characteristics, not specific machines.
+ * don't choose a default machine if none specified; err instead.
+ * don't use #include inside #ifdef.
+ * use the makefile:
+    * instead of #ifdef to fix bad system header files, put an override
+      directory early in the search path with your own versions
+    * have build/configure script customize the software, rather than doing
+      that at compile time -- change #ifdef into choices of files.
  * choose among including separate files, rather than merging them via #ifdef
+ * It's OK to use #ifdef to prevent multiple inclusion
 They give some statistics about C News; in 1000 lines of header files and
 20,000 lines of C, they use only 166 #ifdefs.  Apparently #ifndef is
 included in this count; they don't say whether #if defined(X) is included.
@@ -785,6 +921,28 @@ Abstract:
 }
 I know the year is at least 1998 because one of the packages says "last
 updated in 1998".  Most of the packages are quite a bit older, though.
+
+
+@Article{Kelsey:1998:RRA,
+  author =       "Richard Kelsey and William Clinger and Jonathan Rees",
+  title =        "Revised$^5$ Report on the Algorithmic Language
+                 {Scheme}",
+  journal =      "ACM SIG{\-}PLAN Notices",
+  volume =       "33",
+  number =       "9",
+  pages =        "26--76",
+  month =        sep,
+  year =         "1998",
+  coden =        "SINODQ",
+  ISSN =         "0362-1340",
+  bibdate =      "Tue Sep 15 17:01:28 1998",
+  note =         "With H. Abelson, N. I. {Adams, IV}, D. H. Bartley, G.
+                 Brooks, R. K. Dybvig, D. P. Friedman, R. Halstead, C.
+                 Hanson, C. T. Haynes, E. Kohlbecker, D. Oxley, K. M.
+                 Pitman, G. J. Rozas, G. L. {Steele, Jr.}, G. J.
+                 Sussman, and M. Wand.",
+  acknowledgement = ack-nhfb,
+}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
