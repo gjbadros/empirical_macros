@@ -51,14 +51,14 @@ foreach $file (@files) {
   foreach $line (@buckets) {
     my $n = $total{$pkg};
     while (<IN>) {
-      last if /^Category:/;
+      last if /^\#?Category:/;
       if (defined($_)) {
 	chop;
 	($bucket,$n) = split;
 	last if $bucket == $line;
       }
     }
-    last if /^Category:/;
+    last if /^\#?Category:/;
     if (!defined($column{"<total>"}[$i])) {
       $column{"<total>"}[$i] = 0;
     }
