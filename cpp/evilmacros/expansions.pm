@@ -519,6 +519,27 @@ sub cmd_line_def {
   print CMDLNDEFS "#define $def\n";
 }
 
+# From mde's paren.pm
+# Takes a simplified line as its argument; returns a string containing the
+# unbalanced parens (empty string if all parens are balanced).
+# Perhaps this should also check for braces (and complain or err if any are
+# found before parens balance).
+sub paren_change ( $ )
+{ my ($line) = check_args(1, @_);
+  if ($debug_paren) { print "paren_change <= $line\n"; }
+  my $result_num = 0;
+  my $result_chars = "";
+  while ($line =~ /[\(\)]/g)
+    { $result_chars .= $MATCH;
+      if ($MATCH eq "\(")
+	{ $result_num++; }
+      elsif ($MATCH eq "\)")
+	{ $result_num--; }
+      else
+	{ die("What match? $MATCH"); } }
+  return ($result_num == 0) ? $false : $result_chars;
+}
+
 # Not sure whether it would be faster and just as effective to merely check
 # for a set of common trivially false conditions, like this used to do.
 sub cpp_trivially_false_condition ( $ )
