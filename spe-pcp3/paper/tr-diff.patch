@@ -1,0 +1,21 @@
+--- cpp-aware-c-analyses.tex	Sun Nov 14 16:42:39 1999
++++ cpp-aware-c-analyses-tr.tex	Mon Nov 22 17:14:13 1999
+@@ -16,7 +16,7 @@
+ \usepackage{lscape}
+ \usepackage{personal}
+ 
+-\renewcommand{\baselinestretch}{2}
++%\renewcommand{\baselinestretch}{2}
+ \newcommand{\B}{\discretionary{}{}{}}
+ 
+ %%% Some stuff from Mike
+@@ -83,7 +83,8 @@
+ \newcommand{\figref}[1]{Figure~\ref{#1}}
+ \setlength{\fboxsep}{.1in}
+ 
+-\title{A Framework for Preprocessor-Aware \\ C Source Code Analyses}
++\title{A Framework for Preprocessor-Aware \\ C Source Code Analyses\\
++        \begin{small}Technical Report UW-CSE-98-08-04\end{small}}
+ \author{
+         \hspace*{-2ex}
+         \parbox{4in} {\begin{center}
