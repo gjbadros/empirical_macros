@@ -213,7 +213,7 @@ main (int argc, char **argv, char **env)
 
   perl_run(my_perl);
 
-  gjb_call_hooks_void(opts,STARTUP);
+  gjb_call_hooks_void(opts,HI_STARTUP);
 
   p = argv[0] + strlen (argv[0]);
   while (p != argv[0] && p[-1] != '/') --p;
@@ -254,8 +254,8 @@ main (int argc, char **argv, char **env)
 	{
 	fwrite (parse_in.token_buffer, 1, CPP_WRITTEN (&parse_in), stdout);
 	}
-      gjb_call_hooks_szl(opts,CPP_OUT,parse_in.token_buffer,CPP_WRITTEN(&parse_in));
-      gjb_call_hooks_sz_szl(opts,TOKEN,SzFromToken(kind),parse_in.token_buffer,
+      gjb_call_hooks_szl(opts,HI_CPP_OUT,parse_in.token_buffer,CPP_WRITTEN(&parse_in));
+      gjb_call_hooks_sz_szl(opts,HI_TOKEN,SzFromToken(kind),parse_in.token_buffer,
 			    CPP_WRITTEN(&parse_in));
       if (kind == CPP_EOF)
 	break;
@@ -282,6 +282,6 @@ main (int argc, char **argv, char **env)
     return_exit_code = FATAL_EXIT_CODE;
     }
 
-  gjb_call_hooks_i(opts,EXIT,return_exit_code);
+  gjb_call_hooks_i(opts,HI_EXIT,return_exit_code);
   exit (return_exit_code);
 }

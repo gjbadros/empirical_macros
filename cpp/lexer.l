@@ -46,36 +46,40 @@ char *tokn_ptr;
 
 #undef YY_INPUT
 
-#    ifdef STRING_PARSE
+#include "cpplib.h"
+#include "cppmain.h"
+#include "cpphook.h"
 
-#define    min(X,Y)    ((X)<(Y) ? (X) : (Y))
+void count();
 
-    /* Scan input from a string instead */
+int /* result */
+cpp_yy_input(char *buf,int max_size)
+{
+    int result;
+    enum cpp_token kind = cpp_get_token (&parse_in);
+    gjb_call_hooks_szl(CPP_OPTIONS(&parse_in),CPP_OUT,
+		       parse_in.token_buffer,CPP_WRITTEN(&parse_in));
+    gjb_call_hooks_sz_szl(CPP_OPTIONS(&parse_in),TOKEN,SzFromToken(kind),
+			  parse_in.token_buffer,
+			  CPP_WRITTEN(&parse_in));
+    if (kind == CPP_EOF) {
+	result = YY_NULL;
+	buf[0] = 0;
+    } else {
+	result = CPP_WRITTEN(&parse_in);
+	if (result > max_size) {
+	    fprintf(stderr,"OVERFLOWED max_size in YY_INPUT macro!\n");
+	    result = max_size;
+	}
+	strncpy(buf,parse_in.token_buffer,result);
+	parse_in.limit = parse_in.token_buffer;
+    }
+    return result;
+}
+
+#undef YY_INPUT
 #define YY_INPUT(buf,result,max_size) \
-  do { \
-     int n = min(max_size, Parse_TOS->parselimit - Parse_TOS->parseptr);\
-     if (n>0){ \
-        memcpy(buf,Parse_TOS->parseptr,(unsigned int) n); \
-        Parse_TOS->parseptr += n; \
-        result = n; \
-     } else \
-        result = YY_NULL; \
-  } while(0)
-
-#    else    /* not STRING_PARSE */
-
-    /* Scan input from a file pointer (default) */
-#define YY_INPUT(buf,result,max_size) \
-    do { \
-        if (fgets(buf,max_size,yyin) == NULL) { \
-           result = YY_NULL; \
-        } else { \
-           result = strlen(buf); \
-           strncpy(line_buf, buf, MAX_TOKN_LEN); \
-        } \
-    } while(0)
-
-#    endif    /* not STRING_PARSE */
+         do { result = cpp_yy_input(buf,max_size); } while (0)
 
 #define YY_USER_ACTION \
     { \
@@ -137,7 +141,7 @@ char *tokn_ptr;
 
 YYSTYPE my_var;
 
-EXTERN int yylex ARGS((YYSTYPE *lvalp));
+EXTERN int yylex (YYSTYPE *lvalp);
 
 /*  To give some args to yylex */
 #undef YY_DECL

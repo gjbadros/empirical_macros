@@ -43,14 +43,20 @@ SzToken(i)
 char *
 fname()
 	CODE:
-	RETVAL = parse_in.buffer->fname;
+	if (parse_in.buffer)
+	  RETVAL = parse_in.buffer->fname;
+	else
+	  RETVAL = "@NOBUFFER@";
 	OUTPUT:
 	RETVAL
 
 char *
 nominal_fname()
 	CODE:
-	RETVAL = parse_in.buffer->nominal_fname;
+	if (parse_in.buffer)
+	  RETVAL = parse_in.buffer->nominal_fname;
+	else
+	  RETVAL = "@NOBUFFER@";
 	OUTPUT:
 	RETVAL
 

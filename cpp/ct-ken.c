@@ -12,3 +12,4 @@ typedef struct my_struct {
   } myStruct;
 myStruct * my_struct_instance;
 
+enum EnumFruits foo;

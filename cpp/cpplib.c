@@ -928,7 +928,7 @@ skip_comment (pfile, linep)
 	  if (prev_c == '*' && c == '/') 
 	    {
 	    /* drop the closing delimiter when computing the length */
-	    gjb_call_hooks_szl_sz_i(CPP_OPTIONS(pfile),COMMENT,
+	    gjb_call_hooks_szl_sz_i(CPP_OPTIONS(pfile),HI_COMMENT,
 				    pchStart,CPP_BUFFER(pfile)->cur-2-pchStart,
 				    "*/",(*linep)-lineStart+1);
 	    return ' ';
@@ -946,7 +946,7 @@ skip_comment (pfile, linep)
 	  if (c == EOF)
 	    {
 	    /* note that you need to use -lang-c++ for these to be recognized */
-	    gjb_call_hooks_szl_sz_i(CPP_OPTIONS(pfile),COMMENT,
+	    gjb_call_hooks_szl_sz_i(CPP_OPTIONS(pfile),HI_COMMENT,
 				  pchStart,CPP_BUFFER(pfile)->cur-pchStart,
 				  "EOF",(*linep)-lineStart+1);
 	    return ' '; /* Allow // to be terminated by EOF. */
@@ -962,7 +962,7 @@ skip_comment (pfile, linep)
 	      /* note that you need to use -lang-c++ for these to be recognized */
 	      /* Don't consider final '\n' to be part of comment. */
 	      FORWARD(-1);
-	      gjb_call_hooks_szl_sz_i(CPP_OPTIONS(pfile),COMMENT,
+	      gjb_call_hooks_szl_sz_i(CPP_OPTIONS(pfile),HI_COMMENT,
 				      pchStart,CPP_BUFFER(pfile)->cur-pchStart,
 				      "nl",(*linep)-lineStart+1);
 	      return ' ';
@@ -1107,7 +1107,7 @@ handle_directive (pfile)
       goto done_a_directive;
     }
 
-  gjb_call_hooks_sz(opts,HANDLE_DIRECTIVE,ident);
+  gjb_call_hooks_sz(opts,HI_HANDLE_DIRECTIVE,ident);
 
 #if 0
   if (ident_length == 0 || !is_idstart[*ident]) {
@@ -1703,9 +1703,9 @@ create_definition (buf, limit, pfile, predefinition)
   mdef.symlen = sym_length;
 
   if (predefinition)
-    gjb_call_hooks_szl_sz_defn(opts,CREATE_PREDEF,mdef.symnam,mdef.symlen,bp,defn);
+    gjb_call_hooks_szl_sz_defn(opts,HI_CREATE_PREDEF,mdef.symnam,mdef.symlen,bp,defn);
   else
-    gjb_call_hooks_szl_sz_defn(opts,CREATE_DEF,mdef.symnam,mdef.symlen,bp,defn);
+    gjb_call_hooks_szl_sz_defn(opts,HI_CREATE_DEF,mdef.symnam,mdef.symlen,bp,defn);
 
   return mdef;
 
@@ -1840,7 +1840,7 @@ do_define (pfile, keyword, buf, limit)
   if (pcp_outfile && keyword)
     pass_thru_directive (buf, limit, pfile, keyword);
 #endif
-  gjb_call_hooks_sz(opts,DO_DEFINE,buf);
+  gjb_call_hooks_sz(opts,HI_DO_DEFINE,buf);
 
   mdef = create_definition (buf, limit, pfile, keyword == NULL);
   if (mdef.defn == 0)
@@ -2368,7 +2368,7 @@ special_symbol (hp, pfile)
 	       hp->name);
 #endif
 
-  gjb_call_hooks_sz_i(CPP_OPTIONS(pfile),SPECIAL_SYMBOL,hp->name,hp->type);
+  gjb_call_hooks_sz_i(CPP_OPTIONS(pfile),HI_SPECIAL_SYMBOL,hp->name,hp->type);
     
   for (ip = CPP_BUFFER (pfile); ; ip = CPP_PREV_BUFFER (ip))
     {
@@ -3070,7 +3070,7 @@ macroexpand (pfile, hp)
 
   pfile->output_escapes--;
 
-  gjb_call_hooks_sz_szl(CPP_OPTIONS(pfile),EXPAND_MACRO,hp->name,xbuf,xbuf_len);
+  gjb_call_hooks_sz_szl(CPP_OPTIONS(pfile),HI_EXPAND_MACRO,hp->name,xbuf,xbuf_len);
 
   /* Now put the expansion on the input stack
      so our caller will commence reading from it.  */
@@ -3296,7 +3296,7 @@ do_include (pfile, keyword, unused1, unused2)
 #endif
   else
     {
-      gjb_call_hooks_sz_sz_3flags(CPP_OPTIONS(pfile),DO_INCLUDE,
+      gjb_call_hooks_sz_sz_3flags(CPP_OPTIONS(pfile),HI_DO_INCLUDE,
 				  fbeg,"@BADNAME@",
 				  angle_brackets,skip_dirs,importing);
       cpp_error (pfile,
@@ -3340,7 +3340,7 @@ do_include (pfile, keyword, unused1, unused2)
 
   if (flen == 0)
     {
-      gjb_call_hooks_sz_sz_3flags(CPP_OPTIONS(pfile),DO_INCLUDE,
+      gjb_call_hooks_sz_sz_3flags(CPP_OPTIONS(pfile),HI_DO_INCLUDE,
 				  fbeg,"@NULLLENGTH@",
 				  angle_brackets,skip_dirs,importing);
 
@@ -3366,7 +3366,7 @@ do_include (pfile, keyword, unused1, unused2)
     else
       f = open_include_file (pfile, fname, NULL_PTR);
     if (f == -2) {
-      gjb_call_hooks_sz_sz_3flags(CPP_OPTIONS(pfile),DO_INCLUDE,
+      gjb_call_hooks_sz_sz_3flags(CPP_OPTIONS(pfile),HI_DO_INCLUDE,
 				  fbeg,"@ALREADY_INCLUDED@",
 				  angle_brackets,skip_dirs,importing);
       return 0;		/* Already included this file */
@@ -3410,7 +3410,7 @@ do_include (pfile, keyword, unused1, unused2)
 	 redundant_include_p.  It would be nice if they were unified.  */
       if (redundant_include_p (pfile, fname))
 	{
-	gjb_call_hooks_sz_sz_3flags(CPP_OPTIONS(pfile),DO_INCLUDE,
+	gjb_call_hooks_sz_sz_3flags(CPP_OPTIONS(pfile),HI_DO_INCLUDE,
 				    fbeg,"@REDUNDANT_INCLUDE@",
 				    angle_brackets,skip_dirs,importing);
 	return 0;
@@ -3420,7 +3420,7 @@ do_include (pfile, keyword, unused1, unused2)
       else
 	f = open_include_file (pfile, fname, searchptr);
       if (f == -2){
-	gjb_call_hooks_sz_sz_3flags(CPP_OPTIONS(pfile),DO_INCLUDE,
+	gjb_call_hooks_sz_sz_3flags(CPP_OPTIONS(pfile),HI_DO_INCLUDE,
 				    fbeg,"@ALREADY_INCLUDED@",
 				    angle_brackets,skip_dirs,importing);
 	return 0;			/* Already included this file */
@@ -3493,7 +3493,7 @@ do_include (pfile, keyword, unused1, unused2)
       else
 	cpp_error (pfile, "No include path in which to find %s", fname);
 
-      gjb_call_hooks_sz_sz_3flags(CPP_OPTIONS(pfile),DO_INCLUDE,
+      gjb_call_hooks_sz_sz_3flags(CPP_OPTIONS(pfile),HI_DO_INCLUDE,
 				  fbeg,"@NOTFOUND@",
 				  angle_brackets,skip_dirs,importing);
     }
@@ -3505,7 +3505,7 @@ do_include (pfile, keyword, unused1, unused2)
 
     for (ptr = pfile->dont_repeat_files; ptr; ptr = ptr->next) {
       if (!strcmp (ptr->fname, fname)) {
-	gjb_call_hooks_sz_sz_3flags(CPP_OPTIONS(pfile),DO_INCLUDE,
+	gjb_call_hooks_sz_sz_3flags(CPP_OPTIONS(pfile),HI_DO_INCLUDE,
 				    fbeg,"@ONCED_FILE@",
 				    angle_brackets,skip_dirs,importing);
 	close (f);
@@ -3552,7 +3552,7 @@ do_include (pfile, keyword, unused1, unused2)
 
     /* Record file on "seen" list for #import. */
     add_import (pfile, f, fname);
-    gjb_call_hooks_sz_i(CPP_OPTIONS(pfile),ADD_IMPORT,fname,f);
+    gjb_call_hooks_sz_i(CPP_OPTIONS(pfile),HI_ADD_IMPORT,fname,f);
 
     pcftry = (char *) alloca (strlen (fname) + 30);
     pcfbuf = 0;
@@ -3592,13 +3592,13 @@ do_include (pfile, keyword, unused1, unused2)
 	} while (pcf != -1 && !pcfbuf);
       }
 #endif
-    gjb_call_hooks_sz_sz_3flags(CPP_OPTIONS(pfile),DO_INCLUDE,
+    gjb_call_hooks_sz_sz_3flags(CPP_OPTIONS(pfile),HI_DO_INCLUDE,
 				fbeg,fname,
 				angle_brackets,skip_dirs,importing);
 
     /* Actually process the file */
     cpp_push_buffer (pfile, NULL, 0);
-    gjb_call_hooks_sz_i(CPP_OPTIONS(pfile),INCLUDE_FILE,fname,
+    gjb_call_hooks_sz_i(CPP_OPTIONS(pfile),HI_INCLUDE_FILE,fname,
 			is_system_include(pfile,fname));
     if (finclude (pfile, f, fname, is_system_include (pfile, fname),
 		  searchptr != dsp ? searchptr : SELF_DIR_DUMMY))
@@ -3979,7 +3979,7 @@ do_undef (pfile, keyword, buf, limit)
       delete_macro (pfile,hp);
       cDeletes++;
     }
-  gjb_call_hooks_szl_i(CPP_OPTIONS(pfile),DO_UNDEF,buf,sym_length,cDeletes);
+  gjb_call_hooks_szl_i(CPP_OPTIONS(pfile),HI_DO_UNDEF,buf,sym_length,cDeletes);
 
 
   if (CPP_PEDANTIC (pfile)) {
@@ -4194,7 +4194,7 @@ do_if (pfile, keyword, buf, limit)
   value = eval_if_expression (pfile, buf, limit - buf);
   pchEndExpr = CPP_BUFFER(pfile)->cur;
   conditional_skip (pfile, value == 0, T_IF, NULL_PTR);
-  gjb_call_hooks_szl_szl_i(CPP_OPTIONS(pfile),DO_IF,
+  gjb_call_hooks_szl_szl_i(CPP_OPTIONS(pfile),HI_DO_IF,
 			   pchStartExpr,pchEndExpr-pchStartExpr-1,
 			   pchEndExpr,CPP_BUFFER(pfile)->cur-pchEndExpr-1,
 			   value);
@@ -4219,7 +4219,7 @@ do_elif (pfile, keyword, buf, limit)
 
   if (pfile->if_stack == CPP_BUFFER (pfile)->if_stack) {
     cpp_error (pfile, "`#elif' not within a conditional");
-    gjb_call_hooks_sz_sz_i(CPP_OPTIONS(pfile),DO_ELIF,
+    gjb_call_hooks_sz_sz_i(CPP_OPTIONS(pfile),HI_DO_ELIF,
 			   "@BAD@","@BAD@",value);
     return 0;
   } else {
@@ -4253,12 +4253,12 @@ do_elif (pfile, keyword, buf, limit)
     }
   }
   if (fSkip_IfWasTrue)
-    gjb_call_hooks_szl_szl_i(CPP_OPTIONS(pfile),DO_ELIF,
+    gjb_call_hooks_szl_szl_i(CPP_OPTIONS(pfile),HI_DO_ELIF,
 			     "@IFWASTRUE@",11,
 			     pchEndExpr,CPP_BUFFER(pfile)->cur-pchEndExpr-1,
 			     value);
   else
-    gjb_call_hooks_szl_szl_i(CPP_OPTIONS(pfile),DO_ELIF,
+    gjb_call_hooks_szl_szl_i(CPP_OPTIONS(pfile),HI_DO_ELIF,
 			     pchStartExpr,pchEndExpr-pchStartExpr-1,
 			     pchEndExpr,CPP_BUFFER(pfile)->cur-pchEndExpr-1,
 			     value);
@@ -4379,20 +4379,20 @@ do_xifdef (pfile, keyword, unused1, unused2)
 
   conditional_skip (pfile, skip, T_IF, control_macro);
   /* This will call DO_XIFDEF hook and either DO_IFDEF or DO_IFNDEF hook */
-  gjb_call_hooks_sz_szlx3_i(CPP_OPTIONS(pfile),DO_XIFDEF,
+  gjb_call_hooks_sz_szlx3_i(CPP_OPTIONS(pfile),HI_DO_XIFDEF,
 			   keyword->type == T_IFDEF? "IFDEF": "IFNDEF",
 			   pchStartExpr,pchEndExpr-pchStartExpr,
 			   pchEndExpr,pchEndGarbage-pchEndExpr,
 			   pchEndGarbage,CPP_BUFFER(pfile)->cur-pchEndGarbage,
 			   skip);
   if (keyword->type == T_IFDEF)
-    gjb_call_hooks_szlx3_i(CPP_OPTIONS(pfile),DO_IFDEF,
+    gjb_call_hooks_szlx3_i(CPP_OPTIONS(pfile),HI_DO_IFDEF,
 			      pchStartExpr,pchEndExpr-pchStartExpr,
 			      pchEndExpr,pchEndGarbage-pchEndExpr,
 			      pchEndGarbage,CPP_BUFFER(pfile)->cur-pchEndGarbage,
 			      skip);
   else
-    gjb_call_hooks_szlx3_i(CPP_OPTIONS(pfile),DO_IFNDEF,
+    gjb_call_hooks_szlx3_i(CPP_OPTIONS(pfile),HI_DO_IFNDEF,
 			      pchStartExpr,pchEndExpr-pchStartExpr,
 			      pchEndExpr,pchEndGarbage-pchEndExpr,
 			      pchEndGarbage,CPP_BUFFER(pfile)->cur-pchEndGarbage,
@@ -4621,7 +4621,7 @@ do_else (pfile, keyword, buf, limit)
 
   if (pfile->if_stack == CPP_BUFFER (pfile)->if_stack) {
     cpp_error (pfile, "`#else' not within a conditional");
-    gjb_call_hooks_sz_szl_szl(CPP_OPTIONS(pfile),DO_ELSE,
+    gjb_call_hooks_sz_szl_szl(CPP_OPTIONS(pfile),HI_DO_ELSE,
 			      "@NONE@",
 			      pchStartGarbage,pchEndGarbage-pchStartGarbage,
 			      "", 0);
@@ -4647,7 +4647,7 @@ do_else (pfile, keyword, buf, limit)
     ++pfile->if_stack->if_succeeded;	/* continue processing input */
     output_line_command (pfile, 1, same_file);
   }
-  gjb_call_hooks_sz_szl_szl(CPP_OPTIONS(pfile),DO_ELSE,
+  gjb_call_hooks_sz_szl_szl(CPP_OPTIONS(pfile),HI_DO_ELSE,
 			    DEF_STR(pfile->if_stack->control_macro,"@??@"),
 			    pchStartGarbage,pchEndGarbage-pchStartGarbage,
 			    pchEndGarbage,ip->cur-pchEndGarbage);
@@ -4743,7 +4743,7 @@ FIXME!
       free (temp);
       output_line_command (pfile, 1, same_file);
     }
-  gjb_call_hooks_sz_szl(CPP_OPTIONS(pfile),DO_ENDIF,
+  gjb_call_hooks_sz_szl(CPP_OPTIONS(pfile),HI_DO_ENDIF,
 			(fUnbalanced?"@UNBALANCED@":szControlMacro),
 			pchStartGarbage,pchEndGarbage-pchStartGarbage);
   if (szControlMacro)
@@ -4810,7 +4810,7 @@ cpp_get_token (pfile)
 	      pfile->input_stack_listing_current = 0;
 	      output_line_command (pfile, 0, leave_file);
 	      CPP_BUFFER (pfile) = cur_buffer;
-	      gjb_call_hooks_sz(CPP_OPTIONS(pfile),DONE_INCLUDE_FILE,
+	      gjb_call_hooks_sz(CPP_OPTIONS(pfile),HI_DONE_INCLUDE_FILE,
 				  fname);
 	      /* FIXGJB: Can't get the above to return 
 				  is_system_include(cur_buffer,fname));
@@ -5041,7 +5041,7 @@ cpp_get_token (pfile)
 	    /* NOTE: macro expansions containing string constants [or
 	       special symbols, like __FILE__] will call this hook;
 	       also note that this drops the delimiting double quotes */
-	    gjb_call_hooks_szl_i(CPP_OPTIONS(pfile),STRING_CONSTANT,
+	    gjb_call_hooks_szl_i(CPP_OPTIONS(pfile),HI_STRING_CONSTANT,
 				 pfile->token_buffer + old_written + 1,
 				 CPP_PWRITTEN(pfile)-(pfile->token_buffer+old_written+1)-1,
 				 c_newlines+1);
@@ -6952,7 +6952,7 @@ cpp_finish (pfile)
 
 /* FIXGJB: this should go somewhere! */
 #if 0
-	  gjb_call_hooks_sz_i(CPP_OPTIONS(pfile),DONE_INCLUDE_FILE,
+	  gjb_call_hooks_sz_i(CPP_OPTIONS(pfile),HI_DONE_INCLUDE_FILE,
 			      DEF_STR(CPP_BUFFER(pfile)->fname,"@TOP@"),
 			      (CPP_BUFFER(pfile)->fname?
 			       is_system_include(pfile,CPP_BUFFER(pfile)->fname):
@@ -7537,7 +7537,7 @@ cpp_error (pfile, msg, arg1, arg2, arg3)
      char *arg1, *arg2, *arg3;
 {
   cpp_buffer *ip = cpp_file_buffer (pfile);
-  gjb_call_hooks_sz_i_i_sprintf(CPP_OPTIONS(pfile),CPP_ERROR,
+  gjb_call_hooks_sz_i_i_sprintf(CPP_OPTIONS(pfile),HI_CPP_ERROR,
 				ip?ip->nominal_fname:"[NONE]",
 				ip?ip->lineno:-1,-1,
 				msg, arg1, arg2, arg3);
@@ -7569,7 +7569,7 @@ cpp_warning (pfile, msg, arg1, arg2, arg3)
      char *arg1, *arg2, *arg3;
 {
   cpp_buffer *ip = cpp_file_buffer (pfile);
-  gjb_call_hooks_sz_i_i_sprintf(CPP_OPTIONS(pfile),CPP_WARN,
+  gjb_call_hooks_sz_i_i_sprintf(CPP_OPTIONS(pfile),HI_CPP_WARN,
 				ip?ip->nominal_fname:"[NONE]",
 				ip?ip->lineno:-1,-1,
 				msg, arg1, arg2, arg3);
@@ -7585,7 +7585,7 @@ cpp_pedwarn (pfile, msg, arg1, arg2, arg3)
      char *arg1, *arg2, *arg3;
 {
   cpp_buffer *ip = cpp_file_buffer (pfile);
-  gjb_call_hooks_sz_i_i_sprintf(CPP_OPTIONS(pfile),CPP_PEDWARN,
+  gjb_call_hooks_sz_i_i_sprintf(CPP_OPTIONS(pfile),HI_CPP_PEDWARN,
 				ip?ip->nominal_fname:"[NONE]",
 				ip?ip->lineno:-1,-1,
 				msg, arg1, arg2, arg3);
@@ -7621,7 +7621,7 @@ cpp_error_with_line (pfile, line, column, msg, arg1, arg2, arg3)
      char *arg1, *arg2, *arg3;
 {
   cpp_buffer *ip = cpp_file_buffer (pfile);
-  gjb_call_hooks_sz_i_i_sprintf(CPP_OPTIONS(pfile),CPP_ERROR,
+  gjb_call_hooks_sz_i_i_sprintf(CPP_OPTIONS(pfile),HI_CPP_ERROR,
 				ip?ip->nominal_fname:"[NONE]",
 				line,column,
 				msg, arg1, arg2, arg3);
@@ -7661,7 +7661,7 @@ cpp_warning_with_line (pfile, line, column, msg, arg1, arg2, arg3)
      char *arg1, *arg2, *arg3;
 {
   cpp_buffer *ip = cpp_file_buffer (pfile);
-  gjb_call_hooks_sz_i_i_sprintf(CPP_OPTIONS(pfile),CPP_WARN,
+  gjb_call_hooks_sz_i_i_sprintf(CPP_OPTIONS(pfile),HI_CPP_WARN,
 				ip?ip->nominal_fname:"[NONE]",
 				line,column,
 				msg, arg1, arg2, arg3);
@@ -7676,7 +7676,7 @@ cpp_pedwarn_with_line (pfile, line, column, msg, arg1, arg2, arg3)
      char *arg1, *arg2, *arg3;
 {
   cpp_buffer *ip = cpp_file_buffer (pfile);
-  gjb_call_hooks_sz_i_i_sprintf(CPP_OPTIONS(pfile),CPP_PEDWARN,
+  gjb_call_hooks_sz_i_i_sprintf(CPP_OPTIONS(pfile),HI_CPP_PEDWARN,
 				ip?ip->nominal_fname:"[NONE]",
 				line,column,
 				msg, arg1, arg2, arg3);
@@ -7697,7 +7697,7 @@ cpp_pedwarn_with_file_and_line (pfile, file, line, msg, arg1, arg2, arg3)
      char *msg;
      char *arg1, *arg2, *arg3;
 {
-  gjb_call_hooks_sz_i_i_sprintf(CPP_OPTIONS(pfile),CPP_PEDWARN,
+  gjb_call_hooks_sz_i_i_sprintf(CPP_OPTIONS(pfile),HI_CPP_PEDWARN,
 				file,
 				line,-1,
 				msg, arg1, arg2, arg3);

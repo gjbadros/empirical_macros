@@ -66,7 +66,7 @@ treenode *parse_include(char *filename);
 %token <node> AUTO BREAK CASE CHAR CONST CONT DEFLT DO DOUBLE ELSE ENUM EXTRN
 %token <ifn>  IF
 %token <forn> FOR
-%token <node> FLOAT GOTO INT LONG REGISTR RETURN SHORT SGNED
+%token <node> FLOAT GOTO INT LONG REGISTR CRETURN SHORT SGNED
 %token <node> STATIC STRUCT SWITCH TYPEDEF UNION UNSGNED VOID VOLATILE WHILE 
 
 %token <node> PLUS_EQ MINUS_EQ STAR_EQ DIV_EQ MOD_EQ
@@ -175,7 +175,8 @@ program:  /* emtpy source file */
             if (err_cnt == 0)
               fputs("Warning: ANSI/ISO C forbids an empty source file.\n",
                   stderr);
-            Parse_TOS->parse_tree= (treenode *) NULL;
+	    if (Parse_TOS)
+                Parse_TOS->parse_tree= (treenode *) NULL;
             $$ = (treenode *) NULL;
         }
        | trans_unit
@@ -450,7 +451,7 @@ continue_stemnt: CONT SEMICOLON
             free_tree($2);
         }
 
-return_stemnt:  RETURN opt_expr SEMICOLON
+return_stemnt:  CRETURN opt_expr SEMICOLON
         {
             $1->type = TN_JUMP;
             $1->lnode = $2;

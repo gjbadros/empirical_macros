@@ -115,7 +115,7 @@ delete_macro (pfile, hp)
      HASHNODE *hp;
 {
   if (pfile != NULL)  
-    gjb_call_hooks_sz(CPP_OPTIONS(pfile),DELETE_DEF,hp->name);
+    gjb_call_hooks_sz(CPP_OPTIONS(pfile),HI_DELETE_DEF,hp->name);
 
   if (hp->prev != NULL)
     hp->prev->next = hp->next;

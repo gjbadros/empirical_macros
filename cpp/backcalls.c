@@ -80,12 +80,15 @@ XS(XS_cpp_fname)
 	char *	RETVAL;
 #line 45 "backcalls.xs"
 #line 46 "backcalls.xs"
-	RETVAL = parse_in.buffer->fname;
-#line 48 "backcalls.xs"
+	if (parse_in.buffer)
+	  RETVAL = parse_in.buffer->fname;
+	else
+	  RETVAL = "@NOBUFFER@";
+#line 51 "backcalls.xs"
 	ST(0) = sv_newmortal();
 	sv_setpv((SV*)ST(0), RETVAL);
-#line 48 "backcalls.xs"
-#line 48 "backcalls.xs"
+#line 51 "backcalls.xs"
+#line 51 "backcalls.xs"
     }
     XSRETURN(1);
 }
@@ -96,16 +99,19 @@ XS(XS_cpp_nominal_fname)
     if (items != 0)
 	croak("Usage: cpp::nominal_fname()");
     {
-#line 52 "backcalls.xs"
-	char *	RETVAL;
-#line 52 "backcalls.xs"
-#line 53 "backcalls.xs"
-	RETVAL = parse_in.buffer->nominal_fname;
 #line 55 "backcalls.xs"
+	char *	RETVAL;
+#line 55 "backcalls.xs"
+#line 56 "backcalls.xs"
+	if (parse_in.buffer)
+	  RETVAL = parse_in.buffer->nominal_fname;
+	else
+	  RETVAL = "@NOBUFFER@";
+#line 61 "backcalls.xs"
 	ST(0) = sv_newmortal();
 	sv_setpv((SV*)ST(0), RETVAL);
-#line 55 "backcalls.xs"
-#line 55 "backcalls.xs"
+#line 61 "backcalls.xs"
+#line 61 "backcalls.xs"
     }
     XSRETURN(1);
 }
@@ -117,17 +123,17 @@ XS(XS_cpp_lookup)
 	croak("Usage: cpp::lookup(sz)");
     {
 	char *	sz = (char *)SvPV(ST(0),na);
-#line 60 "backcalls.xs"
+#line 66 "backcalls.xs"
 	char *	RETVAL;
-#line 60 "backcalls.xs"
-#line 61 "backcalls.xs"
+#line 66 "backcalls.xs"
+#line 67 "backcalls.xs"
 	HASHNODE *hp = cpp_lookup(&parse_in,sz,-1,-1);
 	RETVAL = hp->value.defn->expansion;
-#line 64 "backcalls.xs"
+#line 70 "backcalls.xs"
 	ST(0) = sv_newmortal();
 	sv_setpv((SV*)ST(0), RETVAL);
-#line 64 "backcalls.xs"
-#line 64 "backcalls.xs"
+#line 70 "backcalls.xs"
+#line 70 "backcalls.xs"
     }
     XSRETURN(1);
 }

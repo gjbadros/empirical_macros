@@ -40,7 +40,7 @@
 #define	INT	297
 #define	LONG	298
 #define	REGISTR	299
-#define	RETURN	300
+#define	CRETURN	300
 #define	SHORT	301
 #define	SGNED	302
 #define	STATIC	303
