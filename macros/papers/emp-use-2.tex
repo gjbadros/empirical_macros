@@ -46,7 +46,7 @@ Department of Computer Science and Engineering \\
 University of Washington \\
 Box 352350, Seattle, WA  98195-2350  USA \\
 {\small \{{\tt mernst},{\tt gjb},{\tt notkin}\}{\tt @cs.washington.edu}} \\
-2 November 1997}  
+20 November 1997}  
 
 \maketitle
 
@@ -1556,16 +1556,17 @@ when testing which character set is being used on the compiling machine.)
 \section{Related work}
 \label{sec:related}
 
-Split this into:
- * taxonomies
- * checking tools
- * understanding tools such as Emacs hideif mode
- * other?
+%Split this into:
+% * taxonomies
+% * checking tools
+% * understanding tools such as Emacs hideif mode
+% * other?
 
 We could find no other empirical study of the use of the C
 preprocessor nor any other macro processor.  However, we did find some
-guidance on using C macros effectively and tools for checking macro
-usage. 
+guidance on using C macros effectively, tools for checking macro
+usage, and techniques for better understanding C source code which uses the
+preprocessor.
 
 A number of organizations provide hints about effective ways to the use
 the C preprocessor.  The GNU C preprocessor manual~\cite{cpp-manual}
@@ -1609,57 +1610,54 @@ discovered and how it compares to what we discovered.]]
 A number of tools check whether specific C programs satisfy particular
 constraints.  Various ``lint'' source-code analyzers checks for
 potentially problematic uses of C, often including the C preprocessor.
+LCLint also allows the programmer to add annotations which enable more
+sophisticated checks than many other lint programs~\cite{Evans-fse94}.
+LCLint optionally checks function-like macros\,---\,that is, those which
+take arguments\,---\,for macro arguments on the left hand side of
+assignments, for statements playing the role of expressions, and for
+consistent return types.  LCLint's approach is prescriptive: programmers
+are encouraged not to use constructs that might be dangerous, or to
+change code that contains such constructs.  Our macro lint work notices
+a similar set of potentionally dangerous or subtle constructs.
 
-
-LCLint performs many of lint's checks and also
-allows the programmer to add annotations which enable additional
-checks~\cite{Evans-fse94}.
-LCLint optionally checks function-like
-macros\,---\,that is, those which take arguments\,---\,for
-macro arguments on the left hand side of assignments, for statements
-playing the role of expressions, and for consistent return types.
-LCLint's approach is prescriptive: programmers are encouraged not to use
-constructs that might be dangerous, or to change code that contains such
-constructs.  We are more interested in analyzing, describing, and
-automatically removing such uses so that tools can better process existing
-code without requiring human interaction or producing misleading results.
-
-LCLint
-considers assignment to a macro argument dangerous but does not appear
-to check for assignments to local variables.~\cite[\S 8]{Evans:LCLint}
-[[Should we mention these things?  I don't want to seem nitpicky or petty, so
-if we mention this, mention them as differences, not as things LCLint does
-wrong.
-\begin{quote}
-$\ldots$ a parameter to a macro may not be used as the left hand side
-of an assignment expression $\ldots$, a macro definition must be
-syntactically equivalent to a statement $\ldots$ when it is invoked followed by
-a semicolon $\ldots$, the type of the macro body must match the return
-type of the corresponding function $\ldots$~\cite[\S 8]{Evans:LCLint}
-\end{quote}
-That quotation is really easy to nitpick:
-\begin{enumerate}
- \item assignment parameters is fine (just turn into a reference argument) but
-    assignment of non-parameters that aren't at global scope is quite bad.
- \item in x=foo(); we do NOT want foo() to be a statement
- \item a macro doesn't have a single type, but may have many polymorphic types
-\end{enumerate}
-]]
+%LCLint considers assignment to a macro argument dangerous but does not
+%appear to check for assignments to local variables.~\cite[\S
+%8]{Evans:LCLint} [[Should we mention these things?  I don't want to seem
+%nitpicky or petty, so if we mention this, mention them as differences,
+%not as things LCLint does wrong.
+%\begin{quote}
+%$\ldots$ a parameter to a macro may not be used as the left hand side
+%of an assignment expression $\ldots$, a macro definition must be
+%syntactically equivalent to a statement $\ldots$ when it is invoked followed by
+%a semicolon $\ldots$, the type of the macro body must match the return
+%type of the corresponding function $\ldots$~\cite[\S 8]{Evans:LCLint}
+%\end{quote}
+%That quotation is really easy to nitpick:
+%\begin{enumerate}
+% \item assignment parameters is fine (just turn into a reference argument) but
+%    assignment of non-parameters that aren't at global scope is quite bad.
+% \item in x=foo(); we do NOT want foo() to be a statement
+% \item a macro doesn't have a single type, but may have many polymorphic types
+%\end{enumerate}
+%]]
 
 
 %% FIX: If we could also list the platforms for which each can compile,
 %% that would be great, but I doubt the benefit is worth the effort for now
 
-
-
-[[Expand; relocate in this section?]]
 A limited number of tools do exist to assist software engineers to
-understand code with containing Cpp directives, such as debuggers that can
-call {\tt \#define}d functions and editors that support viewing one
-particular configuration of the code.
+understand code with containing Cpp directives.  Emacs provides
+\texttt{hide-ifdef-mode} which enables the programmer to specify
+preprocessor variables as explicitly defined or not defined; the mode
+then presents a view of the source code corresponding to that
+configuration, hiding code that is conditionally unincluded.  Various
+language construct ``tagging'' mechanisms (e.g., \texttt{etags},
+\texttt{ctags}) recognize macro definitions and permit tag-aware editors
+to move easily from a macro expansion to the various definitions of
+that macro name.
 
-
-
+%[[ What debugger does this? ]] Debuggers exist that can
+%call {\tt \#define}d functions.
 
 \section{Conclusions}
 \label{sec:conclusion}
