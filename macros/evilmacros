@@ -4273,6 +4273,11 @@ sub categorize_macro_def
   elsif ($body =~ /^$char_literal_re$/)
     { $category = $catLITERAL;
       $type = $typeCHAR; }
+  elsif ($body =~ /^$c_reserved_nontype_word_re|$c_reserved_type_word_re$/)
+    { $failure_type = "expands_to_reserved_word";
+      $category = harder_category($category,$catRESDWORD);
+      evilprint("expands to reserved word\n    $full_body\n");
+    }
   else
     { my $remaining;
       reset_parse_vars();

@@ -436,22 +436,57 @@ variables by the preprocessor.
   "/etc/hosts"|.  Such macros act like \verb|const| variables, albeit
   without type information, debugging information in the symbol table, and
   so forth.  Macros with constant expression bodies, such as \verb|#define
-  RE_DUP_MAX ((1<<15)-1)|, are included here, but not macros with arguments
-  that are literals or constants, so this number is an underestimate.
-
-COPY_BUFFER_SIZE (32 * 512)
+  RE_DUP_MAX ((1<<15)-1)|, are included, but not macros with arguments
+  that are literals or constants, so this number is an underestimate of the
+  number of macros with constant values.
 
 \item[{\em Expression}]  The macro body is an expression.  This expression
-  might be 
+  might have a single constant value everywhere (the usual case for
+  expression macros without arguments), or might have a different value on
+  each use (the usual case for expression macros with arguments).  Of
+  expression macros, n% [fix: need this number!] use assignment operators,
+  which have potentially unexpected results.  A macro argument which is
+  assigned to is like a pass-by-reference function argument and need only
+  be noted in the macro's documentation.  A global variable which is
+  assigned to also presents no difficulties in understanding.  Assignment
+  to a local variable, however, demands that such a variable exist wherever
+  the macro is invoked, and assigns to different variables at different
+  invocations.\footnote{By contrast, LCLint considers assignment to a macro
+  argument dangerous but does not appear to check for assignments to local
+  variables.}
 
-A constant value appears 
-
-* null defines
-* expressions
-   * literal, constant expression
-   * expression
 %    * expression sans assignment
 %    * expression with assignment
+
+\item[{\em Statement}]  The macro body is a statement.  Such macros can be
+  confusing to use, because programmers are inclined to add a semicolon
+  after a call to such a macro, which causes problems (such as
+  misparsing of nested \verb|if| statements) for most statements.  The
+  well-known \verb|do {|\ldots\verb|} while (0)| partial statement trick
+  solves this problem.  To our surprise, we found very few uses of that
+  construct, but many instances of a macro which expanded to a statement
+  like \verb|{|\ldots\verb|}| in which a call to the macro was immediately
+  followed by a semicolon.
+
+\item[{\em Stringization and pasting}]  The macro body contains \verb|#| or
+  \verb|##|, which treat the macro argument not as a token but as a
+  string.  No language mechanism could replace such macros.  Our
+  implementation separates these categories, but we conflate them to
+  simplify our figures.
+
+\item[{\em Other syntactic macros}]  Like stringization and pasting, these
+  macros make essential use of the unique features of the preprocessor.
+  Our framework separately categorizes a number of such macros, including
+  those that expand to a reserved word (such as \verb|#define private
+  static|, mentioned above), those which expand to a delimiter such as 
+
+those with mismatched parentheses, braces, or
+  brackets, 
+
+This category con
+  
+
+
 * statements
 * other:
    * stringization, pasting
