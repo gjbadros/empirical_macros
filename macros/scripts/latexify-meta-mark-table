@@ -1,5 +1,7 @@
 #!/uns/bin/perl -w
 BEGIN {
+my $cdefined = `sum-column 1 <tbl-subset-categories`;
+chomp($cdefined);
 # FIX: These table headings need to be kept
 # in synch w/ macros-make-subset-metacateg-from-mac script
 # (which uses em_constants' @mcat_XXXX lists)
@@ -11,7 +13,7 @@ print '
 \addtolength{\columnsep}{-.5\columnsep}
 % The *{n}{c|} below creates n duplicate columns of that type (centered, here)
 \begin{tabular}{|r|*{10}{c|}ll}\cline{1-11}
-\rotatebox{90}{\parbox{1in}{Percentage of~ \\\\ macro names}~} &
+\rotatebox{90}{\parbox{1in}{Percentage of ' ."$cdefined". ' \\\\ multiply-defined \\\\ macro names}~} &
 \rotatebox{90}{Null define~} &
 \rotatebox{90}{Constant~} &
 \rotatebox{90}{Expression~} &
