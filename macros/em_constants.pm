@@ -635,8 +635,8 @@ $cpp_include_arg_re = '(?:<(.*)>|\"(.*)\")';
     @rg_physical_lines @rg_ncnb_lines
     @rg_cpp_phys_lines @rg_cpp_phys_ncnb_lines
     @rg_cpp_cmds @rg_ccd_cat_counts
-    %file_inclusion_method %function_name_to_macros_it_uses
-    %files_function_lines %function_to_locs
+    @file_inclusion_method %function_name_to_macros_it_uses
+    @files_function_lines %function_to_locs
     %macro_inclusion_dependenton %macro_inclusion_dependees %inclusion_dependee_lines
     %macro_expansion_dependenton %macro_expansion_dependees %expansion_dependee_lines
     %either_dependee_lines

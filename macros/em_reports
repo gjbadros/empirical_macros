@@ -314,7 +314,7 @@ sub output_defines ( )
       if ($mdef_fileno[$i] ne $built_in_fake_fileno) {
 	# print STDERR "NAME=$name,", join(", ",@{$macros{$name}}),"\n";
 	# Used to output $i third here, but it's irrelevant.
-	print "$name", $iDef+1, $file_inclusion_method{$files[$mdef_fileno[$i]]},
+	print "$name", $iDef+1, $file_inclusion_method[$mdef_fileno[$i]],
 	$files[$mdef_fileno[$i]], $mdef_line[$i], count_macro_args($mdef_formals[$i]),
 	$mdef_physical_lines[$i], $mdef_physical_ncnb_lines[$i],
 	$categoryname[$mdef_category[$i]],
@@ -331,8 +331,16 @@ sub output_defines ( )
 sub output_functions ( )
 { check_args(0, @_);
   if ($opt_v) { print STDOUT "functions..."; }
-  select FUNCTIONS;
+  select FUNCTIONS;		# *.func
   print "#functionId cMacroExpansions (%the macros)\n";
+  # Make the hash keys use file names instead of numbers, for easier sorting.
+  # Notice the list of keys is computed before the hash is modified.
+  foreach my $function_name_id (keys %function_name_to_macros_it_uses)
+    { my $value = delete $function_name_to_macros_it_uses{$function_name_id};
+      if (!defined($value))
+	{ die "No function_name_to_macros_it_uses{$function_name_id}"; }
+      $function_name_id =~ s/^([0-9]+)/$files[$1]/e;
+      $function_name_to_macros_it_uses{$function_name_id} = $value; }
   foreach my $function_name_id (sort keys %function_name_to_macros_it_uses) {
     print $function_name_id,scalar(@{$function_name_to_macros_it_uses{$function_name_id}}),"\n%",
     join(",",@{$function_name_to_macros_it_uses{$function_name_id}}), "\n";
@@ -343,20 +351,24 @@ sub output_functions ( )
 sub output_funclines ( )
 { check_args(0, @_);
   if ($opt_v) { print STDOUT "funclines..."; }
-  select FUNCLINES;
-  foreach my $filename (sort keys %files_function_lines) {
-    print "file: $filename\n", join("\n ",@{$files_function_lines{$filename}}), "\n";
+  select FUNCLINES;		# *.fnln
+  # index zero is for built-ins; don't use it
+  foreach my $fileno (sort { $files[$a] cmp $files[$b] } (1..$#files)) {
+    print "file: $files[$fileno]\n", join("\n ",@{$files_function_lines[$fileno]}), "\n";
   }
   foreach my $function (sort keys %function_to_locs) {
     print "function: $function ";
     my @infos = @{$function_to_locs{$function}};
     if ($#infos == 0)
-      { print join(', ',@{$infos[0]}); }
+      { my $info = $infos[0];
+	$ {$info}[0] = $files[$ {$info}[0]]; # odd spacing to not confuse Emacs
+	print join(', ',@{$info}); }
     else {
       # avoid extra semicolon at end of line
       my @one_file_results = (); # each elt describes one file
       foreach my $info (@infos) {
 	# Don't really need semicolon at end of last entry
+	$ {$info}[0] = $files[$ {$info}[0]]; # odd spacing to not confuse Emacs
 	push(@one_file_results, join(', ',@$info));
       }
       print join('; ',@one_file_results);
@@ -431,7 +443,7 @@ sub output_properties ( )
   my $i = 0;
   my @mdef_properties_in_package = ();
   while ($i < $cMacrosInTables) {
-    ($i++ and next) if ($file_inclusion_method{$files[$mdef_fileno[$i]]} ne "FromStdin");
+    ($i++ and next) if ($file_inclusion_method[$mdef_fileno[$i]] ne "FromStdin");
     push @mdef_properties_in_package, $mdef_properties[$i];
 #DBG	print STDERR "Adding $mdef_properties[$i]\n";
     $i++;
@@ -459,7 +471,7 @@ sub output_properties ( )
 #        any of the macro name's defs occur outside the package and would end up
 #        outputting information for any definition which is defined somewhere inside
 #        the package, even those definitions from outside the package
-    ($i++ and next) if ($file_inclusion_method{$files[$mdef_fileno[$i]]} ne "FromStdin");
+    ($i++ and next) if ($file_inclusion_method[$mdef_fileno[$i]] ne "FromStdin");
     $cASSIGN++ if ($mdef_properties[$i] & $propASSIGN);
     $cFREE_VAR++ if ($mdef_properties[$i] & $propFREE_VAR);
     $cINVOKES_MACRO++ if ($mdef_properties[$i] & $propINVOKES_MACRO);
@@ -496,7 +508,9 @@ sub output_dependences ( )
 		{ print "  def #$i: incl_dep: @{$mdef_direct_inclusion_dependenton[$i]}\n";
 		  print "           exp_dep: @{$mdef_direct_expansion_uses[$i]}\n"; } }
 	  else
-	    { print "  no def; used on $macros_used_by_cpp{$macro_name}\n"; }
+	    { my $where_used_by_cpp = $macros_used_by_cpp{$macro_name};
+	      $where_used_by_cpp =~ s/^([0-9]+)/$files[$1]/e;
+	      print "  no def; used on $where_used_by_cpp\n"; }
 	  if (scalar(keys %{$macro_inclusion_dependenton{$macro_name}}) > 0)
 	    { print "  i_depon: ", join(' ',sort keys %{$macro_inclusion_dependenton{$macro_name}}), "\n"; }
 	  if (scalar(keys %{$macro_inclusion_dependees{$macro_name}}) > 0)
@@ -646,7 +660,7 @@ sub output_lint ( )
 	      print LINT "macro $macro_name: inconsistent arity @args_lengths\n";
 	    } }
       for my $i (@{$macros{$macro_name}})
-	{ if ($file_inclusion_method{$files[$mdef_fileno[$i]]} ne "FromInclude<>")
+	{ if ($file_inclusion_method[$mdef_fileno[$i]] ne "FromInclude<>")
 	    { $num_macro_defs++;
 	      my @complaints = ();
 	      my $body = $mdef_body_simple[$i];
@@ -971,9 +985,10 @@ sub InclusionMethodsForMacroName ( $ ) {
     die if !defined($macros{$name});
     die if !defined($macros{$name}[$iDef]);
     die if !defined($files[$mdef_fileno[$index]]);
-    my $filename = $files[$mdef_fileno[$index]];
-    die "$filename has no inclusion method" if !defined($file_inclusion_method{$filename});
-    push @list, $file_inclusion_method{$filename};
+    my $fileno = $mdef_fileno[$index];
+    my $filename = $files[$fileno];
+    die "$filename has no inclusion method" if !defined($file_inclusion_method[$fileno]);
+    push @list, $file_inclusion_method[$fileno];
   }
   #print STDERR "IMFMN\n";
   return UniquifyAndSortList(@list);
@@ -1041,8 +1056,9 @@ sub MacroNotDefinedInsidePackage ( $ ) { # returns bool
   my ($name) = check_args(1,@_);
   for (my $iDef = 0 ; $iDef <= $#{$macros{$name}}; $iDef++ ) {
     my $index = $macros{$name}[$iDef];
-    my $filename = $files[$mdef_fileno[$index]];
-    if ($file_inclusion_method{$filename} eq "FromStdin") {
+    my $fileno = $mdef_fileno[$index];
+    my $filename = $files[$fileno];
+    if ($file_inclusion_method[$fileno] eq "FromStdin") {
       # it is defined inside the package
       return $false;
     }
