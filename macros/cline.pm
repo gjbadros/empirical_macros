@@ -164,7 +164,7 @@ sub cline_updateinvars ($)
   if ($remaining =~ /\n./)
     { die "Call cline_updateinvars on a physical line, not one with embedded newline"; }
 
-  while ($remaining)
+  while ($remaining ne "")	# not just ($remaining), which ends if "0"
     { if ($cline_incomment)
 	{ if ($remaining =~ /\*\//)
 	    { $remaining = $POSTMATCH;
@@ -267,6 +267,8 @@ sub cline_simplify ($)
   local $cline_instring = $false;
   local $cline_simplify_strings = $true;
 
+  if ($debug_cline) { print "cline_simplify <= '$arg'\n"; }
+
   my ($result, $seen_ncnb, $warnings) = cline_updateinvars($arg);
   # Not sure if eliminating space is the right thing; but if mdef_body_simple
   # isn't stored in state file, it must be done here or elsewhere.
@@ -277,6 +279,8 @@ sub cline_simplify ($)
     { croak "argument ends in comment: $arg"; }
   if ($cline_instring)
     { croak "argument ends in string: $arg"; }
+
+  if ($debug_cline) { print "cline_simplify => '$result'\n"; }
 
   return $result;
 }
@@ -459,7 +463,7 @@ sub get_fulltoken_cline ($;$)
   if ($cline_instring || $cline_incomment)
     { croak("Bad instring $cline_instring or incomment $cline_incomment"); }
 
-  # print "Called get_fulltoken_line ($cline_simplify_strings)\n";
+  # print "Called get_fulltoken_cline ($cline_simplify_strings)\n";
 
   if ((@cline_ungot_raw_lines > 0) && !$peeking)
     { # print "popping cline_ungot_raw_lines $cline_ungot_raw_lines[$#cline_ungot_raw_lines]  cline_ungot_simple_lines $cline_ungot_simple_lines[$#cline_ungot_simple_lines]"; # no newline: it ends with one
@@ -515,13 +519,13 @@ sub get_fulltoken_cline ($;$)
 	    { croak "incomment $cline_incomment or instring $cline_instring must be set"; } }
 
       if ($debug_cline)
-	{ print STDERR "get_fulltoken_line $physical_lines: >>$simple_result>>$raw_result"; }
+	{ print STDERR "get_fulltoken_cline $physical_lines: >>$simple_result>>$raw_result"; }
 
       if (!defined($simple_result))
 	{ $simple_result = " "; }
       elsif ($simple_result eq "")
-	{ croak("empty get_fulltoken_line result"); }
-      # print "get_fulltoken_line returning <<$simple_result>>\n";
+	{ croak("empty get_fulltoken_cline result '$simple_result'"); }
+      # print "get_fulltoken_cline returning <<$simple_result>>\n";
       return ($raw_result, $simple_result, $physical_lines, $physical_ncnb_lines, $warnings);
     }
 }
@@ -573,7 +577,7 @@ sub peek_fulltoken_cline ($$)
 	{ die "arg $arg != cline_ungot_raw_lines+1 ", (@cline_ungot_raw_lines + 1); }
 
       # Do the real work.
-      { # print "peeking about to call get_fulltoken_line\n";
+      { # print "peeking about to call get_fulltoken_cline\n";
 	my ($raw, $simple, $phys, $ncnb, $warnings)
 	  = get_fulltoken_cline($filehandle, $true);
 	# print "peeking found $simple";
