@@ -64,6 +64,8 @@ sub actuals_array ($)
   if (!($args =~ s/^\s*\(\s*(.*)\)\s*$/$1/))
     { croak "argument to args_array not enclosed in parentheses: $args"; }
   # print "actuals_array (2) <= $args\n";
+  if ($args =~ /^\s*$/)
+    { return (); }
   my $remaining = $args;
   my @results = ();
   my $this_arg = "";

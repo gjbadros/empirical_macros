@@ -4083,6 +4083,9 @@ sub simple_macro_substitute_2 ($)
 
   my $mdef_index = $macros{$name}[0];
 
+  if (!defined($mdef_formals[$mdef_index]))
+    { mdie("Undefined formals for $name, def \#$mdef_index, while processing $text"); }
+
   if (!$mdef_formals[$mdef_index])
     # Or, put the body before the actuals.
     { return $text; }
@@ -4096,8 +4099,8 @@ sub simple_macro_substitute_2 ($)
   my @actuals = actuals_array(substr($args, 0, $close_pos+1));
 
   if (scalar(@formals) != scalar(@actuals))
-    { mdie("formals-actuals mismatch: <<" . join(",", @formals)
-	   . ">> <<" . join(",", @actuals) . ">>"); }
+    { mdie("formals-actuals mismatch for $name, def \#mdef_index, while processing $text\n" . scalar(@formals) . <<" . join(",", @formals)
+	   . ">> " . scalar(@actuals) . "<<" . join(",", @actuals) . ">>"); }
 
   my $result = $mdef_body_simple[$mdef_index];
   for my $i (0 .. $#formals)
