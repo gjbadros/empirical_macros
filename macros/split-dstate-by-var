@@ -1,0 +1,31 @@
+#!/uns/bin/perl -w
+use English;			# Permit use of $MATCH for $& and so forth.
+
+sub read_variables {
+  my ($file) = @_;
+  my $i = 0;
+  print STDERR "Reading variables from file $file\n";
+  local $WARNING = 0;
+  no strict;
+  open(INPUTSTATE,"<$file") or die "Couldn't open state file $file: $!";
+  $INPUT_RECORD_SEPARATOR = ");\n"; #FIX: this separator could blow up
+  while (defined($in = <INPUTSTATE>))
+  {
+    my $filename = $file.$i;
+    open(OUT,">$filename") || die "Could not open $filename: $!";
+    print STDERR "Outputting to $filename\n";
+    $in =~ s/\s+//g;  # remove whitespace to compress it
+    print OUT $in;
+    close(OUT);
+    $i++;
+  }
+  close(INPUTSTATE);
+}
+
+if ($#ARGV == 0) {
+  read_variables($ARGV[0]);
+} else {
+  die "Usage: $0 <single_dstate_file>"
+}
+
+
