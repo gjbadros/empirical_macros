@@ -144,15 +144,33 @@ sub dump_uses {
       } elsif ($expansion =~ m/^(0x)?\d+$/) {
 	my $new_var = $mname;
 	$new_var =~ tr/[A-Z]/[a-z]/;
-	#FIXGJB: must avoid name conflicts here
-	annotate_definition_message('text','subst',"enum {$new_var = $expansion};",$mname);
-	annotate_definition_message('text','substexpn',"$new_var /* $expansion */",$mname);
+	# Name conflict?
+	if (exists $vars{$new_var}) {
+	  # try falling back to no name change
+	  if (exists $vars{$mname}) {
+	    # Can't even leave the name alone
+	    print STDERR "Name conflict with $mname as either $new_var or $mname\n";
+	    $new_var = "";
+	  } else {
+	    print STDERR "Name conflict with $mname as $new_var, falling back to $mname\n";
+	    $new_var = $mname;
+	  }
+	} else {
+	  # No conflict, so do a substitution, too
+	  annotate_definition_message('text','substexpn',"$new_var /* $expansion */",$mname);
+	}
+	if ($new_var ne "") {
+	  annotate_definition_message('text','subst',"enum {$new_var = $expansion};",$mname);
+	}
       }
     } else {
       annotate_definition('expsumm',"No uses",$mname,
 			  cpp::InFname(),undef,undef);
     }
   }
+
+  # Now dump all the variable names declared anywhere in this translation unit
+  print "Vars = ", join(", ", sort keys %vars);
 }
 
 sub handle_directive {
@@ -441,6 +459,7 @@ sub do_xifdef {
     print STDERR ": ParseStateStack: ", join(",",cpp::ParseStateStack()), "\n";
     cpp::YYPushStackState();
     cpp::EnterScope();
+    cpp::PushHashTab();
     cpp::PushBuffer($skipped);
   }
 }
@@ -471,6 +490,7 @@ sub pop_perl_buffer {
     print STDERR ": Identical!\n";
   }
   cpp::ExitScope();
+  cpp::PopHashTab();
   cpp::YYPopAndRestoreStackState();
   print STDERR ": After ParseStateStack: ", join(",",cpp::ParseStateStack()), "\n";
 }
@@ -582,6 +602,7 @@ sub do_typedef {
 sub do_vardecl {
   my ($name) = @_;
   print "Vardecl: $name\n";
+  $vars{$name}++;
 }
 
 
