@@ -1090,38 +1090,6 @@ sub MacroNotDefinedInsidePackage ( $ ) { # returns bool
   return $true;
 }
 
-
-sub compute_freq_use_info ( ) {
-  check_args(0, @_);
-  $macros_c_most_uses = 0;
-  # sum of slice @{$macros_uses{$name}}[@i_usage_all] is the total no. uses for macro
-  foreach my $name (keys %macros) {
-    next if MacroNotDefinedInsidePackage($name);
-    my $index = $macros{$name}[0];
-    if ($mdef_category[$index] == $catNULL_DEFINE) {
-      # if the first definition's category is NULLDEFINE, use
-      # a different category if any of its other definitions were
-      # not NULLDEFINEs.
-      my $i = 1;
-      while (defined($macros{$name}[$i]) &&
-	     $mdef_category[$macros{$name}[$i]] == $catNULL_DEFINE) {
-	$i++;
-      }
-      if (defined($macros{$name}[$i])) {
-	$index = $i;
-      }
-    }
-    my $category = $mdef_category[$index];
-    my $c = sum_array(@{$macros_uses{$name}}[@i_usage_all]);
-    local $WARNING = 0;# want to exploit scalars being 0 when undefined
-    $macros_c_number_uses_for[$category][$c]++;
-    $macros_c_number_uses[$c]++;
-    $macros_c_most_uses = $c if ($c > $macros_c_most_uses);
-    $macros_c_most_uses_for[$category] = $c if ($c > $macros_c_most_uses_for[$category]);
-  }
-}
-
-
 sub macro_name_lub_category( $ ) {
   my ($name) = check_args(1,@_);
   my $result = $catNO_DEF;
@@ -1130,6 +1098,22 @@ sub macro_name_lub_category( $ ) {
   }
   warn "Mismatch: $result vs. $mncategory{$name} for $name!" if ($result ne $mncategory{$name});
   return $result;
+}
+
+sub compute_freq_use_info ( ) {
+  check_args(0, @_);
+  $macros_c_most_uses = 0;
+  # sum of slice @{$macros_uses{$name}}[@i_usage_all] is the total no. uses for macro
+  foreach my $name (keys %macros) {
+    next if MacroNotDefinedInsidePackage($name);
+    my $category = macro_name_lub_category($name);
+    my $c = sum_array(@{$macros_uses{$name}}[@i_usage_all]);
+    local $WARNING = 0;# want to exploit scalars being 0 when undefined
+    $macros_c_number_uses_for[$category][$c]++;
+    $macros_c_number_uses[$c]++;
+    $macros_c_most_uses = $c if ($c > $macros_c_most_uses);
+    $macros_c_most_uses_for[$category] = $c if ($c > $macros_c_most_uses_for[$category]);
+  }
 }
 
 sub compute_freq_def_info ( ) {
