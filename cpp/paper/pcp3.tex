@@ -653,7 +653,7 @@ program understanding little when existing only in a data structure in a
 \Perl{} script.  The standard module of hook utilities provides a
 mechanism to output character-indexed annotations of the source code.
 These annotations are Emacs Lisp source code which manipulate Emacs text
-properties of character ranges when evaluated.  This provides a useful
+properties of character ranges when evaluated~\cite{GNUELisp}.  This provides a useful
 (indeed, essential during debugging) mechanism for visualizing the
 results of the analyses within the context of the code analyzed.  As the
 cursor is moved over source code that has been annotated, a subsidiary
@@ -715,7 +715,7 @@ fragile.  They try to parse each macro definition as an expression,
 allowing macro arguments to be types, as well.  If that succeeds, the
 macro is left unexpanded in the code and becomes a node resembling a
 function call in their AST.  About 92\% of macro definitions in the two packages
-they studied parsed accceptably.  For the remaining 8\%, they expanded
+they studied parsed acceptably.  For the remaining 8\%, they expanded
 uses before feeding the resulting tokens to their parser.  Griswold and
 Atkinson note that counting macro expansions is difficult, yet this is
 something \pcp{} does with ease.
@@ -745,12 +745,12 @@ tree as the target representation.
 
 Stroustrup explains that making the preprocessor redundant was a design
 goal of \CPP{}.\footnote{Stroustrup also discusses differences between
-  \C{} and \CPP{} which could cause other problems when retargeting
+  \C{} and \CPP{} which could cause other problems when re-targeting
   legacy \C{} code to a \CPP{}
   compiler~\cite[p.~816-820]{Stroustrup97}.} Though \CPP{} provides no
 feature to replace the obviously still-needed \ppd{include} directive,
-Stroustrup ruminates about what form such a proper language feature
-might take.  Carroll and Ellis make the strong claim that ``C++ provides
+Stroustrup discuss the form that construct
+might take.   Carroll and Ellis make the strong claim that ``C++ provides
 mechanisms that obviate the need for most
 macros''~\cite[p.~147]{Carroll95}.  They list numerous uses of the
 preprocessor and describe the \CPP{} language features that could
@@ -850,4 +850,5 @@ depend on and relate to each other~\cite{Krone94}.
 %%% mode: latex
 %%% TeX-master: t
 %%% End: 
-% LocalWords:  stringization
+% LocalWords:  stringization tex fancybox gjb endif cpplib backcall
+% LocalWords:  MacroExpansionHistory
