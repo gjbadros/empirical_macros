@@ -10,6 +10,7 @@ char *hook_names[] = {
 "DELETE_DEF",
 "SPECIAL_SYMBOL",
 "EXPAND_MACRO",
+"COMMENT",
 "CPP_ERROR",
 "CPP_WARN",
 "CPP_PEDWARN",

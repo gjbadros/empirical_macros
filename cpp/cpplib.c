@@ -898,10 +898,15 @@ skip_comment (pfile, linep)
      long *linep;
 {
   int c;
+  unsigned char *pchStart = CPP_BUFFER(pfile)->cur+1;
+  long lineStart = linep? *linep:0; // CPP_BUFFER(pfile)->lineno;
+  long linep_dummy;
+  if (linep == NULL)
+    linep = &linep_dummy;
+
   while (PEEKC() == '\\' && PEEKN(1) == '\n')
     {
-      if (linep)
-	(*linep)++;
+      (*linep)++;
       FORWARD(2);
     }
   if (PEEKC() == '*')
@@ -915,13 +920,18 @@ skip_comment (pfile, linep)
 	    return EOF;
 	  while (c == '\\' && PEEKC() == '\n')
 	    {
-	      if (linep)
-		(*linep)++;
+              (*linep)++;
 	      FORWARD(1), c = GETC();
 	    }
-	  if (prev_c == '*' && c == '/')
+	  if (prev_c == '*' && c == '/') 
+	    {
+	    /* drop the closing delimiter when computing the length */
+	    gjb_call_hooks_szl_sz_i(CPP_OPTIONS(pfile),COMMENT,
+				    pchStart,CPP_BUFFER(pfile)->cur-2-pchStart,
+				    "*/",(*linep)-lineStart+1);
 	    return ' ';
-	  if (c == '\n' && linep)
+	    }
+	  if (c == '\n')
 	    (*linep)++;
 	}
     }
@@ -932,18 +942,27 @@ skip_comment (pfile, linep)
 	{
 	  c = GETC ();
 	  if (c == EOF)
+	    {
+	    /* note that you need to use -lang-c++ for these to be recognized */
+	    gjb_call_hooks_szl_sz_i(CPP_OPTIONS(pfile),COMMENT,
+				  pchStart,CPP_BUFFER(pfile)->cur-pchStart,
+				  "EOF",(*linep)-lineStart+1);
 	    return ' '; /* Allow // to be terminated by EOF. */
+	    }
 	  while (c == '\\' && PEEKC() == '\n')
 	    {
 	      FORWARD(1);
 	      c = GETC();
-	      if (linep)
-		(*linep)++;
+	      (*linep)++;
 	    }
 	  if (c == '\n')
 	    {
+	      /* note that you need to use -lang-c++ for these to be recognized */
 	      /* Don't consider final '\n' to be part of comment. */
 	      FORWARD(-1);
+	      gjb_call_hooks_szl_sz_i(CPP_OPTIONS(pfile),COMMENT,
+				      pchStart,CPP_BUFFER(pfile)->cur-pchStart,
+				      "nl",(*linep)-lineStart+1);
 	      return ' ';
 	    }
 	}
@@ -2692,9 +2711,6 @@ macroexpand (pfile, hp)
     dump_single_macro (hp, pcp_outfile);
 #endif
 
-  /* FIXGJB: give more info here! */
-  gjb_call_hooks_sz(CPP_OPTIONS(pfile),EXPAND_MACRO,hp->name);
-
   pfile->output_escapes++;
   cpp_buf_line_and_col (cpp_file_buffer (pfile), &start_line, &start_column);
 
@@ -3054,6 +3070,8 @@ macroexpand (pfile, hp)
 
   pfile->output_escapes--;
 
+  gjb_call_hooks_sz_szl(CPP_OPTIONS(pfile),EXPAND_MACRO,hp->name,xbuf,xbuf_len);
+
   /* Now put the expansion on the input stack
      so our caller will commence reading from it.  */
   push_macro_expansion (pfile, xbuf, xbuf_len, hp);
@@ -3062,6 +3080,9 @@ macroexpand (pfile, hp)
   /* Pop the space we've used in the token_buffer for argument expansion. */
   CPP_SET_WRITTEN (pfile, old_written);
     
+
+  /* FIXGJB: give more info here! */
+
   /* Recursive macro use sometimes works traditionally.
      #define foo(x,y) bar (x (y,0), y)
      foo (foo, baz)  */

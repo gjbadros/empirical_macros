@@ -67,3 +67,7 @@ typedef bc_struct *bc_num;
 MAX(x,y);
 
 __FILE__
+
+// A C++ Style comment
+// Note that these need the option "-lang-c++" to get parsed as comments
+

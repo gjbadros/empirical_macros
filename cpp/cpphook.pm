@@ -86,8 +86,8 @@ sub delete_def {
 }
 
 sub expand_macro {
-  my ($mname) = @_;
-  print "expand_macro $mname\n";
+  my ($mname,$expansion) = @_;
+  print "expand_macro $mname => $expansion\n";
 }
 
 sub special_symbol {
@@ -95,6 +95,12 @@ sub special_symbol {
   print "special_symbol $symbol => $node_type_name[$enum_node_type]\n";
 }
 
+sub comment {
+  my ($comment,$how_term,$lines) = @_;
+  print "\n-----------------\n";
+  print "COMMENT ($lines lines) ending w/ $how_term: $comment\n";
+  print "-----------------\n";
+}
 
 # Add the hooks, now
 AddHook($STARTUP,\&Startup);
@@ -107,6 +113,7 @@ AddHook($DO_UNDEF,\&do_undef);
 AddHook($CPP_ERROR,\&cpp_error);
 AddHook($EXPAND_MACRO,\&expand_macro);
 AddHook($SPECIAL_SYMBOL,\&special_symbol);
+AddHook($COMMENT,\&comment);
 
 
 1;
