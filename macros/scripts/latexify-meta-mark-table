@@ -19,7 +19,6 @@ print '
 \rotatebox{90}{statement} &
 \rotatebox{90}{type-related} &
 \rotatebox{90}{syntax-related} &
-\rotatebox{90}{recursive} &
 \rotatebox{90}{non-c code} &
 \rotatebox{90}{unknown symbol} &
 \rotatebox{90}{other}
