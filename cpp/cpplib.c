@@ -2283,7 +2283,10 @@ macarg (cpp_reader *pfile, int rest_args, cpp_expand_info *pcei)
   cpp_annotated_token *pcat;
   //  long arg_start = CPP_WRITTEN (pfile);
   char save_put_out_comments = CPP_OPTIONS (pfile)->put_out_comments;
-  CPP_OPTIONS (pfile)->put_out_comments = 0;
+  CPP_OPTIONS (pfile)->put_out_comments = 1; /* was 0, but test23.c shows
+                                                the need for comments to be
+                                                copied to the expansion buffer
+                                                --01/13/99 gjb */
 
   /* Try to parse as much of the argument as exists at this
      input stack level.  */
