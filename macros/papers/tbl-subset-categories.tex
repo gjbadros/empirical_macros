@@ -5,70 +5,74 @@
 {\small
 \addtolength{\tabcolsep}{-.6\tabcolsep}
 % The *{n}{c|} below creates n duplicate columns of that type (centered, here)
-\begin{tabular}{|r|*{10}{c|}ll}\cline{1-11}
+\begin{tabular}{|r|*{9}{c|}ll}\cline{1-10}
 % The struts ensure that all the columns are equally wide.
 \newlength{\headht}\settowidth{\headht}{Percentage of 3054~}
-\rotatebox{90}{\parbox{\headht}{Percentage of 3054~ \\ multiply-defined~ \\ macro names\strut~}} &
-\rotatebox{90}{Null define~\strut} &
-\rotatebox{90}{Constant~\strut} &
-\rotatebox{90}{Expression~\strut} &
-\rotatebox{90}{Statement~\strut} &
-\rotatebox{90}{Type related~\strut} &
-\rotatebox{90}{Syntactic~\strut} &
-\rotatebox{90}{Symbols~\strut} &
-\rotatebox{90}{Unknown symbol~\strut} &
-\rotatebox{90}{Not C code~\strut} &
-\rotatebox{90}{Failed classification~\strut}
-\\ \cline{1-11}
-    32\% (982) & &\black& & & & & & & & & &  \\ \cline{1-11}
-    28\% (869) & & &\black& & & & & & & & &  \\ \cline{1-11}
-   6.0\% (183) & &\black&\black& & & & & & & & &  \\ \cline{1-11}
-   5.8\% (176) &\black& & & & & & & & & & &  \\ \cline{1-11}
-   3.4\% (103) & & & &\black& & & & & & & &  \\ \cline{1-11}
-   2.4\% (74) &\black& & &\black& & & & & & & &  \\ \cline{1-11}
-   2.0\% (60) & & & & &\black& & & & & & &  \\ \cline{1-11}
-   1.7\% (51) & & &\black&\black& & & & & & & &  \\ \cline{1-11}
-   1.6\% (50) &\black& &\black& & & & & & & & &  \\ \cline{1-11}
-   1.6\% (50) &\black& & & &\black& & & & & & &  \\ \cline{1-11}
-   1.2\% (38) &\black&\black& & & & & & & & & &  \\ \cline{1-11}
-   1.1\% (35) & & & & & &\black& &\black& & & &  \\ \cline{1-11}
-   1.1\% (35) & & & & & & & &\black& & & &  \\ \cline{1-11}
-   1.1\% (33) & & &\black& & & & &\black& & & &  \\ \cline{1-11}
-   1.1\% (33) & & & & & & &\black& & & & &  \\ \cline{1-11}
-   1.0\% (32) & & & & & & & & & &\black& &$\Leftarrow$ \\ \cline{1-11}
-  0.92\% (28) & & &\black& & & &\black& & & & &  \\ \cline{1-11}
-  0.65\% (20) &\black& & & & & & & & &\black& &$\Leftarrow$ \\ \cline{1-11}
-  0.65\% (20) & &\black& & & & & & & &\black& &  \\ \cline{1-11}
-  0.52\% (16) &\black& & & & & & &\black& & & &  \\ \cline{1-11}
-  0.52\% (16) & & &\black& & & & & & &\black& &$\Leftarrow$ \\ \cline{1-11}
-  0.46\% (14) & & & & & & &\black&\black& & & &  \\ \cline{1-11}
-  0.43\% (13) & & & & &\black& & & & &\black& &$\Leftarrow$ \\ \cline{1-11}
-  0.39\% (12) & & &\black&\black& & & & & & & &$\Leftarrow$ \\ \cline{1-11}
-  0.29\% (9) & &\black& & & & & &\black& & & &  \\ \cline{1-11}
-  0.26\% (8) & & & & & &\black& & & & & &  \\ \cline{1-11}
-  0.23\% (7) & & & &\black& & & & & & & &$\Leftarrow$ \\ \cline{1-11}
-%   0.16\% (5) & &\black& & & & & & & &\black& &$\Leftarrow$ \\ \cline{1-11}
-%   0.16\% (5) & & & &\black& & & & & &\black& &$\Leftarrow$ \\ \cline{1-11}
-%   0.16\% (5) & & & & &\black& & &\black& & & &  \\ \cline{1-11}
-%   0.16\% (5) & & & & & & & &\black& &\black& &$\Leftarrow$ \\ \cline{1-11}
-%   0.13\% (4) & & &\black& & &\black& & & & & &$\Leftarrow$ \\ \cline{1-11}
-%   0.13\% (4) & & & & & & & &\black& &\black& &  \\ \cline{1-11}
-%   0.13\% (4) & & & & & & & & & &\black& &  \\ \cline{1-11}
-%  0.098\% (3) &\black& &\black& & & & & & &\black& &  \\ \cline{1-11}
-%  0.098\% (3) &\black& & &\black&\black& & & & &\black& &$\Leftarrow$ \\ \cline{1-11}
-%  0.098\% (3) &\black& & & &\black& & &\black& & & &  \\ \cline{1-11}
-%  0.098\% (3) &\black& & & & & & & & &\black& &  \\ \cline{1-11}
-%  0.098\% (3) & &\black&\black& & & & & & &\black& &  \\ \cline{1-11}
-%  0.098\% (3) & & & &\black& &\black& & & & & &$\Leftarrow$ \\ \cline{1-11}
-%  0.098\% (3) & & & & & &\black& & & &\black& &$\Leftarrow$ \\ \cline{1-11}
-%  0.065\% (2) &\black& & & & & & & &\black& & &  \\ \cline{1-11}
-%  0.065\% (2) & &\black& &\black& & & & & & & &$\Leftarrow$ \\ \cline{1-11}
-%  0.065\% (2) & &\black& &\black& & & & & & & &  \\ \cline{1-11}
-%  0.065\% (2) & &\black& & & & &\black& & & & &  \\ \cline{1-11}
-%  0.065\% (2) & & &\black& & &\black& &\black& & & &$\Leftarrow$ \\ \cline{1-11}
-%  0.065\% (2) & & & &\black& & &\black& & & & &$\Leftarrow$ \\ \cline{1-11}
-%  0.065\% (2) & & & & &\black& & & & & & &$\Leftarrow$ \\ \cline{1-11}
-%  0.065\% (2) & & & & & & & & &\black&\black& &$\Leftarrow$ \\ \cline{1-11}
-%  0.065\% (2) & & & & & & & & &\black& & &  \\ \cline{1-11}
+\rotatebox{90}{\parbox{\headht}{Percentage of 3054~ \\ multiply-defined~ \\ macro names\strut~}}        &
+\rotatebox{90}{Null define~\strut}      &
+\rotatebox{90}{Constant~\strut}         &
+\rotatebox{90}{Expression~\strut}       &
+\rotatebox{90}{Statement~\strut}        &
+\rotatebox{90}{Type related~\strut}     &
+\rotatebox{90}{Syntactic~\strut}        &
+\rotatebox{90}{Symbols~\strut}  &
+\rotatebox{90}{Unknown symbol~\strut}   &
+\rotatebox{90}{Other~\strut}
+\\ \cline{1-10}
+    32\% (982)  &       &\black &       &       &       &       &       &       &       &       &  \\ \cline{1-10}
+    28\% (869)  &       &       &\black &       &       &       &       &       &       &       &  \\ \cline{1-10}
+   6.0\% (183)  &       &\black &\black &       &       &       &       &       &       &       &  \\ \cline{1-10}
+   5.8\% (176)  &\black &       &       &       &       &       &       &       &       &       &  \\ \cline{1-10}
+   3.4\% (103)  &       &       &       &\black &       &       &       &       &       &       &  \\ \cline{1-10}
+   2.4\% (74)   &\black &       &       &\black &       &       &       &       &       &       &  \\ \cline{1-10}
+   2.0\% (60)   &       &       &       &       &\black &       &       &       &       &       &  \\ \cline{1-10}
+   1.7\% (51)   &       &       &\black &\black &       &       &       &       &       &       &  \\ \cline{1-10}
+   1.6\% (50)   &\black &       &\black &       &       &       &       &       &       &       &  \\ \cline{1-10}
+   1.6\% (50)   &\black &       &       &       &\black &       &       &       &       &       &  \\ \cline{1-10}
+   1.2\% (38)   &\black &\black &       &       &       &       &       &       &       &       &  \\ \cline{1-10}
+   1.1\% (35)   &       &       &       &       &       &\black &       &\black &       &       &  \\ \cline{1-10}
+   1.1\% (35)   &       &       &       &       &       &       &       &\black &       &       &  \\ \cline{1-10}
+   1.1\% (33)   &       &       &\black &       &       &       &       &\black &       &       &  \\ \cline{1-10}
+   1.1\% (33)   &       &       &       &       &       &       &\black &       &       &       &  \\ \cline{1-10}
+   1.0\% (32)   &       &       &       &       &       &       &       &       &\black &       &$\Leftarrow$ \\ \cline{1-10}
+  0.92\% (28)   &       &       &\black &       &       &       &\black &       &       &       &  \\ \cline{1-10}
+  0.65\% (20)   &\black &       &       &       &       &       &       &       &\black &       &$\Leftarrow$ \\ \cline{1-10}
+  0.65\% (20)   &       &\black &       &       &       &       &       &       &\black &       &  \\ \cline{1-10}
+  0.52\% (16)   &\black &       &       &       &       &       &       &\black &       &       &  \\ \cline{1-10}
+  0.52\% (16)   &       &       &\black &       &       &       &       &       &\black &       &$\Leftarrow$ \\ \cline{1-10}
+  0.46\% (14)   &       &       &       &       &       &       &\black &\black &       &       &  \\ \cline{1-10}
+  0.43\% (13)   &       &       &       &       &\black &       &       &       &\black &       &$\Leftarrow$ \\ \cline{1-10}
+  0.39\% (12)   &       &       &\black &\black &       &       &       &       &       &       &$\Leftarrow$ \\ \cline{1-10}
+  0.29\% (9)    &       &\black &       &       &       &       &       &\black &       &       &  \\ \cline{1-10}
+  0.26\% (8)    &       &       &       &       &       &\black &       &       &       &       &  \\ \cline{1-10}
+  0.23\% (7)    &       &       &       &\black &       &       &       &       &       &       &$\Leftarrow$ \\ \cline{1-10}
+%   0.16\% (5)  &       &\black &       &       &       &       &       &       &\black &       &$\Leftarrow$ \\ \cline{1-10}
+%   0.16\% (5)  &       &       &       &\black &       &       &       &       &\black &       &$\Leftarrow$ \\ \cline{1-10}
+%   0.16\% (5)  &       &       &       &       &\black &       &       &\black &       &       &  \\ \cline{1-10}
+%   0.16\% (5)  &       &       &       &       &       &       &       &\black &\black &       &$\Leftarrow$ \\ \cline{1-10}
+%   0.13\% (4)  &       &       &\black &       &       &\black &       &       &       &       &$\Leftarrow$ \\ \cline{1-10}
+%   0.13\% (4)  &       &       &       &       &       &       &       &\black &\black &       &  \\ \cline{1-10}
+%   0.13\% (4)  &       &       &       &       &       &       &       &       &\black &       &  \\ \cline{1-10}
+%  0.098\% (3)  &\black &       &\black &       &       &       &       &       &\black &       &  \\ \cline{1-10}
+%  0.098\% (3)  &\black &       &       &\black &\black &       &       &       &\black &       &$\Leftarrow$ \\ \cline{1-10}
+%  0.098\% (3)  &\black &       &       &       &\black &       &       &\black &       &       &  \\ \cline{1-10}
+%  0.098\% (3)  &\black &       &       &       &       &       &       &       &\black &       &  \\ \cline{1-10}
+%  0.098\% (3)  &       &\black &\black &       &       &       &       &       &\black &       &  \\ \cline{1-10}
+%  0.098\% (3)  &       &       &       &\black &       &\black &       &       &       &       &$\Leftarrow$ \\ \cline{1-10}
+%  0.098\% (3)  &       &       &       &       &       &\black &       &       &\black &       &$\Leftarrow$ \\ \cline{1-10}
+%  0.065\% (2)  &\black &       &       &       &       &       &       &       &       &       &  \\ \cline{1-10}
+%  0.065\% (2)  &       &\black &       &\black &       &       &       &       &       &       &$\Leftarrow$ \\ \cline{1-10}
+%  0.065\% (2)  &       &\black &       &\black &       &       &       &       &       &       &  \\ \cline{1-10}
+%  0.065\% (2)  &       &\black &       &       &       &       &\black &       &       &       &  \\ \cline{1-10}
+%  0.065\% (2)  &       &       &\black &       &       &\black &       &\black &       &       &$\Leftarrow$ \\ \cline{1-10}
+%  0.065\% (2)  &       &       &       &\black &       &       &\black &       &       &       &$\Leftarrow$ \\ \cline{1-10}
+%  0.065\% (2)  &       &       &       &       &\black &       &       &       &       &       &$\Leftarrow$ \\ \cline{1-10}
+%  0.065\% (2)  &       &       &       &       &       &       &       &       &\black &       &$\Leftarrow$ \\ \cline{1-10}
+%  0.065\% (2)  &       &       &       &       &       &       &       &       &       &       &  \\ \cline{1-10}
 
 \end{tabular}}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "emp-use-2"
+%%% End: 
