@@ -1,0 +1,373 @@
+#!/uns/bin/perl -w
+# evilmacros
+
+# Invoke like this:   evilmacros `find-c`
+# or like this:  find-c | evilmacros -i
+# Perhaps this should do the searching through subdirectories itself,
+# but that wouldn't be too hard.
+# Also permits it to be piped file names via standard in. (added by gjb)
+
+# Report "evil" CPP macros:
+#  Illegal macros:
+#   Unterminated string
+#   Wrong length character constant
+#   Unterminated character constant
+#   Pasting via comments (syntactically legal, but no pasting occurs in ISO C)
+#  Potentially dangerous macros:
+#   Unbalanced parens, braces, and brackets
+#   Pasting via ##
+#   Stringization via #
+#  Turned off testing for:
+#   Empty string
+
+# Harbison & Steele p. 53:
+#   ISO C reaffirms tht macro bodies must be sequences of well-formed tokens.
+# For instance, no unterminated strings permitted.
+
+# Harbison & Steele p. 19 notes:
+#   Comments are removed by the compiler before preprocessing or lexical
+#   analysis, so line breaks inside comments do not terminate preprocessor
+#   commands.
+# However, continuation line pasting apparently occurs before comment removal.
+
+# To do:
+#  Classify macros as expression-like (possibly subcategorize as function-like
+#	if expression-like and takes argument), statement-like, or neither
+#	(ie, that change the state of the parser)
+#    Check for the semicolon-swallowing problem.
+#    Check for multiple statements, like
+#        #define double(stmt)    stmt;stmt;
+#        double(i=5) =>   i=5;i=5;
+#  Perhaps warn about multi-line comments/strings in macro definitions.
+#	Presently getline() removes the newlines silently; it shouldn't warn
+#	since it is called for every line, not just those in macro defs.
+#  Warn about "#define foo(bar)"?  Probably legal, but probably a mistake.
+#  Give % #def/cpp-directives for .c files and .h files separately.
+#  Compute number of blank lines, comment lines, and code lines.  (Sum will
+#	be more than total, since lines can contain both comments and code,
+#	or both comments and preprocessor directives.)
+#  Recognize macros that build assembly code, and treat/report specially?
+#	(What % of interesting macros are such?)
+#  Perhaps extract some of the utility code into a library or separate file.
+#  Check for/recognize template-like macros (that take a type as an argument).
+
+
+###########################################################################
+### Variables
+###
+
+## Integers:
+$lines = 0;		 # count of lines; line continuation doesn't increment
+$macrodefs = 0;
+$cpp_cmds = 0;		 # total preprocessor commands, including macro defs
+## Strings: 
+$currentfile = 0;
+$mname = 0;
+$margs = 0;
+$mdef = 0;
+## Boolean:
+$incomment = 0;			# in /* */ style comment
+$instring = 0;
+# Shouldn't be in a character constant across lines.
+# $incharconst = 0;
+
+###########################################################################
+### Usage
+###
+
+# Updated by gjb
+sub usage {
+   die "@_\nUsage: $0 [-i] <files>\n\
+-i means use files listed on stdin [one per line]\n
+in addition to those (if any) on cmd line\n";
+}
+
+###########################################################################
+### Code
+###
+
+use Getopt::Std;
+use vars qw( $opt_i $opt_h $opt_v );
+$fDebugCmdProcessing = 0;
+
+# use strict;
+# use English;
+
+getopts('ihv');
+usage() if ($opt_h);
+
+if ($opt_i) {
+  while (<STDIN>) {
+    next if /^-.*$/;
+    chop ($_);
+    push @ARGV, $_;
+  }
+}
+
+$fDebugCmdProcessing && print "@ARGV";
+
+foreach $file (@ARGV)
+{ $opt_v && print STDERR $file . "\n";
+  $currentfile = $file;
+  open(INPUT,$file) or next;
+  $incomment = 0;
+  $instring = 0;
+  # $incharconst = 0;
+ LINELOOP:
+  while ($line = getline())
+    {
+      # check for macros
+      if ($line =~ m/^\#[ \t]*define[ \t]*/)
+	{ $macrodefs++;
+	  $line = $';
+	  # remove trailing newline
+	  chop($line);
+	  # print $line, "\n";
+	  ($mname, $margs, $mdef) = macroparse($line);
+	  # if (!defined($margs)) { $margs = ""; } # avoid uninitialized variable warning
+	  # print "parsed: |$mname|$margs|$mdef|\n";
+	  # Nothing to check if this is just making the macro defined w/o a body.
+	  if (defined($mdef))
+	    { checkmacrobody($mdef); }
+	  }
+      elsif ($line =~ m/^\#/)
+	{ $cpp_cmds++; }
+    }
+  close(INPUT);
+}
+if ($lines == 0)
+  # This is useful for testing, I guess.
+  { print "No lines read!\n"; }
+else
+  { print "$macrodefs macro defs (", sprintf("%2.2f%", 100*$macrodefs/$lines), ") and $cpp_cmds other cpp directives (", sprintf("%2.2f%", 100*$cpp_cmds/$lines), ") in $lines lines (", sprintf("%2.2f%", 100*($macrodefs+$cpp_cmds)/$lines), ") in ", $#ARGV+1, " files\n"; }
+
+
+# Read the next logical line from <INPUT>, until no continuation char
+#   and not in string or comment.
+# Result ends with newline.
+sub getline
+{ my $result;
+  if (not ($result = <INPUT>))
+    { return $result; }
+  $lines++;
+  updateinvars($result);
+
+  # perhaps check for $mname and mention it in message if it's set
+  while ($incomment || $instring || ($result =~ m/\\$/))
+    {
+      # splice lines
+      while ($result =~ m/\\$/)
+	{ # block to localize match data
+	  { if ($result =~ m/\\\Z(?!\n)/)
+	      { print "$currentfile:$.: evil: file ends with backslash (no newline)\n"; } }
+	  $result = $`;		# remove backslash and possibly newline
+	  my $nextline;
+	  if ($nextline = <INPUT>)
+	    { &updateinvars($nextline);
+	      $result = appendlines($result, $nextline);
+	      # The appendlines trims trailing spaces, prettying the message.
+	      if ($nextline =~ m/^[ \t]*$/)
+		{ # No \n at end: $result ends in a newline
+		  print "$currentfile:$.: dangerous: blank line follows continuation character:\n    $result"; }
+	    }
+	  else
+	    # Already removed backslash and newline from result.
+	    # (Should I add them back?)
+	    { print "$currentfile:$.: dangerous: file ends with continuation character:\n    $result\n"; } }
+
+      while ($incomment)
+	{ my $nextline;
+	  if ($nextline = <INPUT>)
+	    { $lines++;
+	      updateinvars($nextline);
+	      $result = appendlines($result, $nextline); }
+	  else
+	    { print "$currentfile:$.: dangerous: file ends in comment:\n    $result";
+	      $incomment = 0; } }
+
+      # Not "while ($instring) ..." because processing continuation lines
+      # takes priority over simple concatenation.
+      if ($instring)
+	{ my $nextline;
+	  if ($nextline = <INPUT>)
+	    { $lines++;
+	      updateinvars($nextline);
+	      $result = appendlines($result, $nextline); }
+	  else
+	    { print "$currentfile:$.: dangerous: file ends in string:\n    $result\n";
+	      $instring = 0; } }
+    }
+
+  $result;
+}
+
+# All backslash line continuations have already been processed.
+sub updateinvars
+{
+  my $remaining = $_[0];
+  
+  while ($remaining)
+    { if ($incomment)
+	{ if ($remaining =~ /\*\//)
+	    { $remaining = $';
+	      $incomment = 0; }
+	  else
+	    { return; } }
+      elsif ($instring)
+	{ # print "in string, processing $remaining";
+	  if ($remaining =~ m/(^|[^\\])(\\\\)*\"/)
+	    { $remaining = $';
+	      $instring = 0; }
+	  else
+	    { # print "$currentfile:$.: in string after line $_[0]";
+	      return; } }
+      # If not instring, I think \" suffices instead of the more complicated
+      # regexp that checks for leading backslashes.
+      elsif ($remaining =~ m/\/[\*\/]|['\"]/) #'FIXCOLOR
+	{ if ($& eq "'")
+	    { if (($' =~ m/^\\''/) || (($' =~ m/'/) && (length($`) < 5))) #'FIXCOLOR
+		{ $remaining = $'; }
+	      else
+                # No newline, since $_[0] has one.
+                # Also, don't die: let processing proceed.
+		{ # die "$currentfile:$.: (bad character constant) $&\n    in $_[0]";
+                  $remaining = $'; } }
+	  elsif ($& eq "\"")
+	    { $remaining = $';
+	      $instring = 1; }
+	  elsif ($& eq "//")
+	    { return; }
+	  elsif ($& eq "/*")
+	    { $remaining = $'; 
+	      $incomment = 1; }
+	  else
+	    { die "What match?  $& in $_[0]\n"; } }
+      else
+	{ return; }
+    }
+}
+
+
+# This pretties things up but changes contents of line-spanning strings
+sub appendlines
+{
+  my ($arg1, $arg2) = @_;
+  # "+", not "*", so don't introduce spaces where there were none before
+  # Do I need \Z instead of $?  It seems I don't...
+  $arg1 =~ s/[ \t\n]+$/ /;
+  $arg2 =~ s/^[ \t\n]+/ /;
+  $arg1 . $arg2;
+}
+
+###########################################################################
+### Parse and check macros
+###
+
+# Return an array of three elements: name, args, def
+sub macroparse
+{ if ($#_ != 0) { die "Wrong number of arguments to macrobody."; }
+  # print "macroparse $_[0]\n";
+  # Match zero or more, not one or more, spaces before definition.
+  # (Perhaps warn if zero are matched.)
+  my @result = ($_[0] =~ m/^([a-zA-Z_0-9]+)(\([^\)]*\))?[ \t]*(.*)$/);
+  if ($#result != 2)		# $# = 2 => 3 elements
+    { die "Problem parsing macro $_[0]\n"; }
+  @result;
+}
+
+# arguments are in @_, that is $_[0], $_[1], etc.
+sub checkmacrodef
+{ 
+}
+ 
+# Should also give file, line in error message.
+sub checkmacrobody
+{ my $body = $_[0];
+  if ($#_ != 0) { die "Wrong number of arguments to checkmacrobody."; }
+  # print "checkmacrobody: $body\n";
+  my $indquote = 0;
+  my $insquote = 0;
+  my $incomment = 0;
+  my @nesting = ();
+  while ($body =~ m![\]\[(){}\"'#]|//|/\*|\*/!) #'FIXCOLOR
+    { $match = $&;
+      $body = $';
+      # print "$match ||| $body\n";
+      if ($match =~ /[\[\(\{]/)
+        { push(@nesting,$match); }
+      elsif ($match =~ /[\]\)\}]/)
+	{ if ($#nesting == -1)
+	    { print "$currentfile:$.: dangerous: close $match without open in $mname\n    $_[0]\n"; }
+	  else
+	    { my $popped = pop(@nesting);
+	      if ((($match eq "\]") && ($popped ne "\["))
+		  || (($match eq "\)") && ($popped ne "\("))
+		  || (($match eq "\}") && ($popped ne "\{")))
+		{ print "$currentfile:$.: dangerous: $popped matched by $match in $mname:\n    $_[0]\n"; } } }
+      elsif ($match eq "\"")
+	# Does this test cope with "foo\\"?
+        { if ($body =~ m/(^|[^\\])(\\\\)*\"/)
+            # Empty string OK only if that is the entire body.
+            { if ((1 == 0)	# turn off the test for now
+		  && ((length($`) + length($1) + length($2)) == 0)
+		  && (length($_[0]) > 2))
+                { print "$currentfile:$.: dangerous: empty string in $mname:\n    $_[0]\n"; }
+              $body = $'; }
+          else
+           { print "$currentfile:$.: illegal: unterminated string $& in $mname:\n    $_[0]\n"; } }
+      elsif ($match eq "\'")
+        { if (($body =~ m/^\\''/) || ($body =~ m/\'/))
+	    { # do this first because we're going to do more matching
+	      $body = $';
+	      my $char = $` . $&;
+              chop($char);	# remove trailing '
+	      if (! ($char =~ m/.|\\.|\\[0-7][0-7][0-7]/))
+	        { print "$currentfile:$.: illegal: bad character constant $char in $mname:\n    $_[0]\n"; }
+    	       }
+          else
+            { print "$currentfile:$.: illegal: unterminated character constant $& in $mname:\n    $_[0]\n";
+              $body = ""; } }
+      elsif ($match eq "#")
+	{ if (substr($', 0, 1) eq "#")
+	    { print "$currentfile:$.: dangerous: ## pasting in $mname:\n    $_[0]\n";
+	      $body = substr($body, 1); }
+	  # This list from GNU C preprocessor manual
+	  elsif ($' =~ m/(assert|cpu|define|elif|else|error|ident|if|ifdef|ifndef|import|include|include_next|line|machine|pragma|pragm|system|unassert|warning)\b/)
+	    { print "$currentfile:$.: dangerous: preprocessor directive #$& in $mname:\n    $_[0]\n"; }
+	  else
+	    { print "$currentfile:$.: dangerous: stringization in $mname:\n    $_[0]\n"; } }
+      elsif ($match eq "/*")
+	# This test probably fails for a/**//**/b.  Oh, well.
+        { my $postmatch = $';
+	  my $precedingabuts = ($` =~ m/\w$/);
+	  while (not ($postmatch =~ m!\*/!))
+	    { my $nextline;
+	      if ($nextline = getline())
+		# Get some more text, and look for the comment close there.
+		{ $body = appendlines($body, $nextline);
+		  $postmatch = appendlines($', $nextline);
+		}
+	      else
+		{ print "$currentfile:$.: evil: unterminated comment in $mname:\n    $_[0]\n";
+		  $body = "";
+		  $postmatch = ""; } }
+	  # print "Setting $body to $'; $`; $&.\n";
+	  # Redo this because the one in the while test is considered
+	  #   in the block, so we lost the (localized) match data.
+	  $postmatch =~ m/\*\//;
+	  $body = $';
+	  if ($precedingabuts && ($body =~ m/^\w/))
+	    { print "$currentfile:$.: illegal: comment pasting in $mname:\n    $_[0]\n"; } }
+      elsif ($match eq "//")
+        { # print "$currentfile:$.: evil: //-style comment in $mname:\n    $_[0]\n";
+          $body = ""; }
+      elsif ($match eq "*/")
+	# $_[0] doesn't give me the whole thing; why?  ($body only contains
+	#   what follows the match at this point.)
+        { print "$currentfile:$.: evil: comment terminator */ not in comment in $mname:\n    $_[0]\n"; }
+      else
+        { die "$currentfile:$.: ???: match = $match before $body in $mname:\n    $_[0]\n"; }
+       }
+  if ($#nesting != -1)
+    { print "$currentfile:$.: evil: no match for ", @nesting, " in $mname:\n    $_[0]\n"; }
+}
