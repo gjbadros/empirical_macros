@@ -34,7 +34,14 @@ Arguments give the source code character
 offsets of the directive; \$conditional is the guard checked, \$skipped is
 the literal text that is skipped (conditional was false if this is non-empty), and
 \$value is 1 iff the \$conditional evaluated to true (defined), 0 otherwise.
-\hook{DO\_\-XIFDEF}{}
+\hook{DO\_\-XIFDEF}{\$s\_\-start,\$s\_\-end, \$kind, \$conditional, \$trailing\_\-garbage, \$skipped, \$fSkipping, \$s\_\-branch\_\-start}
+Called exactly once for each \#ifdef or \#ifndef.
+The arguments are the same as for the DO\_\-IFDEF hook, except \$kind is either
+"IFDEF" or "IFNDEF" depending on the type of conditional; \$fSkipping
+replaces the \$value argument and is non-zero iff the conditional fails
+(i.e., an IFDEF with a not-defined macro, or an IFNDEF with a defined macro);
+\$s\_\-branch\_\-start gives the source code character offset of the start of
+the branch taken.
 \hook{DO\_\-IFDEF}{\$s\_\-start, \$s\_\-end, \$conditional, \$trailer, \$skipped, \$value}
 Called exactly once for each \#ifdef
 (not \#if or \#ifndef) directive seen by the preprocessor. In particular,
@@ -162,9 +169,18 @@ is 1 in this hook (meaning you are cleaning up a top level macro expansion).
 See cpphook.pm for an example.
 \hook{IFDEF\_\-MACRO}{\$s\_\-start,\$s\_\-end,\$mname,\$expansion,\$length,\$raw\_\-call,\$has\_\-escapes,\$cbuffersDeep,
 \$cnested,@nests,\$cargs,@args}
-Called once for each macro expansion in \#ifXX directives.  The arguments
+Called once for each macro expansion in \#if directives.  The arguments
 passed to the hook are the same as those for the EXPAND\_\-MACRO hook, see its
-documentation for details.
+documentation for details.  Note, though, that macros are not usually
+expanded in \#ifdef and \#ifndef directives, they are simply tested for
+defined-ness by lookup in the symbol table, thus triggering the IFDEF\_\-LOOKUP\_\-MACRO
+hook, not this one.  A form such as "\#if FOO" will trigger this hook, however.
+\hook{IFDEF\_\-LOOKUP\_\-MACRO}{\$mname,\$f\_\-defined}
+Called once for each macro name lookup done during conditional compilation
+guard checking.  The arguments are:
+\$mname is the macro name being looked up; \$f\_\-defined is non-zero
+iff the macro has been defined.  Use backcalls to get the expansion if
+it is desired.
 \hook{COMMENT}{\$s\_\-start, \$s\_\-end, \$comment\_\-text, \$how\_\-terminated, \$c\_\-lines}
 Called once for each comment in the source code seen by preprocessor (i.e.,
 comments conditionally-compiiled out will not normally invoke this hook).
