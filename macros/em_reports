@@ -13,6 +13,7 @@
 #   _ni = non-include; for a file, means it was on command line (?)
 #   mi = method of inclusion; why this file is being processed
 
+# FIX: what are all these extra letters doing in here?
 my $getopts_option_letters = 'ihvtIAau1pTg:d:D:M:S:F:L:C:P:c:s:';
 
 # FIX: remove -D -U -S -F -L -C options.
@@ -38,8 +39,10 @@ New options marked with *; options with ':', above, take an argument
   -C [file]  output categorizations to file
   -P [file]  output dependence info to file
   -c [file]  output cond. compilation directive statistics to file
+* -l [file]  output macro lint information to file
   -E [file]  send evil macros to file instead of stdout
   -s [file]  the state file to use [\"state\" by default]
+* -v  verbose: report phases as they are encountered
 
 (Note: -{D,S,F,C,c,E,P} options take precedence over the -d option)
 
@@ -49,8 +52,12 @@ em_reports -s ../../evilout.state -d ../../:evilout
 ";
 }
 
+
+###########################################################################
 ### Strictures
 ###
+
+require 5.004;  # uses "for my $var"
 
 # Use strict requires that for each global, either
 #  * all uses are fully qualified with the package name ($main::$true), or
@@ -68,6 +75,8 @@ use Carp;
 use checkargs;
 use em_constants;
 use em_util;
+use paren;
+use IO::Handle;
 
 
 ###########################################################################
@@ -112,7 +121,7 @@ my $debug_cpp_if_comments = $false;
 ## Command-line processing
 # Are these in any order?
 use vars qw($opt_i $opt_I $opt_h $opt_v $opt_t $opt_d
-	    $opt_D $opt_M $opt_S $opt_F $opt_L $opt_C $opt_P $opt_c $opt_p
+	    $opt_D $opt_M $opt_S $opt_F $opt_L $opt_C $opt_P $opt_c $opt_p $opt_l
 	    $opt_u $opt_1 $opt_A $opt_a $opt_g $opt_T $opt_s);
 my $fIgnoreIncludes = $false;
 
@@ -121,6 +130,8 @@ my $fIgnoreIncludes = $false;
 ### Print output statistics
 ###
 
+# FIXGJB: why does this include variables not imported from elsewhere, like
+# $type_specifier_re?
 use vars qw($getopts_option_letters $c_reserved_type_word_alternatives
     $c_reserved_nontype_word_alternatives
     $c_plus_plus_reserved_type_word_alternatives
@@ -187,6 +198,14 @@ my (%cppcmdcount, %cppcmdcount_ni, %cppcmdcount_hdr_ni, %cppcmdcount_c_ni);
 my (%category_counts_ni, %category_counts_c_ni, %category_counts_hdr_ni);
 
 
+sub args_array ($)
+{ my ($args) = check_args(1, @_);
+  $args =~ s/^\s*\(\s*//;
+  $args =~ s/\s*\)\s*$//;
+  return split(/\s*,\s*/,$args);
+}
+
+
 # FIX: these sub-parts might better be broken up into functions
 sub output_stats ()
 {
@@ -233,9 +252,12 @@ sub output_stats ()
   my $cpp_physical_ncnb_lines_c_ni =
     sum_array(@rg_cpp_phys_ncnb_lines[@ftype_NONHEADER_NOT_INCLUDED]);
 
+  if ($opt_v) { STDOUT->autoflush(1); }
+
   if ($opt_S) {
     my ($h, $v);
     # Dump statistics on frequencies of directives
+    if ($opt_v) { print STDOUT "stats..."; }
     select STATS;
 
     print "#LINES#: physical ncnb_phys cpp_phys cpp_phys_ncnb\n";
@@ -274,6 +296,7 @@ sub output_stats ()
 
   # -M = dump the macro stats
   if ($opt_M) {
+    if ($opt_v) { print STDOUT "macros..."; }
     select MACROS;
     print "#MACROS#: name cDefs cUndefs cCodeUses cMacroUses cCondUses cTotalUses HowUsed Categories InclusionMethods (%functionsThatUseIt)\n";
     foreach my $name (sort keys %macros) {
@@ -308,6 +331,7 @@ sub output_stats ()
   }
 
   if ($opt_D) {
+    if ($opt_v) { print STDOUT "defines..."; }
     select DEFINES;
 # don't want extra lines-- harder for postprocessing tools
 #    print  "\n";
@@ -335,6 +359,7 @@ sub output_stats ()
   # Want a histogram of this info?  try something like:
   # awk '$0 !~ /^[%#]/ {print $2}' < gzip.func | sort -n | uniq -c
   if ($opt_F) {
+    if ($opt_v) { print STDOUT "functions..."; }
     select FUNCTIONS;
     print "#functionId cMacroExpansions (%the macros)\n";
     foreach my $function_name_id (sort keys %function_name_to_macros_it_uses) {
@@ -344,6 +369,7 @@ sub output_stats ()
   }
 
   if ($opt_L) {
+    if ($opt_v) { print STDOUT "funclines..."; }
     select FUNCLINES;
     foreach my $filename (sort keys %files_function_lines) {
       print "file: $filename\n", join("\n ",@{$files_function_lines{$filename}}), "\n";
@@ -374,6 +400,7 @@ sub output_stats ()
   # output them as two rows, one with "# cat1 cat2 .... catn"
   # the second with the results
   if ($opt_c) {
+    if ($opt_v) { print STDOUT "ccdstats..."; }
     select CCDSTATS;
     print "#$OFS";
     foreach my $cname (@cond_category_name) {
@@ -388,6 +415,7 @@ sub output_stats ()
 
   # macro categories
   if ($opt_C) {
+    if ($opt_v) { print STDOUT "categ..."; }
     select CATEG;
     foreach my $name (sort keys %macros) {
       for (my $iDef = 0 ; $iDef <= $#{$macros{$name}}; $iDef++ ) {
@@ -410,14 +438,16 @@ sub output_stats ()
 	    || ($category == $catLITERAL)
 	    || ($category == $catCONSTANT)
 	    || ($category == $catSOMECONSTANT))
-	  { print "(", type_name($type), ")"; }
+	  { # These used to be commas, but those turn into tabs with -t option
+	    print "(" . type_name($type) . ")"; }
 	print ": $mdef_name[$index]$mdef_args[$index] $mdef_body[$index]\n";
       }
     }
   }
 
   if ($opt_P)
-    { select DEPEND;
+    { if ($opt_v) { print STDOUT "depend..."; }
+      select DEPEND;
       # print "===========================================================================\n";
       print "Macro dependence info\n";
       for my $macro_name (sort keys %macros)
@@ -456,9 +486,15 @@ sub output_stats ()
 	    else
 	      { my %def_hash;
 		for my $i (@{$macros{$macro_name}})
-		  { my $body_noc_nospace = $mdef_body_noc[$i];
-		    $body_noc_nospace =~ s/\s+//g;
-		    $def_hash{$body_noc_nospace} = $true; }
+		  { my $body = $mdef_body_noc[$i];
+		    my $args = $mdef_args[$i];
+		    # Canonicalize formal names to avoid gratuitous differences
+		    if ($args)
+		      { my @formals = args_array($args);
+			for my $fno (0 .. $#formals)
+			  { $body =~ s/\b$formals[$fno]\b/EM_ARG_NUM_$fno/g; } }
+		    $body =~ s/\s+//g; # collapse all spaces
+		    $def_hash{$body} = $true; }
 		$num_distinct_defs = scalar(keys %def_hash); }
 	    $mndistinct_defs{$macro_name} = $num_distinct_defs;
 	    my $dep_lines = $either_dependee_lines{$macro_name};
@@ -486,10 +522,159 @@ sub output_stats ()
       print "\n";
     }
 
-  select;
-  compute_freq_use_info();
-  compute_freq_def_info();
+  if ($opt_l)
+    { if ($opt_v) { print STDOUT "lint..."; }
+      select LINT;
+      my $old_ofs = $OFS;
+      $OFS = "\n    ";
+      for my $macro_name (sort keys %macros)
+	{
+	  for my $i (@{$macros{$macro_name}})
+	    { my @complaints = ();
+	      my $body = $mdef_body_noc[$i];
+	      my $args = $mdef_args[$i];
 
+	      # Check for formals but no body -- "#define foo(bar)" might
+	      # have been intended as "#define foo (bar)".
+	      if ((!$body) && $args)
+		{ push(@complaints,
+		       (($args =~ /\(\s*\Q$macro_name\E\s*\)/) ? "" : "possible ")
+		         . "missing space between macro name and parenthesized body"); }
+	      # Check uses of each formal
+	      my $category = $mdef_category[$i];
+	      # This is insufficient: $catMACROTYPE and $catUSESTYPEARG, among
+	      # others, may also be expressions.
+	      my $category_is_expression
+		= (($category == $catEXP)
+		   || ($category == $catEXPASSIGN)
+		   || ($category == $catEXPFREE)
+		   || ($category == $catLITERAL)
+		   || ($category == $catCONSTANT)
+		   || ($category == $catSOMECONSTANT));
+	      if ($args)
+		{ my @args = args_array($args);
+		  for my $arg (@args)
+		    { my @formal_complaints = ();
+		      if ($arg !~ /^$identifier_re$/o)
+			{ push(@formal_complaints, "not an identifier"); }
+		      # Add spaces to make sure that there's a first and last part
+		      my @parts = split(/\b\Q$arg\E\b/, " $body ");
+		      for my $i (0..$#parts)
+			{ $parts[$i] =~ s/^\s+//;
+			  $parts[$i] =~ s/\s+$//; }
+
+		      if (scalar(@parts) > 2)
+			{ push(@formal_complaints, "multiple uses"); }
+		      my @unparen_uses = ();
+		      my @sideeff_uses = ();
+		      for my $i (1..$#parts)
+			{ my $pre = $parts[$i-1];
+			  my $post = $parts[$i];
+			  # if ($macro_name eq "__isctype") { print STDOUT "pre = $pre\nmatch = " . ($pre =~ /[\?:,\)]$/) . "  " . ($pre !~ /\($/) . "  " . ($post !~ /^\)/) . "  " . ($arg ne $body) . "\n" ; }
+			  if (($i < $#parts) && (!$post))
+			    { push(@formal_complaints,
+				   "adjacent uses \#$i and \#" . $i+1); }
+			  # Maybe only do this test if body is an expression.
+			  # Perhaps consolidate all these into one error message.
+
+			  if ((($pre !~ /\($/) || ($post !~ /^\)/))
+			      # Don't complain if arg is whole body --
+			      # probably a syntactic macro.
+			      && ($arg ne $body)
+			      # A better test than category == 'expression'
+			      # is whether this use is adjacent to an operator.
+			      # && $category_is_expression
+			      && (($pre =~ /$binop_regexp$/o)
+				  || ($pre =~ /$prefix_unop_regexp$/o)
+				  || ($pre =~ /$selector_regexp$/o)
+				  #  for ? : and , and casting
+				  || ($pre =~ /[\?:,\)]$/)
+				  || ($post =~ /^$binop_regexp/o)
+				  || ($post =~ /^$postfix_unop_regexp/o)
+				  || ($post =~ /^$selector_regexp/o)
+				  # no comma: it's lowest precedence and left-associative
+				  || ($post =~ /^[\?:]/o) #  for ? :
+				  )
+			      )
+			    { push(@unparen_uses, $i); }
+			  if (($pre =~ /(--|\+\+)$/)
+			      || ($post =~ /^(--|\+\+)/)
+			      || ($post =~ /^([-+*\/%&^\|]|<<|>>)?=[^=]/))
+			    { push(@sideeff_uses, $i); }
+			}
+		      if (scalar(@unparen_uses) == 1)
+			{ push(@formal_complaints,
+			       "unparenthesized use \#$unparen_uses[0]"); }
+		      elsif (scalar(@unparen_uses) > 1)
+			{ push(@formal_complaints,
+			       "unparenthesized uses \#"
+			       . join(",#", @unparen_uses)); }
+		      if (scalar(@sideeff_uses) == 1)
+			{ push(@formal_complaints,
+			       "side-effected use \#$sideeff_uses[0]"); }
+		      elsif (scalar(@sideeff_uses) > 1)
+			{ push(@formal_complaints,
+			       "side-effected uses \#"
+			       . join(",#", @sideeff_uses)); }
+		      if (scalar(@formal_complaints) > 0)
+			{ push(@complaints,
+			       "formal $arg: " . join("; ", @formal_complaints)); }
+		    } }
+
+	      # Check body
+	      if ($body =~ /\n/)
+		{ die "Shouldn't find newlines in body: $body"; }
+	      if ($mdef_body[$i] =~ /\n/)
+		{ push(@complaints,
+		       "multi-line comment or string"); }
+	      if ($category_is_expression)
+		{ # Don't demand parentheses around a single identifier,
+		  # number, or string, or around a function call (which has
+		  # high precedence).
+		  if (!		# complain if not one of the following:
+		      (# parenthesized, or function call
+		       (($body =~ /^($identifier_re\s*)?\(/o)
+			# For testing
+			# && (print STDERR "match = $MATCH, close = \n")
+			&& (find_close_paren($body, length($MATCH)) == length($body)-1))
+		       # identifier or number
+		       || ($body =~ /^\w+$/)
+		       # string
+		       || ($body =~ /^$string_literal_re$/o)
+		       # character
+		       || ($body =~ /^$char_literal_re$/o)))
+		    { push(@complaints,
+			   "macro body should be enclosed in parentheses"); } }
+	      if ($body =~ /[;\}]$/)
+		{ push(@complaints,
+		       "semicolon-swallowing problem: enclose statement(s) in \"do ... while (0)\""); }
+	      else
+		{ my $remaining = $body;
+		  while ($remaining =~ /[;\{]/)
+		    { $remaining = $POSTMATCH;
+		      if ($MATCH eq ";")
+			{ push(@complaints,
+			       "multiple statements (semicolon outside {}): enclose in \"do ... while (0)\"");
+			  last; }
+		      my $close_brace_pos = find_close_brace($remaining);
+		      if (!$close_brace_pos)
+			{ push(@complaints,
+			       "unbalanced open brace before $remaining");
+			  last; }
+		      else
+			{ $remaining = substr($remaining, $close_brace_pos); } } }
+
+
+	      if (scalar(@complaints) > 0)
+		{ print LINT "$mdef_file[$i]:$mdef_line[$i]:\n        #define $macro_name$args $mdef_body[$i]", @complaints;
+		  # Separate print statement so we don't get $OFS before it
+		  print LINT "\n"; }
+	    } }
+      $OFS = $old_ofs;
+    } # end of if $opt_l (lint)
+
+  if ($opt_v) { print STDOUT "frequse..."; }
+  compute_freq_use_info();
   select(FREQUSE);
   OutputCountsHistogramCum(0,$macros_c_most_uses,
 			   make_cum_array(@macros_c_number_uses));
@@ -500,6 +685,8 @@ sub output_stats ()
 			     make_cum_array(@{$macros_c_number_uses_for[$cat]}));
   }
 
+  if ($opt_v) { print STDOUT "freqdef..."; }
+  compute_freq_def_info();
   select(FREQDEF);
   OutputCountsHistogramCum(1,$macros_c_most_defs,
 			   make_cum_array(@macros_c_number_defs));
@@ -509,6 +696,8 @@ sub output_stats ()
     OutputCountsHistogramCum(1,$macros_c_most_defs_for[$cat],
 			     make_cum_array(@{$macros_c_number_defs_for[$cat]}));
   }
+
+  if ($opt_v) { print STDOUT "done\n"; }
 }
 
 
@@ -886,6 +1075,10 @@ if ($opt_d) {
     open(CCDSTATS,">$dir/${basename}ccd") || die "Failed opening $!";
   }
 
+  if (!$opt_l) {
+    open(LINT,">$dir/${basename}lint") || die "Failed opening $!";
+  }
+
   open(FREQDEF,">$dir/${basename}freqdef_cum") || die "Failed opening $!";
   open(FREQUSE,">$dir/${basename}frequse_cum") || die "Failed opening $!";
 
@@ -899,6 +1092,7 @@ if ($opt_M) { open(MACROS,">$opt_M") || die "Failed opening $opt_M"; }
 if ($opt_C) { open(CATEG,">$opt_C") || die "Failed opening $opt_C"; }
 if ($opt_P) { open(DEPEND,">$opt_P") || die "Failed opening $opt_P"; }
 if ($opt_c) { open(CCDSTATS,">$opt_c") || die "Failed opening $opt_c"; }
+if ($opt_l) { open(LINT,">$opt_l") || die "Failed opening $opt_l"; }
 if ($opt_I) { $fIgnoreIncludes = $true; }
 if ($opt_t) { $outOFS = "\t"; } # use tab for OFS
 
@@ -916,6 +1110,7 @@ if ($opt_d) {
   $opt_C = $true;
   $opt_P = $true;
   $opt_c = $true;
+  $opt_l = $true;
 }
 
 # Clunky, but faster than editing and saving the file over NFS.
