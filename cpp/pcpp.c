@@ -127,6 +127,20 @@ cppmain_handle_options (cpp_reader *pfile, int argc, char **argv)
   return i;
 }
 
+/* These are used by ctree's lexer to avoid really getting
+   upset about errors and to augment the error output */
+int
+FIsSpeculative()
+{
+  cpp_buffer *buffer = parse_in.buffer;
+  return (buffer->fFromPerl);
+}
+
+char *
+SzIsSpeculative()
+{
+  return FIsSpeculative?"SPECULATIVE:":"";
+}
 
 int
 main (int argc, char **argv, char **env)
