@@ -1,0 +1,159 @@
+#!/uns/bin/perl -w
+# $Id$ -*- perl -*-
+# macros-extract-defuse-categories
+# Greg Badros
+# <gjb@cs.washington.edu>
+# Seattle, WA  USA
+# http://www.cs.washington.edu/homes/gjb
+
+require 5.000;
+use Getopt::Std;
+use File::Basename;
+use English;
+#use strict;
+#use Carp;
+
+#require Exporter;
+#@ISA = qw(Exporter);
+#@EXPORT = qw();
+
+my $getopts_option_letters = 'h';
+use vars qw($opt_h $OFS);
+
+$prg = basename("$0");
+my $true = (0 == 0);
+my $false = (1 == 0);
+
+sub usage () {
+  die "@_
+Usage: $prg [-$getopts_option_letters] <files>
+-h     Help. Display this usage information
+e.g.
+  $prg *freq*
+";
+}
+
+getopts($getopts_option_letters);
+usage() if ($opt_h);
+
+my $prefix = "";
+my $current_file = "";
+my $type = "";
+my $fOpened = $false;
+
+my @def_files;
+my @use_files;
+my @categories;
+
+# Main routine
+while (<>) {
+  if ($ARGV ne $current_file) {
+    $current_file = $ARGV;
+    $prefix = basename($ARGV,qw(.frequse_cum .freqdef_cum));
+#    print STDERR "On file: $current_file\n";
+    if ($current_file =~ /\.frequse_cum$/) {
+      $type = "use";
+    } else { 
+      $type = "def";
+    }
+  }
+  if (/^\#?Category: (.*)$/) {
+    my $category = $1;
+    close(OUT);
+    my $filename = "$prefix.$type-$category";
+#    print STDERR "Appending to $filename...\n";
+    open(OUT,">> $filename");
+    $fOpened = $true;
+    if ($type eq "use") {
+      push @use_files, $filename;
+    } else {
+      push @def_files, $filename;
+    }
+    if (!grep($_ eq $category,@categories)) {
+      push @categories, $category;
+    }
+  } else {
+    print OUT if $fOpened;
+  }
+}
+close(OUT);
+
+# print STDERR "Categories: ", join(", ",@categories), "\n";
+my $use_limit = 8000;  # emacs max uses is 4636
+my $def_limit = 1000;
+
+foreach my $category (@categories) {
+  print STDERR "Handling $category...\n";
+  my @sum_of_line = (0) x 10000;
+  my $length = 0;
+  foreach my $filename (@use_files) {
+    next if $filename !~ /-$category$/;
+#    print STDERR "Reading $filename...\n";
+    close(IN);
+    open(IN,"<$filename");
+    my $total = 0;
+    my $i = 0;
+    my $num = 0;
+    if (<IN> !~ /Total\t(\d*)/) {
+      warn "Expecting total line";
+    } else {
+      $total = $1 || 0;
+#      print STDERR "Using $total\n";
+    }
+    while (<IN>) {
+      $num = (split(/\t/,$_))[1];
+      if (defined($num) && $num ne "") {
+	$sum_of_line[$i++] += $num;
+      }
+    }
+    $length = $i if $i > $length;
+    if ($i >= $use_limit) {
+      die "Too big!";
+    }
+    while ($i < $use_limit) {
+      $sum_of_line[$i++] += $total;
+    }
+  }
+  close(OUT);
+  open(OUT,">cat-$category.frequse_cum");
+  select OUT;
+  $OFS="\t";
+  print "Total", "$sum_of_line[$length-1]\n";
+  foreach my $i (0..$length) {
+    print $i, $sum_of_line[$i], "\n";
+  }
+}
+
+
+__END__
+
+=head1 NAME
+
+macros-extract-defuse-categories -- separate the various categories
+from a freq{def,use} file into files based on names of the categories
+
+=head1 SYNOPSIS 
+
+=head1 DESCRIPTION
+
+I<Disclaimer: You choose to use this script at your own risk!>
+
+=over 4
+
+=item
+
+=item
+
+=back
+
+=head1 BUGS
+
+=head1 SEE ALSO
+
+=head1 COPYRIGHT
+
+=head1 AUTHOR
+
+Greg Badros <F<<gjb@cs.washington.edu>>>
+
+=cut
