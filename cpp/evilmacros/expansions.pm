@@ -77,9 +77,10 @@ sub Exit {
 
 sub add_use {
   my ($mname,$fname, $expansion, $s_start, $s_end, $cbb) = @_;
-#  if ($cbb == 0) {
+  # test16.c tickles this bug
+  if ($cbb <= 1) {
     print EXPAND "$fname: $mname, $s_start, $s_end\n";
-#  }
+  }
 }
 
 sub output_functions_listing {
