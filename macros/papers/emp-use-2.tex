@@ -108,7 +108,7 @@ one cannot write practical C programs without these facilities.
 
 While disciplined use of the preprocessor can reduce programmer effort
 and improve portability, performance, or readability, Cpp is widely
-viewed as a source of difficulty for understanding and transforming C
+viewed as a source of difficulty for understanding and modifying C
 programs.  Cpp's lack of structure\,---\,it's inputs and
 outputs are raw token streams\,---\,engenders flexibility but allows
 arbitrary source code manipulations that complicate 
@@ -205,10 +205,12 @@ Each approach has different strengths and weaknesses.
 %effects on parser or program state, so that even tools that do no Cpp
 %analysis can operate correctly on such programs.)
 
+Choices among these options are made in the absence of
+an understanding of how Cpp is used in practice.
 While  Cpp's potential pitfalls are well-known, no
 previous work has examined actual use of the C preprocessor to
 determine whether it presents a practical or merely theoretical
-obstacle to program understanding, analysis, and transformation.  This
+obstacle to program understanding, analysis, and modification.  This
 paper fills that gap by examining Cpp use in {\numpackages} programs
 comprising {\numlines} lines of source code.
 
@@ -448,7 +450,8 @@ directives ({\tt \#if}, {\tt \#ifdef}, {\tt \#ifndef}, {\tt \#else}, {\tt
 \end{figure}
 
 The prevalence of, and variation in, preprocessor use makes understanding
-Cpp constructs crucial to program analysis.  One in ten program lines is a
+Cpp constructs crucial to program analysis.  Nearly one in ten program
+lines is a 
 preprocessor directive rather than C code.  Across packages, the percentage
 varies from less than 4\% to more than 22\%.  (These figures do not include
 the 28\% of lines which expand a macro or the 38\% of lines whose inclusion
@@ -1190,7 +1193,7 @@ times.  Figure~\ref{fig:freq-def-cat} graphs the number of definitions for
 each macro name in our test suite, broken down by macro category.
 (Section~\ref{sec:inconsistent} and Appendix~\ref{app:category-lub} extend
 macro body classifications to macro names.)  The average number of
-definitions is less than 2, with 79\% of macros defined just once.
+definitions is less than two, with 79\% of macros defined just once.
 
 Our analysis does not distinguish sequential redefinitions of a macro from
 multiple definitions that cannot take effect in a single configuration.
@@ -1754,6 +1757,19 @@ dependences across file boundaries: if a macro controls whether a file is
 % not on {\tt A}, which must have been set to true in order for {\tt M} to be
 % defined at all.  That is, no setting of {\tt A} can affect {\tt M}'s
 
+\begin{figure}
+\centerline{\epsfig{file=fig/dep-byline.eps,height=4in}}
+
+\captionsmall{Percentage of lines dependent on a particular number of macros (or
+  fewer).  For instance, 93\% of all lines are expansion-dependent on two
+  or fewer macros, and 90\% of all lines are inclusion-dependent on 27 or
+  fewer macros.  The log scale is shifted by unity in order to place 0
+  on the scale:  before plotting, we added 1 to each of the x axis values,
+  then relabeled ``1'' as ``0''.}
+\label{fig:dep-byline}
+\end{figure}
+
+
 The statistics reported in this section are underestimates because they
 omit two packages which aggressively use macros.  The full dependence
 information for \pkg{emacs} and \pkg{mosaic} exceeded our computer's
@@ -1767,17 +1783,8 @@ which use the Motif library.
 
 \subsection{Dependences by line}
 
-\begin{figure}
-\centerline{\epsfig{file=fig/dep-byline.eps,height=4in}}
-
-\captionsmall{Percentage of lines dependent on a particular number of macros (or
-  fewer).  For instance, 93\% of all lines are expansion-dependent on two
-  or fewer macros, and 90\% of all lines are inclusion-dependent on 27 or
-  fewer macros.  The log scale is shifted by unity in order to place 0
-  on the scale:  before plotting, we added 1 to each of the x axis values,
-  then relabeled ``1'' as ``0''.}
-\label{fig:dep-byline}
-\end{figure}
+%%% Figure fig:dep-byline really belongs here, but I'm trying to put it on
+%%% a separate page from fig:dep-bymacro.
 
 Figure~\ref{fig:dep-byline} graphs the percentage of lines dependent on a
 given number of macros.  Over two in five lines (42\%) are controlled by
@@ -1821,9 +1828,9 @@ macros.
 % \centerline{\epsfig{file=fig/exp-dep-bymacro.eps,angle=270,width=.5\linewidth}}
 % \bigskip
 % \centerline{\epsfig{file=fig/incl-dep-bymacro.eps,angle=270,width=.5\linewidth}}
-\centerline{\epsfig{file=fig/exp-dep-bymacro.eps,angle=270,width=.49\linewidth}%
-~%
-\epsfig{file=fig/incl-dep-bymacro.eps,angle=270,width=.49\linewidth}}
+\centerline{\epsfig{file=fig/exp-dep-bymacro.eps,angle=270,width=.48\linewidth}%
+\ %
+\epsfig{file=fig/incl-dep-bymacro.eps,angle=270,width=.48\linewidth}}
 \captionsmall{Dependences by macro name for 22648 macro names in 28 packages.
   Each bar represents all macros that control at least as many as the
   labeled percent of the lines in its package (but fewer than the next
@@ -1954,6 +1961,7 @@ of macros''; these are much like some of the problems our analysis tool
 identifies.  Several coding style guides make recommendations on
 preprocessor use and on ways to reduce unexpected behavior resulting from
 poorly designed constructs~\cite{Stallman97,ellemtel92,Cannon95,Dolenc90}.
+Our empirical data might help refine these sets of suggestions.
 
 Carroll and Ellis state that ``almost all uses of macros can be eliminated
 from C++ libraries''~\cite[p.~146]{Carroll95}.  They list eight categories
@@ -1961,11 +1969,14 @@ of macro usage and explain how the software engineer can use C++ language
 features instead of using the preprocessor.  Our categories focus on actual
 use in C programs rather than potential uses in C++ programs.
 
-Spencer and Collyer recommend against using most varieties of
-\texttt{\#ifdef}~\cite{SpencerC92}, except for  providing default values
-for macros and preventing multiple inclusion of header files.  They suggest
-testing for specific features instead of machines in conditional
-compilation directives, as we do in Section~\ref{sec:ccd}.
+Spencer and Collyer provide a set of techniques for achieving portability
+without using \texttt{\#ifdef}~\cite{SpencerC92}, which they recommend only
+for providing default values for macros and preventing multiple inclusion
+of header files.  They suggest using standard interfaces, using separate
+files instead of merging them with Cpp conditionals, and testing for
+specific features instead of machines in conditional compilation
+directives, as we do in Section~\ref{sec:ccd}.  They also break down the
+uses of \texttt{\#ifdef} in the 21,000 lines of C News.
 
 Krone and Snelting use mathematical concept analysis to determine the
 conditional compilation structure of code~\cite{Krone94}.  They determine,
@@ -1984,7 +1995,7 @@ categories.
 %on only 20, not all 30, packages, which doesn't include the biggest ones.
 
 A number of tools check whether specific C programs satisfy particular
-constraints.  Various ``lint''~\cite{Johnson77} source-code analyzers check
+constraints.  Various lint~\cite{Johnson77} source-code analyzers check
 for potentially problematic uses of C, often including the C preprocessor.
 Macro errors are usually discovered as a byproduct of macro
 expansion\,---\,for instance, by generating an empty statement which causes
@@ -2021,9 +2032,16 @@ but broader set of subtle or potentially dangerous constructs.
 %\end{enumerate}
 %]]
 
-
 %% FIX: If we could also list the platforms for which each can compile,
-%% that would be great, but I doubt the benefit is worth the effort for now
+%% that would be great, but I doubt the benefit is worth the effort for now.
+
+Check is a C macro checker that detects some instances of multiple
+statements, dangling {\tt \#else}, side effects, and precedence errors
+using largely lexical checks~\cite{SpulerS92}.  Precedence errors are
+performed on macro uses rather than reporting problematic definitions.  The
+authors do not report on the effectiveness of the tool in practice or
+justify their tradeoffs between techniques that perform parsing and those
+that do not.
 
 A limited number of tools do exist to assist software engineers to
 understand code with containing Cpp directives.  Emacs~\cite{GNUEmacs19.26}
@@ -2035,6 +2053,16 @@ Various language construct ``tagging'' mechanisms (e.g., \texttt{etags} and
 \texttt{ctags}) recognize macro definitions and permit tag-aware editors
 to move easily from a macro expansion to the various definitions of that
 macro name.
+
+Favre suggests that Cpp be expressed in an abstract syntax like that of
+other programming languages~\cite{Favre96}.  After a simple semantics (free
+of loops and other complicating constructs) is assigned to it, traditional
+analyses such as call graph construction, control and data flow analysis,
+slicing, and specialization can be performed on it.  The Champollion/APP
+environment doesn't support ``the full lexical conventions of the C
+language'' nor macros that take parameters, which make up 28\% of macros in
+our study.
+
 
 %[[ What debugger does this? --11/21/97 gjb]]
 % [[ I don't remember, and couldn't find a reference.  -MDE ]]
@@ -2068,7 +2096,7 @@ Likewise, one of the most common uses of Cpp macros could be eliminated if
 the C language and its dialects had only a single declaration syntax.
 Because most C compilers, and all C++ compilers, accept ANSI-style
 declarations, support for multiple declaration styles may have outlived its
-usefulness.  The \pkg{ansi2knr} tool~\cite{Deutsch90} translates a C program
+usefulness.  The ansi2knr tool~\cite{Deutsch90} translates a C program
 using ANSI style function declarations into one using classical function
 declarations.  This tool frees authors from maintaining two commonly
 required configurations.
@@ -2204,7 +2232,7 @@ strings and comments) of any name that is \texttt{\#define}d is a macro
 use and could correspond to any of the definitions of that same name.
 This pessimism provides an upper bound on the preprocessor complexity of
 the source code, but is too inaccurate when considering code
-transformations.  We currently are experimenting with a different
+modifications.  We currently are experimenting with a different
 framework that accurately tracks macro definitions and uses to provide
 support for more sophisticated reasoning and code transformations.
 
