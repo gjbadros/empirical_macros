@@ -33,7 +33,7 @@ char *
 SzToken(i)
 	int i
 	CODE:
-	RETVAL = SzFromToken((enum cpp_token) i);
+	RETVAL = SzFromToken((enum cpp_token_id) i);
 	OUTPUT:
 	RETVAL
 
@@ -95,9 +95,16 @@ MacroExpansionHistory()
 	    if (buffer->data == 0) {
 		break;
 	    } else {
-		XPUSHs(sv_2mortal(newSVpv(buffer->data?
-					  ((HASHNODE*) (buffer->data))->name:
-					  (U_CHAR *)"",0)));
+		HASHNODE *macro = buffer->data;
+		if (macro) {
+		    int offset = buffer->cur - buffer->buf;
+		    int from_what = 1 + IargWithOffset(offset,
+						       macro->value.defn->nargs,
+						       buffer->args);
+		    XPUSHs(sv_2mortal(newSVpvf("%s#%d[%d]",macro->name,from_what,
+					       offset)));
+		} else
+		    XPUSHs(sv_2mortal(newSVpv("",0)));
 		cbuffersBack++;
 		buffer = CPP_PREV_BUFFER(buffer);
 	    }

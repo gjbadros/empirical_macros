@@ -43,6 +43,7 @@ typedef enum hook_index_constants {
   HI_TOKEN,
   HI_FUNCTION,
   HI_FUNC_CALL,
+  HI_ANNOTATE,
 } HOOK_INDEX;
 // end hook_index_constants
 
@@ -67,6 +68,9 @@ void gjb_call_hooks_sz_i_i(struct cpp_options *, HOOK_INDEX, char *, int, int);
 
 void gjb_call_hooks_sz_szl_i_szl_i(struct cpp_options *, HOOK_INDEX, 
 				   char *, char *, int, int, char *, int, int);
+
+void gjb_call_hooks_pcat_szl(struct cpp_options *, HOOK_INDEX, cpp_annotated_token *,
+			     char *, int);
 
 void gjb_call_hooks_expansion(struct cpp_reader *pfile, HOOK_INDEX ih,
 			      char *sz1, char *sz2, int cch2, int i1, 
@@ -98,6 +102,12 @@ void gjb_call_hooks_szl_i(struct cpp_options *, HOOK_INDEX, char *, int, int);
 
 void gjb_call_hooks_sz_i(struct cpp_options *, HOOK_INDEX, char *, int);
 
+void gjb_call_hooks_sz_i_sz_i(struct cpp_options *, HOOK_INDEX, char *, int,
+			      char *, int);
+
+void gjb_call_hooks_sz_i_sz_i_i(struct cpp_options *, HOOK_INDEX, char *, int,
+				char *, int, int);
+
 void gjb_call_hooks_szl_sz_defn(struct cpp_options *, HOOK_INDEX, char *, 
 				int, char *, DEFINITION *);
 
@@ -113,4 +123,8 @@ void gjb_call_hooks_sz_i_sprintf(struct cpp_options *, HOOK_INDEX, char *, int,
 				 char *, char *, char *, char *);
 void gjb_call_hooks_sz_i_i_sprintf(struct cpp_options *, HOOK_INDEX, char *, int, int,
 				   char *, char *, char *, char *);
+
+
+char * SzFromToken(enum cpp_token_id kind);
+
 #endif

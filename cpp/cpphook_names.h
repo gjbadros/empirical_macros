@@ -35,5 +35,6 @@ char *hook_names[] = {
 "TOKEN",
 "FUNCTION",
 "FUNC_CALL",
+"ANNOTATE",
 };
 

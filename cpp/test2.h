@@ -7,6 +7,7 @@
 
 #define __P(protos) protos
 #define MAX(x,y)     (x,   y)
+#define Max(x,y)     (x,   y)
 #define MANY(xxxx,yy)    Initial Offset xxxx yy xxxx xxxx xxxx yy Terminating offset
 #define HELLO LONG_BAR LONG_BAR
 #define GOODBYE BAZ
@@ -20,6 +21,7 @@
 int main (char *argv, int argc)
 {
  TEST3:
+  MAX(Max(simpled1,simpled2),simple3);
   MAX   (  FOO,     LONG_BAR);
   MAX(LONG_BAR,FOO);
  NEWTEST:
@@ -51,7 +53,7 @@ int main (char *argv, int argc)
  TEST7:
    DEEP;
  TEST8:
-   COMPLEX(wow);
+   COMPLEX(whoaza);
    COMPLEX(MULTI);
 
 }

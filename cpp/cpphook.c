@@ -49,6 +49,13 @@ inline SV *newSVpvOrNull(char *sz, int cch) {
     return newSVpv("@NULL@",6);
 }
 
+inline SV *newSVpv_safe(char *sz, int cch) {
+  if (sz)
+    return newSVpv(sz,cch);
+  else
+    return newSVpv("",0);
+}
+
 
 /* return a single new SV * which is the various arguments
  * OR-ed in together into one integer, each integer getting a bit
@@ -261,6 +268,41 @@ int CNestedArgExpansions(cpp_expand_info *pcei)
   return cexpansions;
 }
 
+// Returns ($token_type,$mname_from,$argno,$raw)
+void gjb_call_hooks_pcat_szl(struct cpp_options *opts, HOOK_INDEX ih, 
+			     cpp_annotated_token *pcat,
+			     char *szRaw, int cchRaw)
+{
+  SV *psvFunc = NULL;
+  dSP;
+  
+  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+    return;
+
+  PUSHMARK(sp);
+  XPUSHs(sv_2mortal(newSVpv(SzFromToken(pcat->id), 0)));
+  XPUSHs(sv_2mortal(newSVpv_safe(pcat->szMnameFrom,0)));
+  XPUSHs(sv_2mortal(newSViv(pcat->from_what)));
+  XPUSHs(sv_2mortal(newSVpvlen(szRaw, cchRaw)));
+
+  if (pcat->args && pcat->from_what > 0) 
+    {
+    cpp_expand_info *pcei = pcat->args[pcat->from_what-1].pcei;
+    
+    while (pcei != NULL) 
+      {
+      XPUSHs(sv_2mortal(newSVpvf("%s#%d[%d]",pcei->hp?(char *)pcei->hp->name:"",
+				 pcei->argno+1,
+				 pcei->offset)));
+      pcei = pcei->pceiPrior;
+      }
+    }
+
+  PUTBACK ;
+     
+  perl_call_sv(psvFunc, G_DISCARD);
+}
+
 
 void
 gjb_call_hooks_expansion(struct cpp_reader *pfile, HOOK_INDEX ih,
@@ -293,7 +335,7 @@ gjb_call_hooks_expansion(struct cpp_reader *pfile, HOOK_INDEX ih,
   XPUSHs(sv_2mortal(newSViv(cNestedArgExpansions)));
   while (pcei != NULL) 
     {
-    XPUSHs(sv_2mortal(newSVpvf("%s#%d[%d]",pcei->hp->name,pcei->argno,
+    XPUSHs(sv_2mortal(newSVpvf("%s#%d[%d]",pcei->hp->name,pcei->argno+1,
 			       pcei->offset)));
     pcei = pcei->pceiPrior;
     }
@@ -541,6 +583,49 @@ gjb_call_hooks_sz_i(struct cpp_options *opts, HOOK_INDEX ih, char *sz, int i)
 }
 
 void
+gjb_call_hooks_sz_i_sz_i(struct cpp_options *opts, HOOK_INDEX ih, 
+			 char *sz1, int i1, char *sz2, int i2)
+{
+  SV *psvFunc = NULL;
+
+  dSP;
+  
+  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+    return;
+
+  PUSHMARK(sp);
+  XPUSHs(sv_2mortal(newSVpv(sz1, 0)));
+  XPUSHs(sv_2mortal(newSViv(i1)));
+  XPUSHs(sv_2mortal(newSVpv(sz2, 0)));
+  XPUSHs(sv_2mortal(newSViv(i2)));
+  PUTBACK ;
+     
+  perl_call_sv(psvFunc, G_DISCARD);
+}
+
+void
+gjb_call_hooks_sz_i_sz_i_i(struct cpp_options *opts, HOOK_INDEX ih, 
+			   char *sz1, int i1, char *sz2, int i2, int i3)
+{
+  SV *psvFunc = NULL;
+
+  dSP;
+  
+  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+    return;
+
+  PUSHMARK(sp);
+  XPUSHs(sv_2mortal(newSVpv(sz1, 0)));
+  XPUSHs(sv_2mortal(newSViv(i1)));
+  XPUSHs(sv_2mortal(newSVpv(sz2, 0)));
+  XPUSHs(sv_2mortal(newSViv(i2)));
+  XPUSHs(sv_2mortal(newSViv(i3)));
+  PUTBACK ;
+     
+  perl_call_sv(psvFunc, G_DISCARD);
+}
+
+void
 gjb_call_hooks_szl_i(struct cpp_options *opts, HOOK_INDEX ih, char *sz, int cch, int i)
 {
   SV *psvFunc = NULL;
@@ -658,4 +743,100 @@ void gjb_call_hooks_sz_i_i_sprintf(struct cpp_options *opts, HOOK_INDEX ih,
   PUTBACK ;
 
   perl_call_sv(psvFunc, G_DISCARD);
+}
+
+char *
+SzFromToken(enum cpp_token_id kind) {
+  char *s = "";
+  switch (kind)
+    {
+    case CPP_EOF:
+      s = "CPP_EOF";
+      break;
+    case CPP_OTHER:
+      s = "CPP_OTHER";
+      break;
+    case CPP_COMMENT:
+      s = "CPP_COMMENT";
+      break;
+    case CPP_HSPACE:
+      s = "CPP_HSPACE";
+      break;
+    case CPP_VSPACE:
+      s = "CPP_VSPACE";
+      break;
+    case CPP_NAME:
+      s = "CPP_NAME";
+      break;
+    case CPP_NUMBER:
+      s = "CPP_NUMBER";
+      break;
+    case CPP_CHAR:
+      s = "CPP_CHAR";
+      break;
+    case CPP_STRING:
+      s = "CPP_STRING";
+      break;
+    case CPP_DIRECTIVE:
+      s = "CPP_DIRECTIVE";
+      break;
+    case CPP_LPAREN:
+      s = "CPP_LPAREN";
+      break;
+    case CPP_RPAREN:
+      s = "CPP_RPAREN";
+      break;
+    case CPP_LBRACE:
+      s = "CPP_LBRACE";
+      break;
+    case CPP_RBRACE:
+      s = "CPP_RBRACE";
+      break;
+    case CPP_COMMA:
+      s = "CPP_COMMA";
+      break;
+    case CPP_SEMICOLON:
+      s = "CPP_SEMICOLON";
+      break;
+    case CPP_3DOTS:
+      s = "CPP_3DOTS";
+      break;
+#if 0
+    case CPP_ANDAND:
+      s = "CPP_ANDAND";
+      break;
+    case CPP_OROR:
+      s = "CPP_OROR";
+      break;
+    case CPP_LSH:
+      s = "CPP_LSH";
+      break;
+    case CPP_RSH:
+      s = "CPP_RSH";
+      break;
+    case CPP_EQL:
+      s = "CPP_EQL";
+      break;
+    case CPP_NEQ:
+      s = "CPP_NEQ";
+      break;
+    case CPP_LEQ:
+      s = "CPP_LEQ";
+      break;
+    case CPP_GEQ:
+      s = "CPP_GEQ";
+      break;
+    case CPP_PLPL:
+      s = "CPP_PLPL";
+      break;
+    case CPP_MINMIN:
+      s = "CPP_MINMIN";
+      break;
+#endif
+  /* POP_TOKEN is returned when we've popped a cpp_buffer. */
+    case CPP_POP:
+      s = "CPP_POP";
+      break;
+    }
+  return s;
 }

@@ -282,7 +282,7 @@ cpp_reader *pfile;
 {
   register int c;
   register struct token *toktab;
-  enum cpp_token token;
+  cpp_annotated_token *pcat;
   struct operation op;
   U_CHAR *tok_start, *tok_end;
   int old_written;
@@ -302,11 +302,11 @@ cpp_reader *pfile;
       return op;
     }
 
-  token = cpp_get_token (pfile,0);
+  pcat = cpp_get_token (pfile,0,0);
   tok_start = pfile->token_buffer + old_written;
   tok_end = CPP_PWRITTEN (pfile);
   pfile->limit = tok_start;
-  switch (token)
+  switch (pcat->id)
   {
     case CPP_EOF: /* Should not happen ... */
       op.op = 0;
@@ -363,7 +363,7 @@ cpp_reader *pfile;
 	  {
 	    if (c == '\\')
 	      {
-		c = cpp_parse_escape (pfile, &ptr);
+		c = cpp_parse_escape (pfile, (char **)&ptr);
 		if (width < HOST_BITS_PER_INT
 		  && (unsigned) c >= (1 << width))
 		    cpp_pedwarn (pfile,
@@ -975,7 +975,7 @@ cpp_parse_expr (pfile)
 	  int old_size = (char*)limit - (char*)stack;
 	  int new_size = 2 * old_size;
 	  if (stack != init_stack)
-	    new_stack = (struct operation*) xrealloc (stack, new_size);
+	    new_stack = (struct operation*) xrealloc ((char *)stack, new_size);
 	  else
 	    {
 	      new_stack = (struct operation*) xmalloc (new_size);

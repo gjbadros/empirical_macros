@@ -84,101 +84,6 @@ fancy_abort ()
 
 
 
-char *
-SzFromToken(enum cpp_token kind) {
-  char *s = "";
-  switch (kind)
-    {
-    case CPP_EOF:
-      s = "CPP_EOF";
-      break;
-    case CPP_OTHER:
-      s = "CPP_OTHER";
-      break;
-    case CPP_COMMENT:
-      s = "CPP_COMMENT";
-      break;
-    case CPP_HSPACE:
-      s = "CPP_HSPACE";
-      break;
-    case CPP_VSPACE:
-      s = "CPP_VSPACE";
-      break;
-    case CPP_NAME:
-      s = "CPP_NAME";
-      break;
-    case CPP_NUMBER:
-      s = "CPP_NUMBER";
-      break;
-    case CPP_CHAR:
-      s = "CPP_CHAR";
-      break;
-    case CPP_STRING:
-      s = "CPP_STRING";
-      break;
-    case CPP_DIRECTIVE:
-      s = "CPP_DIRECTIVE";
-      break;
-    case CPP_LPAREN:
-      s = "CPP_LPAREN";
-      break;
-    case CPP_RPAREN:
-      s = "CPP_RPAREN";
-      break;
-    case CPP_LBRACE:
-      s = "CPP_LBRACE";
-      break;
-    case CPP_RBRACE:
-      s = "CPP_RBRACE";
-      break;
-    case CPP_COMMA:
-      s = "CPP_COMMA";
-      break;
-    case CPP_SEMICOLON:
-      s = "CPP_SEMICOLON";
-      break;
-    case CPP_3DOTS:
-      s = "CPP_3DOTS";
-      break;
-#if 0
-    case CPP_ANDAND:
-      s = "CPP_ANDAND";
-      break;
-    case CPP_OROR:
-      s = "CPP_OROR";
-      break;
-    case CPP_LSH:
-      s = "CPP_LSH";
-      break;
-    case CPP_RSH:
-      s = "CPP_RSH";
-      break;
-    case CPP_EQL:
-      s = "CPP_EQL";
-      break;
-    case CPP_NEQ:
-      s = "CPP_NEQ";
-      break;
-    case CPP_LEQ:
-      s = "CPP_LEQ";
-      break;
-    case CPP_GEQ:
-      s = "CPP_GEQ";
-      break;
-    case CPP_PLPL:
-      s = "CPP_PLPL";
-      break;
-    case CPP_MINMIN:
-      s = "CPP_MINMIN";
-      break;
-#endif
-  /* POP_TOKEN is returned when we've popped a cpp_buffer. */
-    case CPP_POP:
-      s = "CPP_POP";
-      break;
-    }
-  return s;
-}
 
 static PerlInterpreter *my_perl;
 
@@ -299,8 +204,7 @@ main (int argc, char **argv, char **env)
     fprintf(stderr,"Option --noparse given, just running cpp w/o grammar!\n");
     for (;;)
       {
-      enum cpp_token token;
-      token = cpp_get_token (&parse_in,0);
+      cpp_annotated_token *pcat = cpp_get_token (&parse_in,0,0);
       cBytesCppRead += CPP_WRITTEN(&parse_in);
       if (! opts->no_output)
 	{
@@ -308,9 +212,9 @@ main (int argc, char **argv, char **env)
 	}
       cBytesOutput += CPP_WRITTEN(&parse_in);
       gjb_call_hooks_szl(opts,HI_CPP_OUT,parse_in.token_buffer,CPP_WRITTEN(&parse_in));
-      gjb_call_hooks_sz_szl(opts,HI_TOKEN,SzFromToken(token),parse_in.token_buffer,
+      gjb_call_hooks_pcat_szl(opts,HI_TOKEN,pcat,parse_in.token_buffer,
 			    CPP_WRITTEN(&parse_in));
-      if (token == CPP_EOF)
+      if (pcat->id == CPP_EOF)
 	break;
       parse_in.limit = parse_in.token_buffer;
       }

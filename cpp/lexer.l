@@ -58,15 +58,15 @@ cpp_yy_input(char *buf,int max_size)
 {
     int result;
     do {
-	enum cpp_token kind = cpp_get_token (&parse_in,0);
+	cpp_annotated_token *pcat = cpp_get_token (&parse_in,0,0);
 	cBytesCppRead += CPP_WRITTEN(&parse_in);
 	gjb_call_hooks_szl(CPP_OPTIONS(&parse_in),HI_CPP_OUT,
 			   parse_in.token_buffer,CPP_WRITTEN(&parse_in));
-	gjb_call_hooks_sz_szl(CPP_OPTIONS(&parse_in),HI_TOKEN,SzFromToken(kind),
+	gjb_call_hooks_pcat_szl(CPP_OPTIONS(&parse_in),HI_TOKEN,pcat,
 			      parse_in.token_buffer,
 			      CPP_WRITTEN(&parse_in));
-	if (kind == CPP_EOF || cpp_got_eof == 1) {
-	    fprintf(stderr,"Got kind == CPP_EOF\n");
+	if (pcat->id == CPP_EOF || cpp_got_eof == 1) {
+	    fprintf(stderr,"Got pcat->id == CPP_EOF\n");
 	    result = YY_NULL;
 	    buf[0] = 0;
 	    cpp_got_eof = 1;
@@ -82,6 +82,7 @@ cpp_yy_input(char *buf,int max_size)
 	    strncpy(buf,parse_in.token_buffer,result);
 	    parse_in.limit = parse_in.token_buffer;
 	}
+	free(pcat);
     } while (result == 0);
     buf[result] = 0;
 #ifdef GJB_DEBUG_CPP_YY_INPUT

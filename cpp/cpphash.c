@@ -70,11 +70,7 @@ hashf (name, len, hashsize)
  * Otherwise, compute the hash code.
  */
 HASHNODE *
-cpp_lookup (pfile, name, len, hash)
-     struct parse_file *pfile;
-     const U_CHAR *name;
-     int len;
-     int hash;
+cpp_lookup (cpp_reader *pfile, const U_CHAR *name, int len, int hash)
 {
   register const U_CHAR *bp;
   register HASHNODE *bucket;

@@ -1,0 +1,39 @@
+cpp_get_token
+    Non-macro?  
+	annotate it and return in
+    else
+	macroexpand
+		macarg  #1
+			cpp_get_token
+			...
+		macarg  #2
+			cpp_get_token
+			...
+		...
+		...
+		cpp_expand_to_buffer  # for use #1
+			cpp_push_buffer
+			cpp_scan_buffer
+				cpp_get_token
+				...
+				cpp_get_token
+				...
+				...
+				--EOB--
+				cpp_pop_buffer
+		cpp_expand_to_buffer  # for use #2
+			cpp_push_buffer
+			cpp_scan_buffer
+				cpp_get_token
+				...
+				cpp_get_token
+				...
+				...
+				--EOB--
+				cpp_pop_buffer
+		...
+		...
+		HI_EXPAND hook
+		push_macro_expansion
+	goto get_next;
+		

@@ -40,7 +40,7 @@ typedef struct cpp_buffer cpp_buffer;
 typedef struct cpp_options cpp_options;
 typedef struct hashnode cpp_hashnode;
 
-enum cpp_token {
+enum cpp_token_id {
   CPP_EOF = -1,
   CPP_OTHER = 0,
   CPP_COMMENT = 1,
@@ -74,15 +74,32 @@ enum cpp_token {
   CPP_POP
 };
 
-#ifndef PARAMS
-#ifdef __STDC
-#define PARAMS(P) P
-#else
-#define PARAMS(P) ()
-#endif
-#endif /* !PARAMS */
 
-typedef enum cpp_token (*parse_underflow_t) PARAMS((cpp_reader*, cpp_expand_info *));
+typedef struct cpp_annotated_token {
+  enum cpp_token_id id;
+  char *szMnameFrom;  // NULL = program text
+  int from_what;  // 0 = macro body, n = macro argument n
+  struct cpp_annotated_token *pcatPrev;
+  struct argdata *args;
+} cpp_annotated_token;
+
+typedef struct cpp_expand_info {
+  int argno;
+  int offset;
+  int length;
+  cpp_hashnode *hp;
+  struct cpp_expand_info *pceiPrior;
+} cpp_expand_info;
+
+  //#ifndef PARAMS
+  //#ifdef __STDC
+#define PARAMS(P) P
+  //#else
+  //#define PARAMS(P) ()
+  //#endif
+  //#endif /* !PARAMS */
+
+typedef cpp_annotated_token * (*parse_underflow_t) PARAMS((cpp_reader*, cpp_expand_info *, struct argdata *));
 typedef int (*parse_cleanup_t) PARAMS((cpp_buffer *, cpp_reader*, cpp_expand_info *));
 
 /* A parse_marker indicates a previous position,
@@ -100,9 +117,9 @@ extern void parse_goto_mark PARAMS((struct parse_marker*, cpp_reader*));
 extern void parse_move_mark PARAMS((struct parse_marker*, cpp_reader*));
 
 extern int cpp_handle_options PARAMS ((cpp_reader*, int, char**));
-extern enum cpp_token cpp_get_token PARAMS ((struct parse_marker*, cpp_expand_info *pcei));
+extern cpp_annotated_token *cpp_get_token PARAMS ((cpp_reader *, cpp_expand_info *pcei, struct argdata *pad));
 extern void cpp_skip_hspace PARAMS((cpp_reader*));
-extern enum cpp_token cpp_get_non_space_token PARAMS ((cpp_reader *));
+extern cpp_annotated_token *cpp_get_non_space_token PARAMS ((cpp_reader *));
 
 
 /* Maintain and search list of included files, for #import.  */
@@ -118,15 +135,6 @@ struct import_file {
 
 /* If we have a huge buffer, may need to cache more recent counts */
 #define CPP_LINE_BASE(BUF) ((BUF)->buf + (BUF)->line_base)
-
-typedef struct cpp_expand_info {
-  int argno;
-  int offset;
-  int length;
-  cpp_hashnode *hp;
-  struct cpp_expand_info *pceiPrior;
-} cpp_expand_info;
-
 
 struct cpp_buffer {
   unsigned char *buf;
@@ -664,6 +672,7 @@ struct argdata {
 		 array during the final expansion of the macro */
   long dchUsesStart[16];  /* beginning offset of each successive use */
   long dchUsesEnd[16];    /* ending offset of each successive use */
+  cpp_expand_info *pcei;
 };
 
 

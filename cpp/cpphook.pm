@@ -24,7 +24,8 @@ sub Startup {
 #  open(CPP,">cpp.listing") || die "Could not open output file: $!";
   *CPP = *STDERR;
   open(CHOUT,">chout.listing") || die "Could not open output file: $!";
-  open(TOKEN,">token.listing") || die "Could not open output file: $!";
+#  open(TOKEN,">token.listing") || die "Could not open output file: $!";
+  *TOKEN = *STDERR;
   open(MAPPING,">mapping") || die "Could not open output file: $!";
   print MAPPING "(setq char-mapping (list\n";
   open(TP,">textprops.el") || die "Could not open output file: $!";
@@ -280,15 +281,18 @@ sub done_include_file {
 
 # Token's come a lot, so redirect this output somewhere else
 sub Got_token {
-  my ($token,$sz) = @_;
-  my @history = cpp::MacroExpansionHistory();
-  my $argno = cpp::ArgOf();
-  print  TOKEN "TOKEN: $sz;", substr($token,4),", FExpanidngMacros = ",cpp::FExpandingMacros(),
-   ", CchOffset = ", cpp::CchOffset(), "; CbytesOutput = ", cpp::CbytesOutput(),";", join("<-",@history),"\n";
-  print TOKEN ": ArgOf = ", $argno, "\n";
+  my ($token,$mname,$argno,$raw,@history) = @_;
+  my @nests = cpp::MacroExpansionHistory();
+ $argof = cpp::ArgOf();
+  print  TOKEN "TOKEN: $raw;", substr($token,4),", FExpandingMacros = ",cpp::FExpandingMacros(),
+   ", CchOffset = ", cpp::CchOffset(), "; CbytesOutput = ", cpp::CbytesOutput(),"\n";
+  print TOKEN ": Nests: ",join("<-",@nests),"\n";
+  print TOKEN ": History: ",join("<-",@history),"\n";
+  print TOKEN ": From $mname\n";
+  print TOKEN ": ArgOf = $argof vs. Argno = $argno\n";
 
   my $end = cpp::CbytesOutput()+1;
-  my $start = $end-length($sz);
+  my $start = $end-length($raw);
   if ($#history >= 0) {
     print TP "#out:(put-face-property-if-none $start $end \'italic)\n";
     print TP "#out:(put-mouse-face-property-if-none $start $end \'highlight)\n";
@@ -300,6 +304,11 @@ sub Got_token {
       print TP "#out:(add-text-property $start $end \'doc \"Expansion from argument $argno of " , (join("<-",@history)),"\")\n";
     }
   }
+}
+
+sub annotate {
+  my ($szBefore,$cdeepBefore,$szAfter,$cdeepAfter, $pad) = @_;
+  print "ANNOTATE: $szBefore\[$cdeepBefore\]; $szAfter\[$cdeepAfter\] : $pad\n";
 }
 
 sub do_function {
@@ -345,6 +354,7 @@ AddHook("EXIT",\&Exit);
 AddHook("TOKEN",\&Got_token);
 AddHook("FUNCTION",\&do_function);
 AddHook("FUNC_CALL",\&do_func_call);
+AddHook("ANNOTATE",\&annotate);
 
 
 1;
