@@ -24,6 +24,7 @@ Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include <strings.h>
 #include <stdlib.h>
+#include <assert.h>
 #include "cpplib.h"
 #include "cpphash.h"
 #include "cpphook.h"
@@ -40,6 +41,12 @@ extern char *xmalloc PARAMS ((unsigned));
 #define const
 #define volatile
 #endif
+
+
+static HASHNODE *hashtab[HASHSIZE];
+static HASHNODE **rghashtab[SIZE_HASHTAB_STACK] = { hashtab };
+static HASHNODE **phashtab = hashtab;
+static int chashtab = 1;
 
 /*
  * return hash function on name.  must be compatible with the one
@@ -84,7 +91,7 @@ cpp_lookup (cpp_reader *pfile, const U_CHAR *name, int len, int hash)
   if (hash < 0)
     hash = hashf (name, len, HASHSIZE);
 
-  bucket = hashtab[hash];
+  bucket = phashtab[hash];
   while (bucket) {
     if (bucket->length == len && strncmp (bucket->name, name, len) == 0)
       return bucket;
@@ -192,9 +199,9 @@ install (name, len, type, ivalue, value, hash)
   i = sizeof (HASHNODE) + len + 1;
   hp = (HASHNODE *) xmalloc (i);
   bucket = hash;
-  hp->bucket_hdr = &hashtab[bucket];
-  hp->next = hashtab[bucket];
-  hashtab[bucket] = hp;
+  hp->bucket_hdr = &phashtab[bucket];
+  hp->next = phashtab[bucket];
+  phashtab[bucket] = hp;
   hp->prev = NULL;
   if (hp->next != NULL)
     hp->next->prev = hp;
@@ -214,13 +221,44 @@ install (name, len, type, ivalue, value, hash)
 }
 
 void
-cpp_hash_cleanup (pfile)
-     cpp_reader *pfile;
+cpp_hash_cleanup (cpp_reader *pfile)
 {
   register int i;
   for (i = HASHSIZE; --i >= 0; )
     {
-      while (hashtab[i])
-	delete_macro (pfile,hashtab[i]);
+      while (phashtab[i])
+	delete_macro (pfile,phashtab[i]);
     }
 }
+
+void
+cpp_deep_copy_hashtab(HASHNODE **dest, HASHNODE **src)
+{
+  /* FIXNOWGJB this does a shallow copy for now! */
+  int i = 0;
+  for ( ; i < HASHSIZE; i++) 
+    {
+    dest[i] = src[i];
+    }
+}
+
+void
+cpp_push_hashtab(cpp_reader *pfile)
+{
+  assert(chashtab < SIZE_HASHTAB_STACK);
+  rghashtab[chashtab] = malloc(sizeof(HASHNODE *) * HASHSIZE);
+  cpp_deep_copy_hashtab(rghashtab[chashtab],hashtab);
+  ++chashtab;
+  phashtab = rghashtab[chashtab-1];
+}
+
+void
+cpp_pop_hashtab(cpp_reader *pfile)
+{
+  assert(chashtab>1);
+  free(rghashtab[chashtab-1]);
+  rghashtab[chashtab-1] = 0;
+  --chashtab;
+  phashtab = rghashtab[chashtab-1];
+}
+
