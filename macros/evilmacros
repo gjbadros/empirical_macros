@@ -287,11 +287,12 @@ my $catMACROTYPE = 13;
 # Be sure to keep in sync w/ strings of @categoryname
 my $catASM = 14;
 my $catSYNTAX = 15;		# this goes along with MISMATCH, sort of
-my $catRESDWORD  = 16;
-my $catSTATEMENT = 17;  # STATEMENT-s likely contain reserved words, but are more specific
-my $catMISMATCH  = 18;
-my $catPASTING   = 19;
-my $catSTRINGIZE = 20;
+my $catTYPE = 16;
+my $catRESDWORD  = 17;
+my $catSTATEMENT = 18;  # STATEMENT-s likely contain reserved words, but are more specific
+my $catMISMATCH  = 19;
+my $catPASTING   = 20;
+my $catSTRINGIZE = 21;
 
 
 my @categoryname = (
@@ -303,7 +304,7 @@ my @categoryname = (
 		    'failed_categorization', 'has_type_argument',
 		    'macro_as_function', 'macro_as_type',
 		    'assembly_code', 'syntax_tokens',
-		    'expands_to_reserved_word',
+		    'expands_to_type', 'expands_to_reserved_word',
 		    'statement',
 		    'mismatched_entities',
 		    'token_pasting',
@@ -398,7 +399,9 @@ my $type_special = 'int (*)(dc_num, dc_num, int, dc_num *)';
 my $type_re_special_1 = 'int \(\*\)\(dc_num, dc_num, int, dc_num \*\)';
 my $type_re_special_2 = 'int \(\*\)\(void\)';
 my $type_re_special = '(?:' . $type_re_special_1 . '|' . $type_re_special_2 . ')';
-my $type_re = $type_specifier_re . '(?:\s*(?:\*|\[\s*\]))*'; # 0 groups
+# contains leading whitespace; unconditional; 0 groups
+my $type_suffix_re = '(?:\s*(?:\*|\[\s*\]))';
+my $type_re = $type_specifier_re . $type_suffix_re . '*'; # 0 groups
 # Use $type_declarator_re instead.
 # $type_identifier_re = $type_re . '\s*' . $identifier_re;
 
@@ -441,8 +444,7 @@ my $numeric_type_word_re = '\b(short|signed|unsigned|long|int|char|float|double)
 my $numeric_type_re = $numeric_type_word_re . '(\s+' . $numeric_type_word_re . ')*';
 my $non_numeric_type_re = '\b(void)\b';
 my $builtin_type_base_re = "($numeric_type_re|$non_numeric_type_re)";
-my $type_suffix_re = '(\s*(\*|\[\d*\]))*'; # note contains leading whitespace
-my $builtin_type_re = $builtin_type_base_re . $type_suffix_re;
+my $builtin_type_re = $builtin_type_base_re . $type_suffix_re . '*';
 
 ## Binary operators
 # $numeric_binop_regexp should precede $bool_binop_regexp because of < and <<.
@@ -2976,7 +2978,9 @@ sub parse_exp ($;$)
       # identifier which expands to reserved word: type
       || (($exp =~ /^\(\s*($identifier_re)\s*\)\s*(.)/)
 	  && defined($mncategory{$1})
-	  && ($mncategory{$1} eq $catRESDWORD))
+	  && (($mncategory{$1} eq $catTYPE)
+	      # Is this latter really necessary?
+	      || ($mncategory{$1} eq $catRESDWORD)))
       )
     { my $casttype = parse_type($1);
       my $nextchar = $LAST_PAREN_MATCH;
@@ -4645,11 +4649,15 @@ sub categorize_macro_def ($)
       $type = $typeCHAR; }
   # Being a statement has precedence over having a reserved word,
   # but this body is just a single word.
-  elsif ($body =~ /^($c_reserved_nontype_word_re|$c_reserved_type_word_re)$/)
+  elsif ($body =~ /^$c_reserved_nontype_word_re$/)
     { # $failure_type = "expands_to_reserved_word";
       $category = $catRESDWORD;
-      evilprint("expands to reserved word: $body\n");
+      # evilprint("expands to reserved word: $body\n");
     }
+  elsif ( # like $type_re, but unconditional suffix
+	 ($body =~ /^$type_specifier_re$type_suffix_re+$/o)
+	 || ($body =~ /^($c_reserved_type_word_re[ \t\*\[\]]*)+$/))
+    { $category = $catTYPE; }
   elsif (($body =~ /^$identifier_re$/)
 	 && (categorize_macro_name($body) || $true) # for side effect
 	 && (defined($mncategory{$body})))
@@ -4747,6 +4755,8 @@ sub categorize_macro_def ($)
 	{
 	  $category = $catSTATEMENT;
 	}
+      # Perhaps check against type_re here; but that should have already
+      # been caught, right?  And here the check would catch far too much.
       else
 	# Should do some evilness processing here, to justify the failed
 	# categorization.
@@ -5007,6 +5017,7 @@ sub check_macro_body ($) {
     { my ($file, $line, $sub) = (caller(0))[1,2,3];
       die "check_macro_body called not wanting an array at $file:$line $sub";
     }
+
   my $result = 0;
   # print "check_macro_body: $body\n";
   my @nesting = ();
@@ -5017,8 +5028,21 @@ sub check_macro_body ($) {
   my $category = $catFAILURE;
   my $full_body = $body;
 
+  if ($body =~ /^if\s*(?=\()/)
+    { my ($type, $remaining) = parse_expression($POSTMATCH);
+      ($type, $remaining) = parse_expression($body);
+      # print "type = $type; remaining = $remaining\n";
+      # $type was ($type != $typeFAIL)
+      if ($type && ($remaining !~ /\s*\{/))
+	{ ($type, $remaining) = parse_expression($remaining);
+	  if ($type && ($remaining =~ /^\s*$/))
+	    { $category = $catSTATEMENT;
+	      $failure_type = "semicolonless, braceless if";
+	      return ($result,$failure_type,$category); } } }
+
   #print "BODY: $body\n";
-  while ($body =~ m%[\]\[(){}\"\'\#]|//|/\*|\*/|$c_reserved_nontype_word_re|$c_reserved_type_word_re|;%o) #'HACKCOLOR
+  # Used to include '$c_reserved_nontype_word_re|$c_reserved_type_word_re'
+  while ($body =~ m%[\]\[(){}\"\'\#]|//|/\*|\*/|__asm__|;%o) #'HACKCOLOR
     # Found paren, quote, cpp directive, or comment
     { my $match = $MATCH;
       $body = $POSTMATCH;
@@ -5032,14 +5056,24 @@ sub check_macro_body ($) {
 	  #FIXMERNST: what about "," operator?
 	  $failure_type = "expands_to_statement";
 	  $category = harder_category($category,$catSTATEMENT);
-	  evilprint("expands to statement: $full_body\n");
+	  # evilprint("expands to statement: $full_body\n");
 	}
-      elsif ($match =~ /$c_reserved_nontype_word_re|$c_reserved_type_word_re/o)
-	{
-	  $failure_type = "expands_to_reserved_word";
-	  $category = harder_category($category,$catRESDWORD);
-	  evilprint("expands to reserved word '$MATCH': $full_body\n");
+      elsif ($match =~ /^__asm__$/)
+	{ $failure_type = "assembly_code";
+	  $category = harder_category($category,$catASM);
 	}
+      #  elsif ($match =~ /^$c_reserved_type_word_re$/o)
+      #  {
+      #    $failure_type = "expands_to_type";
+      #    $category = harder_category($category,$catTYPE);
+      #    # evilprint("expands to type '$MATCH': $full_body\n");
+      #  }
+      #  elsif ($match =~ /^$c_reserved_nontype_word_re$/o)
+      #  {
+      #    $failure_type = "expands_to_reserved_word";
+      #    $category = harder_category($category,$catRESDWORD);
+      #    # evilprint("expands to reserved word '$MATCH': $full_body\n");
+      #  }
       elsif ($match =~ /[\]\)\}]/)
 	{ if ($#nesting == -1)
 	    { $result |= $DANGER;
@@ -5156,6 +5190,8 @@ sub check_macro_body ($) {
       $category = $catSYNTAX;
       $failure_type = "expansion_into_syntax";
     }
+  # I moved this into the body (was that the right thing), so this
+  # oughtn't have any effect.
   if (($failure_type eq "unknown") && ($full_body =~ /__asm__/))
     { $category = harder_category($category,$catASM);
       $failure_type = "assembly_code";
@@ -5869,6 +5905,7 @@ sub test_categorize_macro_defs ()
   test_categorize_macro_def("literal", "\"\\037\\235\"");
   test_categorize_macro_def("literal", "\"\037\235\"");
   test_categorize_macro_def("statement", "if (status < 0) { perror(name); error=1; }");
+  test_categorize_macro_def("statement", "if (foo) bar(baz)");
 }
 
 
