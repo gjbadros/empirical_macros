@@ -313,7 +313,8 @@ extern char *xrealloc ();
 extern char *xcalloc ();
 static char *savestring ();
 
-static void conditional_skip ();
+static void conditional_skip (cpp_reader *pfile, int skip, enum node_type type, 
+			      U_CHAR *control_macro, char *szConditionalClause);
 static void skip_if_group ();
 
 /* Last arg to output_line_command.  */
@@ -4362,7 +4363,7 @@ do_if (pfile, keyword, buf, limit)
   value = eval_if_expression (pfile, buf, limit - buf);
   pfile->fGettingDirective--;
   pchEndExpr = CPP_BUFFER(pfile)->cur;
-  conditional_skip (pfile, value == 0, T_IF, NULL_PTR);
+  conditional_skip (pfile, value == 0, T_IF, NULL_PTR,keyword?keyword->name:0);
   gjb_call_hooks_szl_szl_i(CPP_OPTIONS(pfile),HI_DO_IF,
 			   pchStartExpr,pchEndExpr-pchStartExpr-1,
 			   pchEndExpr,CPP_BUFFER(pfile)->cur-pchEndExpr-1,
@@ -4485,6 +4486,7 @@ do_xifdef (pfile, keyword, unused1, unused2)
   U_CHAR *pchStartExpr = CPP_BUFFER(pfile)->cur+1;
   U_CHAR *pchEndExpr = NULL;
   U_CHAR *pchEndGarbage = NULL;
+  char *szConditionalClause = NULL;
 
   /* Detect a #ifndef at start of file (not counting comments).  */
   if (ip->fname != 0 && keyword->type == T_IFNDEF)
@@ -4513,6 +4515,8 @@ do_xifdef (pfile, keyword, unused1, unused2)
 	  control_macro = (U_CHAR *) xmalloc (ident_length + 1);
 	  bcopy (ident, control_macro, ident_length + 1);
 	}
+      szConditionalClause = (char *) xmalloc (ident_length + 1);
+      bcopy(ident,szConditionalClause,ident_length +1);
     }
   else
     {
@@ -4546,7 +4550,7 @@ do_xifdef (pfile, keyword, unused1, unused2)
       }
 #endif
 
-  conditional_skip (pfile, skip, T_IF, control_macro);
+  conditional_skip (pfile, skip, T_IF, control_macro, szConditionalClause);
   /* This will call DO_XIFDEF hook and either DO_IFDEF or DO_IFNDEF hook */
   gjb_call_hooks_sz_szlx3_i(CPP_OPTIONS(pfile),HI_DO_XIFDEF,
 			   keyword->type == T_IFDEF? "IFDEF": "IFNDEF",
@@ -4575,11 +4579,8 @@ do_xifdef (pfile, keyword, unused1, unused2)
    Otherwise, CONTROL_MACRO is 0.  */
 
 static void
-conditional_skip (pfile, skip, type, control_macro)
-     cpp_reader *pfile;
-     int skip;
-     enum node_type type;
-     U_CHAR *control_macro;
+conditional_skip (cpp_reader *pfile, int skip, enum node_type type, 
+		  U_CHAR *control_macro, char *szConditionalClause)
 {
   IF_STACK_FRAME *temp;
 
@@ -4590,6 +4591,7 @@ conditional_skip (pfile, skip, type, control_macro)
 #endif
   temp->next = pfile->if_stack;
   temp->control_macro = control_macro;
+  temp->szConditionalClause = szConditionalClause;
   pfile->if_stack = temp;
 
   pfile->if_stack->type = type;
@@ -4818,7 +4820,7 @@ do_else (pfile, keyword, buf, limit)
     output_line_command (pfile, 1, same_file);
   }
   gjb_call_hooks_sz_szl_szl(CPP_OPTIONS(pfile),HI_DO_ELSE,
-			    DEF_STR(pfile->if_stack->control_macro,"@??@"),
+			    DEF_STR(pfile->if_stack->szConditionalClause,"@??@"),
 			    pchStartGarbage,pchEndGarbage-pchStartGarbage,
 			    pchEndGarbage,ip->cur-pchEndGarbage);
   return 0;
@@ -4837,7 +4839,7 @@ do_endif (pfile, keyword, buf, limit)
   cpp_buffer *ip = CPP_BUFFER (pfile);
   U_CHAR *pchStartGarbage = ip->cur+1;
   U_CHAR *pchEndGarbage = NULL;
-  char *szControlMacro = NULL;
+  char *szConditionalClause = NULL;
   int fUnbalanced = 0;
   if (CPP_PEDANTIC (pfile))
     validate_else (pfile, "#endif");
@@ -4853,13 +4855,13 @@ do_endif (pfile, keyword, buf, limit)
       IF_STACK_FRAME *temp = pfile->if_stack;
       if (temp->control_macro != NULL) 
 	{
-	szControlMacro = xmalloc(strlen(temp->control_macro)+1);
-	strcpy(szControlMacro,temp->control_macro);
+	szConditionalClause = xmalloc(strlen(temp->szConditionalClause)+1);
+	strcpy(szConditionalClause,temp->control_macro);
 	}
       else
 	{
-	szControlMacro = xmalloc(5);
-	strcpy(szControlMacro,"@??@");
+	szConditionalClause = xmalloc(5);
+	strcpy(szConditionalClause,"@??@");
 	}
       pfile->if_stack = temp->next;
       if (temp->control_macro != 0)
@@ -4914,10 +4916,9 @@ FIXME!
       output_line_command (pfile, 1, same_file);
     }
   gjb_call_hooks_sz_szl(CPP_OPTIONS(pfile),HI_DO_ENDIF,
-			(fUnbalanced?"@UNBALANCED@":szControlMacro),
+			(fUnbalanced?"@UNBALANCED@":szConditionalClause),
 			pchStartGarbage,pchEndGarbage-pchStartGarbage);
-  if (szControlMacro)
-    free(szControlMacro);
+  free(szConditionalClause);
   return 0;
 }
 
