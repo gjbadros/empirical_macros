@@ -72,7 +72,7 @@ find-c | evilmacros -iv -d ~/macros/data/stable
 
 #Complex execution (use zsh):
 #
-# for i in *(/); do echo $i; pushd $i; find-c | evilmacros -i -d $TM:${i%%-*} >$i.out 2> $i.err; popd; done 
+# for i in *(/); do echo $i; pushd $i; find-c | evilmacros -i -d $TM:${i%%-*} >$i.out 2> $i.err; popd; done
 #
 # For a second run for first-run failures:
 # for i in *(/); do if [[ ! -s $TM/${i%%-*}.stat ]]; then echo $i; pushd $i; find-c | evilmacros -i -d $TM2:${i%%-*}1 >$TM2/${i%%-*}.out 2>$TM2/${i%%-*}.err ; popd; fi; done
@@ -324,35 +324,38 @@ my $catMULTIPLE = 2;
 my $catNULLDEFINE = 3;
 # Expressions
 my $catEXP = 4;
-my $catEXPFREE = 5;		# expression with free variables
-my $catLITERAL = 6;		# also specify the literal
-my $catCONSTANT = 7;		# need to also specify the particular value, if possible
-my $catSOMECONSTANT = 8;
+my $catEXPASSIGN = 5;
+my $catEXPFREE = 6;		# expression with free variables
+my $catLITERAL = 7;		# also specify the literal value
+my $catCONSTANT = 8;		# need to also specify the particular value, if possible
+my $catSOMECONSTANT = 9;	# a constant, but not known which (e.g., multiple #defines)
 # Non-expressions
-my $catFAILURE = 9;		# shouldn't have just one, should have many
-my $catTYPEARG = 10;		# macro argument has a type
+my $catFAILURE = 10;		# shouldn't have just one, should have many
+my $catTYPEARG = 11;		# macro argument has a type
 # These shouldn't be failures
-my $catMACROFUN = 11;
-my $catMACROTYPE = 12;
+my $catMACROFUN = 12;
+my $catMACROTYPE = 13;
 
 # New categories -- higher numbers take precedence over lower ones
 # Be sure to keep in sync w/ strings of @categoryname
-my $catEXPASSIGN = 13;
-my $catRESDWORD  = 14;
-my $catSTATEMENT = 15;  # STATEMENT-s likely contain reserved words, but are more specific
-my $catMISMATCH  = 16;
-my $catPASTING   = 17;
-my $catSTRINGIZE = 18;
+my $catASM = 14;
+my $catSYNTAX = 15;		# this goes along with MISMATCH, sort of
+my $catRESDWORD  = 16;
+my $catSTATEMENT = 17;  # STATEMENT-s likely contain reserved words, but are more specific
+my $catMISMATCH  = 18;
+my $catPASTING   = 19;
+my $catSTRINGIZE = 20;
 
 
 my @categoryname = (
 		    'uncategorized', 'being_categorized',
 		    'multiply_categorized', 'null_define',
-		    'expression', 'expression_with_free_variables',
+		    'expression', 'expression_with_assignment',
+		    'expression_with_free_variables',
 		    'literal', 'constant', 'some_constant',
 		    'failed_categorization', 'has_type_argument',
 		    'macro_as_function', 'macro_as_type',
-		    'expression_with_assignment',
+		    'assembly_code', 'syntax_tokens',
 		    'expands_to_reserved_word',
 		    'statement',
 		    'mismatched_entities',
@@ -361,7 +364,7 @@ my @categoryname = (
 		   );
 
 # my %failed_categorization_type_count =
-#   ( 
+#   (
 #    "unknown" => 0,
 #    "close_but_no_open" => 0,
 #    "mismatched_entities" => 0,
@@ -415,6 +418,8 @@ my $float_literal_frac_re = '[-+]?\d*\.\d+([eE][-+]?\d+)?([fFlL]?)'; # fraction 
 # integer regexp: $1 = number, $2 = suffix (uUlL)
 my $hex_literal_re = '(0x[0-9a-fA-F]+)([uUlL]?[uUlL]?)';
 my $dec_oct_literal_re = '(\d+)([uUlL]?[uUlL]?)';
+# Using this is probably ill-advised.
+my $number_literal_re = '((' . join(')|(', $float_literal_whole_re, $float_literal_frac_re, $hex_literal_re, $dec_oct_literal_re) . '))';
 
 # Character and string literals
 # NOTE: GJB changed the below to {1,3}, but ANSI requires exactly 3 --
@@ -509,8 +514,9 @@ my $typeFLOAT = 11;
 my $typeDOUBLE = 12;
 my $typeLDOUBLE = 13;
 my $typeSTRING = 14;
-my $typeUNKNOWN = 15;		# we know it's some type, but don't know which
-my $typeUNSPECIFIED = 16;		# declared w/o a type (e.g., as function arg)
+my $typeNUMBER = 15;
+my $typeUNKNOWN = 16;		# we know it's some type, but don't know which
+my $typeUNSPECIFIED = 17;		# declared w/o a type (e.g., as function arg)
 
 my %type_num = ('short' => $typeSHORT, 'short int' => $typeSHORT,
 		'signed short' => $typeSHORT, 'signed short int' => $typeSHORT,
@@ -535,7 +541,9 @@ my @type_name_array = ('typeFAIL', 'bool',
 		       'long', 'unsigned long',
 		       'float', 'double', 'long double',
 		       'char *',
-		       'typeUNKOWN');
+		       'typeNUMBER',
+		       'typeUNKNOWN',
+		       'typeUNSPECIFIED');
 
 # For determining whether a Perl variable has numeric type.
 # This is incredibly disgusting; do something about it.
@@ -1752,6 +1760,23 @@ sub get_fulltoken_line
   return ($simple_result);
 }
 
+# Two arguments: token, line, line limit.
+# Two result values: success, lines.
+sub get_fulltoken_lines_to
+{ my ($regexp, $line, $limit) = check_args(3, @_);
+  if ($line =~ /$regexp/)
+    { return($true, $line); }
+  my $nextline;
+  while (($limit > 0) && ($nextline = get_fulltoken_line($true)))
+    { my $success = ($nextline =~ /$regexp/);
+      $line = append_lines($line, $nextline);
+      if ($success)
+	{ return ($true, $line); } }
+  parse_error("Didn't match regexp '$regexp' after $limit lines: $line");
+  return($false, $line)
+}
+
+
 # ***** Need to keep track of number of physical and ncnb lines, for each
 # element of @getline_ungot_raw_lines; or just don't reprocess next time
 # around (remember whether it was popped), though that could make the
@@ -2709,6 +2734,7 @@ sub macroparse
 my %parsevars = ();
 my %parsefuns = ();
 my %parsetypes = ();
+my $parse_exp_saw_equals = $false;
 
 # Should check @parsexxxs for reserved words; if we find any, I misparsed.
 sub reset_parse_vars
@@ -2717,6 +2743,7 @@ sub reset_parse_vars
   %parsevars = ();
   %parsefuns = ();
   %parsetypes = ();
+  $parse_exp_saw_equals = $false;
 }
 
 # Returns a type and the remaining string.
@@ -2783,7 +2810,7 @@ sub parse_exp
 	{ $parsetypes{$casttypenum} = $true; }
       return parse_exp_follower($casttypenum, $remaining); }
   # Type in parens followed by (what looks like) paren, number, or identifier
-  if ($exp =~ /^\s*\(\s*($type_re)\s*\)\s*([0-9a-zA-Z\(])/)
+  if ($exp =~ /^\s*\(\s*($type_re)\s*\)\s*([0-9a-zA-Z_\(])/)
     { my $casttype = $1;
       my $nextchar = $2;
       # print "non-built-in cast type $casttype (follower $nextchar)\n";
@@ -3111,21 +3138,28 @@ sub parse_exp_follower
     { return parse_exp_follower($typeUNKNOWN, $POSTMATCH); }
 
   # Binary operators:  multi-char operators must precede single-char ones
-  if (($follow =~ /^(<<|>>|[<=>!]=|&&|\|\||[-*\/%+&^|<>])/)
+  if (($follow =~ /^(<<=?|>>=?|[<=>!]=|&&|\|\||[-*\/%+&^\|]=?|[<>=])/)
       || ($commaop && ($follow =~ /^(,)/)))
     { my $op = $1;
       my $arg2 = $POSTMATCH;
       if ($op eq ",")
 	{ # print "found a comma operator, commaop = $commaop\n";
 	}
+      if (($op eq "=") || ($op =~ /^[<>][<>]=$/) || ($op =~ /^[^<>=]=$/))
+	{ $parse_exp_saw_equals = $true; }
       my ($type2, $remaining) = parse_exp($arg2);
       if (!$type2) { return ($typeFAIL, $arg2); }
+      # parse_exp_follower is certain to do nothing here, because parse_exp
+      # has already gobbled all it can.  Right?
       if (bool_op_p($op))
 	{ return parse_exp_follower($typeBOOL, $remaining); }
-      elsif ($op eq ",")
+      elsif (($op eq ",") || ($op eq "="))
 	{ return parse_exp_follower($type2, $remaining); }
       else
-	{ return parse_exp_follower(type_lub($type, $type2), $remaining); } }
+	{ my $result_type = type_lub($type, $type2);
+	  if (($type eq $typeUNKNOWN) && (numeric_op_p($op)))
+	    { $type = $typeNUMBER; }
+	  return parse_exp_follower($result_type, $remaining); } }
 
   # Ternary operator ?:
   if ($follow =~ /^\?/)
@@ -3145,6 +3179,13 @@ sub bool_op_p
 {
   my ($op) = check_args(1, @_);
   return ($op =~ /^([<=>!]=|&&|\|\||<|>)$/);
+}
+
+sub numeric_op_p
+{
+  my ($op) = check_args(1, @_);
+  # All the non-boolean operators except &, =.
+  return ($op =~ /^(<<=?|>>=?||[-*\/%+&^\|]=?)/);
 }
 
 
@@ -3214,9 +3255,9 @@ sub get_macro_call_types
       }
 
       check_file_boundary();
-      # Perhaps I should use a variant of get_fulltoken_line that insists that parens
-      # are balanced, too; that might let me more reasonably cope with
-      # breaks across lines.
+      # Perhaps I should use a variant of get_fulltoken_line that insists
+      # that parens are balanced, too; that might let me more reasonably
+      # cope with breaks across lines.
       # Perhaps make global so check_file_boundary can check it.
       my $in_extern_C = 0;
       my $line;
@@ -3436,14 +3477,15 @@ PROCESSLINE:
 			  # Could do a better job here.
 			  # We'd better hope this is really a function
 			  # definition and not a function declaration!
-			  while (!($remaining =~ /\{/))
-			    {	# print "no open brace, so appending a line to $remaining\n";
-			      $remaining = append_lines($remaining, get_fulltoken_line($true)); }
-			  if (!($remaining =~ /\{/))
-			    { die "Just saw an open brace in $remaining"; }
-			  $line = $typespec . '(){' . $POSTMATCH;
-			  # print "replaced masquerading macro: '$line' for '$remaining'\n";
-			  goto PROCESSLINE;
+			  my $success;
+			  ($success, $remaining) = get_fulltoken_lines_to('\{', $remaining, 5);
+			  if (!$success)
+			    { parse_error("Didn't find an open brace in time in $remaining"); }
+			  else
+			    { $line = $typespec . '(){' . $POSTMATCH;
+			      # print "replaced masquerading macro: '$line' for '$remaining'\n";
+			      goto PROCESSLINE;
+			    }
 			}
 		      # print "rejected macro masquerading as function $identifier\n";
 		    }
@@ -3481,10 +3523,16 @@ PROCESSLINE:
 		      # Get the complete declarator, which might span lines.
 		      # $nextchar is in [,=;\(]
 		      if ($nextchar eq "(")
-			{ while (!($remaining =~ /[;\{=]/))
-			    { # print "no semi or brace, so appending a line to $remaining\n";
-			      $remaining = append_lines($remaining, get_fulltoken_line($true)); }
-			  $remaining =~ /[;\{=]/; # MUST succeed
+			{ # print "no semi or brace, so appending a line to $remaining\n";
+			  my $success;
+			  ($success, $remaining) = get_fulltoken_lines_to('[;\{=]', $remaining, 5);
+			  if (!$success)
+			    # FIX: I have no idea which loop is being nexted.
+			    # But it's better than failing later on...
+			    { parse_error("Didn't find '[;\{=]' in $remaining");
+			      next; }
+			  if ($remaining !~ /[;\{=]/) # MUST succeed
+			    { die "Just succeeded with get_fulltoken_lines_to '[;\{=]': $remaining"; }
 			  if ($MATCH eq "=")
 			    { # This declares not a function but a variable
 			      # (say, a pointer to a function).
@@ -3497,7 +3545,14 @@ PROCESSLINE:
 			# Only need to check the new stuff, not the whole thing.
 			{ while (!($remaining =~ /;/))
 			    {	# print "no semicolon, so appending a line to $remaining\n";
-			      $remaining = append_lines($remaining, get_fulltoken_line($true));
+			      # Intentionally not get_fulltoken_lines_to
+			      my $nextline = get_fulltoken_line($true);
+			      if (!$nextline)
+				# This could be really bad: I'm sending
+				# control somewhere strange.
+				{ parse_error("Didn't find semicolon in $remaining");
+				  last; }
+			      $remaining = append_lines($remaining, $nextline);
 			      # Hack: bc-1.03/global.c line 39 does
 			      #   CONST char libmath[] =
 			      #   #include "libmath.h"
@@ -3733,11 +3788,14 @@ sub process_function_definition_or_declaration
 
   # found (start of) function definition or prototype
   # Only need to check the new stuff, not the whole thing.
-  while (!($remaining =~ /\)/))
-    { # print "no close paren, so appending a line to $remaining\n";
-      $remaining = append_lines($remaining, get_fulltoken_line($true)); }
-  if (!($remaining =~ /\)/))
-    { mdie("There must be a close paren.\n"); }
+
+  my $success;
+  # Should this really be find_matching_paren?  Probably...
+  # Also stop at brace.
+  ($success, $remaining) = get_fulltoken_lines_to('\)', $remaining, 5);
+  if (!$success)
+    { parse_error("Didn't find close paren in $remaining");
+      return ""; }
   # print "found function $identifier; remaining $remaining\n";
   # process the args:  create the scope, eat the following
   # open brace, etc.  $remaining includes everything after
@@ -3757,10 +3815,10 @@ sub process_function_definition_or_declaration
     if (!$success)
       { return $remaining; } }
   # $remaining is what follows the close paren
-  while (!($remaining =~ /[;\{=]/))
+  if (!($remaining =~ /[;\{=]/))
     { # print "no semi or brace, so appending a line to $remaining\n";
-      mdie("Shouldn't have to read more lines in process_fun_def_or_decl.");
-      $remaining .= get_fulltoken_line($true); }
+      parse_error("Shouldn't have to read more lines in process_fun_def_or_decl: $remaining");
+      return ""; }
 
   my @arg_names;		# These two will be set from arg_decls when
   my @arg_types;		#   we know whether this was a def or decl.
@@ -3916,9 +3974,11 @@ sub process_function_definition_or_declaration
 	  # Maybe only read while $remaining is empty....
 
 	  # Only need to check the new stuff, not the whole thing.
-	  while (!($remaining =~ /\{/))
-	    {			# print "no brace, so appending a line to $remaining\n";
-	      $remaining = append_lines($remaining, get_fulltoken_line($true)); }
+	  my $success;
+	  ($success, $remaining) = get_fulltoken_lines_to('\{', $remaining, 5);
+	  if (!$success)
+	    { parse_error("Didn't find open brace: $remaining");
+	      return(""); }
 	  $remaining = parse_KandR_function_arg_decls($remaining);
 	  # Make sure that the argument list matches the declarators
 
@@ -4065,8 +4125,9 @@ sub exit_scope
       return; }
   while ($scopemarker ne pop(@symtab_identifiers))
     { pop(@symtab_types);
-      if ($#symtab_identifiers == -1)
-	{ mdie("exit_scope: not in scope (no scopemarker)"); } }
+      if (@symtab_identifiers == 0)
+	{ parse_error("exit_scope: not in scope (no scopemarker)");
+	  return; } }
   pop(@symtab_types);
   # It's possible that ($#symtab_identifiers == -1), if global scope is empty.
   if ($debug_scopes) { show_symtab("exited scope $symtab_scopes"); }
@@ -4192,11 +4253,20 @@ sub categorize_macro_def
   if ($body eq "")
     # Null define
     { $category = $catNULLDEFINE; }
-#!    elsif ($body =~ /^\".*\"$/)
-#!      # String
-#!      { # print "found string";
-#!        $category = $catLITERAL;
-#!        $type = $typeSTRING; }
+  elsif ($body =~ /^($string_literal_re\s*)+$/)
+    # String
+    { # print "found string";
+      $category = $catLITERAL;
+      $type = $typeSTRING; }
+  elsif ($body =~ /^($float_literal_whole_re|$float_literal_frac_re)$/)
+    { $category = $catLITERAL;
+      $type = $typeFLOAT; }
+  elsif ($body =~ /^($hex_literal_re|$dec_oct_literal_re)$/)
+    { $category = $catLITERAL;
+      $type = infer_int_type($body); }
+  elsif ($body =~ /^$char_literal_re$/)
+    { $category = $catLITERAL;
+      $type = $typeCHAR; }
   else
     { my $remaining;
       reset_parse_vars();
@@ -4206,6 +4276,8 @@ sub categorize_macro_def
       if ($type && ($remaining =~ /^\s*$/))
 	# Expression
 	{ $category = $catEXP;
+	  if ($parse_exp_saw_equals)
+	    { $category = $catEXPASSIGN; }
 	  # print "category = $categoryname[$category]; found expression $body\n";
 	  { my $arg;
 	    foreach $arg (split(/[\(, \t]*/, $mdef_args[$index]))
@@ -4260,6 +4332,7 @@ sub categorize_macro_def
 		    if (!(($varclass == $catLITERAL)
 			  || ($varclass == $catCONSTANT)
 			  || ($varclass == $catSOMECONSTANT)))
+		      # Is this right?
 		      { $category = $catFAILURE; # should be more specific here
 			goto CATEGORIZED; } }
 		else
@@ -4268,9 +4341,12 @@ sub categorize_macro_def
 		  { $category = $catEXPFREE; # should be more specific here
 		    goto CATEGORIZED; }
 	      } }
+	  # Don't set category here; it was defaulted to $catEXP above.
 	  # print "category postfree = $category\n";
-	  $category = $catSOMECONSTANT;
-	  # print "category = $category\n";
+	}
+      elsif ($type && ($remaining =~ /^\s*;\s*$/))
+	{
+	  $category = $catSTATEMENT;
 	}
       else
 	# Should do some evilness processing here, to justify the failed
@@ -4511,16 +4587,18 @@ sub checkmacrodef
 # or modify the globals for the current macro when we're in the classification
 # phase.
 
+# This is called only if parsing the expression as an expession and other
+# simple tests already failed.
 sub check_macro_body {
-  if (!wantarray) 
-    {	my ($file, $line, $sub) = (caller(0))[1,2,3]; #FIX: is this right?
+  if (!wantarray)
+    {	my ($file, $line, $sub) = (caller(0))[1,2,3];
 	die "check_macro_body called not wanting an array at $file:$line $sub";
       }
   my ($body) = check_args(1, @_);
   my $result = 0;
   # print "check_macro_body: $body\n";
   my @nesting = ();
-  
+
   # FIX: should I concatenate failure_type-s so we see multiple failures?
   # this would mean it'd be tricky to keep the table the same across files
   my $failure_type = "unknown";
@@ -4541,16 +4619,16 @@ sub check_macro_body {
 	{
 	  $failure_type = "expands_to_reserved_word";
 	  $category = harder_category($category,$catRESDWORD);
-	  evilprint("expands to reserved word\n    $full_body\n"); 
+	  evilprint("expands to reserved word\n    $full_body\n");
 	}
       elsif ($match =~ /;/)
 	{
 	  #FIXMERNST: what about "," operator?
 	  $failure_type = "expands_to_statement";
 	  $category = harder_category($category,$catSTATEMENT);
-	  evilprint("expands to statement\n    $full_body\n"); 
+	  evilprint("expands to statement\n    $full_body\n");
 	}
-	  
+
       elsif ($match =~ /[\]\)\}]/)
 	{ if ($#nesting == -1)
 	    { $result |= $DANGER;
@@ -4659,8 +4737,17 @@ sub check_macro_body {
   if ($#nesting != -1)
     { $result |= $EVIL;
       $failure_type = "no_match";
-      $category =  harder_category($category,$catMISMATCH);
+      $category = harder_category($category,$catMISMATCH);
       evilprint("evil: no match for ", @nesting, ":\n    $full_body\n"); }
+  if (($failure_type eq "unknown") && ($full_body =~ /^[\(\);, .]*$/))
+    { $category = harder_category($category,$catSYNTAX);
+      $failure_type = "expansion_into_syntax";
+    }
+  if (($failure_type eq "unknown") && ($full_body =~ /__asm__/))
+    { $category = harder_category($category,$catASM);
+      $failure_type = "assembly_code";
+    }
+
   if ($failure_type eq "unknown") {
     evilprint("unknown failed categorization:\n    $full_body\n");
   }
@@ -5368,6 +5455,8 @@ sub test_parse_expressions
   test_parse_expression("\"foo\"", "char *");
   test_parse_expression("(((struct mhead *) mem) - 1) -> mh_index", $typeUNKNOWN);
   test_parse_expression("8 << (((struct mhead *) mem) - 1) -> mh_index", $typeUNKNOWN);
+  test_parse_expression("(va_list)__builtin_saveregs()", "va_list");
+  test_parse_expression("((AP) = (va_list)__builtin_saveregs())", "va_list");
 }
 
 sub test_parse_type
@@ -5710,8 +5799,8 @@ print STDERR "Categorizing " . ($cMacrosInTables - $cBuiltinMacros + 1) . " macr
       #   print "\n  $mdef_name[$i]";
       #   if (defined($mdef_args[$i])) { print $mdef_args[$i]; }
       #   print " $mdef_body[$i]\n";
-      #current_file and current_line_no need to be set for 
-      # while we are categorizing.  Also must always 
+      #current_file and current_line_no need to be set for
+      # while we are categorizing.  Also must always
       # set $current_ftype_index when we change the $current_file
       # (use compute_ftype_index() )
       $current_file = $mdef_file[$i];
