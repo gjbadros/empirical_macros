@@ -5,7 +5,7 @@
 # Directories on uni
 PKG_DIR := /tmp/gjb/packages
 ANALYZE_OUTPUT_DIR := /tmp/gjb/data
-COMMON_DIR := $(shell dirname $$(which em_analyze))
+COMMON_DIR := $(shell dirname $$(ls -l Makefile | awk '{print $$NF}'))
 EXTRA_ANALYZE_FLAGS := -g14
 
 PAPER_DIR := /homes/gws/gjb/macros/papers
@@ -43,8 +43,6 @@ RAW_TABLES := raw-directives-hist tbl-directives-breakdown \
 		tbl-def-categories tbl-subset-categories
 
 LATEX_TABLES :=	tbl-def-categories.tex tbl-subset-categories.tex
-
-CVT_LATEX_TABLES := $(patsubst %,%.tex,$(TEXT_TABLES))
 
 ALL_TABLES := $(TEXT_TABLES) $(RAW_TABLES) $(LATEX_TABLES) $(CVT_LATEX_TABLES)
 
@@ -92,6 +90,9 @@ text_tables:	$(TEXT_TABLES)
 
 tbl-package-sizes: $(STAT)
 	macros-make-package-sizes-tbl-from-stat $^ > $@
+
+tbl-package-sizes.tex: tbl-package-sizes
+	(echo "Package	Version	Physical lines	NCNB lines	Description"; join -t'	' $(COMMON_DIR)/package_versions tbl-package-sizes | join -t'	' - $(COMMON_DIR)/package_descriptions ) | latexify > $@
 
 tbl-def-frequency: $(DEFCUM)
 	macros-make-tbl-frequsedef-from-cum $^ > $@
@@ -146,9 +147,6 @@ tbl-subset-categories: $(MAC)
 tbl-subset-categories.tex: tbl-subset-categories
 	latexify-mark-table `sum-column 1 <$^`  < $^ > $@
 
-$(CVT_LATEX_TABLES): %.tex: %
-	latexify $< > $@
-
 ###########################################################################
 ### Etc.
 ###
@@ -165,7 +163,7 @@ showvars:
 
 
 copy: $(PAPER_TABLES)
-	perl -pi.bak -e 's/<total>/Total/g' $(PAPER_TABLES)
+	perl -pi.bak -e 's/z*<total>/Total/g' $(PAPER_TABLES)
 	cp $(PAPER_TABLES) $(PAPER_DIR)
 
 .PHONY: all clean showvars text_tables data_analyze data_reports raw copy
