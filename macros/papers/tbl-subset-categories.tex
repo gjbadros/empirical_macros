@@ -4,77 +4,66 @@
 \newcommand{\black}{\vrule height5.5pt depth0.5pt width6pt}
 {\small
 \addtolength{\columnsep}{-.5\columnsep}
-\begin{tabular}{|r|*{22}{c|}}\hline
-& % # occur
-& % failed
-& % null define
-\multicolumn{3}{c|}{Constants} &
-\multicolumn{4}{c|}{Expressions} & 
-\multicolumn{2}{c|}{{\tiny Statements}} &
-\multicolumn{2}{c|}{} & % stringization and pasting
-\multicolumn{3}{c|}{Syntactic} &
-\multicolumn{4}{c|}{Type-related} &
-% recursive
-\\\hline
+% The *{n}{c|} below creates n duplicate columns of that type (centered, here)
+\begin{tabular}{|r|*{11}{c|}}\hline
 \rotatebox{90}{Percentage of macro names} &
 \rotatebox{90}{failed categorization} &
 \rotatebox{90}{null define} &
-
 \rotatebox{90}{literal} &
-\rotatebox{90}{constant} &
-\rotatebox{90}{some constant} &
-
-\rotatebox{90}{expression} &
-\rotatebox{90}{expression with assignment} &
-\rotatebox{90}{expression with free variables~} &
-\rotatebox{90}{uses macro as function} &
-
-\rotatebox{90}{assembly code} &
+\rotatebox{90}{non-literal expression} &
 \rotatebox{90}{statement} &
-
-\rotatebox{90}{token pasting} &
-\rotatebox{90}{stringization} &
-
-\rotatebox{90}{expands to reserved word} &
-\rotatebox{90}{mismatched entities} &
-\rotatebox{90}{expands to syntax tokens} &
-
-\rotatebox{90}{expands to type} &
-\rotatebox{90}{has type argument} &
-\rotatebox{90}{uses macro as type} &
-\rotatebox{90}{uses type argument} &
-
-\rotatebox{90}{recursive}
+\rotatebox{90}{type-related} &
+\rotatebox{90}{syntax-related} &
+\rotatebox{90}{recursive} &
+\rotatebox{90}{non-c code} &
+\rotatebox{90}{unknown symbol} &
+\rotatebox{90}{other}
 \\\hline
-    39\% & & &\black& & & & & & & & & & & & & & & & & &  \\\hline
-    34\% & & & & & &\black& & & & & & & & & & & & & & &  \\\hline
-   7.2\% & &\black& & & & & & & & & & & & & & & & & & &  \\\hline
-   4.1\% & & & & & & & & & & &\black& & & & & & & & & &  \\\hline
-   3.7\% & & & & & & &\black& & & & & & & & & & & & & &  \\\hline
-   3.6\% &\black& & & & & & & & & & & & & & & & & & & &  \\\hline
-   2.4\% & & & & &\black& & & & & & & & & & & & & & & &  \\\hline
-  0.65\% & & & & & & & & & & & & & & & & &\black& & & &  \\\hline
-  0.45\% & &\black& & & & & & & & &\black& & & & & & & & & &  \\\hline
-  0.45\% & & &\black& & &\black& & & & & & & & & & & & & & &  \\\hline
-  0.39\% & & & & & & & & & & & & & & & & & & & &\black&  \\\hline
-  0.36\% & & & & & & &\black& & & &\black& & & & & & & & & &  \\\hline
-  0.25\% & &\black&\black& & & & & & & & & & & & & & & & & &  \\\hline
-  0.25\% & &\black& & & &\black& & & & & & & & & & & & & & &  \\\hline
-  0.19\% & & & & & &\black&\black& & & & & & & & & & & & & &  \\\hline
-  0.19\% & & & & & & & & & & & & & & & & & & &\black& &  \\\hline
-  0.15\% & & & & & &\black& & & & &\black& & & & & & & & & &  \\\hline
-  0.14\% & &\black& & & & & & & & & & & & & & &\black& & & &  \\\hline
-  0.13\% &\black& & & & &\black& & & & & & & & & & & & & & &  \\\hline
-  0.13\% & & & & & & & & &\black& & & & & & & & & & & &  \\\hline
-  0.12\% &\black&\black& & & & & & & & & & & & & & & & & & &  \\\hline
-  0.11\% & & & & & & & & & & & & & & &\black& & & & & &  \\\hline
- 0.081\% & & &\black& & & & & & & &\black& & & & & & & & & &  \\\hline
- 0.081\% & & & & & & & & & & & & & & & & & & & & &\black \\\hline
- 0.076\% & & & & &\black&\black& & & & & & & & & & & & & & &  \\\hline
- 0.071\% & &\black& & & & &\black& & & & & & & & & & & & & &  \\\hline
- 0.061\% & & & & & &\black& & & & & & & & & &\black& & & & &  \\\hline
- 0.061\% & & & & & &\black& & & & & & & & & & &\black& & & &  \\\hline
- 0.061\% & & & & & &\black& & & & & & & & & & & & &\black& &  \\\hline
- 0.055\% &\black& &\black& & & & & & & & & & & & & & & & & &  \\\hline
+    34\% & & &\black& & & & & & & &  \\\hline
+    24\% & & & &\black& & & & & & &  \\\hline
+   8.2\% & &\black& & & & & & & & &  \\\hline
+   6.4\% & & &\black&\black& & & & & & &  \\\hline
+   2.9\% & & & & &\black& & & & & &  \\\hline
+   2.2\% & & & &\black&\black& & & & & &  \\\hline
+   1.8\% & & &\black& & & & & & &\black&  \\\hline
+   1.8\% & & & & & & & & & &\black&  \\\hline
+   1.8\% & & & & & &\black& & & & &  \\\hline
+   1.7\% & &\black& & &\black& & & & & &  \\\hline
+   1.6\% &\black& & & & & & & & & &  \\\hline
+   1.5\% & &\black&\black& & & & & & & &  \\\hline
+   1.5\% & & & &\black& & & & & &\black&  \\\hline
+   1.2\% & &\black& &\black& & & & & & &  \\\hline
+   0.9\% & &\black& & & &\black& & & & &  \\\hline
+  0.76\% & & & & & & &\black& & &\black&  \\\hline
+  0.76\% & & & & & & & & & & &\black \\\hline
+  0.65\% &\black&\black& & & & & & & & &  \\\hline
+  0.58\% & & & & & & & & & &\black&\black \\\hline
+  0.53\% &\black& &\black& & & & & & & &  \\\hline
+  0.53\% & & &\black& &\black& & & & & &  \\\hline
+  0.48\% &\black& & &\black& & & & & & &  \\\hline
+  0.44\% & & & &\black& & & & & & &\black \\\hline
+  0.37\% & &\black& &\black&\black& & & & & &  \\\hline
+  0.29\% & &\black& & & & & & & &\black&  \\\hline
+   0.2\% &\black& & & & &\black& & & & &  \\\hline
+   0.2\% & & &\black&\black& & & & & &\black&  \\\hline
+  0.19\% & &\black& & & & & & &\black& &  \\\hline
+  0.19\% & & & & & &\black& & & &\black&  \\\hline
+  0.19\% & & & & & & &\black& & & &  \\\hline
+  0.19\% & & & & & & & & &\black& &  \\\hline
+  0.15\% &\black& & & &\black& & & & & &  \\\hline
+  0.14\% & & & &\black& & & & &\black& &  \\\hline
+  0.12\% &\black& & & & & &\black& & & &  \\\hline
+  0.12\% &\black& & & & & & & & &\black&  \\\hline
+  0.12\% & &\black& & & & & & & & &\black \\\hline
+ 0.085\% & & & &\black& & &\black& & & &  \\\hline
+ 0.068\% &\black&\black& & &\black&\black& & & & &  \\\hline
+ 0.068\% & & & &\black&\black& & & &\black& &  \\\hline
+ 0.068\% & & & & &\black& &\black& & & &  \\\hline
+ 0.068\% & & & & &\black& & & &\black& &  \\\hline
+ 0.051\% &\black& &\black&\black& & & & & &\black&  \\\hline
+ 0.051\% &\black& &\black&\black& & & & & & &  \\\hline
+ 0.051\% & &\black& & & &\black& & & &\black&  \\\hline
+ 0.051\% & & &\black& & & & & &\black& &  \\\hline
+ 0.051\% & & & &\black& & & & & &\black&\black \\\hline
 
 \end{tabular}}
