@@ -3051,46 +3051,47 @@ order to prevent unforeseen consequences from turning it into a burden.
 
 % \subsection{Relevance of the results}
 
-The results of this research are of interest to language designers, tool
-writers, programmers, and software engineers.
+The data and analyses in this paper can provide value to language
+designers, tool writers, programmers, and software engineers.
 
 Language designers can examine how programmers use the macro system's
 extra-linguistic capabilities.  Future language specifications can
 directly support (or prevent!)\ such practices, thus imposing greater
-discipline and structure.
+discipline and structure.  
 
 % [[[Think more about this:  Also, how do language choices lead to more/less
 % tightly integrated (as opposed to open, component-based) environments?
 % E.G., no need for \verb|__LINE__| in Java?]]]
 
-Programming tool writers can choose to cope only with common uses of the
-preprocessor.  By partial preprocessing (or embedded understanding of
-some Cpp constructs), a parser can maintain the
-programmer-oriented abstractions provided by preprocessor directives and
-macro names while not getting confused by non-syntactic programs.
+Programming tool writers can choose to cope only with common uses of
+the preprocessor.  By partial preprocessing (or embedded understanding
+of some Cpp constructs), a parser can maintain the programmer-oriented
+abstractions provided by preprocessor directives and macro names while
+not getting confused by non-syntactic programs.  
 
 Programmers who wish to make their code cleaner and more portable can
-choose to limit their use of the preprocessor to the most widely-used Cpp
-idioms, which tools are most likely to handle.  They can choose to avoid
-constructs that cause tools (such as test frameworks and program
+choose to limit their use of the preprocessor to the most widely-used
+and easiest to understand Cpp idioms.  Similarly, they can choose to
+avoid constructs that cause tools (such as test frameworks and program
 understanding tools) to give incomplete or incorrect results.
 
 % Also, learn weird new Cpp tricks!
 
-Finally, our results are of interest to software engineers for all of the
-above reasons and more.  Since this is the first study of Cpp usage of
-which we are aware, it is worth performing simply to determine whether the
-results were predictable \emph{a priori}; in addition, we found
-some interesting, and in some cases surprising, features of our suite of
-programs.
+Finally, our results are of interest to software engineers researchers
+for all of the above reasons and more.  Since this is the first study
+of Cpp usage of which we are aware, it is worth performing simply to
+determine whether the results were predictable \emph{a priori}; in
+addition, we found some interesting, and in some cases surprising,
+features of our suite of programs.
 
 
 %% See slide 15 and its notes from Mike's quals talk.
 % \subsection{Future work}
  
-These results suggest a wide variety of future avenues for research, both
-in terms of expanding our understanding of uses of the preprocessor in
-practice and in addressing the issues identified by this study.
+These results suggest a wide variety of future avenues for research,
+both in terms of expanding our understanding of uses of the
+preprocessor in practice and in addressing the issues identified by
+this study.
 
 Comparing how Cpp use in libraries (e.g., \pkg{glibc}) and application code
 may yield insights into the different needs of library authors.  Other
@@ -3123,10 +3124,10 @@ declarator.
 
 \section*{Acknowledgments}
 
-This work was supported by an IBM Cooperative Fellowship and a National
-Science Foundation Graduate Fellowship.  We thank Robert Bowdidge, Netta
-Shani, and the anonymous referees for their comments, which substantially
-improved the presentation.
+This work was supported by an IBM Cooperative Fellowship (Ernst) and a
+National Science Foundation Graduate Fellowship (Badros).  We thank
+Robert Bowdidge, Netta Shani, and the anonymous referees for their
+comments, which substantially improved the presentation.
     
 % Any opinions, findings, conclusions, or recommendations expressed in
 % this publication are those of the author, and do not necessarily
