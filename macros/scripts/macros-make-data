@@ -13,6 +13,6 @@ cd $PKG
 for i in *(/); do 
   echo $i
   pushd $i
-  find-c | evilmacros -i -t -d $TM:${i%%-*} >$TM/${i%%-*}.out 2> $TM/${i%%-*}.err
+  find-c | evilmacros -i -t -d $TM:${i%%-*} > $TM/${i%%-*}.out 2> $TM/${i%%-*}.err
   popd
 done
