@@ -28,6 +28,7 @@ use checkargs;
  @mcat_NULL @mcat_CONSTANT @mcat_NONCONSTANT_EXPRESSION
  @mcat_STATEMENT @mcat_SYNTAX @mcat_TYPE
  @mcat_NON_C_CODE @mcat_SYMBOL @mcat_SYMBOL_UNKNOWN @mcat_FAILURE
+ %meta_category_number @meta_category_numbers @meta_category_printnames
 
  $propNONE $propASSIGN $propFREE_VAR $propINVOKES_MACRO
  $propPASSES_TYPE_AS_ARG $propUSES_MACRO_AS_TYPE $propUSES_ARG_AS_TYPE
@@ -218,7 +219,35 @@ if ((not defined($categoryname[$catLast]))
 @mcat_SYMBOL_UNKNOWN = qw( catSYMBOL_UNKNOWN );
 @mcat_SYMBOL = qw( catRESERVED_WORD catFUNCTION_NAME );
 
+# Map from category name to its metacategory's category number
+%meta_category_number = ();
+sub setup_meta_category_number ( $@ )
+{ my ($meta_num, @sub_names) = check_args_at_least(2, @_);
+  foreach my $sub_num_name (@sub_names)
+    { my $sub_name = $categoryname[$ {$sub_num_name}];
+      if (exists $meta_category_number{$sub_name})
+	{ die "Two category definitions for $sub_name: $meta_num, $meta_category_number{$sub_name}"; }
+      $meta_category_number{$sub_name} = $meta_num; }
+}
+setup_meta_category_number($catNULL_DEFINE, @mcat_NULL);
+setup_meta_category_number($catCONSTANT, @mcat_CONSTANT);
+setup_meta_category_number($catEXP, @mcat_NONCONSTANT_EXPRESSION);
+setup_meta_category_number($catSTATEMENT, @mcat_STATEMENT);
+setup_meta_category_number($catTYPE, @mcat_TYPE);
+setup_meta_category_number($catUNBALANCED, @mcat_SYNTAX);
+setup_meta_category_number($catRESERVED_WORD, @mcat_SYMBOL);
+setup_meta_category_number($catSYMBOL_UNKNOWN, @mcat_SYMBOL_UNKNOWN );
+setup_meta_category_number($catCOMMAND_LINE, @mcat_NON_C_CODE);
+setup_meta_category_number($catFAILURE, @mcat_FAILURE);
 
+@meta_category_numbers = ($catNULL_DEFINE, $catCONSTANT, $catEXP,
+			  $catSTATEMENT, $catTYPE, $catUNBALANCED,
+			  $catRESERVED_WORD, $catSYMBOL_UNKNOWN,
+			  $catCOMMAND_LINE, $catFAILURE);
+@meta_category_printnames = ("Null define", "Constant", "Expression",
+			     "Statement", "Type", "Syntactic",
+			     "Symbol", "Unknown symbol",
+			     "Not C Code", "Failed classification");
 
 # Properties, which can be attached to any of the above:
 $propNONE = 0;
