@@ -5,26 +5,38 @@
 %
 
 \documentclass{letter}
-\usepackage{fullpage}
+%\usepackage{fullpage}
 \usepackage{personal}
+\address{Dept.\ of Computer Science \& Engineering \\
+University of Washington  \\ 
+Box 352350 \\
+Seattle, WA 98195-2350 \\
+(206) 616-3997}
 
-\begin{letter}
+\newcommand{\pcp}{\mbox{\textsf{PCp}$^3$}}
 
-To the Editor of SPE:
+\signature{Greg J.\ Badros}
+\begin{document}
+\begin{letter}{
+Software Practice and Experience}
+
+\opening{Dear Editor:}
 
 Enclosed please find our newest version of "A Framework for
 Preprocessor-Aware C Source Code Analyses" by Badros and Notkin, which we
 have revised based on the comments of the two referees.
 
 Most of our changes fall into two categories: (1) high-level changes
-motivated by the referees' comments about a lack of clarity in our goals,
-our approach, etc.; and (2) a relatively large set of detailed changes based
-on specific and relatively low-level concerns of the referees.   Here we
+motivated by the referees' comments about a lack of clarity in our
+goals, our approach, etc.; and (2) a relatively large set of detailed
+changes based on specific low-level concerns of the referees.  Here we
 briefly recount the most important issues in these categories.
 
-High-level:
+High-level concerns:
 
-*       Referee A had few high-level concerns; the largest was a nagging
+\begin{itemize}
+
+\item Referee A had few high-level concerns; the largest was a nagging
 sense that we didn't do a thorough job of solving the general problem.  That
 is, indeed, an accurate appraisal of our results.  On the whole, solving
 general problems requires even deeper insight than we have gained from our
@@ -35,31 +47,42 @@ with (at least) several more implementations.  We believe that our approach
 is attractive because of its effectiveness in the narrow domain and because
 it seems relatively straightforward to apply to other, similar domains.  But
 we are still a far cry from a general solution, as desirable as one is.
-*       Referee B had similar concerns about the applicability of the
+
+\item Referee B had similar concerns about the applicability of the
 approach.  We have tried to clarify our results in this regard (not only in
 this letter but also in the paper itself).
 
+\end{itemize}
+
 Specific issues:
 
-*       Referee B is concerned with our terminology being confusing (with
+\begin{itemize}
+
+\item Referee B is concerned with our terminology being confusing (with
 respect to terms like "preprocessed", etc.).  Unfortunately, there is no
 standard terminology in the field for these things.  So we have chosen one
 terminology, defined what we used, and have used it consistently throughout
 the paper.  (In earlier drafts, virtually every reader had a different view
-on the "right" ways to name things.  So we have experience when we claim
+on the "right" ways to name things; we have experience when we claim
 that a standard naming scheme is unavailable.)
-*       Although "PCp^3" may not be an ideal name, it is indeed what we call
-it: "pee-see-pee-cubed".
-*       We have added a brief discussion of the selection of Perl for
-handling hooks.  Overall, we view the cost in learning curve to C
-programmers with no Perl experience to be less than the cost of continuing
-with C and incurring a longer compile-run-debug cycle.
 
-In any case, we have worked to improve the paper based on the referees'
+\item Although "\pcp" may not be an ideal name, it is indeed what we call
+it: "pee-see-pee-cubed".  We have noted our preferred pronunciation in
+the paper to aid the reader when re-encountering the name.
+
+\item We have added a brief discussion of the selection of Perl for
+handling hooks.  To summarize, we view the cost in the learning curve for C
+programmers with no Perl experience to be less than the cost of continuing
+with C and incurring a significantly longer compile-run-debug cycle.
+
+\end{itemize}
+
+Overall, we have worked to improve the paper based on the referees'
 comments, and we hope it is now acceptable for publication in SPE.
 
-
+\closing{Best regards,}
 \end{letter}
+\end{document}
 
 % Local Variables: 
 % mode: latex
