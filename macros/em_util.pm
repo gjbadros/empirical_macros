@@ -223,7 +223,7 @@ sub print_lint_summary ( $$$$$$$$$$$$$$$;$ )
       . "%) any warning by def\n";
   print "$different_arity\t("
     . sprintf("%2.4f",percent2($different_arity,$macros))
-      . "%) inconsistent arity\n";
+      . "%) inconsistent arity by name\n";
   print "$null_body\t("
     . sprintf("%2.4f",percent2($null_body,$defs))
       . "%) null body with args\n";
@@ -235,7 +235,7 @@ sub print_lint_summary ( $$$$$$$$$$$$$$$;$ )
       . "%) unparenthesized body\n";
   print "$swallow_semi\t("
     . sprintf("%2.4f",percent2($swallow_semi,$defs))
-      . "%) doesn't swallow semicolon\n";
+      . "%) dangling semicolon\n";
   print "$free_var\t("
     . sprintf("%2.4f",percent2($free_var,$defs))
       . "%) free variables\n";
