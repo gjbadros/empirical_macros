@@ -1,0 +1,38 @@
+--- ct-ken.c	Wed Sep  3 11:54:41 1997
++++ ../ctree_05/src/ken.c	Wed Aug 20 23:35:53 1997
+@@ -12,4 +12,3 @@
+   } myStruct;
+ myStruct * my_struct_instance;
+ 
+-enum EnumFruits foo;
+--- ct-prnttree.c	Tue Sep  2 16:15:39 1997
++++ ../ctree_05/src/prnttree.c	Wed Aug 20 23:35:29 1997
+@@ -19,7 +19,7 @@
+ 
+ int  ptline, ptpos;
+ 
+-#ifdef    CT_DEBUG
++#ifdef    DEBUG
+ #define    FPUTS(X,Y)     do { if (debug_print_on) fputs((X),(Y)); } while(0)
+ #else
+ #define    FPUTS(X,Y)    /* Nop */
+@@ -43,7 +43,7 @@
+ void indent(int levels, FILE *fp)
+ {
+     int j;
+-#ifdef    CT_DEBUG
++#ifdef    DEBUG
+     if (debug_print_on && (levels != 0))
+       fprintf(fp,"\n<indent %d>",levels);
+     else
+--- ct-tree_stk.c	Tue Sep  2 16:16:00 1997
++++ ../ctree_05/src/tree_stk.c	Wed Aug 20 23:35:02 1997
+@@ -284,7 +284,7 @@
+ }
+     
+ /* o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o+o */
+-#ifdef    CT_DEBUG
++#ifdef    DEBUG
+ void show_stack(TreeStack *tree_stk)
+ {
+     Stk_Item *tmp;
