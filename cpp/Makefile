@@ -232,8 +232,12 @@ OBJECTS = $(NON_GRAMMAR_OBJECTS) $(GRAMMAR_OBJECTS)
 
 SD_OBJECTS = scan-decls.o cpplib.o cpphash.o cppalloc.o cpperror.o cppexp.o version.o backcalls.o cpphook.o
 
-# Making the preprocessor/parse
-pcppct: $(NON_GRAMMAR_OBJECTS) $(CT_GRAMMAR_OBJECTS) hook_index_constants.pm
+all: pcp3 paper/backcalls.tex paper/pcp3-hooks.tex
+
+# Making the preprocessor/parser
+# PCP^3 == Perl-enhanced C PreProcessor and Parser
+# Used to be called pcppct (Perl-enhanced C Preprocesor and Parser using CTree)
+pcp3: $(NON_GRAMMAR_OBJECTS) $(CT_GRAMMAR_OBJECTS) hook_index_constants.pm
 	rm -f $@
 	$(CC) $(ALL_CFLAGS) $(LDFLAGS) -o $@ $(filter-out hook_index_constants.pm,$^) $(LIBS) $(PERLLIBS)
 
@@ -363,6 +367,12 @@ grammar: $(GRAMMAR_OBJECTS) grammar.o
 %.d: %.c
 	$(SHELL) -ec '$(CC) -MM $(CPPFLAGS) $(INCLUDES) $< \
 		| sed '\''s/$*\\.o[ :]*/& $@/g'\'' > $@'
+
+paper/backcalls.tex: backcalls.xs
+	extract-latex-comments <$< >$@
+
+paper/pcp3-hooks.tex: cpphook.h
+	extract-latex-comments <$< >$@
 
 SOURCES = $(wildcard *.c)
 include $(SOURCES:.c=.d)
