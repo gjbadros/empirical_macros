@@ -97,7 +97,10 @@ while (<IN>) {
 #  print OUT "$mname, $ichStart, $ichEnd\n";
   my $ichLast = tell INFILE;
   my $cchToRead = $ichStart - $ichLast -1;
-  die "Asked to go backwards $cchToRead!  Expansions file is not sorted by offset! $ichStart, $ichEnd, $ichLast" if $cchToRead < 0;
+  if ($cchToRead < 0) {
+    warn "Asked to go backwards $cchToRead!  Expansions file is not sorted by offset! $ichStart, $ichEnd, $ichLast";
+    next;
+  }
   my $source_data;
   # read through to the end of the next expansion
   read INFILE, $source_data, $cchToRead;
