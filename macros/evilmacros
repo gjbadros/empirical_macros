@@ -2,9 +2,6 @@
 # $Id$
 # evilmacros
 
-# TODO: learn perldb, any perl profiler?, learn perl compiler
-# TODO: split up this huge file, use fewer globals, write packages
-
 # TERMS:
 #   project file == a file passed in via -i, or on cmd line
 #                   it is also called an NI (not-included) file
@@ -102,19 +99,12 @@ find-c | evilmacros -iv -d ~/macros/data/stable
 ### To do
 ###
 
-# ***** Categorize essential macros.
-# ***** Don't use "macro as function" -- instead, inherit category from callee.
-# ***** Maybe lobotomize pass 2 not to parse full declaration, only to note
-#	begin and end of function.
+# Categorize essential macros.
 
 # Make sure info about uses of built-in macros like __STDC__ gets output.
 
-# I can't believe that macro_dependenton works at all; fix it.
-
 # fixgjb:
-#  * document relationship among ncnb, blank, comment lines; how to
-#    compute them (or whether they can't be -- eg, no count of lines
-#    containing a comment).  Change current_line_no() into two functions which return
+#    Change current_line_no() into two functions which return
 #    the first and last physical lines associated with the current lines being
 #    processed; in general, prefer the former to the latter, except when
 #    the end of a function definition, etc.
@@ -122,112 +112,83 @@ find-c | evilmacros -iv -d ~/macros/data/stable
 # Small code stuff:
 #  * when body = expression + semicolon, warn; but check that every use of
 # 	the macro is followed by a semicolon, and if so, eliminate the one
-# 	in the body
+# 	in the body (ie, converts to function not returning void).
+#       Or check the context: is it void?
 #  * Maybe look at whole functions at a time rather than being line-oriented,
 #    or break on semicolons or braces instead of newlines.  But sometimes
 #    when we're confused, restarting at the next newline is the right thing to do.
-# Make argument and result order everywhere consistent: simple, then raw.
 
 # All calls to get_fulltoken_line should check the result value before
 # using it (might get to end of file).
 
-# Do we avoid double-including files both mentioned on the command line and
-# in #include "" or #include <>?
-
-# Change type into an object.
-
 # Uniformize uses of $type_declarator_re.
 # Probably don't need the type special cases any more.
 
-# change  !(a =~ b)  to  a !~ b
+# Break some huge regexps into separate tests for smaller pieces, which is
+# more efficient.
 
-# For ifdef __STDC__ (and a few other macros), maybe just always take the
-# true branch...
+# Optionally specify values for certain macros (such as __STDC__: always
+# take the true branch and omit a lot of hard declaration-munging
+# nonsense).
+
+# Collect statistics on number of lines dependent on each particular macro.
 
 # Small projects:
-#  * Warn about "#define foo(bar)".  Legal, but probably a mistake.
 #  * Recognize macros that build assembly code, and treat/report specially?
-# 	(What % of interesting macros are such?)
+# 	(What % of interesting macros are such?  Very few, I think.)
 #  * Look for macro definitions from makefiles (-D option to compiler)
-# 	we can't know all the things that are macros, but can try
-#  * Warn if missing parens around arg in body, or missing parens around
-# 	whole body.
-#  * Keep track of the current conditional compilation constraints (done, but
-#	I'm not sure I really believe it works).
-#  * Warn about multi-line comments/strings in macro definitions.  (Plus
-# 	option to turn this off.)
-# 	Presently get_fulltoken_line() removes the newlines silently; it shouldn't warn
-# 	since it is called for every line, not just those in macro defs.
+# 	We can't know all the things that are macros, but can try.
+#	[Greg will do this.]
 #  * Try other (non-gcc) preprocessors on the problematic stuff, to see if they
 # 	deal with it identically.
 #  * Get more packages (eg GNAT), until nishin:/tmp is full.  Then stop.
+#	In particular, get elk and saoimage.
 # 	/tmp policy is basically that they'll try not to blow stuff away
 #  * Add additional pass for function and global types before inferring macro
 # 	invocation types.  Does a tool already exist to compute this for us?
+#	Perhaps this isn't necessary if processing #includes in order??
 # 
 # Major projects:
-#  * [GREG] get better representation for types, make that work
-# 	Deal with types of wide character and string constants.
-# 	Need something that will parse a declarator into a type and identifier.
-# 	Need a special typeZERO
-# 	Perhaps separate usual_binary_conversions from a type_lub which is
-# 		used for coalescing multiple definitions/uses.
-#  * convert from macros into language constructs; see if code still works
-# 	Perhaps do this by hand for some small codebase
+#  * convert from macros into language constructs; see if code still works.
+# 	Perhaps do this by hand for some small codebase.
 # 	Need to worry about new files, #include, extern, etc.
 #  * dependentmacros, showing which macros' values depend on the values of
 # 	other macros.  Perhaps only the non-dependent ones need to be true
 # 	macros, while the others can be turned into consts.
-#  * classify as expression or not (not if "{ }", or if "foo; bar[;]"
-#  * classify when/where set (in Makefile, via -D, has default or not, etc.)
-#  * ignore code commented out via #ifdef 0 ... #endif
+#	Also do this per line a la Krone & Snelting.
 #  * do type inference for macro arguments, type lookup for globals and functions.
 # 	This entails checking for free variables and more.
-#  * write has_default (which checks dependent_on)
 #  * find all non-dependent macros -- including those mentioned in #if lines.
-#  * write type and side-effect specifications for library functions (maybe
+#  *  (maybe
 # 	do this automatically by reading lots of standard header files?
 # 	Then note which header files have been read so we don't reread them.)
 #  * check for side effects in macros (eg, function calls in an argumentless
 # 	macro probably prevent it from being turned into a const, unless
-# 	the call is to a known side-effect-less library function
-#  * perhaps permit assignment, but remember whether it's to a macro arg (in
+# 	the call is to a known side-effect-less library function.  This requires
+#	me to write side-effect specifications for library functions; don't
+#	do so unless I determine this is valuable.  This is interesting only
+#	in constant-like macros that make function calls; the compiler will
+#	do it for function-like macros that get converted in to functions.
+#  * Track assigned-to lvalues, but remember whether it's to a macro arg (in
 # 	which case it must be passed by reference) or to a global (which is
-# 	hunky-dory) or to a local (which is evil).
+# 	hunky-dory) or to a local (which is evil).  The latter is evil anyway,
+#	so maybe assignment is never a problem?
 #  * Check for/recognize template-like macros (that take a type as an argument).
-#    2 cases where macros provide polymorphism:
-#     * type argument
-#     * use of ad-hoc polymorphism inherited from underlying operators, eg
-# 	min works on both floats & ints, or both shorts & longs (the latter
-# 	can't be converted to long w/o loss of efficiency)
-#    Can't capture this without templates -- can't even tell when it is
-#    really being used, though could avoid doing some type promotion (say,
-#    beyond int or unsigned int).
 #  * for lightweight (non-parsing) tool, determine the effect a macro would
 # 	have on parser state, e.g. like a function call, a block, a
 # 	statement, a constant, etc.
-#  * Move conditional compilation into inline functions (to unclutter source)
+#  * Move conditional compilation into inline functions (to unclutter source).
+#	For instance, change #if #def #else #def #endif into
+#	inline { #if #else #endif }; is the latter really better?
+
 #  * Analysis of purpose of each define and other preprocessor command (eg,
 # 	portability, efficiency, etc.), like that done by hand for gzip.
 
-# Need to add precedence to parser so 5>4?3:2 is (5 > 4) ? 3 : 2, not 5 > (4 ? 3 : 2).
-
-# Parse Makefile-s and look for -DMACROS and have a way of adding them in
-# as well; also get list of files from Makefile, maybe.
-
-# #  Classify macros as expression-like (possibly subcategorize as function-like
-# #	if expression-like and takes argument), statement-like, or neither
-# #	(ie, that change the state of the parser)
-# #    Check for the semicolon-swallowing problem.
-# #    Check for multiple statements, like
-# #        #define double(stmt)    stmt;stmt;
-# #        double(i=5) =>   i=5;i=5;
-# 
 # Perhaps do something special about macros that expand into reserved words.
+# Specially recognize types, partical declarations.
 # 
-# 
-# I want to recognize that these are type macros (probably hard) and that
-# for each the two alternate definitions are equivalent.
+# I want to recognize that these are type macros (maybe hard, maybe not) and
+# that for each the two alternate definitions are equivalent.
 # #  define EXTERN(type, array)  extern type * near array
 # #  define DECLARE(type, array, size)  type * near array
 # #  define EXTERN(type, array)  extern type array[]
@@ -248,20 +209,6 @@ find-c | evilmacros -iv -d ~/macros/data/stable
 # depending on whether you are that DLL or some other user.
 
 
-### Un-understood preprocessor behavior.
-
-# These seem to happen to pass commas into macros that will stringify?
-# 
-# WEIRD: ## with comma on one side:
-# ./glibc-1.09.1/hurd/hurd/fd.h:241: dangerous: ## pasting in
-#     static const struct ioctl_handler handler##_ioctl_handler =  { (first), (last), (int (*) (int, int, __gnuc_va_list)) (handler),  (&(handler), &(handler##_ioctl_handler), NULL) };  text_set_element (_hurd_ioctl_handler_lists, ##handler##_ioctl_handler)
-# ./glibc-1.09.1/sysdeps/m68k/m68020/asm-syntax.h:63: dangerous: ## pasting in INSN:
-#     2(mnemonic,size_suffix,dst,src)mnemonic.size_suffix src##,dst
-# 
-# WEIRD: # with comma:
-# ./glibc-1.09.1/sysdeps/unix/sysv/sysv4/solaris2/sparc/sysdep.h:28: dangerous: stringization in poundfnc:
-#     cat(#,function)
-
 
 ###########################################################################
 ### Strictures
@@ -271,7 +218,7 @@ find-c | evilmacros -iv -d ~/macros/data/stable
 #  * all uses are fully qualified with the package name ($main::$true), or
 #  * it is declared with "my" or appears in a use vars qw( ... ) declaration.
 use strict;
-## This is giving Mike an error as of 1/27/97.
+## This gives Mike an error as of 1/27/97.
 # use diagnostics;
 
 # Permit use of $MATCH for $& and so forth.
@@ -1628,10 +1575,15 @@ sub OutputHistogram ($$$;$) {
   foreach $h (sort keys %$hashref) {
     push @headings_list, $h;
     my $v = $ {$hashref}{$h};
-    if ($divisor != 1) {
-      push @values_list, sprintf "%2.2f",pct2($v,$divisor);
-    } else {
+    if ($divisor == 0) {
+      if ($v != 0)
+	{ die "How can divisor be 0 but numerator be $v?"; }
       push @values_list, $v;
+    } elsif ($divisor == 1) {
+      # This case feels gratuitous
+      push @values_list, $v;
+    } else {
+      push @values_list, sprintf "%2.2f",pct2($v,$divisor);
     }
   }
   if (defined($fPrintHeading)) { print "#${heading}#: ", join($OFS,@headings_list) . "\n"; }
@@ -5056,7 +5008,7 @@ sub initialize_lists_of_hashes () {
   my $j;
   foreach $i (0..$c_ftype-1) {
     foreach $j (keys %cppcmdcount) {
-# FIX: gjb thinks these are same      
+# FIX: gjb thinks these are same
 #      $rg_cppcmdcounts[$i]->{$j} = 0;
       $ {$rg_cppcmdcounts[$i]}{$j} = 0;
     }
@@ -5524,7 +5476,7 @@ sub complete_include_pathname ($$) {
 sub pct2 ($$) {
   my ($x,$w) = check_args(2, @_);
   if ($w <= 0) {
-    mdie("pct2: Bad divisor: $x / $w");
+    croak("pct2: Bad divisor: $x / $w");
     return 0;
   }
   if ($x < 0 || $x > $w) {
