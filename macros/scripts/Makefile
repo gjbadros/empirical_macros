@@ -6,6 +6,13 @@
 # make some changes (e.g. to the first several settings).  If so
 # be sure to point COMMON_DIR to your scripts directory!
 
+# Typical usage:
+#   make data_analyze
+#   make data_reports
+#   make
+#   make copy
+
+
 USER_PREFIX = /homes/gws/gjb/macros
 
 # Directories
@@ -29,12 +36,21 @@ EXTRA_ANALYZE_FLAGS := -v
 EXTRA_REPORTS_FLAGS := -v
 #EXTRA_ANALYZE_FLAGS := -v -g14 -F$(FAST_DIR)
 
+# not -DPROTO  because that is a macro that takes arguments
+# other possibilities:
+#   LIBC KR_headers STDARGS?  VARARGS?  I_STDARGS?  I_VARARGS?
+#   NeedFunctionPrototypes has_prototypes HaveProtos PROTOTYPE FUNCPROTO
+#   NO_PROTO HAVE_PROTOS USE_PROTOS HAVE_PROTOTYPES USE_PROTOTYPES
+CPPP_FLAGS := -DHAS_BOOL -DHAVE_STDC -DNULL=0 -DSTANDARD_C -DSTDC -DSTDC_HEADERS -D__STDC__ -D__cplusplus -D__cplusplus__ -Dc_plusplus -Dcplusplus -D_POSIX_SOURCE -D_POSIX_C_SOURCE=2 -D__USE_POSIX -D__USE_POSIX2
+
 include Makefile.$(USER)
 
 SCRIPTS := em_analyze em_reports em_constants.pm em_depend.pm em_util.pm cline.pm paren.pm
 SCRIPTSPATH := $(addprefix $(USER_PREFIX)/,$(SCRIPTS))
 SCRIPTSFAST := $(addprefix $(FAST_DIR)/,$(SCRIPTS))
 
+PKG_DIRS := $(shell zsh -c "setopt extendedglob; echo $(USER_PREFIX)/packages/$(PKG_PREFIX)*~*\~(.:t)")
+# Should make this use PKG_DIRS, not recompute from scratch.
 PKGS := $(shell zsh -c "setopt extendedglob; echo $(USER_PREFIX)/packages/$(PKG_PREFIX)*~*\~(.:t) | sed -e 's/-[^ ]*//g' | uniq")
 
 STATE := $(addsuffix .state,$(PKGS))
@@ -323,6 +339,15 @@ copyorig: $(PAPER_TABLES)
 fast:	$(SCRIPTSPATH)
 	for i in $(SCRIPTSPATH); do bn=$(FAST_DIR)/`basename $$i`; rm -f $$bn; remove_check_args $$i > $$bn; chmod +x $$bn; chmod -w $$bn; done
 	@echo "Ensure $(FAST_DIR) is first on your path, and rehash if you changed it!"
+
+# Run cpppfull on the includes and packages
+cppp_packages:
+	cd /tmp/mernst/include-cppp
+	cppp $(CPPP_FLAGS) `find-c`
+	cd /tmp/mernst/pack-cppp
+	foreach PACK ($PKG_DIRS)
+	  echo $PACK; cd $PACK; cpppfull `grep -v '^#' c-files-listing`; cd ..
+	end
 
 # This tells make not to remove *.state files created en route to making, e.g., a
 # *.stat file
