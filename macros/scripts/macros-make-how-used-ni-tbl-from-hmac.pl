@@ -42,4 +42,5 @@ foreach my $key (qw(Code CodeMacro Cond MacroCond Macro CodeCond CodeMacroCond N
     # sprintf("%s%%",two_significant_digits($pct)),"\n";
     sprintf("%.1f%%\n", $pct);
 }
-print "Total",$total,"(100%)" ."\n";
+# dropped below line --01/28/99 gjb
+#print "Total",$total,"(100%)" ."\n";
