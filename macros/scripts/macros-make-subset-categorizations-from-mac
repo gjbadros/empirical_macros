@@ -1,4 +1,9 @@
 #!/uns/bin/perl -anw
+## OBSOLETED
+## OBSOLETED
+## OBSOLETED
+# See macros-make-subset-metacateg-from-mac
+
 BEGIN {
   my $getopts_option_letters = 'had:';
 
