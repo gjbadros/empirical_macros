@@ -836,7 +836,7 @@ C or C++ construct exists, and to apply tools to explicate the remaining
 uses.  Here we discuss a few approaches to solving this problem by
 eliminating the source of confusion rather than applying tools.  We do not
 seriously consider simply eliminating the preprocessor, for it provides
-conveniences and functionality not present in the language.
+conveniences and functionality not present in the base language.
 
 Since many of the most problematic uses of Cpp provide portability across
 different language dialects or different operating environments,
@@ -866,16 +866,16 @@ programmers to use language constructs rather than relying on the
 guarantees of an extra-linguistic tool like Cpp.\footnote{Interestingly,
   the issue seems to not be whether compilers do the appropriate
   optimizations, but whether programmers have confidence that the
-  optimizations will be performed;  if unsure, programmers will continue
-  to resort to Cpp, since certainly a compiler cannot generate
-  code for source that it does not ever even see (because Cpp has already stripped
-  it away).}
+  optimizations will be performed; if unsure, programmers will continue to
+  resort to Cpp, since certainly a compiler cannot generate code for source
+  that it does not ever even see (because Cpp has already stripped it
+  away).}
 
-Cpp constructs meant for specific purposes could be replaced by a
-special-purpose syntax for those frequently-occurring cases.  For instance,
-declarations or partial declarations could be made explicit (perhaps
-first-class) objects.  Manipulations of these objects would then be
-performed through a clearly-specified interface rather than via string
+Common Cpp constructs could be replaced by a special-purpose syntax.  For
+instance, declarations or partial declarations could be made explicit
+(perhaps first-class) objects; similar support could be provided for
+repetitive constructs and dynamic scoping.  Manipulations of these objects would then
+be performed through a clearly-specified interface rather than via string
 concatenation, easing the understanding burden on the programmer.  Such
 uses would also be visible to the compiler and could be checked and
 reasonable error messages provided.  The downside of this approach is the
@@ -887,18 +887,22 @@ An alternative approach which avoids the clumsiness of a separate language
 of limited expressibility is to make the macro language more
 powerful\,---\,perhaps even using the language itself via constructs
 evaluated at compile time rather than run time.  (The macro systems of
-Common Lisp and Scheme, and their descendants~\cite{WeiseC93} take this
+Common Lisp and Scheme, and their descendants~\cite{WeiseC93}, take this
 approach.)  An extreme example would be to provide a full-fledged
 reflection capability.  Such an approach is highly general, powerful, and
-and theoretically clean; it circumvents many of the limitations of Cpp.
-However, this approach does \emph{not} lead to more understandable programs
-and may result in just the opposite.  As difficult as it may be to
-determine what output a macroless program produces, it can be just as
-difficult simply to determine the text of a program which uses such macros.
-(In practice, such systems are used in fairly restricted ways.)  A dialog
-among users, compiler writers, tool writers, and language theorists is
-necessary when introducing a feature in order to prevent unforeseen
-consequences from turning it into a burden.
+and theoretically clean; it circumvents many of the limitations of Cpp,
+though it does not necessarily support all of Cpp's low-level features.
+However, this approach may degrade rather than improve programs
+understanding.  As difficult as it may be to determine what output a
+macroless program produces, it can be just as difficult simply to determine
+the text of a program which uses such macros.  (This is also a problem with
+meta-object protocols, aspect-oriented programming, and intentional
+programming, all of which permit the programmer to specify transformations
+on other parts of the source code.  In practice, such systems are used in
+fairly restricted ways, perhaps because other uses would be too
+complicated.)  A dialog among users, compiler writers, tool writers, and
+language theorists is necessary when introducing a feature in order to
+prevent unforeseen consequences from turning it into a burden.
 
 
 %% See slide 15 and its notes from Mike's quals talk.
@@ -907,9 +911,6 @@ consequences from turning it into a burden.
 % These results suggest a wide variety of future avenues for research, both
 % in terms of expanding our understanding of uses of the preprocessor in
 % practice and in addressing the issues identified by this study.
-% 
-%   We are
-% pursuing a number of these 
 
 
 \section{Related work}
