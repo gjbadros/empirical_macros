@@ -695,3 +695,12 @@
 ./hconfig.h
 ./specs.h
 ./options.h
+# These def files added since they get #included by C code
+./cp/tree.def
+./bc-typecd.def
+./bytecode.def
+./machmode.def
+./modemap.def
+./objc-tree.def
+./rtl.def
+./stab.def
