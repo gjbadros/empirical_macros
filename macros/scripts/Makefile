@@ -16,6 +16,7 @@ COMMON_DIR := $(shell dirname $$(ls -l Makefile | awk '{print $$NF}'))
 #COMMON_DIR := /homes/gws/gjb/macros/scripts
 
 EXTRA_ANALYZE_FLAGS := -v
+EXTRA_REPORTS_FLAGS := -v
 #EXTRA_ANALYZE_FLAGS := -g14
 
 PAPER_DIR := $(USER_PREFIX)/papers
@@ -82,8 +83,7 @@ clean:
 
 data_analyze: $(STATE)
 
-data_reports:
-	macros-make-data-reports $(ANALYZE_OUTPUT_DIR)
+data_reports: $(STAT)
 
 clean_reports:
 	macros-clean-reports
@@ -93,7 +93,7 @@ clean_reports:
 	em_make_state_file $(PKG_DIR) $(ANALYZE_OUTPUT_DIR) $@ $(EXTRA_ANALYZE_FLAGS) || echo $< >> $(ANALYZE_OUTPUT_DIR)/failures
 
 %.stat: %.state $(COMMON_DIR)/../em_reports
-	em_reports -s $< -t -d $(ANALYZE_OUTPUT_DIR):`echo $@ | sed -e 's/\.stat$$//'`
+	em_reports -s $< -t $(EXTRA_REPORTS_FLAGS) -d $(ANALYZE_OUTPUT_DIR):`echo $@ | sed -e 's/\.stat$$//'`
 
 ###########################################################################
 ### Text tables
