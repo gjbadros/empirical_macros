@@ -1,7 +1,8 @@
 #!/uns/bin/zsh -
 # run on *.mac files
 for i in "$@"; do
-  SUM=`awk < $i '$0 !~ /^[%#]/ && $NF ~ /FromStdin/ { print $2 }' | sort -n | uniq -c | tee /tmp/$i.$$ | awk '{sum += ($1 * $2)} END {print sum}'`
+  SUM=`awk < $i '$0 !~ /^[%#]/ \
+&& $NF ~ /FromStdin/ { print $2 }' | sort -n | uniq -c | tee /tmp/$i.$$ | awk '{sum += ($1 * $2)} END {print sum}'`
   (echo "$SUM"; awk < /tmp/$i.$$ '{total += $1*$2; printf "%d %d\n", $2, total}') | tee ${i%%.mac}.freq_def_hist | macros-make-buckets-and-percentages ${i%%.mac} > ${i%%.mac}.freqdef
   rm -f /tmp/$i.$$
 done
