@@ -29,7 +29,7 @@ EXTRA_REPORTS_FLAGS := -v
 
 include Makefile.user
 
-SCRIPTS := em_analyze em_reports em_constants.pm em_util.pm cline.pm
+SCRIPTS := em_analyze em_reports em_constants.pm em_depend.pm em_util.pm cline.pm paren.pm
 SCRIPTSPATH := $(addprefix $(USER_PREFIX)/,$(SCRIPTS))
 SCRIPTSFAST := $(addprefix $(FAST_DIR)/,$(SCRIPTS))
 
@@ -213,7 +213,7 @@ copyorig: $(PAPER_TABLES)
 	cp $(PAPER_TABLES) $(PAPER_ORIG_DIR)
 
 fast:	$(SCRIPTSPATH)
-	for i in $(SCRIPTSPATH); do bn=$(FAST_DIR)/`basename $$i`; remove_check_args $$i > $$bn; chmod +x $$bn; done
+	for i in $(SCRIPTSPATH); do bn=$(FAST_DIR)/`basename $$i`; rm -f $$bn; remove_check_args $$i > $$bn; chmod +x $$bn; chmod -w $$bn; done
 	@echo "Ensure $(FAST_DIR) is first on your path, and rehash if you changed it!"
 
 # This tells make not to remove *.state files created en route to making, e.g., a
