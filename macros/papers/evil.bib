@@ -10,26 +10,6 @@
 
 @string{PARC = "Xerox Palo Alto Research Center"}
 
-@string{fse94="Proceedings of SIGSOFT '94 Second ACM SIGSOFT Symposium
-on the Foundations of Software Engineering"} 
-
-@string{fse95="Proceedings of SIGSOFT '95 Third ACM SIGSOFT Symposium
-on the Foundations of Software Engineering"} 
-
-@string{fse96="Proceedings of SIGSOFT '96 Fourth ACM SIGSOFT Symposium
-on the Foundations of Software Engineering"} 
-
-@string{icse18 = "Proceedings of the 18th International Conference on
-Software Engineering"}
-
-@string{ICSE94 = "Proceedings of the 16th International Conference on
-                 Software Engineering"}
-
-@string{icse97 = "Proceedings of the 1997 International Conference on
-Software Engineering"}
-@string{icse99 = "Proceedings of the 1999 International Conference on
-Software Engineering"}
-
 
 @TechReport{ellemtel92,
   author = 	 {{Ellemtel Telecommunication Systems Laboratory}},
@@ -86,7 +66,7 @@ Pitfalls and Subtleties of Macros:
   organization = {{GNU} Project},
   year =	 1997,
   month =	 {July},
-  note =	 {\relax{}ftp://prep.ai.mit.edu/\discretionary{}{}{}pub/\discretionary{}{}{}gnu/\discretionary{}{}{}standards/\discretionary{}{}{}standards.texi}
+  note =	 {\relax{}\url{ftp://prep.ai.mit.edu/pub/gnu/standards/standards.texi}}
 }
 [[The use of "\relax{}" in the note prevents BibTeX from making a bad break
 (in the middle of a TeX \discretionary macro).  Don't change!]]
@@ -141,7 +121,7 @@ Avoid preprocessor tricks. Tricks such as using /**/ for token pasting and
 Don't change syntax via macro substitution (except via the PROTO macro). It makes the program
      unintelligible to all but the perpetrator.
 Header files should not be nested.
-Make code (eg, conditional bodies) fully-bracketed.
+Make code (e.g., conditional bodies) fully-bracketed.
 #define constants should be in all CAPS.
 Build in the debug code using as few #ifdefs as possible. 
 If you #ifdef machine dependencies, make sure that when no machine is
@@ -187,7 +167,7 @@ Use an \<\#if~0> and \<\#endif> pair instead of nested comments.
 @InProceedings( Murphy-icse18,
   author= 	"Murphy, Gail C. and Notkin, David and Lan, Erica S.-C.",
   title= 	"{An empirical study of static call graph extractors}",
-  booktitle= 	icse18,
+  booktitle= 	icse96,
   pages= 	"90--99",
   month= 	mar,
   year= 	1996
@@ -252,6 +232,7 @@ book on object oriented system development using Objective-C.
   address =	 ph:adr,
   edition =	 "Second"
 }
+Still the latest edition as of 2001.
 
 @Book{Carroll95,
   author = 	 {Carroll, Martin D. and Ellis, Margaret A.},
@@ -279,22 +260,25 @@ macro and code versioning are rendered obsolete in C++."
   author= 	"Evans, David and Guttag, John and Horning, Jim and Tan, Yang Meng",
   title= 	"{LCLint}: A tool for using specifications to check code",
   booktitle= 	FSE94,
+  address =     FSE94addr,
   pages= 	"87--96",
-  month= 	dec,
+  month= 	FSE94date,
   year= 	1994
 )
 
 @Manual{Evans:LCLint,
-  title = 	 {LCLint User's Guide},
+  title = 	 {{LCL}int User's Guide, Version 2.5},
   author =	 {David Evans},
   OPTorganization = {},
   OPTaddress = 	 {},
-  year =	 1996,
-  month =	 Aug,
-  note =         {\relax{}http://www.sds.lcs.mit.edu/\discretionary{}{}{}lclint/\discretionary{}{}{}guide/}
+  year =	 2000,
+  month =	 May,
+  note =         {\url{http://lclint.cs.virginia.edu/guide/}}
 }
 Used to be:
-  note =	 {\relax{}Version 2.2.  http://larch-www.lcs.mit.edu:8001/\discretionary{}{}{}larch/\discretionary{}{}{}lclint/\discretionary{}{}{}guide/\discretionary{}{}{}guide.html}
+  year =	 1996,
+  month =	 Aug,
+  note =	 {Version 2.2.  http://larch-www.lcs.mit.edu:8001/larch/lclint/guide/guide.html}
 
 
 @InProceedings{Krone94,
@@ -302,10 +286,12 @@ Used to be:
   title = 	 "On the Inference of Configuration Structures from Source Code",
   booktitle = 	 ICSE94,
   year =	 1994,
-  publisher =	 {IEEE Computer Society Press},
-  month =	 {May},
-  pages =	 {49-57}
+  pages =	 {49--57},
+  address =	 ICSE94addr,
+  month =	 ICSE94date
 }
+  publisher =	 {IEEE Computer Society Press},
+This is superseded by Snelting, TOSEM 5(2), April 1996.
 
 @TechReport{Zellweger83:TR,
   author = 	 "Polle T. Zellweger",
@@ -331,6 +317,7 @@ Used to be:
 PLDI93, SIGPLAN Notices 6:28
 
 
+Superseded by BadrosN00.
 @TechReport{CppAwareCAnalyses,
   author = 	 {Badros, Greg and Notkin, David},
   title = 	 {A Framework for Preprocessor-Aware {C} Source Code Analyses},
@@ -340,6 +327,18 @@ PLDI93, SIGPLAN Notices 6:28
   address =	 uw:adr,
   month =	 {August}
 }
+
+
+
+@article{ Badros00,
+    author = "Greg J. Badros and David Notkin",
+    title = "A framework for preprocessor-aware C source code analyses",
+    journal = SPE,
+    volume = "30",
+    number = "8",
+    pages = "907-924",
+    year = "2000",
+    url = "citeseer.nj.nec.com/badros98framework.html" }
 
 
 @InProceedings{GriswoldAM96,
@@ -446,9 +445,9 @@ relevance, except that they are other kinds of lint checkers for style.
 
 
 @Misc{Gimpel,
-  author =	 "Gimpel Software",
+  author =	 "{Gimpel Software}",
   title =	 "{PC}-lint/{F}lexe{L}int",
-  howpublished = "\relax{}http://www.gimpel.com/\discretionary{}{}{}lintinfo.htm",
+  howpublished = "\url{http://www.gimpel.com/lintinfo.htm}",
   year =	 1999
 }
 PC-Lint:
@@ -463,8 +462,8 @@ in the ad) and is distributed as shrouded source code.
   booktitle = 	 "Usenix Summer 1992 Technical Conference",
   year =	 1992,
   address =	 "San Antonio, Texas",
-  month =	 jun # "~8-12,",
-  pages =	 "185-197",
+  month =	 jun # "~8--12,",
+  pages =	 "185--197",
   url = 	 "http://9www.x.bell-labs.com/user/geoff/ifdefs.ps.Z",
 }
 Abstract:
@@ -700,22 +699,23 @@ errors.  Section 4.8 gives 9 rules for parse trees with precedence errors
 based on whether each operator appears in a macro parameter, macro body, or
 outside macros.
   Except for operator precedence errors, everything is at the lexical level:
-no parsing, lots of approximations (eg, suppress certain errors if any
-statement-like token appears in a macro).  Througout, unsubstantiated
+no parsing, lots of approximations (e.g., suppress certain errors if any
+statement-like token appears in a macro).  Throughout, unsubstantiated
 claims about what extra work (parsing, etc.) is worthwhile and what isn't;
 this is a major theme of the paper, but no evidence is provided.  No
 reports about running it on actual code (except an implication that it's
 being used for a programming class).
   Also see David A. Spuler, Check: A Better Checker for C, B Sc (Honours)
-Thesis, James Cook Universaity, Townsville, Australia (1990).
+Thesis, James Cook University, Townsville, Australia (1990).
 
 
 @Unpublished{Lindig98:dagstuhl,
   author = 	 "Christian Lindig",
   title = 	 "Analysis of Software Variants",
-  note = 	 "Talk at  Schloss Dagstuhl Seminar on Program Comprehension and Software Reengineering",
+  note = 	 "Talk at Schloss Dagstuhl Seminar on Program Comprehension
+		  and Software Reengineering",
   year =	 1998,
-  month =	 mar # "~9--13"
+  month =	 mar # "~9--13,"
 }
 Christian Lindig <lindig at ips.cs.tu-bs.de> gave a talk at Dagstuhl regarding
 analysis of software variants; the slides are
@@ -761,10 +761,10 @@ evaluation has been performed yet.
   author = 	 "David Atkins and Thomas Ball and Todd Graves and Audris Mockus",
   title = 	 "Using Version Control Data to Evaluate the Impact of Software Tools",
   booktitle = 	 icse99,
-  OPTpages = 	 "",
+  pages = 	 "324--333",
   year =	 1999,
   address =	 "Los Angeles, CA",
-  month =	 may # "~19-21,"
+  month =	 may # "~19--21,"
 }
 The idea is to evaluate VE, a #if-aware editor that supports changing a
 program that makes extensive use of the C preprocessor.  The editor hides
@@ -830,6 +830,7 @@ Zipf's law.
                  Reusability, and Maintainability",
   author =       "Daniel J. Salomon",
   booktitle =    "Compiler Construction, 6th International Conference",
+  pages =        "208--222",
   editor =       "Tibor Gyimothy",
   address =      "Link{\"o}ping, Sweden",
   month =        "24--26~" # apr,
@@ -927,11 +928,44 @@ Abstract:
 @Misc{Lott-metrics-tools,
   author =	 "Christopher Lott",
   title =	 "Metrics collection tools for {C} and {C}++ Source Code",
-  howpublished = "\relax{}http://www.cs.umd.edu/\discretionary{}{}{}users/\discretionary{}{}{}cml/\discretionary{}{}{}cmetrics/",
+  howpublished = "\url{http://www.cs.umd.edu/users/cml/cmetrics/}",
   year =	 1998
 }
 I know the year is at least 1998 because one of the packages says "last
 updated in 1998".  Most of the packages are quite a bit older, though.
+
+
+@InProceedings{Engblom99,
+  author = 	 "Jakob Engblom",
+  title = 	 "Static Properties of Commercial Embedded Real-Time
+		  Programs, and Their Implication for Worst-Case Execution
+		  Time Analysis",
+  booktitle = 	 "Proceedings of the 5th IEEE Real-Time Technology and
+		  Applications Symposium (RTAS '99)",
+  OPTcrossref =  "",
+  OPTkey = 	 "",
+  OPTpages = 	 "",
+  year = 	 "1999",
+  OPTeditor = 	 "",
+  OPTvolume = 	 "",
+  OPTnumber = 	 "",
+  OPTseries = 	 "",
+  address = 	 "Vancouver, Canada",
+  month = 	 jun,
+  OPTorganization = "",
+  OPTpublisher = "",
+  OPTnote = 	 "",
+  OPTannote = 	 ""
+}
+http://www.docs.uu.se/~jakob/publications.html
+For a collection of real-time (8- and 16-bit) embedded programs, collects
+statistics of the intermediate representation (after optimization) such as
+number of recursive calls, number of instances of unstructured control
+flow, number of non-terminating functions, number of function entries and
+exits, etc.  The idea is to indicate what properties an analysis of
+real-time embedded code may safely ignore.  Future work (already published)
+is to control these statistics to those of the SPECint benchmarks, and show
+that the latter are not representative of embedded code.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -997,7 +1031,7 @@ http://www-adele.imag.fr/users/Jean-Marie.Favre/):
      Doctoral Consortium of CAiSE'94 
      (Workshop of the 6th International Conference of Computer Aided Information System Engineering, Utrecht (Netherlands), 6-10 june,
      1994), 
-     Memoranda Informatica 94-24, Univeristy of Twente 
+     Memoranda Informatica 94-24, University of Twente 
      1994. 
 
      J.M. Favre 
@@ -1021,8 +1055,8 @@ http://www-adele.imag.fr/users/Jean-Marie.Favre/):
   booktitle = 	 "IEEE Third Workshop on Program Comprehension",
   year =	 1994,
   address =	 "Washington, DC, USA",
-  month =	 nov # "~14-15",
-  pages =	 "89-97"
+  month =	 nov # "~14--15,",
+  pages =	 "89--97"
 }
 Understanding Code Containing Preprocessor constructs, by Panos E. Livadas and David T. Small, SERC-TR-73-F, June 1994.
 Description: Understanding, debugging, and maintaining software is a costly
@@ -1030,7 +1064,7 @@ and difficult task. The difficulties are exacerbated in programs written to
 take advantage of preprocessing facilities. This paper examines problems
 associated with source code containing preprocessor constructs -i.e.,
 included files, conditional compilation, and macros. We define the useful
-mappings from tokens in the proprocessor's output to the source file(s),
+mappings from tokens in the preprocessor's output to the source file(s),
 and propose that by capturing these correspondences an internal program
 representation can be built which will allow for the use of maintenance
 techniques including program slicing, dicing, and ripple analysis. The
