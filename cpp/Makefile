@@ -223,6 +223,13 @@ C++-FLAGS := $(STANDARD-INCS) ...
 
 GRAMMAR_OBJECTS := ansi-c.tab.o ansi-c-lex.o
 
+PCP3_SOURCES := lexer.l gram.y pcpp.c pcpp.h cpplib.c cpplib.h cpphook.c cpphook.h \
+		cpphash.c cpphash.h cppalloc.c cpperror.c cppexp.c \
+		version.c backcalls.xs bison-stack.c bison-stack.h \
+		ct-heap.c ct-nmetab.c ct-prnttree.c \
+		ct-symtab.c ct-token.c  ct-tree.c \
+		ct-tree_stk.c
+
 CT_GRAMMAR_OBJECTS := lexer.o gram.tab.o ct-heap.o ct-nmetab.o ct-prnttree.o ct-symtab.o ct-token.o ct-tree.o ct-tree_stk.o
 
 NON_GRAMMAR_OBJECTS =pcpp.o cpplib.o cpphook.o cpphash.o cppalloc.o cpperror.o cppexp.o \
@@ -233,6 +240,9 @@ OBJECTS = $(NON_GRAMMAR_OBJECTS) $(GRAMMAR_OBJECTS)
 SD_OBJECTS = scan-decls.o cpplib.o cpphash.o cppalloc.o cpperror.o cppexp.o version.o backcalls.o cpphook.o
 
 all: pcp3 paper/backcalls.tex paper/pcp3-hooks.tex
+
+lines:	$(PCP3_SOURCES)
+	wc -l $^ > lines
 
 # Making the preprocessor/parser
 # PCP^3 == Perl-enhanced C PreProcessor and Parser
