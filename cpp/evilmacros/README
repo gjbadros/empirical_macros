@@ -54,7 +54,9 @@ How To Use Pcp3 To Preprocess A Package
 8) denote-expansions expansions.lst 2> denote-expansions.err
    # (zsh syntax; capture output so it isn't lost, unnecessary under Emacs)
    # create munged/* directory hierarchy with preprocessed files
-   # If anything went wrong here, it's *bad news*.
+   # If anything went wrong here, it could be bad news
+   # before re-running, be sure to delete munged/* directory: rm -fr munged/
+
 
 9) cd munged
    find-c-no-usr > c-files-listing
