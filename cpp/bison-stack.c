@@ -112,6 +112,7 @@ static void GetStackState(int isssSource)
     *yyls_cur++ = *(rgpyyls[isssSource]+i);
 #endif
     }
+  yyssp = yyss_cur-1;
 }
 
 // Compare current ss to rgXXX[isssCompare]
