@@ -2583,6 +2583,8 @@ sub parse_exp ($;$)
   elsif ($exp =~ /^$reserved_nontype_word_re/o)
     # reserved word except sizeof, true, false
     { return ($typeFAIL, $exp); }
+  elsif ($exp =~ /^__extension__\b/)
+    { return parse_exp($POSTMATCH, $ignoretypes); }
 
   # Literals
 
@@ -4417,6 +4419,15 @@ sub categorize_macro_def ($)
     { mdie("leading space in body: $body"); }
   $fDebugCommentRemoval && print STDERR "body = '$mdef_body[$index]'\nbody_simple = '$body'\n";
 
+  # Rename formals which are reserved words; only happens twice in suite.
+  for my $arg (args_array($mdef_args[$index]))
+    { if ($arg =~ /^$reserved_word_re$/o)
+	{ # No need for quoting: any reserved word is an identifier.
+	  # Bizarre substitution: "${arg}_" looks like close brace to Emacs
+	  $body =~ s/\b$arg\b/$arg . "_"/ge; # no /o
+	  print "body became $body\n";
+	} }
+
   # Fix: are these special cases better done in parse_expression?
   my $category;
   my $type;
@@ -5617,7 +5628,8 @@ sub test_categorize_macro_defs ()
   test_cat($catDECLARATION_SANS_SEMI, $propASSIGN, "struct Lisp_Subr sname = { PVEC_SUBR | (sizeof (struct Lisp_Subr) / sizeof (EMACS_INT)), fnname, minargs, maxargs, lname, prompt, 0}; Lisp_Object fnname");
   test_cat($catDECLARATION_SANS_SEMI, $propASSIGN, "Lisp_Object fnname (); struct Lisp_Subr sname = { PVEC_SUBR | (sizeof (struct Lisp_Subr) / sizeof (EMACS_INT)), fnname, minargs, maxargs, lname, prompt, 0}; Lisp_Object fnname");
   test_cat($catDECLARATION_SANS_SEMI, $propNONE, "int mkdir (const char *dpath, unsigned short dmode)");
-# These use "new", which is a reserved word.
+# These use "new", which is a reserved word in C++ (perfectly legal in C).
+#   test_cat($catEXP, $propNONE, "(((new) + 1) < ((cur) - (new)))");
 #   test_cat($catEXP, $propNONE, "report_error_1(new, msg, x, 0)");
 #   test_cat($catEXP, $propNONE, "report_error_1 (new, msg, x, 0)");
 #   test_cat($catSTATEMENT, $propNONE, "report_error_1 (new, msg, x, 0);");
