@@ -253,6 +253,19 @@ SetParseStateStack()
 	    i++;
 	}
 
+
+void
+PushBuffer($buffer_to_push)
+	PPCODE:
+	int length = 0;
+	int len = 0;
+ 	char *szBuf = SvPV(ST(0),length);
+	if ((len = strlen(szBuf)) != length) {
+	    warn("PushBuffer cannot handle strings with embedded NULLs\n");
+	}
+	cpp_push_buffer(&parse_in,szBuf,len);
+
+
 void
 SetParseDebugging()
 	CODE:
@@ -267,31 +280,37 @@ ResetParseDebugging()
 void
 YYPushStackState()
 	CODE:
+	if (!fShouldParse) return;
 	PushStackState();
 
 void
 YYPopAndRestoreStackState()
 	CODE:
+	if (!fShouldParse) return;
 	PopAndRestoreStackState();
 
 void
 YYPopAndDiscardStackState()
 	CODE:
+	if (!fShouldParse) return;
 	PopAndDiscardStackState();
 
 void
 YYSwapStackState()
 	CODE:
+	if (!fShouldParse) return;
 	SwapStackState();
 
 void
 YYPushDupTopStackState()
 	CODE:
+	if (!fShouldParse) return;
 	PushDupTopStackState();
 
 bool
 YYFCompareTopStackState()
 	CODE:
+	if (!fShouldParse) return TRUE;
 	RETVAL = FCompareTopStackState();
 	OUTPUT:
 	RETVAL

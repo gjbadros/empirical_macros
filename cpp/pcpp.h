@@ -12,6 +12,7 @@ extern cpp_reader parse_in;
 extern cpp_options options;
 extern int cBytesOutput;
 extern int cBytesCppRead;
+extern int fShouldParse;
 
 extern int ct_yydebug;
 

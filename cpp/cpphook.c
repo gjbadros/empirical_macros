@@ -704,7 +704,7 @@ gjb_call_hooks_i_i_szl_sz_defn(struct cpp_options *opts, HOOK_INDEX ih,
   XPUSHs(sv_2mortal(newSVpv(expn, 0)));
   XPUSHs(sv_2mortal(newSViv(defn->nargs)));
   XPUSHs(sv_2mortal(newSVpv(defn->expansion, 0)));
-  XPUSHs(sv_2mortal(newSVpv(defn->file, 0)));
+  XPUSHs(sv_2mortal(newSVpv_safe(defn->file, 0)));
   XPUSHs(sv_2mortal(newSViv(defn->line)));
   XPUSHs(sv_2mortal(newSVpv(defn->args.argnames,0 )));
   XPUSHs(sv_2mortal(newSVbitmap(defn->predefined, defn->rest_args, -1)));
