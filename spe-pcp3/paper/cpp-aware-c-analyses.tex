@@ -170,7 +170,7 @@ Experienced and novice \C{} programmers alike are frustrated by
 misunderstandings of source code due to the arbitrary transformations
 \Cpp{} performs. A software engineer might want to be sure that a
 function \texttt{foo} is not invoked in a given block of code.  By
-simply visually scapping that code segment, though, she may be oblivious 
+simply visually scanning that code segment, though, she may be oblivious 
 to a seemingly-unrelated macro that happens to expand to an invocation
 of the function intended to be avoided.
 
@@ -403,7 +403,7 @@ section suffers from many of the same shortcomings as tools that
 configuration of the source and eliminates all macro abstractions
 from the extracted model.  As Murphy et al.\ discuss, there are many
 degrees of freedom for call-graph extractors~\cite{Murphy98}.  As
-written, the analsysis counts all function calls in macro expansions as
+written, the analysis counts all function calls in macro expansions as
 occurring from the function in which the macro is expanded---the macro
 expansion itself is omitted from the call graph.  This behaviour may not 
 always be what the software engineer desires. A substantial
