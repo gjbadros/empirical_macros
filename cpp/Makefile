@@ -14,6 +14,9 @@ GCC_CFLAGS=$(INTERNAL_CFLAGS) $(X_CFLAGS) $(T_CFLAGS) $(CFLAGS) -I./include
 # This is the variable actually used when we compile.
 ALL_CFLAGS = $(INTERNAL_CFLAGS) $(X_CFLAGS) $(T_CFLAGS) $(CFLAGS) $(XCFLAGS) -g #-Wall
 
+# Use yyparse()!
+ALL_CFLAGS += -DGJB_PARSE
+
 # Directory where sources are, from where we are.
 srcdir = .
 PERLARCHDIR = /uns/lib//perl5.004/arch
@@ -217,9 +220,10 @@ PERL-LINKAGE := $(shell $(PERL) $(PERL-EMBED) -e ldopts)
 STANDARD-LINKAGE += $(PERL-LINKAGE)
 C++-FLAGS := $(STANDARD-INCS) ...
 
+GRAMMAROBJS := ansi-c.tab.o ansi-c-lex.o
 
 OBJECTS = cppmain.o cpplib.o cpphook.o cpphash.o cppalloc.o cpperror.o cppexp.o \
-  version.o backcalls.o
+  version.o backcalls.o $(GRAMMAROBJS)
 
 SD_OBJECTS = scan-decls.o cpplib.o cpphash.o cppalloc.o cpperror.o cppexp.o version.o backcalls.o cpphook.o
 
@@ -320,7 +324,7 @@ ansi-c-lex.c: ansi-c.l
 ansi-c.tab.c ansi-c.tab.h: ansi-c.y
 	bison -d $^
 
-grammar: ansi-c.tab.o ansi-c-lex.o grammar.o
+grammar: $(GRAMMAROBJS) grammar.o
 	gcc -g -o grammar $^ -lfl
 
 .PHONY: tags clean

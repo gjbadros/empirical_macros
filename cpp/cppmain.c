@@ -23,6 +23,9 @@ Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #define bool int
 #include <EXTERN.h>               /* from the Perl distribution     */
 #include <perl.h>                 /* from the Perl distribution     */
+#undef yydebug
+extern int yydebug;
+#undef yyparse
 /* Avoid some warnings by undef-fing  perl's TRUE and FALSE macros, 
    since cpp redefs them */
 #undef FALSE
@@ -173,6 +176,7 @@ main (int argc, char **argv, char **env)
   int perl_exit_status = 0;
   struct cpp_options *opts = &options;
   int return_exit_code = SUCCESS_EXIT_CODE;
+  int fShouldParse = 0;
 
   /* Perl startup code */
   char *startup_code[] = { "", "-I", "/tmp/gjb/cpp", "-e", "use cpphook;" };
@@ -211,14 +215,22 @@ main (int argc, char **argv, char **env)
   else if (! freopen (opts->out_fname, "w", stdout))
     cpp_pfatal_with_name (&parse_in, opts->out_fname);
 
-#ifndef GJB_PARSE
-  for (;;)
+/* FIXGJB: make this a flag */
+#ifdef GJB_PARSE
+  fShouldParse = 1;
+#else
+  fShouldParse = 0;
+#endif
+
+  if (!fShouldParse)
     {
+    for (;;)
+      {
       enum cpp_token kind;
       kind = cpp_get_token (&parse_in);
       if (! opts->no_output)
 	{
-	  fwrite (parse_in.token_buffer, 1, CPP_WRITTEN (&parse_in), stdout);
+	fwrite (parse_in.token_buffer, 1, CPP_WRITTEN (&parse_in), stdout);
 	}
       gjb_call_hooks_szl(opts,CPP_OUT,parse_in.token_buffer,CPP_WRITTEN(&parse_in));
       gjb_call_hooks_sz_szl(opts,TOKEN,SzFromToken(kind),parse_in.token_buffer,
@@ -226,10 +238,15 @@ main (int argc, char **argv, char **env)
       if (kind == CPP_EOF)
 	break;
       parse_in.limit = parse_in.token_buffer;
+      }
     }
-#else
-  yy_parse();
-#endif
+  else
+    {
+    yydebug = 0; /* FIXGJB: make this a flag */
+    fprintf(stderr,"Starting parse...\n");
+    yyparse();
+    fprintf(stderr,"Done parse...\n");
+    }
 
   cpp_finish (&parse_in);
 

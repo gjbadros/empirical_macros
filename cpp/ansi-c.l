@@ -9,12 +9,44 @@ IS                      (u|U|l|L)*
 %{
 #include <stdio.h>
 #include "ansi-c.tab.h"
+#include "cpplib.h"
+#include "cppmain.h"
+#include "cpphook.h"
 
 void count();
+
+int /* result */
+cpp_yy_input(char *buf,int max_size)
+{
+    int result;
+    enum cpp_token kind = cpp_get_token (&parse_in);
+    gjb_call_hooks_szl(CPP_OPTIONS(&parse_in),CPP_OUT,
+		       parse_in.token_buffer,CPP_WRITTEN(&parse_in));
+    gjb_call_hooks_sz_szl(CPP_OPTIONS(&parse_in),TOKEN,SzFromToken(kind),
+			  parse_in.token_buffer,
+			  CPP_WRITTEN(&parse_in));
+    if (kind == CPP_EOF)
+	result = YY_NULL;
+    else {
+	result = CPP_WRITTEN(&parse_in);
+	if (result > max_size) {
+	    fprintf(stderr,"OVERFLOWED max_size in YY_INPUT macro!\n");
+	    result = max_size;
+	}
+	strncpy(buf,parse_in.token_buffer,result);
+	parse_in.limit = parse_in.token_buffer;
+    }
+    return result;
+}
+
+#undef YY_INPUT
+#define YY_INPUT(buf,result,max_size) \
+         do { result = cpp_yy_input(buf,max_size); } while (0)
 %}
 
 %%
 "/*"                    { comment(); }
+"#"                     { directive(); }
 
 "auto"                  { count(); return(AUTO); }
 "break"                 { count(); return(BREAK); }
@@ -135,6 +167,19 @@ loop:
 
         if (c != 0)
                 putchar(c1);
+}
+
+directive()
+{
+        char c;
+#ifdef GJB_DIRECTIVE_DEBUG
+	fprintf(stderr,"In directive...\n");
+#endif
+        while ((c = input()) != '\n' && c != 0)
+                putchar(c);
+#ifdef GJB_DIRECTIVE_DEBUG
+	fprintf(stderr,"Done directive...\n");
+#endif
 }
 
 

@@ -7,3 +7,6 @@
 
 extern cpp_reader parse_in;
 extern cpp_options options;
+
+char * SzFromToken(enum cpp_token kind);
+
