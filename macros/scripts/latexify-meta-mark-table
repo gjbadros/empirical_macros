@@ -10,7 +10,7 @@ print '
 {\small
 \addtolength{\columnsep}{-.5\columnsep}
 % The *{n}{c|} below creates n duplicate columns of that type (centered, here)
-\begin{tabular}{|r|*{10}{c|}}\hline
+\begin{tabular}{|r|*{10}{c|}ll}\cline{1-11}
 \rotatebox{90}{\parbox{1in}{Percentage of~ \\\\ macro names}~} &
 \rotatebox{90}{Null define~} &
 \rotatebox{90}{Constant~} &
@@ -22,7 +22,7 @@ print '
 \rotatebox{90}{Unknown symbol~} &
 \rotatebox{90}{Not C code~} &
 \rotatebox{90}{Failed classification~}
-\\\\ \hline
+\\\\ \cline{1-11}
 ';
 }
 
@@ -44,9 +44,11 @@ while (<>) {
   ($count,$marks) = /^( +\d+)\s(.*)$/;
 
   # print STDERR "$count <<$marks>>\n";
+  $marks =~ s/\^.*$//;
   @m = split(//,$marks);
   $out = join("&", @m);
   $out =~ s/\*/\\black/g;
+  $out =~ s/\</\$\\Leftarrow\$/g;
 
   if (100*$count/$sum >= 0.05) {
     if ($pct == 0) {
@@ -59,6 +61,6 @@ while (<>) {
       $pct_string =~ s/^(\s*) (0\.0*\d)(\\%)/$1${2}0$3/;
       print $pct_string;
     }
-    print $out, ' \\\\ \\hline', "\n";
+    print $out, ' \\\\ \\cline{1-11}', "\n";
   }
 }
