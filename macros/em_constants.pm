@@ -138,6 +138,7 @@ $catSYMBOL_UNKNOWN = 20;	# symbol (not function, macro, or reserved word)
 				#    or possibly a local or global variable)
 
 $catSYMBOLS = 21;		# multiple space-separated symbols: #def P(x,y) x y
+				# (it might actually be a declaration_sans_semi)
 
 $catRECURSIVE = 22;		# not sure there are enough of these to justify;
 				# currently all but about 5 are misclassifications

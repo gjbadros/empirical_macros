@@ -664,7 +664,8 @@ sub output_stats ()
 			   (($body =~ /^($identifier_re\s*)?\(/o)
 			    # For testing
 			    # && (print STDERR "match = $MATCH, close = \n")
-			    && (find_close_paren($body, length($MATCH)) == length($body)-1))
+			    && (($body =~ /^\(\s*\{/) # hack: don't call find_close_paren if braces inside, as it will complain
+				|| (find_close_paren($body, length($MATCH)) == length($body)-1)))
 			   # identifier or number
 			   || ($body =~ /^\w+$/)
 			   # string

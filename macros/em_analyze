@@ -1450,7 +1450,7 @@ sub get_fulltoken_line (;$)
   if (!defined($simple_result))
     {    $simple_result = " ";}
   elsif ($simple_result eq "")
-    { mdie("empty get_fulltoken_line result"); }
+    { mdie("empty get_fulltoken_line result '$simple_result'"); }
   if ($debug_getline)
     { print "get_fulltoken_line returning <<$simple_result>>\n"; }
   return ($simple_result);
@@ -2451,7 +2451,7 @@ sub parse_expression ($)
 {
   my ($exp) = check_args(1, @_);
   reset_parse_vars();
-  # print "parse_expression $exp\n";
+  if ($debug_parse_expression) { print "parse_expression <= $exp\n"; }
   # Should be no comments when this is called, so no need to do this.
   # my ($type, $remaining) = parse_exp(remove_comments($exp));
   return parse_exp($exp);
@@ -2487,7 +2487,7 @@ sub parse_exp ($;$)
   if (!defined($ignoretypes))
     { $ignoretypes = $false; }
   if ($debug_parse_expression)
-    { print "parse_exp", ($ignoretypes ? " (ignore types)" : ""), ": '$exp'\n"; }
+    { print "parse_exp", ($ignoretypes ? " (ignore types)" : ""), " <= '$exp'\n"; }
   # If ignoretypes is set, then we don't try to infer types, look up types
   # of unknown functions, or set symbol tables.  We do still compute types
   # for literals and return a type, I think.
@@ -2532,6 +2532,14 @@ sub parse_exp ($;$)
       return parse_exp_follower($casttype,$remaining); }
   # print "not a cast: $exp\n";
 
+  # Parens around statement (GNU C: use statement as expression)
+  elsif ($exp =~ m/^\(\s*\{/)
+    { my ($cat, $remaining) = parse_statement("\{$POSTMATCH");
+      if (($cat == $catSTATEMENT) && ($remaining =~ /^\s*\)/))
+	{ return parse_exp_follower($typeUNKNOWN, $POSTMATCH); }
+      else
+	{ return($typeFAIL,$exp); } }
+
   # Parens as grouping
   elsif ($exp =~ m/^\(/)
     { my ($type, $remaining) = parse_exp_commaop($POSTMATCH);
@@ -2570,7 +2578,10 @@ sub parse_exp ($;$)
 	}
       # actually "size_t", but "int" is understood and that isn't yet.
       return parse_exp_follower($typeINT, $remaining); }
-  elsif ($exp =~ /^$reserved_nontype_word_re/o)	# reserved word except "sizeof"
+  elsif ($exp =~ /^(true|false)\b/)
+    { return ($typeBOOL, $POSTMATCH); }
+  elsif ($exp =~ /^$reserved_nontype_word_re/o)
+    # reserved word except sizeof, true, false
     { return ($typeFAIL, $exp); }
 
   # Literals
@@ -2667,6 +2678,11 @@ sub parse_exp ($;$)
       categorize_macro_name($var);
       my $vartype = $mntype{$var};
       my $is_macro = defined($vartype);
+      if ($debug_parse_expression)
+	{ if ($is_macro)
+	    { print "parse_exp: $var is a macro\n"; }
+	  else
+	    { print "parse_exp: $var is not a macro\n"; } }
       if ($is_macro)
 	{ # This is kind of a hack; is it the right thing to do?
 	  # FIX:  figure out whether it is the right thing.
@@ -2793,7 +2809,8 @@ sub parse_array_initializer ($)
 sub parse_function_decl_args ($)
 {
   my ($text) = check_args(1, @_);
-  # print "parsing arg decls in $text\n";
+  if ($debug_parse_declaration)
+    { print "parse_function_decl_args <= $text\n"; }
 
   my @arg_decls = ();
 
@@ -2829,7 +2846,8 @@ sub parse_function_decl_args ($)
 	}
       push(@arg_decls, $arg_decl);
       if ($nextchar eq "\)")
-	{ # print "parse_function_decl_args returning ", join(', ', @arg_decls), "\n";
+	{ if ($debug_parse_declaration)
+	    { print "parse_function_decl_args <= ", join(', ', @arg_decls), "\n"; }
 	  return ($true, $text, @arg_decls); }
       if ($nextchar ne ",")
 	{ mdie("Must be at comma: '$nextchar' '$text' '@arg_decls'"); }
@@ -2848,15 +2866,16 @@ sub parse_declarations ($)
   my ($decls) = check_args(1, @_);
   my %nametype = ();
   my $warnings = [];
-  if ($debug_parse_declaration)
-    { print "type_declarator_re = '$type_declarator_re'\n"; }
+  # if ($debug_parse_declaration)
+  #   { print "type_declarator_re = '$type_declarator_re'\n"; }
   while ($decls =~ /^\s*$type_declarator_re\s*([,;\(=])/o)
-    { if ($debug_parse_declaration) { print "parsing decls $decls\n"; }
-      my $typespec = $1;
+    { my $typespec = $1;
       my $declarator = $2;
       my $nextchar = $LAST_PAREN_MATCH;
       $decls = $POSTMATCH;
       my ($type, $identifier) = parse_declarator($typespec, $declarator);
+      if ($debug_parse_declaration)
+	{ print "parsed decl '$typespec' '$declarator'; remaining '$nextchar' '$decls'\n"; }
       if ($nextchar eq "=")
 	{ my $postexp = skip_expression_nocommaop($decls);
 	  if ($postexp =~ /^\s*([,;])/)
@@ -2868,8 +2887,8 @@ sub parse_declarations ($)
       if ($nextchar eq "\(")
 	{ # This function argument declarator declares a function.
 	  my ($success, $remaining, @sub_arg_decls) = parse_function_decl_args($decls);
-	  if ($success && ($remaining !~ m/^\s*;/))
-	    { $nextchar = ';';
+	  if ($success && ($remaining =~ m/^\s*([,;])/))
+	    { $nextchar = $1;
 	      $decls = $POSTMATCH;
 	      # For now, put it back together and make someone else re-parse it.
 	      $type .= "(" . join(", ", @sub_arg_decls) . ")"; }
@@ -3037,7 +3056,6 @@ use vars qw($parsing_do_statement);
 
 # Returns a category (probably $catSTATEMENT, $catSTATEMENT_SANS_SEMI,
 # $catPARTIAL_STATEMENT, or $catFAILURE), plus the remaining string.
-# For now, this does not recognize the null statement (simply a semicolon).
 sub parse_statement ($)
 {
   my ($body) = check_args(1, @_);
@@ -3046,7 +3064,8 @@ sub parse_statement ($)
 
   if ($body eq "")
     { return ($catFAILURE, ""); }
-
+  elsif ($body =~ /^;/)
+    { return ($catSTATEMENT, $POSTMATCH); }
   elsif ($body =~ /^(break|continue)\b/)
     { return statement_or_sans_semi($POSTMATCH); }
   elsif ($body =~ /^return\b\s*/)
@@ -3136,6 +3155,7 @@ sub statement_or_sans_semi ($)
   else
     { return ($catSTATEMENT_SANS_SEMI, $arg); } }
 
+# Return category and string following the statements.
 # This shouldn't return $catSTATEMENT except via a call to
 # parse_statement_follower.
 sub parse_statements ($)
@@ -4402,7 +4422,8 @@ sub categorize_macro_def ($)
   my $type;
   if ($body eq "")
     # Null define
-    { $category = $catNULL_DEFINE; }
+    { # print "Null define $mdef_name[$index]: '$body'\n";
+      $category = $catNULL_DEFINE; }
   elsif ($body =~ /^[\(\);, .\*\?]+$/)
     # Easy test, so it appears early
     { $category = $catPUNCTUATION; }
@@ -4457,7 +4478,9 @@ sub categorize_macro_def ($)
     # The checks for abutting "$" are necessary because Perl doesn't treat
     # it as a word constituent.
     { $category = $catRECURSIVE; }
-  elsif ($body =~ /-\w+([= ]\w+)?([ \t]+-\w+([= ]\w+)?)+$/)
+  elsif (($body =~ /^(-\w[a-zA-Z0-9_.,\/]*([= ][a-zA-Z0-9_.,\/]*)?\s*)+$/)
+	 || ($body =~ /(\/$identifier_re)+/)
+	 || ($body =~ /\$[\(\{]/))
     { $category = $catCOMMAND_LINE; }
   elsif (contains_mismatch($body))
     { $category = $catUNBALANCED; }
@@ -4498,6 +4521,11 @@ sub categorize_macro_def ($)
 	if ($stmt_remaining !~ /^\s*$/)
 	  { if ($body =~ /^(__)?asm(__)?/)
 	      { $category = $catASSEMBLY_CODE; }
+	    elsif ($body =~ /^$identifier_re(\s+$identifier_re)*$/)
+	      { if ($body =~ /$reserved_type_word_re/)
+		  { $category = $catDECLARATION_SANS_SEMI; }
+		else
+		  { $category = $catSYMBOLS; } }
 	    else
 	      # try parsing as declaration
 	      { my ($decl_remaining, $warnings, %nametype) = parse_declarations($body);
@@ -5579,6 +5607,29 @@ sub test_categorize_macro_defs ()
   test_cat($catDECLARATION_SANS_SEMI, $propNONE, "gs_paint_cspace_params gs_base_cspace_params; gs_separation_params separation; gs_indexed_params indexed");
   # because one argument is "goto fail"
   test_cat($catFAILURE, $propNONE, "rc_allocate_struct(pgs->element, gx_transfer_map, pgs->memory_procs, goto fail, cname);");
+  test_cat($catSTATEMENT_SANS_SEMI, $propNONE, "do; while (0)");
+  test_cat($catCOMMAND_LINE, $propNONE, "-q nodirect_code");
+  test_cat($catCOMMAND_LINE, $propNONE, "-W0,-ncompress -W0,-opt,2 -A cpu,a88k -A sys,any -A run,bsd4.3");
+  test_cat($catCOMMAND_LINE, $propASSIGN, "-O1 -fomit-frame-pointer -w -g -Dgetopt=gnu_getopt -Dopterr=gnu_opterr -Doptind=gnu_optind -Doptarg=gnu_optarg -Dcfree=gnu_cfree -D___type=");
+  test_cat($catSYMBOLS, $propNONE, "Lisp_Object fnname");
+  test_cat($catDECLARATION_SANS_SEMI, $propNONE, "Lisp_Object fnname ()");
+  test_cat($catDECLARATION, $propNONE, "Lisp_Object fnname ();");
+  test_cat($catDECLARATION_SANS_SEMI, $propASSIGN, "struct Lisp_Subr sname = { PVEC_SUBR | (sizeof (struct Lisp_Subr) / sizeof (EMACS_INT)), fnname, minargs, maxargs, lname, prompt, 0}; Lisp_Object fnname");
+  test_cat($catDECLARATION_SANS_SEMI, $propASSIGN, "Lisp_Object fnname (); struct Lisp_Subr sname = { PVEC_SUBR | (sizeof (struct Lisp_Subr) / sizeof (EMACS_INT)), fnname, minargs, maxargs, lname, prompt, 0}; Lisp_Object fnname");
+  test_cat($catDECLARATION_SANS_SEMI, $propNONE, "int mkdir (const char *dpath, unsigned short dmode)");
+# These use "new", which is a reserved word.
+#   test_cat($catEXP, $propNONE, "report_error_1(new, msg, x, 0)");
+#   test_cat($catEXP, $propNONE, "report_error_1 (new, msg, x, 0)");
+#   test_cat($catSTATEMENT, $propNONE, "report_error_1 (new, msg, x, 0);");
+#   test_cat($catSTATEMENTS_SANS_SEMI, $propNONE, "report_error_1 (new, msg, x, 0); return -1");
+  test_cat($catEXP, $propNONE, "(void (*)(int))1");
+  test_cat($catEXP, $propASSIGN, "pthread_run->error_p =(x)");
+  test_cat($catSTATEMENT, $propASSIGN, "reject = true;");
+  test_cat($catSTATEMENT, $propASSIGN, "if ( allupper( str ) ) reject = true;");
+  test_cat($catSTATEMENT_SANS_SEMI, $propASSIGN, "if (--(op)->ob_refcnt != 0) ; else _Py_Dealloc(op)");
+  test_cat($catSTATEMENT, $propNONE, "while ((wait3(NULL, WNOHANG, NULL)) > 0);");
+  # This is deeply broken:  that trailing semicolon is a killer
+  test_cat($catSTATEMENTS, $propASSIGN, "if((nodes[J].flag & 0x20) != 0) { x = nodes[J].x; y = nodes[J].y; nodes[J].flag -= 0x20; if (!clip_point(x,y) && !IFSET(XREDUCE(x)-XREDUCE(xleft),YREDUCE(y)-YREDUCE(ybot))) (*t->point)(x,y, plot_info[nplot].point_type); };");
 }
 
 
@@ -5691,6 +5742,7 @@ sub test_parse_expressions ()
   test_parse_expression("bool", "(startpos >= size1)");
   test_parse_expression("bool", "(foo || bar)");
   test_parse_expression("bool", "(size1 == 0 || startpos >= size1)");
+  test_parse_expression("bool", "result = true");
 
   # Array
   test_parse_expression("typeUNKNOWN", "{  { LONG_MAX, LONG_MAX },  { LONG_MAX, LONG_MAX }, }");
