@@ -19,6 +19,10 @@ require Exporter;
  $catUNBALANCED $catPUNCTUATION $catCOMMAND_LINE $catASSEMBLY_CODE
  $catMULTIPLE $catFAILURE $catLast @categoryname
 
+ @mcat_NULL @mcat_LITERAL @mcat_NONLITERAL_EXPRESSION
+ @mcat_STATEMENT @mcat_SYNTAX @mcat_TYPE @mcat_RECURSIVE
+ @mcat_NON_C_CODE @mcat_OTHER @mcat_FAILURE
+
  $propNONE $propASSIGN $propFREE_VAR $propINVOKES_MACRO
  $propPASSES_TYPE_AS_ARG $propUSES_MACRO_AS_TYPE $propUSES_ARG_AS_TYPE
  $propASSEMBLY_CODE $propPASTING $propSTRINGIZE
@@ -111,7 +115,7 @@ $catNULL_DEFINE = 3;
 
 ## Expression:
 $catEXP = 4;
-$catSOME_CONSTANT = 5;	# a constant, but not known which (e.g., multiple #defines)
+$catSOME_CONSTANT = 5;		# a constant, but not known which (e.g., multiple #defines)
 $catCONSTANT = 6;		# need to also specify the particular value
 $catLITERAL = 7;		# also specify the literal value
 
@@ -121,22 +125,28 @@ $catSTATEMENT_SANS_SEMI = 9;	# semicolon-less statement
 $catPARTIAL_STATEMENT = 10;
 # Are these useful, or should they be a property?
 $catSTATEMENTS = 11;		# multiple statements
-$catSTATEMENTS_SANS_SEMI = 12;		# multiple statements, last one lacks semicolon
+$catSTATEMENTS_SANS_SEMI = 12;	# multiple statements, last one lacks semicolon
 $catPARTIAL_STATEMENTS = 13;	# multiple statements, last one incomplete
 
 ## Type
 $catTYPE = 14;			# expands to a type
-$catPARTIAL_TYPE = 15;
+$catPARTIAL_TYPE = 15;		# expands to a cv-qualifier or something like "register", "static", etc.
 
 $catDECLARATION = 16;		# add partial_declaration?
 $catDECLARATION_SANS_SEMI = 17;
 
 ## Single symbol (no $catMACRONAME: if expands to a macro, inherit its type)
-$catRESERVED_WORD = 18;		# expands to (just) non-type reserved word -- irrelevant?
+$catRESERVED_WORD = 18;		# expands to (just) non-type reserved
+                                # word -- irrelevant?
+
 $catFUNCTION_NAME = 19;		# expands to name of function declared in package
 $catSYMBOL_UNKNOWN = 20;	# symbol (not function, macro, or reserved word)
-				#   (probably a macro whose def we didn't see,
-				#    or possibly a local or global variable)
+				#   (probably a macro whose def we
+				# didn't see, or possibly a local or
+				# global variable) This exists to
+				# avoid conflicts w/ other definitions
+				# of the same name of macro; a name
+				# whose category is this is a failed categorization
 
 $catSYMBOLS = 21;		# multiple space-separated symbols: #def P(x,y) x y
 				# (it might actually be a declaration_sans_semi)
@@ -148,13 +158,15 @@ $catRECURSIVE = 22;		# not sure there are enough of these to justify;
 $catUNBALANCED = 23;		# unbalanced parentheses; was $catMISMATCH;
 				#   includes {), so perhaps that was better,
 				#   but "mismatch" isn't as evocative
-$catPUNCTUATION = 24;	# expands to just punctuation token(s); was $catSYNTAX
+$catPUNCTUATION = 24;		# expands to just punctuation token(s); was $catSYNTAX
 
 ## Not C code:
 $catCOMMAND_LINE = 25;		# Command-line arguments
 $catASSEMBLY_CODE = 26;
 
-$catMULTIPLE = 27; # a def gets this if it expands to a macro with this category
+$catMULTIPLE = 27;		# a def gets this if it expands to a
+                                # macro with this category
+
 $catFAILURE = 28;		# other sorts of failure (for example...?)
 
 $catLast = 28;			# same as last one
@@ -180,11 +192,33 @@ if ((not defined($categoryname[$catLast]))
      || defined($categoryname[$catLast+1]))
 { die "categoryname and catLast out of synch! '$categoryname[$catLast]' '$categoryname[$catLast+1]'"; }
 
+#### Meta Categories (for the paper, used by
+#### macros-make-categories-tbl-from-stat.pl) 
+#### These @mcat_XXX lists tell which $catXXXX indices are combined
+####   for the given meta categories.  Use:
+####   map { $categoryname[$mcat_FAILURE[$_]] } @mcat_FAILURE
+@mcat_FAILURE = qw( catNOT_YET catIN_PROCESS catNO_DEF catFAILURE 
+		       catMULTIPLE catSYMBOL_UNKNOWN);
+@mcat_NULL = qw( catNULL_DEFINE );
+@mcat_LITERAL = qw( catCONSTANT catLITERAL catSOME_CONSTANT );
+@mcat_NONLITERAL_EXPRESSION = qw( catEXP );
+@mcat_STATEMENT = qw( catSTATEMENT catSTATEMENT_SANS_SEMI catPARTIAL_STATEMENT 
+			 catSTATEMENTS catSTATEMENTS_SANS_SEMI catPARTIAL_STATEMENTS );
+@mcat_TYPE = qw( catTYPE catPARTIAL_TYPE catDECLARATION catDECLARATION_SANS_SEMI);
+#my @mcat_DECLARATION = qw( catDECLARATION catDECLARATION_SANS_SEMI );
+#folded DECLARATION into the above, TYPE
+@mcat_SYNTAX = qw( catUNBALANCED catPUNCTUATION );
+@mcat_RECURSIVE = qw( catRECURSIVE );
+@mcat_NON_C_CODE = qw( catCOMMAND_LINE catASSEMBLY_CODE );
+@mcat_OTHER = qw( catRESERVED_WORD catFUNCTION_NAME catSYMBOL_UNKNOWN catSYMBOLS);
+
+
+
 # Properties, which can be attached to any of the above:
 $propNONE = 0;
 $propASSIGN = 1;
 $propFREE_VAR = 2;		# expression with free variables
-$propINVOKES_MACRO = 4;	# uses a macro as a function -- irrelevant?
+$propINVOKES_MACRO = 4;		# uses a macro as a function -- irrelevant?
 $propPASSES_TYPE_AS_ARG = 8;	# body passes a type to another macro
 $propUSES_MACRO_AS_TYPE = 16;	# expands a macro where a type is expected
 $propUSES_ARG_AS_TYPE = 32;	# a macro argument was used as a type
