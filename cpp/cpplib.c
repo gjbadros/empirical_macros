@@ -6924,8 +6924,13 @@ cpp_handle_options (pfile, argc, argv)
         break;
 
       case 'r':
-        /* ignore -rXXXX options */
+        /* ignore -rXXXX options, e.g., -rdynamic */
         fprintf(stderr,"ignoring -r option: %s\n", argv[i]);
+        break;
+
+      case 'm':
+        /* ignore -mXXXX options, e.g., -m486 */
+        fprintf(stderr,"ignoring -m option: %s\n", argv[i]);
         break;
 
       case 'f':
