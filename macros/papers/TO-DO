@@ -15,19 +15,6 @@ or elsewhere.  This does occurs in practice (for instance, it may be used
 for configuration), as we've made clear in the paper.
 
 
-Be sure that we offer the code and the data (give a URL, or not?).
-
-
-> You have version numbers.  Do you have other
-> independent information (even guesses) about the packages?  Bug rates?
-> Number of users?  Can your analysis of usage within a package tell us
-> anything about that package?
-
-Though this would definitely be interesting, and we now mention it in
-our new Future work section 10, it is not our intention in this paper to 
-do a longitudinal study on a single package.  We expect our work will
-encourage and enable careful study of other features.
-
 > What does it mean to say cpp can define new syntax?
 
 Cpp can create operators (macros) which differ from any pre-existing
@@ -55,13 +42,6 @@ The remainder of the paper investigates which constructs those are.  They
 will depend to some extent on specific circumstances and needs and as such
 are difficult to formalize.
 
-> I'm not very convinced by your list.  It's all
-> too vague and general.  Try to improve or prune the list.  Definitely
-> give a concrete example of each.
-
-We give an example of each, with each example taken directly from one of
-the packages we studied.
-[Do we say that explicitly?]
 
 > Why is high total use problematic?  Computers are good at doing
 > the same thing over and over.
@@ -96,18 +76,6 @@ than large programs -- which are the only ones that are hard to deal with,
 so are of most interest to researchers and practitioners -- we have omitted
 them.
 
->   4) Interesting codes possibly worth adding include:
->        - the Linux kernel or parts thereof
->        - BSD sources
->        - Runtime system from SML/NJ or Objective CAML
->        - tcl implementation
->        - Hanson's C Interfaces and Implementations
-
-These are good suggestions; we had many other candidates as well.  With
-well over a million lines of code already under analysis, we decided that
-we didn't need any more programs.  Additionally, we did not wish to
-introduce even further variation into our population (say, by including
-partial programs or libraries).
 
 > I found I didn't learn anything from the fact that different packages
 > had different profiles.  I was disappointed.  Did you learn anything?
@@ -123,13 +91,6 @@ Additionally, it seems valuable to provide the data, as others might notice
 patterns that we did not.  Finally, we address the packages making most use
 of Cpp in section 4.2.
 
-> How much of your 11,000 lines of perl might be useful for other kinds
-> of analyses?
-
-It depends on the analysis; anywhere from nearly all of it it nearly none
-of it, we would guess.  Much of the code is an approximate, Cpp-aware
-parser that others might find useful.  Reuse of our infrastructure for
-other kinds of analyses was not a primary driver during our research.
 
 > HAVE_PROTO is worth discussing.  You may want to compare the
 > HAVE_PROTO technique to this technique:
@@ -176,15 +137,6 @@ for which at least some tools (such as tags tables and approximate parsers)
 work.  We had omitted a discussion of this because of length, but can
 reinstate it if necessary.
 
-> Shouldn't the extra-linguistic category include Syntactic macros?
-
-The third sentence of the paragraph notes that extra-linguistic
-capabilities provide a feature unavailable in the C language.  By contrast,
-macros categorized as syntactic act as punctuation.  Since these are
-orthogonal classifications, some but not all syntactic macros will provide
-extra-linguistic capabilities (such as dynamic binding).
-[This is in sec:extra-linguistic.]
-
 > How did you develop your list of macro pitfalls?  Aren't these
 > well known in the C literature?  How does your work relate?
 > Your contribution would be more valuable if you were identifying the
@@ -219,28 +171,6 @@ have found it impossible to predict what will be interesting or boring to
 different audiences; as we note in our cover letter, responses have been
 quite varied.
 
-
-> In Section 6.1, are we talking multiple macros on one line or macros
-> invoking macros?  Wouldn't it be useful to distinguish those cases?
-
-This section is about dependences, which include invocations (which we call
-expansion-dependence) but are not restricted to them.  Our data give
-transitive dependences.  We hope this is now clear from our remark that the
-LEGITIMIZE_ADDRESS line, which contains five tokens (and only one macro) is
-dependent on hundreds of macros.
-
-> If so, how frequent are
-> those usages according to your data?  Does the frequency vary by
-> package?
-
-We collected this data, but do not have room for it in the paper (and did
-not find it particularly illuminating).
-
-> Can the variation be correlated to maturity?  Bug reports?
-> Age relative to the ANSI standard?
-
-As mentioned earlier, a detailed study of specific software packages would
-be welcome but is beyond the scope of this paper.
 
 > Page 27:
 > 
@@ -335,35 +265,10 @@ constructs that are asserted `problematic' without supporting evidence
 At the top of page 3, identify situations in which `only some sort of
 preprocessing of Cpp analysis can produce useful answers'.
 
-I'm alarmed that the Statement category on page 8 doesn't distinguish
-the else-capturing FREE from the other macros, nor the SIGNAL_RETURN,
-which requires a semicolon, from the SWALLOW_LINE, which may behave
-strangely when followed by semicolon 
-(e.g., if (p) SWALLOW_LINE(fp); else assert(feof(fp));)
-[Give examples of all 6.  Make clear that we kept them separate in our
-analyses, but merged them for presentation.]
-
-Even the Symbol and Unknown Symbol categories deserve examples.
-[Do this.]
-
-I still learn nothing from Figure 4.  Put it in an appendix, or better
-yet, make the data available electronically.
-
 
 You present no evidence for the `more unexpected and harder to
 understand' claim at the top of page 12.
 
-
-
-
-Page 14, `side-effected formal' appears wrong.  Neither glyphs nor
-frame need be an lvalue.  I agree that frame must be the name of a
-field in a struct pointed to by glyphs, and this is passing strange.
-Consider, e.g.,
-  #define SET_GLYPHS_FRAME(glyphs,frame) (set_ ## #frame((glyphs), (frame)))
-as an alternative.  Might not this simple function call serve as well?
-Or am I overlooking something obvious?
-[This criticism is right; choose another example from this category.]
 
 
 In section 5.5, I am surprised by the decision to consider all strings
@@ -371,6 +276,8 @@ and character literals identical.  What happens if this element of the
 canonicalization isn't done?  Do the results change in any interesting
 way?  (If this was in the first draft, my apologies for missing it
 then.)
+[There were a lot of differences; but the macros were essentially
+identical, and it wasn't useful.]
 
 
 In your conclusions, you claim your article `serves to confirm or
@@ -381,8 +288,6 @@ serves to confirm or contradict them.
 [This would be nice to do, if possible.  But is it reasonable to do
 comprehensively in the time alotted?]
 
-"type" vs "type related" for a category (see figs 8, 6; they are not
-consistent).
 
 END OF MESSAGE
 
@@ -410,19 +315,8 @@ embed.pl from global.sym and interp.sym.
 How did you classify the names (symbols) mentioned at the top of page
 23?
 
-"SYMBOL" -> "IDENTIFIER" in figures and text 
-  --done [edited *.tex, postscript] 01/15/00 gjb
 
 I would love to see a Tukey box (median, mean, quartiles, and 90%
 confidence) added to figure 9 as a summary row.
 [Do this, probably.]
   -- not available in Excel 97/2000, so probably not worth it.
-
-Get tar file for all the raw data 
-  --done [but just tgz files of pkgs] 01/15/00 gjb
-
-Figure 10:
-  You should put a break in your X axis as well, and if
-possibly insert the usual wavy symbol for `large gap'.
-[Do add the gap and wavy line.]  
-  --done [edited postscript] 01/15/00 gjb

@@ -568,7 +568,8 @@ After marking the potentially expanded macros, we processed all the source
 files using a program that we wrote for this study.  This program collects the
 statistics about macro definitions, uses, and dependences that are
 reported in the paper; more details of its operation are reported as
-appropriate along with those results.  Our tool includes parsers for
+appropriate along with those results.  Our tool includes approximate,
+Cpp-aware parsers for
 expressions, statements, and declarations.  It performs approximate parsing
 because the input may not be a valid C program; as a result, we may
 misinterpret some constructs, but we can cope with uncompilable C and with
@@ -786,7 +787,8 @@ macros, especially those that do not expand to a complete syntactic
 construct, are more problematic.
 
 
-The ten macro body categories are as follows.
+The ten macro body categories are as follows.  Each example in this 
+{\typeofdocument} comes from the packages studied.
 
 % The examples are chosen for clarity and brevity from the packages studied.
 
@@ -955,7 +957,12 @@ ASSERT(p) if (!(p)) botch(\verb|__STRING|(p)); else}).
   The macro body is a single identifier that is either a function name
   (95\% of this category) or a reserved word (5\% of this category, 65\% of
   which are uses of variable names such as {\tt true} or {\tt delete} which
-  are reserved words in another C dialect).  A macro body that is a macro
+  are reserved words in another C dialect).  Examples include
+\begin{verbatim}
+    #define REGEX_ALLOCATE_STACK malloc
+    #define THAT this
+\end{verbatim}
+  A macro body that is a macro
   name inherits that macro name's categorization rather than appearing
   here.
 
@@ -965,12 +972,17 @@ ASSERT(p) if (!(p)) botch(\verb|__STRING|(p)); else}).
 % @mcat_SYMBOL_UNKNOWN = qw( catSYMBOL_UNKNOWN );
 \item[Unknown identifier]
   The macro expands to a single identifier that is not defined in the package
-  or in any library header files included by the package.  The symbol may
+  or in any library header files included by the package.  For example,
+\begin{verbatim}
+    #define signal __bsd_signal
+    #define BUFSIZE bufsize
+\end{verbatim}
+  The symbol may
   be defined by compiler command arguments or may be used inside a
   conditional compilation guard because it is only meaningful 
   with a particular architecture, system, or library (for which we did not
   have header files available).
-  
+
   Unknown identifiers can also be local variables, or variables or functions that we failed to
   parse.  Our approximate parser can succeed where an exact parse would not
   (as for non-syntactic code that deviates from the language grammar
@@ -1084,8 +1096,11 @@ indeed, this is a primary motivation for using Cpp.  Such constructs can
 present special challenges to program understanding, and especially to
 reducing the use of the preprocessor by translation into C or C++.  This
 section presents a list of extra-linguistic constructs whose effect is to
-provide a feature unavailable in the C language.  It also reports their
-frequency of appearance, both individually and in combination, in the code we analyzed.
+provide a feature unavailable in the C language.  (This is orthogonal to
+the ``syntactic'' category of Section~\ref{sec:categorization}, which
+contains macros that act like punctuation.)  It also reports their
+frequency of appearance, both individually and in combination, in the code
+we analyzed.
 These capabilities are based on the effects of the macro's code,
 not the coarse categorization of its body; a full list of
 difficult-to-understand macros would include, for example, macros classified as
@@ -1414,7 +1429,8 @@ described below.
 \item[side-effected formal]
         A formal argument is side-effected, as in
 \begin{verbatim}
-    #define SET_GLYPHS_FRAME(glyphs,frame) ((glyphs)->frame = (frame))
+    #define POP(LOW,HIGH) do {LOW = (--top)->lo;HIGH = top->hi;} while (0)
+    #define SKIP_WHITE_SPACE(p) { while (is_hor_space[*p]) p++; }
 \end{verbatim}
         This is erroneous if the
         argument is not an lvalue\,---\,a value that can be assigned to, like
@@ -2724,7 +2740,7 @@ An adaptation of the Indian Hill C Style and Coding
 Standards~\cite{Cannon90} makes numerous suggestions. Programmers should use all capital letters for macro
 names except for macros that behave like function calls, which are
 acceptable only for short functions.  Statement macros should be wrapped in
-{\tt do \{ \ldots{} \} while (0)}, particularly when they contain keywords.
+{\tt do \verb|{| \ldots{} \verb|}| while (0)}, particularly when they contain keywords.
 Conditional bodies should be fully bracketed to avoid dangling semicolons.
 Macros should evaluate their parameters exactly once and arguments should
 not have side effects.  Side effects to macro parameters should be
@@ -3151,8 +3167,9 @@ this study.
 
 Comparing how Cpp use in libraries differs from its use in application code
 may yield insights into the language needs of library authors.  Other
-comparisons, such as Unix vs.~Microsoft Windows packages or packages with
-different application domains or user-interface styles, may also prove valuable.
+comparisons, such as Unix vs.~Microsoft Windows packages, packages with
+different application domains or user-interface styles, different versions
+of a single package, and the like, may also prove valuable.
 
 We did not formally analyze any C++ source code.  Preliminary results
 indicate that many C++ packages rely heavily on Cpp, even for uses where C++ supports
