@@ -5456,8 +5456,9 @@ sub initialize_builtin_macros () {
     $mdef_file[$cBuiltinMacros] = $built_in_fake_file;
     $mdef_line[$cBuiltinMacros] = 0;
     $mdef_physical_lines[$cBuiltinMacros] = 0;
-    $mdef_category[$cBuiltinMacros] = 0;
+    $mdef_category[$cBuiltinMacros] = $catNOTYET;
     $mncategory{$mac} = $catNULLDEFINE;
+    $mntype{$mac} = $typeUNSPECIFIED;
 
 # FIX: initialize all the mdef_XXX arrays, here and below cases
 #    $mdef_physical_ncnb_lines[$cBuiltinMacros] = 0;
@@ -5479,7 +5480,7 @@ sub initialize_builtin_macros () {
     $mdef_file[$cBuiltinMacros] = $built_in_fake_file;
     $mdef_line[$cBuiltinMacros] = 0;
     $mdef_physical_lines[$cBuiltinMacros] = 0;
-    $mdef_category[$cBuiltinMacros] = 0;
+    $mdef_category[$cBuiltinMacros] = $catNOTYET;
     $mncategory{$mac} = $catLITERAL;
     $mntype{$mac} = $typeSTRING;
 
@@ -5495,7 +5496,7 @@ sub initialize_builtin_macros () {
     $mdef_file[$cBuiltinMacros] = $built_in_fake_file;
     $mdef_line[$cBuiltinMacros] = 0;
     $mdef_physical_lines[$cBuiltinMacros] = 0;
-    $mdef_category[$cBuiltinMacros] = 0;
+    $mdef_category[$cBuiltinMacros] = $catNOTYET;
     $mncategory{$mac} = $catLITERAL;
     # This isn't quite right; some are long, some float.
     $mntype{$mac} = $typeINT;
