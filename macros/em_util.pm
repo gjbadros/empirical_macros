@@ -9,7 +9,7 @@ require Exporter;
 use checkargs;
 use em_constants;
 
-# Common functions to em_reports and evilmacros
+# Common functions to em_reports and em_analyze
 # For determining whether a Perl variable has numeric type.
 # This is incredibly disgusting; do something about it.
 sub is_number ($)
