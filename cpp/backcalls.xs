@@ -185,7 +185,9 @@ ExpansionLookup(sz)
 	char *sz
 	CODE:
 	HASHNODE *hp = cpp_lookup(&parse_in,sz,-1,-1);
-	RETVAL = hp->value.defn->expansion;
+	RETVAL = "@NOTFOUND@";
+	if (hp)
+          RETVAL = hp->value.defn->expansion;
 	OUTPUT:
 	RETVAL
 
