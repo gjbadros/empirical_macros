@@ -50,6 +50,8 @@ Methodology
 	figures report only on package-defined macros; most numbers increase
 	dramatically if all macros are included.
   Collection of scripts, approximately 11,000 lines of Perl
+  The raw data, and the programs used to generate and manipulate them, are
+	available from the authors.
 
 Total usage
  high total use: 9.6% cpp use is very high
@@ -106,6 +108,10 @@ Definitions
 	  others are bugs (such as, in one case, a failure to close a /* */
 	  style comment) which were apparently not discovered because testing
 	  did not build the package under all possible circumstances.
+	Also warnings for unexpected indentation and more.
+	Also some bad constructs:
+	  #undef GO_IF_INDEXABLE_BASE(X, ADDR)
+	  #module
 
  * Multiple (potentially inconsistent) definitions per name
     * Multiple definitions
@@ -248,6 +254,9 @@ Uses
 
 Dependences
  Two types of dependence:  control/inclusion, and substitution/expansion
+     This includes macros which control its inclusion via conditional
+     compilation, macros that are invoked on the line, and macros that
+     control the definitions of, or are called by, directly invoked macros
  Explain this.  Explain how we compute it transitively.
  The dependence charts omit Emacs and Mosaic; the full dependence
    information for each overran the virtual memory available on the machine
