@@ -120,15 +120,16 @@ sub delete_def {
 }
 
 sub macro_cleanup {
-  my ($mname) = @_;
+  my ($mname, $s_start, $s_end) = @_;
   my $offset  = cpp::CchOffset();
   my $cbb = cpp::CbuffersBack();
   my $cbytesOutput = cpp::CbytesOutput();
   my $fname = cpp::Fname();
-  print "macro_cleanup $mname; source $offset, $cbb; output $cbytesOutput\n";
-  if ($mname eq $top_level_mname) {
+  print "macro_cleanup $mname; [$s_start - $s_end] source $offset, $cbb; output $cbytesOutput\n";
+  if ($cbb == 1) {
+    $top_level_full_expansion =~ s%\n%\\n\\%g;
     print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'doc \"$mname final expansion: $top_level_full_expansion\")\n";
-    $top_level_full_expansion = "";    
+    $top_level_full_expansion = "";
     $top_level_mname = "";
   }
 }
@@ -138,12 +139,8 @@ sub macro_arg_exp  {
   print "macro_arg_exp $mname of $raw (arg $number)\n";
 }
 
-$lastdoc = "";
-$s_start = 0;
-$s_end = 0;
-$top_level_mname = "";
 sub expand_macro {
-  my ($mname,$expansion,$length,$raw_call,$has_escapes,$cbuffersDeep,@rest) 
+  my ($mname,$expansion,$length,$raw_call,$s_start,$s_end,$has_escapes,$cbuffersDeep,@rest) 
     = @_;
   my $cnested = shift @rest;
   my @nests = splice(@rest,0,$cnested);
@@ -156,12 +153,6 @@ sub expand_macro {
   my $cbuffersBack;
   my $fname = cpp::Fname();
 
-  if ($has_escapes == 0) {
-    $s_end = cpp::CchOffset();
-    $s_end++;
-    $s_start = $s_end - $call_length;
-    $top_level_mname = $mname;
-  }
   print "\nexpand_macro $mname = ", cpp::ExpansionLookup($mname), ", source offset: $s_start - $s_end, $cbuffersDeep [$has_escapes]; ", 
       cpp::FExpandingMacros(), " in $fname\n";
   print " : expansion of $mname => $expansion (length $length:offset $start - $end [$cBytesOutput + $exp_offset + 1])\n";
@@ -178,13 +169,15 @@ sub expand_macro {
     print " :$iarg used $uses times: ", join(";",splice(@args,0,2*$uses)), "\n";
     $iarg++;
   }
-  if ($has_escapes == 0) {
-    # top level expansion
-    print TPSOURCE "#$fname:(put-face-property-if-none $s_start $s_end \'italic)\n";
-    print TPSOURCE "#$fname:(put-mouse-face-property-if-none $s_start $s_end \'highlight)\n";
-    $lastdoc = 0;
+  if ($s_start >= 0) {
+    if ($has_escapes == 0) {
+      # top level expansion
+      $top_level_mname = $mname;
+      print TPSOURCE "#$fname:(put-face-property-if-none $s_start $s_end \'italic)\n";
+      print TPSOURCE "#$fname:(put-mouse-face-property-if-none $s_start $s_end \'highlight)\n";
+    }
+    print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'doc \"$mname expands to $expansion\")\n";
   }
-  print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'doc \"$mname expands to $expansion\")\n";
   if ($has_escapes == 0) {
     print TP "#out:(put-face-property-if-none $start $end \'italic)\n";
     print TP "#out:(put-mouse-face-property-if-none $start $end \'highlight)\n";
@@ -193,7 +186,6 @@ sub expand_macro {
     print TP "#out:(put-mouse-face-property-if-none $start $end \'secondary-selection)\n";
   }
   print TP "#out:(add-text-property $start $end \'doc \"Expansion of $mname\")\n";
-  $lastdoc++;
 }
 
 sub ifdef_macro {
