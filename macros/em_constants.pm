@@ -47,6 +47,8 @@ use checkargs;
  @ftype_NONHEADER_NOT_INCLUDED @ftype_NONHEADER_INCLUDED
  @ftype_HEADER_NOT_INCLUDED @ftype_HEADER_INCLUDED
  $built_in_fake_filename $built_in_fake_fileno
+ $command_line_fake_filename $command_line_fake_fileno
+ $fake_files
  $i_usage_code $i_usage_macro $i_usage_cond $i_usage_cond_redef
  @i_usage_all
  @cond_category_name
@@ -461,35 +463,47 @@ $typeNODEF = 18;		# no definition (symbol inferred to be macro)
 
 # This enumeration gives indices into the lists
 
-# 2 (1st dim) times 4 (2nd dim) file types
-$c_ftype = 2 * 4;
+# 2 (1st dim: header vs. code) times 5 (2nd dim: inclusion type) file types
+$c_ftype = 2 * 5;
 
 @ftype_ALL = (0..$c_ftype-1);
 
-($ftype_HEADER_INPUT, $ftype_HEADER_ARG, $ftype_HEADER_INCB, $ftype_HEADER_INCQ,
-    $ftype_NONHEADER_INPUT, $ftype_NONHEADER_ARG, $ftype_NONHEADER_INCB, $ftype_NONHEADER_INCQ) = @ftype_ALL;
+## The way that we invoke em_analyze, "non-included" is all package files
+## (because they all appear in FromStdin) and "included" is only
+## library (typically "#include<>") files.  MDE 12/98
 
+($ftype_HEADER_INPUT, $ftype_HEADER_ARG, $ftype_HEADER_INCB, $ftype_HEADER_INCQ, $ftype_HEADER_MINUSD,
+    $ftype_NONHEADER_INPUT, $ftype_NONHEADER_ARG, $ftype_NONHEADER_INCB, $ftype_NONHEADER_INCQ, $ftype_NONHEADER_MINUSD) = @ftype_ALL;
+
+# Apparently as of 12/98, our methodology (piping a file listing files into
+# em_analyze) doesn't result in any FromCmdLine files.
+# Length of this appears in expression for $c_ftype (circular dependence).
 %InclusionMethod_to_Index =
   ("FromCmdLine" => $ftype_HEADER_ARG,
    "FromStdin" => $ftype_HEADER_INPUT,
    "FromInclude<>" => $ftype_HEADER_INCB,
-   "FromInclude\"\"" => $ftype_HEADER_INCQ);
+   "FromInclude\"\"" => $ftype_HEADER_INCQ,
+   "CommandLineDef" => $ftype_HEADER_MINUSD);
 
 $ftype_HEADER_Start = $ftype_HEADER_INPUT;
 $ftype_NONHEADER_Start = $ftype_NONHEADER_INPUT;
 
 # make slices for common uses
-@ftype_CODE = ($ftype_HEADER_INPUT..$ftype_HEADER_INCQ);
-@ftype_HEAD = ($ftype_NONHEADER_INPUT..$ftype_NONHEADER_INCQ);
-@ftype_NOT_INCLUDED = ($ftype_HEADER_INPUT,$ftype_HEADER_ARG,$ftype_NONHEADER_INPUT,$ftype_NONHEADER_ARG);
+@ftype_CODE = ($ftype_HEADER_INPUT..$ftype_HEADER_MINUSD);
+@ftype_HEAD = ($ftype_NONHEADER_INPUT..$ftype_NONHEADER_MINUSD);
+@ftype_NOT_INCLUDED = ($ftype_HEADER_INPUT,$ftype_HEADER_ARG,$ftype_HEADER_MINUSD,
+		       $ftype_NONHEADER_INPUT,$ftype_NONHEADER_ARG,$ftype_NONHEADER_MINUSD);
 @ftype_INCLUDED = ($ftype_HEADER_INCB,$ftype_HEADER_INCQ,$ftype_NONHEADER_INCB,$ftype_NONHEADER_INCQ);
-@ftype_NONHEADER_NOT_INCLUDED = ($ftype_NONHEADER_INPUT,$ftype_NONHEADER_ARG);
+@ftype_NONHEADER_NOT_INCLUDED = ($ftype_NONHEADER_INPUT,$ftype_NONHEADER_ARG,$ftype_NONHEADER_MINUSD);
 @ftype_NONHEADER_INCLUDED = ($ftype_NONHEADER_INCB,$ftype_NONHEADER_INCQ);
-@ftype_HEADER_NOT_INCLUDED = ($ftype_HEADER_INPUT,$ftype_HEADER_ARG);
+@ftype_HEADER_NOT_INCLUDED = ($ftype_HEADER_INPUT,$ftype_HEADER_ARG,$ftype_HEADER_MINUSD);
 @ftype_HEADER_INCLUDED = ($ftype_HEADER_INCB,$ftype_HEADER_INCQ);
 
 $built_in_fake_filename = "%Built In%";
+$command_line_fake_filename = "%Command Line%";
 $built_in_fake_fileno = 0;
+$command_line_fake_fileno = 1;
+$fake_files = 2;		# count of fake files where macros can be defined
 
 # enumeration for the macros_uses indices
 @i_usage_all = ($i_usage_code, $i_usage_macro, $i_usage_cond, $i_usage_cond_redef)

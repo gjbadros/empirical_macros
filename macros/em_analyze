@@ -73,7 +73,9 @@ cat c-files-listing | $0 -i -d ~/macros/data/stable:pkgname
 }
 
 # To run on all packages:
-#   link to (don't copy) Makefile; edit first three lines; make data_analyze
+#   from a data/ directory, link to (don't copy) scripts/Makefile;
+#   edit first three lines;
+#   make data_analyze
 #
 # # Puts a list of failed packages in "failures".
 # TM=/tmp/$USER/macros/data/stable
@@ -193,7 +195,7 @@ cat c-files-listing | $0 -i -d ~/macros/data/stable:pkgname
 # 	portability, efficiency, etc.), like that done by hand for gzip.
 
 # Perhaps do something special about macros that expand into reserved words.
-# Specially recognize types, partical declarations.
+# Specially recognize types, partial declarations.
 # 
 # I want to recognize that these are type macros (maybe hard, maybe not) and
 # that for each the two alternate definitions are equivalent.
@@ -451,6 +453,7 @@ sub parse_type ( $ )
 
 my @rg_physical_lines = (0) x $c_ftype;
 my @rg_ncnb_lines = (0) x $c_ftype;
+# The "cpp" versions only count preprocessor command lines.
 my @rg_cpp_phys_lines = (0) x $c_ftype;
 my @rg_cpp_phys_ncnb_lines = (0) x $c_ftype;
 
@@ -552,9 +555,9 @@ my %typedefs = ();		# keys are all typedefs encountered
 my $current_macro_line_number;	# Used by current_line_no when categorizing macros
 
 # @file_inclusion_method, a string like "#include<>", tells where file got added
-my @files = ($built_in_fake_filename);         # list of files to process
+my @files = ($built_in_fake_filename, $command_line_fake_filename);         # list of files to process
+my @file_inclusion_method = ("BuiltIn", "CommandLineDef");
 my %file_numbers;
-my @file_inclusion_method = ("BuiltIn");
 
 # files that are included should be pushed onto both @files and
 # @files_included -- the latter is used only to prevent multiple inclusion
@@ -669,6 +672,13 @@ my %fun_decl_arg_macros;
 my %semi_fun_decl_arg_macros;
 my %void_macros;
 
+# Should be settable from command line.
+# If non-nil, then macro uses in code (not on preprocessor lines) are
+# prefixed by "EXPANDED_GJB_MDE_".  This is true if running from a "munged"
+# subdirectory.
+my $expanded_gjb_mde_macros = $true;
+
+
 ## Debugging; should add more
 my $fDebugCmdProcessing = $false;
 my $fDebugCommentRemoval = $false;
@@ -724,8 +734,8 @@ sub find_macro_definitions ( )
 # Do not use a foreach, since we're pushing on to the end of @files,
 #   and the list foreach uses does not get updated
 #  foreach my $this_file (@files)
-  # skip index 0, which is built_in_fake_filename
-  for (my $ifiles = 1; $ifiles <= $#files; $ifiles++)
+  # skip indices 0 and 1, which are {built_in,command_line}_fake_filename
+  for (my $ifiles = $fake_files; $ifiles <= $#files; $ifiles++)
     { $current_file_number = $ifiles;
       $current_file_name = $files[$current_file_number];
       $current_ftype_index = compute_ftype_index($current_file_number);
@@ -1752,6 +1762,10 @@ sub get_fulltoken_line (;$)
       }
     }
 
+    if ($expanded_gjb_mde_macros && ($simple_result =~ s/EXPANDED_GJB_MDE_//g))
+      { $raw_result =~ s/EXPANDED_GJB_MDE_//g;
+	$current_raw_fulltoken_line =~ s/EXPANDED_GJB_MDE_//g; }
+
     if (defined($simple_result) && ($simple_result =~ /^\s*\#/))
       { # Preprocessor line; usually just return "\n";
 	if ($finding_macro_defs) {
@@ -1805,7 +1819,7 @@ sub peek_fulltoken_line ( $ )
 ## FIX:  throttle these after a certain number of lines have been read.
 
 # find_close_{paren,brace}_read is like find_close_{paren,brace}, but:
-#  * return a second result, orginarily the argument string
+#  * return a second result, ordinarily the argument string
 #  * read lines to try to balance, in which case the second return value can
 #    differ from the first input value, and the first result is never $false
 # These were more efficient when integrated with find_close_{paren,brace}, but
@@ -2271,7 +2285,10 @@ sub cpp_handle_include ( $$ )
       if (!defined($complete_include_filename))
 	{ # FIX:  make complete_include_pathname work when $angled_include
 	  # is false, and then restore this (and eliminate the "else"...)
-	  parse_error("Can't resolve include file $include_file");
+	  parse_error("Can't resolve include file $include_file:  "
+		      # possible problem with list hardcoded in get_include_path
+		      . ($angled_include ? "problem with get_include_path()?"
+			 : "file not included on command line?"));
 	} else {
 
 	  { my $curr_incl_dep = [ @current_inclusion_dependenton ];
@@ -3230,7 +3247,7 @@ sub parse_declarations ( $ )
   # if ($debug_parse_declaration)
   #   { print "type_declarator_re = '$type_declarator_re'\n"; }
   if ($debug_parse_declaration)
-    { print "parse_declararions $decls\n"; }
+    { print "parse_declarations $decls\n"; }
   while ($decls =~ /^\s*$type_declarator_re\s*([,;\(=])/o)
     { my $typespec = $1;
       my $declarator = $2;
@@ -3382,7 +3399,7 @@ sub parse_exp_follower ( $$ )
       # print "ternary operator: lub($thentype, $elsetype) = ", type_lub($thentype, $elsetype), "\n";
       return (type_lub($thentype, $elsetype), $remaining); }
 
-  # print "Checking for contatenated strings: ", type_name($type), ": $follow\n";
+  # print "Checking for concatenated strings: ", type_name($type), ": $follow\n";
   if (($type eq $typeSTRING)
       && (($follow =~ /^\"/)
 	  || (($follow =~ /^$identifier_re/o)
@@ -3576,7 +3593,7 @@ sub parse_statement_follower ( $ )
 # Do a rough parse of each file:
 #  recognize binding forms:
 #     variable declarations, function definitions, function declarations
-#     Can use etags to find function defintiions, but it doesn't find
+#     Can use etags to find function definitions, but it doesn't find
 #	global variables.
 #  recognize function calls, check whether they are macros
 # Cope with macro definitions like "#define local static" and with
@@ -3609,8 +3626,8 @@ sub process_macro_calls ( )
   my $old_cline_simplify_strings = $cline_simplify_strings;
   $cline_simplify_strings = $true;
   # Not "foreach @files" because @files can change, I think.
-  # skip index 0, which is built_in_fake_filename
-  for (my $ifiles = 1; $ifiles <= $#files; $ifiles++)
+  # skip indices 0 and 1, which are {built_in,command_line}_fake_filename
+  for (my $ifiles = $fake_files; $ifiles <= $#files; $ifiles++)
     { $current_file_number = $ifiles;
       $current_file_name = $files[$current_file_number];
       # shouldn't have already set this value
@@ -3662,7 +3679,7 @@ sub process_macro_calls ( )
 
 	      # Alternative to variable $indented is making sure that loops
 	      #   back to PROCESSLINE append a space to the front of lines
-	      #   that were oringally indented, but a portion of which must
+	      #   that were originally indented, but a portion of which must
 	      #   be reprocessed.  (Actually, that wouldn't even be enough,
 	      #   since we want to treat bar as unindented in unindented
 	      #   "foo; bar;".)
@@ -4063,9 +4080,9 @@ PROCESSVARDEF:
 			  # "symtab_add($identifier, $type)" should
 			  # logically happen here, but hold off in case we
 			  # find that we are actually not in a variable
-			  # definitiion or declaration, but accidentally
+			  # definition or declaration, but accidentally
 			  # processing the argument list of a function
-			  # definition or delcaration.  Unfortunately, this
+			  # definition or declaration.  Unfortunately, this
 			  # lookahead only busy avoid one incorrect entry.
 			  # Should perhaps mdie in this case.
 
@@ -4949,7 +4966,7 @@ sub categorize_macro_name ( $ )
     { my $mdef_index = $macros{$name}[$i];
       if (!defined($mdef_category[$mdef_index]))
 	{ categorize_macro_def($mdef_index); }
-      # Type may be undefined; it's ingored for some categories.
+      # Type may be undefined; it's ignored for some categories.
       if (!defined($mdef_category[$mdef_index]))
 	{ mdie("Undefined category (type $mdef_type[$mdef_index]): $i $mdef_index $mdef_name[$mdef_index] $mdef_formals[$mdef_index] $mdef_body[$mdef_index]"); } }
 
@@ -4983,7 +5000,7 @@ sub categorize_macro_name ( $ )
 	  if ($debug_categorize_macro)
 	    { print "examining def $i of $name (index $mdef_index) = $mdef_body[$mdef_index]\n"; }
 	  $category = category_lub($category, $mdef_category[$mdef_index]);
-	  ## Not right if a NO_DEF or NULL_DEFINE category is ingored
+	  ## Not right if a NO_DEF or NULL_DEFINE category is ignored
 	  # Type is allowed to be undefined; it's ignored for some categories.
 	  # if ((!defined($type)) || (!defined($mdef_type[$mdef_index])))
 	  #   { $type = undef; }
@@ -5016,6 +5033,7 @@ sub categorize_macro_def ( $ )
   if ($debug_categorize_macro)
     { print "Categorizing $index $mdef_name[$index]$mdef_formals[$index] $mdef_body[$index]\n  simple:$mdef_body_simple[$index]\n  from $files[$mdef_fileno[$index]]\n"; }
 
+  # Don't die for $command_line_fake_fileno
   if ($mdef_fileno[$index] eq $built_in_fake_fileno)
     { mdie("Trying to categorize built-in."); }
 
@@ -5132,7 +5150,7 @@ sub categorize_macro_def ( $ )
       { if ($type =~ /^category: /)
 	  # Not an expression after all.
 	  # This happens when the expression is a macro (or a macro appears
-	  # in the argument, though I doublt the "category: ..." type often
+	  # in the argument, though I doubt the "category: ..." type often
 	  # bubbles to the outside in that situation.  So probably this is
 	  # largely extraneous.
 	  { $category = $POSTMATCH; }
@@ -5610,7 +5628,9 @@ sub evilprint ( $@ ) {
 
 sub current_line_no ( ) {
   check_args(0, @_);
-  if (!$categorizing_macros) {
+  if ($current_file_number == $command_line_fake_fileno) {
+    return 0;
+  } elsif (!$categorizing_macros) {
     return int($. - cline_ungot_phys_lines());
   } else {
     return $current_macro_line_number;
@@ -5651,7 +5671,7 @@ sub compute_ftype_index ( $ ) {
 
   my $offset = file_is_header($filename) ? $ftype_HEADER_Start : $ftype_NONHEADER_Start;
 
-  die "compute_ftype_index can't determine an index for inclusion method $file_inclusion_method[$fileno]"
+  die "compute_ftype_index can't determine an index for inclusion method $file_inclusion_method[$fileno] for file #$fileno $files[$fileno]"
     if !exists $InclusionMethod_to_Index{$file_inclusion_method[$fileno]};
 
 #  print STDERR "CFI: $offset,", $InclusionMethod_to_Index{$file_inclusion_method[$fileno]}, "\n";
@@ -5774,6 +5794,7 @@ sub initialize_builtin_macros ( ) {
 
 # analyze_for_macro_use($spliced_line)
 # looks for macros in $spliced_line (which is simplified) and saves the file,line#
+# (As of 11/98, only called by get_fulltoken_line.)
 
 # These are macro expansions, not mere uses/appearances:  we don't count the
 # argument to #undef, for instance.
@@ -5860,7 +5881,15 @@ sub analyze_for_macro_use ( $ ) {
   my %incl_deps = ();
   my %exp_deps = ();
 
-  foreach my $word (macros_in($line)) {
+  my @line_macros;
+  if ($expanded_gjb_mde_macros && ($macro_uses_index == $i_usage_code))
+    # Use the "EXPANDED_GJB_MDE_" prefix only if a code line; it isn't
+    # added to preprocessor commands.
+    { @line_macros = macros_in_expanded($line); }
+  else
+    { @line_macros = macros_in($line); }
+
+  foreach my $word (@line_macros) {
     # Need to remember:
     #  * that this macro was used on a code line, or not
     #  * that the macro was used on a preprocessor line, or not
@@ -5964,6 +5993,14 @@ sub possible_macro_names_in ( $ )
 }
 
 
+## There are two versions of macros_in, because we may or may not
+## preprocess the source code with pcp3 and expansions.pm, which prefixes
+## macro uses with EXPANDED_GJB_MDE_.  And even when we are using the
+## "munged" (annotated) source, in some cases we may need the original
+## version.
+
+
+# Original version
 sub macros_in ( $ )
 {
   my ($text) = check_args(1, @_);
@@ -5972,6 +6009,20 @@ sub macros_in ( $ )
   }
   # I suspect that words_in is more efficient than identifiers_in, here.
   return grep { defined($macros{$_}) } words_in($text);
+}
+
+sub macros_in_expanded ( $ )
+{
+  my ($text) = check_args(1, @_);
+  if ($finding_macro_defs) {
+    warn "subroutine macros_in_expanded is used on first pass";
+  }
+  my @result = ();
+  while ($text =~ s/\bEXPANDED_GJB_MDE_([a-zA-Z0-9_\$]+)\b/$1/)
+    { push @result, $1;
+      if (!defined($macros{$1}))
+	{ croak "Macro $1 prefixed by EXPANDED_GJB_MDE_ was not defined: $text"; } }
+  return @result;
 }
 
 
@@ -6051,7 +6102,7 @@ sub which_function ( $$ ) {
   } elsif ($line_no < $$listref[$i]) {
     # undef
   } else {
-    die "Uexpected case in which_function: file#$fileno $files[$fileno]:$line_no, @$listref[$i,$i+2]:\
+    die "Unexpected case in which_function: file#$fileno $files[$fileno]:$line_no, @$listref[$i,$i+2]:\
 $i $#{$listref}\n";
   }
 
@@ -6180,8 +6231,10 @@ sub get_include_path ( ) {
 		   # Platform-independent
 		   "/usr/local/include",
 		   # Linux
-		   "/usr/local/.contrib/gcc-2.7.2/i586-unknown-linux/include",
-		   "/usr/local/.contrib/gcc-2.7.2/lib/gcc-lib/i586-unknown-linux/2.7.2/include",
+		   # "/usr/local/.contrib/gcc-2.7.2/i586-unknown-linux/include",
+		   # "/usr/local/.contrib/gcc-2.7.2/lib/gcc-lib/i586-unknown-linux/2.7.2/include",
+		   "/usr/i386-linux/include",
+		   "/usr/lib/gcc-lib/i386-linux/2.7.2.1/include",
 		   # Platform-independent
 		   "/usr/include",
 		   "/usr/X11/include",
@@ -6210,13 +6263,16 @@ sub look_in_path_for_filename ( $ ) {
 
   my $complete_file_try;
   my $complete_file = undef;
+  #DBG print STDERR "looking in path for $file\n";
   foreach my $dir (@include_path) {
+    #DBG print STDERR "checking dir $dir\n";
     $complete_file_try = "$dir/$file";
     if (-f $complete_file_try) {
       $complete_file = $complete_file_try;
       last;
     }
   }
+  #DBG print STDERR "result: $complete_file\n";
   return $complete_file
 }
 
@@ -6238,7 +6294,9 @@ sub complete_include_pathname ( $$$ ) {
     $local_name = $file;
   } else {
     $local_name = "$dirname/$file";
+    #DBG { parse_error("unsimple local_name: $local_name"); }
     $local_name = simplify_path_name($local_name);
+    #DBG { parse_error("local_name: $local_name"); }
   }
 
 
@@ -6277,6 +6335,10 @@ sub complete_include_pathname ( $$$ ) {
     if (defined($complete_file)) {
       return ($false,$complete_file);
     }
+    # A failure here may indicate failure to include the file on the command
+    # line; if in the current directory, the exists($file_numbers{$local_name})
+    # ought to have succeeded above.
+    #DBG print STDERR "non-system failure $file\n";
   }
 
   #DBG print STDERR "Found $file to be ", (defined($complete_file) ? $complete_file : "<<UNDEFINED>>"), \n";
@@ -6427,8 +6489,8 @@ sub test_typedecl_regexp ( )
 {
   check_args(0, @_);
 #  foreach my $this_file (@files)
-  # skip index 0, which is built_in_fake_filename
-  for (my $ifiles = 1; $ifiles <= $#files; $ifiles++)
+  # skip indices 0 and 1, which are {built_in,command_line}_fake_filename
+  for (my $ifiles = $fake_files; $ifiles <= $#files; $ifiles++)
     { $current_file_number = $ifiles;
       $current_file_name = $files[$current_file_number];
       $current_ftype_index = compute_ftype_index($current_file_number);
@@ -7077,13 +7139,34 @@ if ($opt_T)
 
 ## Begin processing files
 
-# "scalar(@files)" because index 0 is built_in_fake_filename
-if ($opt_v) { print STDERR "Processing $#files files",
+if ($opt_v) { print STDERR "Processing ", scalar(@files) - $fake_files, " files",
   	                   ($opt_I ? "" : " (plus \#included files)"), "...\n"; }
 
 ## This is pass 1 over the input files
 find_macro_definitions();	# also counts other preprocessor usage
 if ($opt_v) { print STDERR "Done finding macro definitions.\n"; }
+
+# Take care of macros defined on the command line.
+{ # This is a hack; should parse output from pcp3 (or the original compilation
+  # flags).
+  my %package_command_line_macros = ("fvwm" => { 'FVWM_ICONDIR' => "",
+						 'FVWMDIR' => "",
+						 'FVWMRC' => "", },
+				     "plan" => { 'NOBODY_UID' => 65534,
+						 'NOBODY_GID' => 9999, },
+				     );
+  my $basename = $statename;
+  if (($basename =~ s/^.*\/([^\/]+)\.state$/$1/)
+      && exists($package_command_line_macros{$basename}))
+    { if (scalar(@current_inclusion_dependenton) != 0)
+	{ croak "Nonempty current_inclusion_dependenton: @current_inclusion_dependenton"; }
+      $current_file_number = $command_line_fake_fileno;
+      my %command_line_macro_defs = % {$package_command_line_macros{$basename}};
+      my ($key, $value);
+      while (($key, $value) = each %command_line_macro_defs)
+	{ process_macro_definition("$key $value", "$key $value", 0, 0); }
+      undef $current_file_number; }
+}
 { my %undefined_macros = ();
   for my $word (keys %macros_used_by_cpp)
     { if (!defined($macros{$word}))
@@ -7097,7 +7180,6 @@ if ($opt_v) { print STDERR "Done finding macro definitions.\n"; }
   for my $word (sort { $undefined_macros{$a} cmp $undefined_macros{$b} } keys(%undefined_macros))
     { if ($macros_used_by_cpp{$word} !~ /^builtin_(empty|string|num)_def$/)
 	{ print EVIL "$undefined_macros{$word}: macro $word never defined\n"; } } }
-
 
 # Kind of a hack
 if ($opt_v) { print STDERR "Another loop over the macros...\n"; }
@@ -7192,7 +7274,7 @@ print STDERR "Categorizing $cMacrosInTables macros\n";
 # print STDERR "Included files:", join("\n    ",@files_included), "\n";
 # print STDERR "fun_decl_arg_macros:", join("\n",keys %fun_decl_arg_macros), "\n";
 
-# Flush the output, becuase DumpxsFd may close them and delete buffered output.
+# Flush the output, because DumpxsFd may close them and delete buffered output.
 # (I can no longer reproduce that problem, but just in case...)
 select(EVIL); $| = 1; print EVIL "\n";
 select(PARSE_ERRS); $| = 1; print PARSE_ERRS "\n";

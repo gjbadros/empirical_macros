@@ -1,5 +1,5 @@
 # $Id$
-# Makefile
+# Makefile; also see scripts/Makefile
 
 PERL_MODULES := $(wildcard *.pm)
 PERL_SCRIPTS := $(wildcard *.pl)
