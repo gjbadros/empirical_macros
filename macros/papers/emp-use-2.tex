@@ -541,6 +541,7 @@ additional) system calls or other code.
 
 
 \section{Macro definition bodies}
+\label{sec:categorization}
 
 This section examines features of macro definitions that may complicate
 understanding the containing program.  We report how many macro definitions
@@ -553,6 +554,7 @@ redefinitions and of differing redefinitions, especially redefinitions with
 incompatible bodies.
 
 [[Punchline/summary goes here.]]
+
 
 
 \subsection{Macro body categorization}
@@ -597,15 +599,7 @@ and brevity from the packages studied.
 \end{figure}
 
 
-\label{sec:categorization}
-
-
 {\input{expl-categories.tex}}
-
-Figure~\ref{fig:categorization} shows the percentage of macros that fit
-into these categories for each package.  Overall, 70\% of macro bodies are
-expressions\,---\,mostly constants.
-
 
 
 %In anticipation of the translator tool, the analysis tool infers
@@ -635,20 +629,22 @@ appearance, both individually and in combination,  in our test suite.
 [[Since types are not first-class in C, they may not be passed to functions
 or returned as results.]]
 
+[[The second paragraph should be a summary, hitting the high points.]]
+
 \begin{figure}
   {\small\centerline{\input{tbl-subset-properties.tex}}}
   
   \caption{This figure indicates the occurrence, both singly and in
-  combination, of the extra-linguistic capabilities of the C preprocessor
-  listed in section~\ref{desc:properties}.  The features are listed across
-  the top, along with the percentage of macro definitions exploiting each.
-  Each row of the table reports the percentage of all macro definitions
-  that exploit exactly a particular combination of the capabilities,
-  indicated by black dots.  For instance, 0.093\% of all macro
-  definitions both perform assignment and use the result of a macro
-  invocation as a type, but use none of the other extra-linguistic features
-  listed.  This table reports all macros using an extra-linguistic feature;
-  the last several lines represent just one macro definition.}
+    combination, of uses of the extra-linguistic capabilities of the C
+    preprocessor listed in section~\ref{desc:properties}.  The features are
+    listed across the top, along with the percentage of macro definitions
+    exploiting each.  Each row of the table reports the percentage of all
+    macro definitions that exploit a particular combination of the
+    capabilities, indicated by black squares.  For instance, 0.093\% of all
+    macro definitions perform assignment and use the result of a macro
+    invocation as a type, but use none of the other extra-linguistic
+    features listed.  The last five lines each represent one macro
+    definition.}
   \label{fig:subset-properties}
 \end{figure}
 
@@ -712,7 +708,10 @@ be enabled and disabled individually.
 \begin{figure}
   {\small\centerline{\input{tbl-lint.tex}}}
   
-  \caption{Macro lint.}
+  \caption{Macro lint.  This table indicates the frequency of occurrence of
+    various error-prone constructs in macro bodies.  Except where
+    specifically noted, the percentages are with respect to all macro
+    definitions rather than by name.}
   \label{fig:macro-lint}
 \end{figure}
 
@@ -1447,6 +1446,15 @@ call {\tt \#define}d functions and editors that support viewing one
 particular configuration of the code.
 
 
+The Lint program will warn about empty statements, constants in conditional
+context, and a few other things.  But it's pretty inadequate.  This mostly
+has to do with problems after expansion.
+
+
+Greg:  describe LCLint methodology and results.  Say exactly what you did
+(ie, how hard you tried), and what the results were.  Also, that you tried
+on only 20, not all 30, packages, which doesn't include the biggest ones.
+
 
 \section{Conclusions}
 \label{sec:conclusion}
@@ -1626,6 +1634,9 @@ Variations among packages:
  * Applications vs. libraries?  Get more libraries, or eliminate the current
    ones.
 
+
+  [[We didn't analyze whether the free variables are globals or locals,
+          which could substantially impact understanding/translation.]]
 
 
 
