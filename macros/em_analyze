@@ -1145,7 +1145,7 @@ sub cpp_trivially_false_condition ($)
 # Just like the above, with 0 and 1 reversed
 sub cpp_trivially_true_condition ($)
 { my ($cond) = check_args(1, @_);
-  if ($cond eq "1")
+  if (($cond eq "1") || ($cond =~ /^1\s*\|\|/))
     { return $true; }
   elsif ($cond =~ /^\(\s*(.*)\s*\)$/)
     { return cpp_trivially_true_condition($1); }
