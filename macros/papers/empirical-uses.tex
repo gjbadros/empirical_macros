@@ -40,21 +40,22 @@ Seattle, WA  98195-2350\\
 \begin{abstract}
 
   The C programming language is intimately connected to its macro
-  preprocessor.  This relationship affects, indeed generally hinders, both
-  the tools (compilers, debuggers, call graph extractors, etc.)\ built to
-  engineer C programs and also the ease of translating to other languages
-  such as C++.  In this paper we analyze over 20 packages comprising almost
-  one million lines of publicly available C code, determining the ways in
-  which the preprocessor is used in practice.  We developed a framework for
-  analyzing preprocessor usage, using it to extract information about the
-  percentage of preprocessor directives in C programs, the frequency of use
-  of defined macros, the relationship between C functions and their use of
-  macros, and the macros that are difficult to express in terms of other C
-  or C++ language features.  We report on the analysis, in particular
-  illustrating data that are material when considering the development of
-  tools for C or C++.  The results (and the supporting framework) lay the
-  foundation for developing a tool to reduce usage of the preprocessor by
-  translating from C to C++.
+  preprocessor.  This relationship affects, indeed generally hinders,
+  both the tools (compilers, debuggers, call graph extractors, etc.)\ 
+  built to engineer C programs and also the ease of translating to other
+  languages such as C++.  In this paper we analyze over 20 packages
+  comprising just over one million lines of publicly available C code,
+  determining the ways in which the preprocessor is used in practice.
+  We developed a framework for analyzing preprocessor usage, using it to
+  extract information about the percentage of preprocessor directives in
+  C programs, the frequency of use of defined macros, the relationship
+  between C functions and their use of macros, and the macros that are
+  difficult to express in terms of other C or C++ language features.  We
+  report on the analysis, in particular illustrating data that are
+  material when considering the development of tools for C or C++.  The
+  results (and the supporting framework) lay the foundation for
+  developing a tool to reduce usage of the preprocessor by translating
+  from C to C++.
 
 \end{abstract}
 
@@ -156,7 +157,7 @@ is another path for partial elimination of Cpp.
 %code~\cite{OCallahan-icse97}.
 
 As a step toward such preprocessor elimination, we empirically analyzed
-preprocessor usage in 23 C packages comprising nearly one million lines of
+preprocessor usage in 24 C packages comprising over one million lines of
 code.  Figure~\ref{fig:packages} lists the packages and their sizes.
 For each package we also report the physical line count---the
 number of lines (or newline characters) in the file---and the non-comment,
@@ -473,7 +474,7 @@ to help in this categorization.
   \setlength{\tabcolsep}{.25em}
   \input{categories-tbl.tex}%
 }
-\caption{Categorization of Macros\label{fig:categorization}}
+\caption{Percentage Categorization of Macros\label{fig:categorization}}
 \end{figure}
 
 In addition to classifying each macro as taking arguments or not, our tool
@@ -525,7 +526,7 @@ use assignment operators,
 \item[Statement]  The macro body is a statement.  Such macros can be
   confusing to use, because programmers are inclined to add a semicolon
   after a call to such a macro, which can cause problems such as 
-  misparsing of nested \verb|if| statements.  The
+  mis-parsing of nested \verb|if| statements.  The
   well-known \verb|do {|\ldots\verb|} while (0)| partial statement trick
   solves this problem.  To our surprise, we found very few uses of that
   construct, but many instances of a macro that expanded to a statement
@@ -535,7 +536,7 @@ use assignment operators,
 \item[Stringization and pasting]  The macro body contains \verb|#| or
   \verb|##|, which treat the macro argument not as a token but as a
   string.  No language mechanism could replace such macros.  Our
-  implementation separates these categories, but we conflate them to
+  implementation separates these categories, but we combine them to
   simplify our figures.
 
 \item[Other syntactic macros]  Like stringization and pasting, these
