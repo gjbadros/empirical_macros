@@ -2831,6 +2831,7 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
   register int i;
   int ichSourceStart = 0;
   int cchRawCall = 0;
+  cpp_buffer *pbuf = NULL;
 
 #if 0
   CHECK_DEPTH (return;);
@@ -2847,9 +2848,10 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
   cpp_buf_line_and_col (cpp_file_buffer (pfile), &start_line, &start_column);
 
   nargs = defn->nargs;
-  pchRawCall = CPP_BUFFER(pfile)->cur;
-  cchRawCall = CPP_BUFFER(pfile)->cur - pchAfterMacroName;
-  ichSourceStart = pcei?(pcei->offset + 1): 
+  pbuf = CPP_BUFFER(pfile);
+  pchRawCall = pbuf->cur;
+  cchRawCall = pbuf->cur - pchAfterMacroName;
+  ichSourceStart = pcei?(pcei->offset + pbuf->cur - pbuf->buf - 2):
     (CchOffset_internal(pfile) - cchRawCall - strlen(hp->name) + 1);
   /* FIXGJBNOW  CPP_BUFFER(pfile)->ichSourceStart = ichSourceStart;  */
 
@@ -3228,9 +3230,10 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
   /*  int cchRawCall = pbuf->cur - pchAfterMacroName; */
   int cbuffersDeep = CbuffersDeep(pfile);
   /*  int ichSourceStart = pbuf->ichSourceStart; */
-  int ichSourceEnd = ichSourceStart + (pcei?pcei->length:(cchRawCall + strlen(hp->name)));
+  int ichSourceEnd = ichSourceStart + cchRawCall + strlen(hp->name);
   cpp_buffer *prev_buffer = CPP_PREV_BUFFER(pfile->buffer);
-  if (CExpansionsDeep(pcei) > 1 && prev_buffer != CPP_NULL_BUFFER(pfile) && prev_buffer->prev != 0 && prev_buffer->ichSourceStart >= 0) {
+  if (CExpansionsDeep(pcei) > 1 && prev_buffer != CPP_NULL_BUFFER(pfile) 
+      && prev_buffer->prev != 0 && prev_buffer->ichSourceStart >= 0) {
     if (!pbuf->fFromPerl) {
       ichSourceStart += prev_buffer->ichSourceStart - 1;
       ichSourceEnd += prev_buffer->ichSourceStart - 1;
