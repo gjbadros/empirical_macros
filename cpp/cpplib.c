@@ -6863,12 +6863,21 @@ cpp_handle_options (pfile, argc, argv)
   struct cpp_options *opts = CPP_OPTIONS (pfile);
   for (i = 0; i < argc; i++) {
     if (argv[i][0] != '-') {
-      if (opts->out_fname != NULL)
-	fatal ("Usage: %s [switches] input output", argv[0]);
+      if (opts->out_fname != NULL) {
+        fprintf(stderr,"Usage: %s [switches] input output\n", argv[0]);
+        fprintf(stderr,"Doing nothing, but exiting with EXIT_SUCCESS so make can continue\n");
+        exit(0);
+      }
       else if (opts->in_fname != NULL)
 	opts->out_fname = argv[i];
-      else
+      else {
+        /* skip .o files, in case this is a link step */
+        if (strstr(argv[i],".o"))
+          continue;
+        /* get the filename, but don't increment i */
+        strcpy(szCompileFileName,argv[i]);
 	opts->in_fname = argv[i];
+      }
     } else {
       switch (argv[i][1]) {
       case '-':
@@ -6894,12 +6903,17 @@ cpp_handle_options (pfile, argc, argv)
 	opts->fWarnMissingHooks = FALSE;
 	break;
       case 'c':
-        /* get the filename, but don't increment i */
-        strcpy(szCompileFileName,argv[i+1]);
+        /* get the filename, increment i */
+        /*        strcpy(szCompileFileName,argv[++i]);
+                  opts->in_fname = argv[i]; */
         break;
 
       case 'L':
         /* Just ignore -L option */
+        break;
+
+      case 'O':
+        /* Just ignore -O option */
         break;
 
       case 'i':
