@@ -1,7 +1,7 @@
 #!/uns/bin/perl
 
 package checkargs;
-require 5.000;
+require 5.004;			# uses "for my $var"
 require Exporter;
 @ISA = qw(Exporter);
 @EXPORT = qw(check_args check_args_range check_args_at_least);

@@ -3,15 +3,17 @@
 package em_constants;
 require 5.000;
 require Exporter;
-use checkargs;
-# DO NOT "use em_util", as em_util uses this
+use vars qw(@ISA @EXPORT);
 # use strict;
+use checkargs;
+
+# Do not "use em_util", as em_util uses this
 
 @ISA = qw(Exporter);
 # Initially used below line to generate the @EXPORT line
 #perl -ne 'BEGIN {print "\@EXPORT = qw("; } END {print ");\n";} print "$1 " if /([$%@]\w+)\s+/'
 @EXPORT = qw(
- $true $false $OBSOLETE $DANGER $EVIL $ILLEGAL
+ $true $false
 
  $catNOT_YET $catIN_PROCESS $catNO_DEF $catNULL_DEFINE $catEXP
  $catSOME_CONSTANT $catCONSTANT $catLITERAL
@@ -78,9 +80,12 @@ use checkargs;
 
  &string_from_prop &prop_contains
 
- @state_file_vars
+ @state_file_vars @depend_state_file_vars
 );
 #End of @EXPORT
+
+# This doesn't seem to work for me, so omit "use strict";
+# use vars @EXPORT;
 
 
 ###########################################################################
@@ -96,12 +101,6 @@ $false = (1 == 0);
 # sub name TRUE () { 1==1 }
 # sub name FALSE () { 1==0 }
 # In Perl 5.004, this allegedly will be expanded inline
-
-# These should probably be merged into failure categories, below
-$OBSOLETE = 1;
-$DANGER = 2;
-$EVIL = 3;
-$ILLEGAL = 4;
 
 
 ###########################################################################
@@ -617,10 +616,6 @@ $cpp_include_arg_re = '(?:<(.*)>|\"(.*)\")';
 #   rg_cpp_cmds mncategory mntype mdef_evilness
 #   mdef_direct_inclusion_dependenton mdef_freefuns
 
-# macro_inclusion_dependenton is very large and should perhaps be avoided,
-# along with the following variables -- do the work in em_analyze instead
-# of in em_reports.
-
 
 @state_file_vars = qw(
     %macros %macros_c_undefs %macros_uses
@@ -637,10 +632,9 @@ $cpp_include_arg_re = '(?:<(.*)>|\"(.*)\")';
     @rg_cpp_cmds @rg_ccd_cat_counts
     @file_inclusion_method %function_name_to_macros_it_uses
     @files_function_lines %function_to_locs
-    %macro_inclusion_dependenton %macro_inclusion_dependees %inclusion_dependee_lines
-    %macro_expansion_dependenton %macro_expansion_dependees %expansion_dependee_lines
+    %inclusion_dependee_lines
+    %expansion_dependee_lines
     %either_dependee_lines
-    %file_includers %file_includees
     %file_direct_inclusion_dependentons
     %file_direct_inclusion_dependent_macros %file_inclusion_dependent_macros
     %file_included_by
@@ -650,6 +644,15 @@ $cpp_include_arg_re = '(?:<(.*)>|\"(.*)\")';
 
     %macros_used_by_cpp %functions %typedefs
 		     );
+
+@depend_state_file_vars = qw(
+  %macro_inclusion_dependenton
+  %macro_inclusion_dependees
+  %macro_expansion_dependenton
+  %macro_expansion_dependees
+  %file_includers
+  %file_includees
+			     );
 
 
 1; #Successful import

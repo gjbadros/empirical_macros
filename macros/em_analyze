@@ -243,6 +243,7 @@ use paren;
 
 use em_constants;
 use em_util;
+use em_depend;
 
 
 # my %failed_categorization_type_count =
@@ -1647,7 +1648,8 @@ sub compute_transitive_macro_dependences ( )
   %macro_expansion_dependenton = %local_expansion_dependenton;
   %macro_expansion_dependees = %local_expansion_dependees;
 
-  if ($opt_v) { print STDERR "Computing transitive macro dependences...done\n"; }
+  if ($opt_v)
+    { print STDERR "Computing transitive macro dependences...done\n"; }
 }
 
 ## Now taken care of in compute_transitive_file_dependences, I think.
@@ -6725,9 +6727,25 @@ sub test_misc ( )
 ### Save state
 ###
 
-sub SaveMacroAnalysisState
+sub SaveMacroAnalysisState ( $ )
 {
-  my ($output_filename) = check_args(1,@_);
+  my ($output_filename) = check_args(1, @_);
+
+  # Output big dependence variables to their own file
+  { my %namevalhash = ();
+    my $dependence_output_filename = $output_filename;
+    $dependence_output_filename =~ s/state$/dstate/;
+    if ($dependence_output_filename eq $output_filename)
+      { $dependence_output_filename .= "-depend"; }
+    for my $varname (@depend_state_file_vars)
+      { $namevalhash{$varname} = eval '\\' . $varname;
+	if ($@) { die "Problem evaling '$varname': $@"; } }
+    save_dependence_state($dependence_output_filename, %namevalhash);
+    # Reclaim space by undefining the variables
+    for my $varname (@depend_state_file_vars)
+      { eval "undef $varname;\n"; }
+  }
+
 
   $Data::Dumper::Indent = 1;
 #  $Data::Dumper::Purity = 1;
@@ -6737,6 +6755,7 @@ sub SaveMacroAnalysisState
   open(OUTSTATE, ">$output_filename")
     or (open(OUTSTATE, ">state" && printf STDERR "Couldn't open $output_filename, using \"state\" instead\n"))
       or die "Failed opening output file: $!";
+  print OUTSTATE "\# -*- Perl -*-\n";
 
   # Try to save some space, to avoid running out of memory in Data::Dumper
   undef @mdef_body_noc;
@@ -6763,6 +6782,7 @@ sub SaveMacroAnalysisState
 
   close(OUTSTATE);
 #  system("mv state $output_filename");
+
 }
 
 

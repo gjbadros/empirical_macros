@@ -1,6 +1,6 @@
 #!/uns/bin/perl -w
 package em_util;
-require 5.002;
+require 5.003;			# uses prototypes
 require Exporter;
 @ISA = qw(Exporter);
 @EXPORT = qw( is_number type_name count_macro_args formals_array actuals_array

@@ -67,18 +67,17 @@ use strict;
 ## This gives Mike an error as of 1/27/97.
 # use diagnostics;
 
-# Permit use of $MATCH for $& and so forth.
-use English;
-
-## Other packages
-
+use English;			# Permit use of $MATCH for $& and so forth.
 use Carp;
+use IO::Handle;
+
 use checkargs;
-use em_constants;
-use em_util;
 use paren;
 use cline;
-use IO::Handle;
+
+use em_constants;
+use em_util;
+use em_depend;
 
 
 ###########################################################################
@@ -134,6 +133,7 @@ my $fIgnoreIncludes = $false;
 ###
 
 use vars @state_file_vars;
+use vars @depend_state_file_vars;
 
 # Computed from the above, but not in state file.
 my @mdef_body_simple;
@@ -1200,6 +1200,12 @@ $fDebugCmdProcessing && print "@ARGV";
 
 # Read input before opening any output files, in case of trouble.
 ReadMacroAnalysisState($statename);
+my $dependence_statename = $statename;
+$dependence_statename =~ s/state$/dstate/;
+if ($dependence_statename eq $statename)
+  { $dependence_statename .= "-depend"; }
+ReadMacroAnalysisState($dependence_statename);
+
 #$WARNING = 0;
 #require "dumpvar.pl";
 #dumpvar();
@@ -1342,6 +1348,14 @@ compute_global_cpp_sums();
 output_statistics();
 
 #print STDERR "Included files:", join("\n",@files_included), "\n";
+
+## For testing, to make sure output is same as input .dstate file
+# { my %namevalhash = ();
+#   for my $varname (@depend_state_file_vars)
+#     { $namevalhash{$varname} = eval '\\' . $varname;
+#       if ($@) { die "Problem evaling '$varname': $@"; } }
+#   save_dependence_state("/tmp/mernst/foo", %namevalhash);
+# }
 
 exit();
 

@@ -1,7 +1,7 @@
 #!/uns/bin/perl
 
 package cline;
-require 5.000;
+require 5.003;			# uses prototypes
 require Exporter;
 @ISA = qw(Exporter);
 @EXPORT = qw(get_spliced_cline get_spliced_cline_maybe_ungot get_fulltoken_cline

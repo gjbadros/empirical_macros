@@ -1,7 +1,7 @@
 #!/uns/bin/perl
 
 package paren;
-require 5.000;
+require 5.003;			# uses prototypes
 require Exporter;
 @ISA = qw(Exporter);
 @EXPORT = qw(brace_change paren_change contains_mismatch find_close_delimiter);
