@@ -305,7 +305,9 @@ sub output_stats ()
 
       die if (!defined($macros_uses{$name}));
       die if (!defined($macros_c_undefs{$name}));
-      die if (!defined($macros_used_in_functions{$name}));
+# FIXGJB: we don't use macros_used_in_functions in paper, so I removed it
+# from the *.state exported variables list --gjb
+#      die if (!defined($macros_used_in_functions{$name}));
 
       # FIXPERL: cperl mode doesn't count , as a statement continuer
       # in a print
@@ -321,9 +323,11 @@ sub output_stats ()
       # These next two will be blank for things not defined, but only
       # used in cond. comp. directives
       join(",",CategoriesForMacroName($name)),
-      join(",",InclusionMethodsForMacroName($name)),
-      "\n%" . join("\n%",@{$macros_used_in_functions{$name}}),
-      "\n";
+      join(",",InclusionMethodsForMacroName($name)), "\n";
+# FIXGJB: we don't use macros_used_in_functions in paper, so I removed it
+# from the *.state exported variables list --gjb
+#      "\n%" . join("\n%",@{$macros_used_in_functions{$name}}),
+#      "\n";
     }
   }
 
@@ -453,7 +457,7 @@ sub output_stats ()
 	  if (scalar(@{$macros{$macro_name}}) > 0)
 	    { for my $i (@{$macros{$macro_name}})
 		{ print "  def #$i: incl_dep: @{$mdef_direct_inclusion_dependenton[$i]}\n";
-		    print "           exp_dep: @{$mdef_direct_expansion_uses[$i]}\n"; } }
+		  print "           exp_dep: @{$mdef_direct_expansion_uses[$i]}\n"; } }
 	  else
 	    { print "  no def; used on $macros_used_by_cpp{$macro_name}\n"; }
 	  if (scalar(keys %{$inclusion_dependenton{$macro_name}}) > 0)
@@ -1011,7 +1015,7 @@ sub ReadMacroAnalysisState {
   my $in;
   while (defined($in = <INPUTSTATE>))
   {
-#    print "$in\n----------------\n\n";
+    #DBG print "$in\n----------------\n\n";
     eval $in;
   }
   close(INPUTSTATE);
