@@ -28,9 +28,10 @@ require Exporter;
  $built_in_fake_file 
  $i_usage_code $i_usage_macro $i_usage_cond 
  @i_usage_all
+ @cond_category_name
  $ccatDEBUG $ccatPORT_LANLIB $ccatPORT_FEATURE $ccatPORT_MACHINE 
  $ccatCOMMENTING $ccatMI_PREVENTION
- $ccatREDEF_SUPPRESION $ccatMISC_SYSTEM
+ $ccatREDEF_SUPPRESION $ccatMISC_SYSTEM $ccatOTHER $ccatMIXED
 );
 #End of @EXPORT
 
@@ -130,7 +131,7 @@ $catSTRINGIZE = 24;
 # Conditional Categories (for #if.* preprocessor directives)
 @cond_category_name = qw(debug portability_language_or_library portability_feature
 			 portability_machine commenting mi_prevention redef_suppression
-			 misc_system);
+			 misc_system other mixed_categories);
 
 # T
 (
@@ -142,7 +143,9 @@ $ccatCOMMENTING,
 $ccatMI_PREVENTION,
 $ccatREDEF_SUPPRESION,
 $ccatMISC_SYSTEM,
- ) = (0..$#cond_category_name-1);
+$ccatOTHER,
+$ccatMIXED,
+ ) = (0..$#cond_category_name);
 
 ###########################################################################
 ### Types
