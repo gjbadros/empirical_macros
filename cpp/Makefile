@@ -268,10 +268,10 @@ scandecls: $(SD_OBJECTS)
 	$(CC) $(ALL_CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS) $(PERLLIBS)
 
 tags:
-	etags cppmain.[ch] cpplib.[ch] cpphash.[ch] cppalloc.[ch] cpperror.[ch] cppexp.[ch] version.c pcp.h tm.h bison-stack.[ch] cpphook.[ch] cpphook.pm backcalls.xs
+	etags $(SOURCES)
 
 clean:
-	rm -f *.o cppmain pcpp pcppct cpphook_names.h hook_index_constants.pm gram.tab.* lexer.c
+	rm -f *.o cppmain pcpp pcppct cpphook_names.h hook_index_constants.pm gram.tab.[ch] lexer.c
 
 cpp: $(CCCP)
 	-rm -f cpp$(exeext)
