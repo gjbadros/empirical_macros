@@ -294,7 +294,10 @@ length, since that focuses more clearly on the essential source text of a
 package.
 
 \begin{figure}
-\input{package_and_sizes-tbl.tex}
+{\small
+  \setlength{\tabcolsep}{.25em}
+  \input{package_and_sizes-tbl.tex}
+}
 \caption{Analyzed Packages and Sizes\label{fig:packages}}
 \end{figure}
 
@@ -303,15 +306,11 @@ package.
 
 \section{Occurrence of Preprocessor Directives}\label{sec:directives}
 
-[fix: I hate these detailed explanations of figures.  It would go better in
-a caption, but may not be needed at all.]
-[fix: this is a really bizarre ordering.  Should go in approximate size
-order: define, conditionals, etc.]
-
 The first question we asked was simple: how often do
 preprocessor directives appear in C programs?
 Figure~\ref{fig:directives} shows the data for the packages we
-analyzed.  There are five rows in the figure, each of which has a
+analyzed.  The figure contains six rows, *****
+There are five rows in the figure, each of which has a
 separate bar for each of the packages we analyzed.  The topmost row
 shows the total percentage of lines in the package that represent
 preprocessor directives.  The rows below the topmost one show the
@@ -374,7 +373,10 @@ single bin.  For example, looking at the \verb+bc+ package, 98.72\% of
 the identifiers were \verb+#define+d between one and six times.
 
 \begin{figure}
-\input{freq_of_def-tbl.tex}
+{\small
+  \setlength{\tabcolsep}{.25em}
+  \input{freq_of_def-tbl.tex}%
+}
 \caption{Frequency of Definition\label{fig:define_count}}
 \end{figure}
 
@@ -386,7 +388,10 @@ represents the number of times that a defined name is expanded (in
 either C code or preprocessor directives).
 
 \begin{figure}
-\input{freq_of_use-tbl.tex}
+{\small
+  \setlength{\tabcolsep}{.25em}
+  \input{freq_of_use-tbl.tex}%
+}
 \caption{Frequency of Macro Expansions\label{fig:use_count}}
 \end{figure}
 
@@ -395,7 +400,10 @@ that are used in C code, in Cpp code, in both, or in neither (i.e. no
 uses).
 
 \begin{figure}
-\input{where_uses-tbl.tex}
+{\small
+  \setlength{\tabcolsep}{.25em}
+  \input{where_uses-tbl.tex}%
+}
 \caption{Where Macro Uses Occur\label{fig:define_usage}}
 \end{figure}
 
