@@ -144,7 +144,13 @@ sub do_categories($$@) {
       close(IN);
       open(IN,"<$filename") || die $!;
       my $total = 0;
-      my $i = 0;
+      my $i;
+      if ($use_or_def eq "use") {
+	$i = 0;
+      } else {
+	# for both def and ddf
+	$i = 1;
+      }
       my $num = 0;
       if (<IN> !~ /Total[\t ](\d*)/) {
 	warn "Expecting total line, got $_";
