@@ -20,7 +20,8 @@ elsif (/^([0-9]+)\s+\([0-9]+\.[0-9]+%\) any warning by name$/)
 elsif (/^([0-9]+)\s+\([0-9]+\.[0-9]+%\) any warning by def$/)
   { $defs_any_warning += $1;
     $defs_any_warning_files++; }
-elsif (/^([0-9]+)\s+\([0-9]+\.[0-9]+%\) inconsistent arity$/)
+# No trailing $ here, because the message tells what the arities are
+elsif (/^([0-9]+)\s+\([0-9]+\.[0-9]+%\) inconsistent arity by name$/)
   { $different_arity += $1;
     $different_arity_files++; }
 elsif (/^([0-9]+)\s+\([0-9]+\.[0-9]+%\) null body with args$/)
@@ -32,9 +33,12 @@ elsif (/^([0-9]+)\s+\([0-9]+\.[0-9]+%\) contains newline$/)
 elsif (/^([0-9]+)\s+\([0-9]+\.[0-9]+%\) unparenthesized body$/)
   { $unparen_body += $1;
     $unparen_body_files++; }
-elsif (/^([0-9]+)\s+\([0-9]+\.[0-9]+%\) doesn't swallow semicolon$/)
+elsif (/^([0-9]+)\s+\([0-9]+\.[0-9]+%\) dangling semicolon$/)
   { $swallow_semi += $1;
     $swallow_semi_files++; }
+elsif (/^([0-9]+)\s+\([0-9]+\.[0-9]+%\) swallows else$/)
+  { $swallow_else += $1;
+    $swallow_else_files++; }
 elsif (/^([0-9]+)\s+\([0-9]+\.[0-9]+%\) free variables$/)
   { $free_var += $1;
     $free_var_files++; }
@@ -72,6 +76,8 @@ END
     { die "Undefined unparen_body_files"; }
   if (!defined($swallow_semi_files))
     { die "Undefined swallow_semi_files"; }
+  if (!defined($swallow_else_files))
+    { die "Undefined swallow_else_files"; }
   if (!defined($free_var_files))
     { die "Undefined free_var_files"; }
   if (!defined($formal_name_files))
@@ -92,16 +98,17 @@ END
       || ($packages != $newline_body_files)
       || ($packages != $unparen_body_files)
       || ($packages != $swallow_semi_files)
+      || ($packages != $swallow_else_files)
       || ($packages != $free_var_files)
       || ($packages != $formal_name_files)
       || ($packages != $formal_mult_use_files)
       || ($packages != $formal_adjacent_use_files)
       || ($packages != $formal_unparen_use_files)
       || ($packages != $formal_modified_files))
-    { die "Inconsistent number of files with info: '$packages' '$names_any_warning_files' '$defs_any_warning_files' '$different_arity_files' '$null_body_files' '$newline_body_files' '$unparen_body_files' '$swallow_semi_files' '$free_var_files' '$formal_name_files' '$formal_mult_use_files' '$formal_adjacent_use_files' '$formal_unparen_use_files' '$formal_modified_files'"; }
+    { die "Inconsistent number of files with info: '$packages' '$names_any_warning_files' '$defs_any_warning_files' '$different_arity_files' '$null_body_files' '$newline_body_files' '$unparen_body_files' '$swallow_semi_files' '$swallow_else_files' '$free_var_files' '$formal_name_files' '$formal_mult_use_files' '$formal_adjacent_use_files' '$formal_unparen_use_files' '$formal_modified_files'"; }
 
   print_lint_summary($different_arity, $null_body, $newline_body,
-		     $unparen_body, $swallow_semi, $free_var, $formal_name,
+		     $unparen_body, $swallow_semi, $swallow_else, $free_var, $formal_name,
 		     $formal_mult_use, $formal_adjacent_use,
 		     $formal_unparen_use, $formal_modified,
 		     $macros, $defs, $names_any_warning, $defs_any_warning,
