@@ -226,7 +226,7 @@ GRAMMAR_OBJECTS := ansi-c.tab.o ansi-c-lex.o
 CT_GRAMMAR_OBJECTS := lexer.o gram.tab.o ct-heap.o ct-nmetab.o ct-prnttree.o ct-symtab.o ct-token.o ct-tree.o ct-tree_stk.o
 
 NON_GRAMMAR_OBJECTS =pcpp.o cpplib.o cpphook.o cpphash.o cppalloc.o cpperror.o cppexp.o \
-  version.o backcalls.o
+  version.o backcalls.o bison-stack.o
 
 OBJECTS = $(NON_GRAMMAR_OBJECTS) $(GRAMMAR_OBJECTS)
 
@@ -254,7 +254,7 @@ scandecls: $(SD_OBJECTS)
 	$(CC) $(ALL_CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS) $(PERLLIBS)
 
 tags:
-	etags cppmain.[ch] cpplib.[ch] cpphash.[ch] cppalloc.[ch] cpperror.[ch] cppexp.[ch] version.c pcp.h tm.h 
+	etags cppmain.[ch] cpplib.[ch] cpphash.[ch] cppalloc.[ch] cpperror.[ch] cppexp.[ch] version.c pcp.h tm.h bison_stack.[ch]
 
 clean:
 	rm -f *.o cppmain pcpp pcppct cpphook_names.h hook_index_constants.pm gram.tab.* lexer.c
@@ -338,6 +338,8 @@ ansi-c-lex.c: ansi-c.l
 
 ansi-c.tab.c ansi-c.tab.h: ansi-c.y
 	bison -d $^
+
+bison-stack.o: bison-stack.c bison-stack.h lexer.h
 
 ## The C Grammar used by CTree 0.05
 lexer.c: lexer.l
