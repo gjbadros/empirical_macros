@@ -8,9 +8,9 @@ flex	2.5.3
 fvwm	2.0.43
 g77	0.5.18
 gawk	2.15.6
+gcc	2.7.2.1
 genscript	1.3.2a
 ghostview	1.5
-gcc	2.7.2.1
 gnuchess	4.0pl77
 gnuplot	3.50.1.17
 groff	1.10

@@ -8,7 +8,7 @@ flex	Scanner generator
 fvwm	Window manager 
 g77	Fortran compiler 
 gawk	GAWK interpreter 
-gcc	C/C++ compiler
+gcc	C and C++ compiler
 genscript	Text-to-PostScript converter 
 ghostview	PostScript previewer 
 gnuchess	Chess player 
