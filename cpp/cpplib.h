@@ -137,6 +137,8 @@ struct cpp_buffer {
   long line_base;
   long lineno; /* Line number at CPP_LINE_BASE. */
   long colno; /* Column number at CPP_LINE_BASE. */
+  long ichSourceStart;
+  long ichSourceEnd;
 #ifndef STATIC_BUFFERS
   cpp_buffer *chain;
 #endif
@@ -644,6 +646,7 @@ typedef struct if_stack IF_STACK_FRAME;
 struct argdata {
   /* Strings relative to pfile->token_buffer */
   long raw, expanded, stringified;
+  long offset;
   int raw_length, expand_length;
   int stringified_length;
   char newlines;
@@ -657,6 +660,8 @@ struct argdata {
 
 typedef struct cpp_expand_info {
   int argno;
+  int offset;
+  int length;
   cpp_hashnode *hp;
   struct cpp_expand_info *pceiPrior;
 } cpp_expand_info;
