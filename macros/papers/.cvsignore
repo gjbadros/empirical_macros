@@ -4,3 +4,5 @@
 *.dvi
 *.log
 auto
+*.epsi.orig
+*.epsi
