@@ -1,5 +1,22 @@
 #!/uns/bin/perl -anw
 BEGIN {
+  my $getopts_option_letters = 'had:';
+
+  use Getopt::Std;
+  getopts($getopts_option_letters);
+
+  sub usage () {
+    die "@_\nUsage: $0 [-$getopts_option_letters]
+-h usage message
+-d <num> set the minimum number of defs before outputting a row for that name
+-a print all lines, even ones which do not have the minimum number of defs
+";
+  }
+
+  usage() if ($opt_h);
+
+  use vars qw($opt_d $opt_a $opt_h);
+
   my $i = 0;
 # we need to use $i+0, or else the value pointed to
 # by the first handful keeps getting incremented, and
@@ -48,16 +65,19 @@ BEGIN {
   my $lastargv = "";
 }
 
+my $cdefs_min_filter = $opt_d || 0;   # only output stats with more than this many defintions
 sub marks_for_categories {
   $listref = $_[0];
   my $c;
   my $str = " " x ($categoryname{"LAST"});
-  foreach $c (@$listref) {
-    my $offset = $categoryname{$c};
-    if (!defined($offset)) {
-      die $c;
+  if (scalar(@$listref) > $cdefs_min_filter) {
+    foreach $c (@$listref) {
+      my $offset = $categoryname{$c};
+      if (!defined($offset)) {
+	die $c;
+      }
+      substr($str,$offset,1) = "*";
     }
-    substr($str,$offset,1) = "*";
   }
   return $str;
 }
@@ -75,5 +95,8 @@ next if !defined($F[8]); # the categories are not listed for cond comp directive
 #i.e. macros that are used in ccd-s, but not #define-d anywhere
 my @cat = split(/,/,$F[8]);
 
-print marks_for_categories(\@cat);
+my $row = marks_for_categories(\@cat);
+if ($opt_a || $row =~ m/\*/) {
+  print $row;
+}
 print "\n";
