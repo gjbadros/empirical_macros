@@ -717,6 +717,7 @@ void cpp_message (cpp_reader *pfile, int is_error, char *msg,
 
 int CchOffset_internal(cpp_reader *pfile);
 
+int CbuffersDeep(cpp_reader *pfile);
 
 #ifdef __cplusplus
 }

@@ -1977,6 +1977,7 @@ cpp_pop_buffer (cpp_reader *pfile, cpp_expand_info *pcei)
   cpp_buffer *buf = CPP_BUFFER (pfile);
 #ifdef STATIC_BUFFERS
   (*buf->cleanup) (buf, pfile, pcei);
+  gjb_call_hooks_i(CPP_OPTIONS(pfile),HI_POP_BUFFER,CbuffersDeep(pfile)-1);
   return ++CPP_BUFFER (pfile);
 #else
   cpp_buffer *next_buf = CPP_PREV_BUFFER (buf);
@@ -1984,7 +1985,7 @@ cpp_pop_buffer (cpp_reader *pfile, cpp_expand_info *pcei)
   (*buf->cleanup) (buf, pfile, pcei);
   CPP_BUFFER (pfile) = next_buf;
   free (buf);
-  gjb_call_hooks_void(CPP_OPTIONS(pfile),HI_POP_BUFFER);
+  gjb_call_hooks_i(CPP_OPTIONS(pfile),HI_POP_BUFFER,CbuffersDeep(pfile)-1);
   return next_buf;
 #endif
 }
@@ -3831,9 +3832,7 @@ redundant_include_p (pfile, name)
    for which C++ should (on most systems) assume `extern "C"'.  */
 
 static int
-is_system_include (pfile, filename)
-     cpp_reader *pfile;
-     register char *filename;
+is_system_include (cpp_reader *pfile, char *filename)
 {
   struct file_name_list *searchptr;
 
@@ -5018,6 +5017,7 @@ cpp_get_token (cpp_reader *pfile, cpp_expand_info *pcei, struct argdata *pad)
   cpp_annotated_token *pcat = PcatNew();
   struct cpp_options *opts = CPP_OPTIONS (pfile);
   unsigned char *pchAfterMacroName;
+  int cchOffsetStart = -1;
   CPP_BUFFER (pfile)->prev = CPP_BUFFER (pfile)->cur;
  get_next:
   c = GETC();
@@ -5195,6 +5195,7 @@ cpp_get_token (cpp_reader *pfile, cpp_expand_info *pcei, struct argdata *pad)
 	case '\'':
 	  /* A single quoted string is treated like a double -- some
 	     programs (e.g., troff) are perverse this way */
+	  cchOffsetStart = CchOffset_internal(pfile);
 	  cpp_buf_line_and_col (cpp_file_buffer (pfile),
 				&start_line, &start_column);
 	  old_written = CPP_WRITTEN (pfile);
@@ -5291,10 +5292,12 @@ cpp_get_token (cpp_reader *pfile, cpp_expand_info *pcei, struct argdata *pad)
 	    /* NOTE: macro expansions containing string constants [or
 	       special symbols, like __FILE__] will call this hook;
 	       also note that this drops the delimiting double quotes */
-	    gjb_call_hooks_szl_i(CPP_OPTIONS(pfile),HI_STRING_CONSTANT,
-				 pfile->token_buffer + old_written + 1,
-				 CPP_PWRITTEN(pfile)-(pfile->token_buffer+old_written+1)-1,
-				 c_newlines+1);
+	    gjb_call_hooks_i_i_szl_i(CPP_OPTIONS(pfile),HI_STRING_CONSTANT,
+				     cchOffsetStart,CchOffset_internal(pfile)+1,
+				     pfile->token_buffer + old_written + 1,
+				     CPP_PWRITTEN(pfile)-
+				       (pfile->token_buffer+old_written+1)-1,
+				     c_newlines+1);
 	    }
 	  pcat->id = ( c == '\'' ? CPP_CHAR : CPP_STRING);
 	  AnnotatePcat(pcat,pfile,pcei,pad);
@@ -7820,7 +7823,7 @@ cpp_error (cpp_reader *pfile, char *msg, char *arg1, char *arg2, char *arg3)
 {
   cpp_buffer *ip = cpp_file_buffer (pfile);
   gjb_call_hooks_sz_i_i_sprintf(CPP_OPTIONS(pfile),HI_CPP_ERROR,
-				ip?ip->nominal_fname:"[NONE]",
+				ip?ip->nominal_fname:"@NONE@",
 				ip?ip->lineno:-1,-1,
 				msg, arg1, arg2, arg3);
   cpp_error_nohook(pfile,msg,arg1,arg2,arg3);
@@ -7852,7 +7855,7 @@ cpp_warning (pfile, msg, arg1, arg2, arg3)
 {
   cpp_buffer *ip = cpp_file_buffer (pfile);
   gjb_call_hooks_sz_i_i_sprintf(CPP_OPTIONS(pfile),HI_CPP_WARN,
-				ip?ip->nominal_fname:"[NONE]",
+				ip?ip->nominal_fname:"@NONE@",
 				ip?ip->lineno:-1,-1,
 				msg, arg1, arg2, arg3);
   cpp_warning_nohook(pfile,msg,arg1,arg2,arg3);
@@ -7868,7 +7871,7 @@ cpp_pedwarn (pfile, msg, arg1, arg2, arg3)
 {
   cpp_buffer *ip = cpp_file_buffer (pfile);
   gjb_call_hooks_sz_i_i_sprintf(CPP_OPTIONS(pfile),HI_CPP_PEDWARN,
-				ip?ip->nominal_fname:"[NONE]",
+				ip?ip->nominal_fname:"@NONE@",
 				ip?ip->lineno:-1,-1,
 				msg, arg1, arg2, arg3);
   if (CPP_OPTIONS (pfile)->pedantic_errors)
@@ -7897,7 +7900,7 @@ cpp_error_with_line (cpp_reader *pfile, int line, int column, char *msg,
 {
   cpp_buffer *ip = cpp_file_buffer (pfile);
   gjb_call_hooks_sz_i_i_sprintf(CPP_OPTIONS(pfile),HI_CPP_ERROR,
-				ip?ip->nominal_fname:"[NONE]",
+				ip?ip->nominal_fname:"@NONE@",
 				line,column,
 				msg, arg1, arg2, arg3);
   cpp_error_with_line_nohook(pfile,line,column,msg,arg1,arg2,arg3);
@@ -7937,7 +7940,7 @@ cpp_warning_with_line (pfile, line, column, msg, arg1, arg2, arg3)
 {
   cpp_buffer *ip = cpp_file_buffer (pfile);
   gjb_call_hooks_sz_i_i_sprintf(CPP_OPTIONS(pfile),HI_CPP_WARN,
-				ip?ip->nominal_fname:"[NONE]",
+				ip?ip->nominal_fname:"@NONE@",
 				line,column,
 				msg, arg1, arg2, arg3);
   cpp_warning_with_line_nohook(pfile,line,column,msg,arg1,arg2,arg3);
@@ -7952,7 +7955,7 @@ cpp_pedwarn_with_line (pfile, line, column, msg, arg1, arg2, arg3)
 {
   cpp_buffer *ip = cpp_file_buffer (pfile);
   gjb_call_hooks_sz_i_i_sprintf(CPP_OPTIONS(pfile),HI_CPP_PEDWARN,
-				ip?ip->nominal_fname:"[NONE]",
+				ip?ip->nominal_fname:"@NONE@",
 				line,column,
 				msg, arg1, arg2, arg3);
   if (CPP_OPTIONS (pfile)->pedantic_errors)
