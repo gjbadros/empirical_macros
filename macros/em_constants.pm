@@ -4,9 +4,35 @@ package em_constants;
 require 5.000;
 require Exporter;
 @ISA = qw(Exporter);
-# Use below line to generate the @EXPORT line
+# Initially used below line to generate the @EXPORT line
 #perl -ne 'BEGIN {print "\@EXPORT = qw("; } END {print ");\n";} print "$1 " if /([$%@]\w+)\s+/'
-@EXPORT = qw($true $false $OBSOLETE $DANGER $EVIL $ILLEGAL $catNOTYET $catINPROCESS $catNODEF $catMULTIPLE $catNULLDEFINE $catEXP $catEXPASSIGN $catEXPFREE $catLITERAL $catCONSTANT $catSOMECONSTANT $catFAILURE $catHASTYPEARG $catMACROFUN $catMACROTYPE $catUSESTYPEARG $catASM $catSYNTAX $catTYPE $catRESDWORD $catSTATEMENT $catRECURSIVE $catMISMATCH $catPASTING $catSTRINGIZE @categoryname $typeFAIL $typeBOOL $typeCHAR $typeUCHAR $typeSCHAR $typeSHORT $typeUSHORT $typeINT $typeUINT $typeLONG $typeULONG $typeFLOAT $typeDOUBLE $typeLDOUBLE $typeSTRING $typeNUMBER $typeUNKNOWN $typeUNSPECIFIED $typeNODEF %type_num @type_name_array $c_ftype @ftype_ALL %InclusionMethod_to_Index $ftype_HEADER_Start $ftype_NONHEADER_Start @ftype_CODE @ftype_HEAD @ftype_NOT_INCLUDED @ftype_INCLUDED @ftype_NONHEADER_NOT_INCLUDED @ftype_NONHEADER_INCLUDED @ftype_HEADER_NOT_INCLUDED @ftype_HEADER_INCLUDED $built_in_fake_file $i_usage_code $i_usage_macro $i_usage_cond @i_usage_all);
+@EXPORT = qw($true $false $OBSOLETE $DANGER $EVIL $ILLEGAL
+ $catNOTYET $catINPROCESS $catNODEF $catMULTIPLE $catNULLDEFINE 
+ $catEXP $catEXPASSIGN $catEXPFREE $catLITERAL $catCONSTANT $catSOMECONSTANT
+ $catFAILURE $catHASTYPEARG $catMACROFUN $catMACROTYPE $catUSESTYPEARG
+ $catASM $catSYNTAX $catTYPE $catRESDWORD $catSTATEMENT $catRECURSIVE 
+ $catMISMATCH $catPASTING $catSTRINGIZE
+ @categoryname 
+ $typeFAIL $typeBOOL $typeCHAR $typeUCHAR $typeSCHAR $typeSHORT 
+ $typeUSHORT $typeINT $typeUINT $typeLONG $typeULONG 
+ $typeFLOAT $typeDOUBLE $typeLDOUBLE 
+ $typeSTRING $typeNUMBER $typeUNKNOWN $typeUNSPECIFIED $typeNODEF
+ %type_num @type_name_array 
+ $c_ftype
+ @ftype_ALL
+ %InclusionMethod_to_Index 
+ $ftype_HEADER_Start $ftype_NONHEADER_Start 
+ @ftype_CODE @ftype_HEAD @ftype_NOT_INCLUDED @ftype_INCLUDED 
+ @ftype_NONHEADER_NOT_INCLUDED @ftype_NONHEADER_INCLUDED 
+ @ftype_HEADER_NOT_INCLUDED @ftype_HEADER_INCLUDED 
+ $built_in_fake_file 
+ $i_usage_code $i_usage_macro $i_usage_cond 
+ @i_usage_all
+ $ccatDEBUG $ccatPORT_LANLIB $ccatPORT_FEATURE $ccatPORT_MACHINE 
+ $ccatCOMMENTING $ccatMI_PREVENTION
+ $ccatREDEF_SUPPRESION $ccatMISC_SYSTEM
+#End of @EXPORT
+);
 
 ###########################################################################
 ### Constants
@@ -101,6 +127,22 @@ $catSTRINGIZE = 24;
 		    'stringization',
 		   );
 
+# Conditional Categories (for #if.* preprocessor directives)
+@cond_category_name = qw(debug portability_language_or_library portability_feature
+			 portability_machine commenting mi_prevention redef_suppression
+			 misc_system);
+
+# T
+(
+$ccatDEBUG, 
+$ccatPORT_LANLIB,
+$ccatPORT_FEATURE,
+$ccatPORT_MACHINE,
+$ccatCOMMENTING,
+$ccatMI_PREVENTION,
+$ccatREDEF_SUPPRESION,
+$ccatMISC_SYSTEM,
+ ) = (0..$#cond_category_name-1);
 
 ###########################################################################
 ### Types
