@@ -297,7 +297,7 @@ sub output_stats ()
   if ($opt_M) {
     if ($opt_v) { print STDOUT "macros..."; }
     select MACROS;
-    print "#MACROS#: name cDefs cUndefs cCodeUses cMacroUses cCondUses cTotalUses HowUsed Categories InclusionMethods (%functionsThatUseIt)\n";
+    print "#MACROS#: name cDefs cUndefs cCodeUses cMacroUses cCondUses cTotalUses HowUsed Categories InclusionMethods\n"; # (%functionsThatUseIt)  [removed since not used in paper & no longer exported]
     foreach my $name (sort keys %macros) {
       #print STDERR "MNAME=$name, @{$macros{$name}}\n";
       #my $i = $macros{$name}[1];  #Should this now be 0?
@@ -952,6 +952,9 @@ sub UniquifyAndSortList (@) {
 sub CategoriesForMacroName ($) {
   my ($name) = check_args(1,@_);
   my @list = ();
+  if ($#{$macros{$name}} < 0) {
+    return ("NoDefinitions");
+  }
   for (my $iDef = 0 ; $iDef <= $#{$macros{$name}}; $iDef++ ) {
     my $index = $macros{$name}[$iDef];
     die if !defined($macros{$name});
@@ -968,6 +971,9 @@ sub CategoriesForMacroName ($) {
 sub InclusionMethodsForMacroName ($) {
   my ($name) = check_args(1,@_);
   my @list = ();
+  if ($#{$macros{$name}} < 0) {
+    return ("NoDefinitions");
+  }
   for (my $iDef = 0 ; $iDef <= $#{$macros{$name}}; $iDef++ ) {
     my $index = $macros{$name}[$iDef];
     die if !defined($macros{$name});
