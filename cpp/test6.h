@@ -8,7 +8,7 @@
 #define A4 A3
 
 #define PA1(x) zeroth
-#define PA2(x) x
+#define PA2(x) x + FOO
 #define PA3(x) x + 4
 
 #define TA1(x,y) zeroth
@@ -18,6 +18,7 @@
 #define TA5(x,y) x ## y
 #define TA6(x,y) x/**/y
 #define TA7(x,y) #x, #y
+#define FOO bar
 
 #define N1 A
 #define N2 A AB ABC ABCD
@@ -28,7 +29,7 @@
 
 #define NPA4 PA3(A4)
 
-TA4(TA3(PA2(x),PA3(y)),z)
+TA4(TA3(PA2(a),PA3(b)),c)
 
 
 TA4(ABCD,ABCD)
