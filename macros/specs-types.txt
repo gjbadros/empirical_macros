@@ -8,8 +8,13 @@ type_is_function(t) => bool
 
 // constructor-like
 type_make_pointer(t) => t  [add a level of indirection]
-type_make_array(t) => t
-type_make_function(@t) => t
+type_make_array(t, int) => t
+type_make_function(t, @t) => t (first arg is return type, list is arg types)
+
+// accessors
+type_pointer_basetype(t) => t
+type_array_basetype(t) => t
+type_array_size(t) => int
 
 // parsing
 parse_type(str) => t
