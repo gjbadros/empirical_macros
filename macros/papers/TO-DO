@@ -390,21 +390,26 @@ END OF MESSAGE
 
 Greg:
 
-"SYMBOL" -> "IDENTIFIER" in figures and text
+
+Please explain the huge Unknown Symbol entry for perl.
+[Do this.] 
+
+How did you classify the names (symbols) mentioned at the top of page
+23?
+
+"SYMBOL" -> "IDENTIFIER" in figures and text 
+  --done [edited *.tex, postscript] 01/15/00 gjb
 
 I would love to see a Tukey box (median, mean, quartiles, and 90%
 confidence) added to figure 9 as a summary row.
 [Do this, probably.]
+  -- not available in Excel 97/2000, so probably not worth it.
 
-Get tar file for all the raw data
-
-Please explain the huge Unknown Symbol entry for perl.
-[Do this.]
+Get tar file for all the raw data 
+  --done [but just tgz files of pkgs] 01/15/00 gjb
 
 Figure 10:
   You should put a break in your X axis as well, and if
 possibly insert the usual wavy symbol for `large gap'.
-[Do add the gap and wavy line.]
-
-How did you classify the names (symbols) mentioned at the top of page
-23?
+[Do add the gap and wavy line.]  
+  --done [edited postscript] 01/15/00 gjb
