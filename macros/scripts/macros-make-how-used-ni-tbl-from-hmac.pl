@@ -12,7 +12,7 @@ foreach my $filename (@ARGV) {
     if ($type eq "") {
       $type = "NoUses";
     }
-      
+
     if (!defined($ctype{$type})) {
       $ctype{$type} = 0;
     }
@@ -22,7 +22,7 @@ foreach my $filename (@ARGV) {
   close (IN);
 }
 
-my %keyheading = 
+my %keyheading =
   (
    Code => "Code",
    CodeMacro => "Code, macro",
@@ -33,12 +33,13 @@ my %keyheading =
    CodeMacroCond => "Code, cond., macro",
    NoUses => "No uses"
   );
-	       
+
 
 $OFS = "\t";
 foreach my $key (qw(Code CodeMacro Cond MacroCond Macro CodeCond CodeMacroCond NoUses) ) {
-  print $keyheading{$key},# $ctype{$key},
-  sprintf("%s%%",two_significant_digits($ctype{$key}/$total*100)),"\n";
+  my $pct = $ctype{$key}/$total*100;
+  print $keyheading{$key},
+    # sprintf("%s%%",two_significant_digits($pct)),"\n";
+    sprintf("%.1f%%\n", $pct);
 }
 print "Total",$total,"(100%)" ."\n";
-
