@@ -17,10 +17,10 @@
 BEGIN { if (defined $ENV{"PERLINC"})
 	  { unshift(@INC, split(/[ :]+/, $ENV{"PERLINC"})); } }
 
-# Fix: I want to use '-$' like cpp does, not '-l'; how to do this?
+# FIX: I want to use '-$' like cpp does, not '-l'; how to do this?
 my $getopts_option_letters = 'ihvtIAau1pTlg:d:D:M:S:F:L:C:E:P:';
 
-# fix: remove -D -U -S -F -L -C options.
+# FIX: remove -D -U -S -F -L -C options.
 
 # Remove the asterisks below when the options are known to the users.
 
@@ -908,9 +908,7 @@ use vars '@include_path';
 
 # perhaps make %macros proper just index into other arrays.
 
-# FIX: this data structure is especially HACKY.  Fix after paper deadline...
-my %macros = ();	  # for each macro, list of indexes for info about it
-			  # (first list element is number of following elements)
+my %macros = ();	  # for each macro name, list of indexes for info about it
 
 my %macros_c_undefs = ();	# hashes macro names to the number of times they
 				# are #undef-d
@@ -1069,8 +1067,11 @@ sub process_macro_definition ($$$$)
 
   # initialize all the parallel arrays here,
   # so that we don't have to check the defined-ness later
-  if (!defined($macros{$name}[0])) {
-    $macros{$name}[0] = 0;
+  if (!defined($macros{$name})) {
+    # $macros{$name} = [];  is the same as below
+    # Also remember, @$macros{$names} is different from @{$macros{$names}}
+    #                ^^^^^^^^ assoc array slice           ^^^^^^^^^^^^^^^ ref to array, so @ derefs
+    @{$macros{$name}} = ();
     $macros_uses{$name} = [0,0,0];
     $macros_c_undefs{$name} = 0;
     $macros_used_in_functions{$name} = [];
@@ -1078,10 +1079,9 @@ sub process_macro_definition ($$$$)
   }
 
 
-  $macros{$name}[0] += 1;
-  $macros{$name}[$macros{$name}[0]] = $this_macro_index;
-  # print "def number $macros{$name}[0]:";
-  # for ($i = 1; $i <= $macros{$name}[0]; $i++)
+  push @{$macros{$name}}, $this_macro_index;
+  # print "def number $#{$macros{$name}}:";
+  # for ($i = 0; $i <= $#{$macros{$name}}; $i++)
   #   { print " $macros{$name}[$i]"; }
   # print "\n";
   $mdef_name[$this_macro_index] = $name;
@@ -1119,6 +1119,7 @@ sub process_macro_definition ($$$$)
   # PERLNOTE: be careful not to do
   # $mdef_expansion_uses[$this_macro_index] = ();  ##WRONG
   # you'll get a wierd error message at the point of use
+  # mdef_expansion_uses is a list of references to arrays
   @{$mdef_expansion_uses[$this_macro_index]} = ();
 }
 
@@ -1146,15 +1147,11 @@ sub process_macro_undefinition ($$) {
 sub macro_dependenton ($@)
 {
   my ($macro_name, @dependenton) = check_args_at_least(1, @_);
-  # FIX: This seems wrong, but other retlated uses fail if it
-  # is changed to @{$macros{$macro_name}}, like it probably should be
-  my @indices = @macros{$macro_name};
-  shift(@indices);		# eliminate the count of size
+  my @indices = @{$macros{$macro_name}};
+  #shift(@indices);		# eliminate the count of size
   my @result = ($false);
   # scratch indices, since I must pass in at least one index.
   # (I don't yet know how to pass two arrays.)
-  # ***** problem: this increments the global count.  Probably get rid of
-  # this function and just use that global variable.
   my $extraindexmin = $cMacrosInTables + 10;
   my $extraindexmax = $extraindexmin-1;
   if (@dependenton > 0)
@@ -1169,7 +1166,7 @@ sub macro_dependenton ($@)
       push(@indices, $extraindexmax); }
   # Perhaps use a named loop instead of the gotos.
 MDLOOP:
-  if (@indices == 1)
+  if (scalar(@indices) == 0)
     { @result = @mdef_dependenton[$indices[0]]; # protect from undef below
       goto MDDONE; }
   ## ***** This can't work at all!
@@ -1238,13 +1235,16 @@ sub merge_dependenton ($@)
 sub dependenton_single_difference ($@)
 { my($index, @do2) = check_args_at_least(1, @_);
   my @do1;
+  if (!defined($mdef_dependenton[$index])) {
+    die "Bad ref, mdef_dependenton[ $index ]";
+  }
   @do1 = @{$mdef_dependenton[$index]};
   # Old way to copy array, replaced by the above
   #   # @do1 = @mdef_dependenton[$index];
   #   { my $i;
   #     for $i (0..$mdef_dependenton[$index][0])
   #       { $do1[$i] = $mdef_dependenton[$index][$i]; } }
-  if ((@do2 == 1) && is_num($do2[0]))
+  if ((@do2 == 1) && is_number($do2[0]))
     { @do2 = @mdef_dependenton[$do2[0]]; }
 
   if ($#do1 != $#do2)
@@ -1415,13 +1415,11 @@ sub output_stats ()
   if ($opt_M) {
     my $name;
     select MACROS;
-    # FIX: compute a category for all definitions of the macro, if possible
-    # or give list of categories
     print "#MACROS#: name cDefs cUndefs cCodeUses cMacroUses cCondUses cTotalUses HowUsed Categories InclusionMethods (%functionsThatUseIt)\n";
     foreach $name (sort keys %macros) {
       #print STDERR "MNAME=$name, @{$macros{$name}}\n";
-      my $i = $macros{$name}[1];
-      die "i not defined for $name" if (!defined($i));
+      #my $i = $macros{$name}[1];  #Should this now be 0?
+      #die "i not defined for $name" if (!defined($i));
 
       #next if ($mdef_file[$i] eq $built_in_fake_file);
 
@@ -1437,7 +1435,7 @@ sub output_stats ()
       my $cCondUses = $macros_uses{$name}[$i_usage_cond];
       my $cTotalUses = $cCodeUses + $cMacroUses + $cCondUses;
 
-      print "$name", $macros{$name}[0], $macros_c_undefs{$name},
+      print "$name", $#{$macros{$name}}+1, $macros_c_undefs{$name},
       $cCodeUses, $cMacroUses, $cCondUses, $cTotalUses,
       how_used_from_code_cpp_uses($cCodeUses, $cMacroUses, $cCondUses),
       join(",",CategoriesForMacroName($name)),
@@ -1456,7 +1454,7 @@ sub output_stats ()
     foreach $name (sort keys %macros) {
       # Could also print number of times it's defined.
       my $iDef;
-      for ( $iDef = 1; $iDef <= $macros{$name}[0]; $iDef++ ) {
+      for ( $iDef = 0; $iDef <= $#{$macros{$name}}; $iDef++ ) {
 	my $i = $macros{$name}[$iDef];
 	if ($mdef_file[$i] ne $built_in_fake_file) {
 	  #print STDERR "NAME=$name,", join(", ",@{$macros{$name}}),"\n";
@@ -1520,7 +1518,7 @@ sub output_stats ()
     my $name;
     foreach $name (sort keys %macros) {
       my $iDef;
-      for ($iDef = 1 ; $iDef <= $macros{$name}[0]; $iDef++ ) {
+      for ($iDef = 0 ; $iDef <= $#{$macros{$name}}; $iDef++ ) {
 	my $index = $macros{$name}[$iDef];
 	my $category = $mdef_category[$index];
 	my $type = $mdef_type[$index];
@@ -1583,7 +1581,7 @@ sub CategoriesForMacroName ($) {
   my ($name) = check_args(1,@_);
   my $iDef;
   my @list = ();
-  for ($iDef = 1 ; $iDef <= $macros{$name}[0]; $iDef++ ) {
+  for ($iDef = 0 ; $iDef <= $#{$macros{$name}}; $iDef++ ) {
     my $index = $macros{$name}[$iDef];
     die if !defined($macros{$name});
     die if !defined($macros{$name}[$iDef]);
@@ -1600,7 +1598,7 @@ sub InclusionMethodsForMacroName ($) {
   my ($name) = check_args(1,@_);
   my $iDef;
   my @list = ();
-  for ($iDef = 1 ; $iDef <= $macros{$name}[0]; $iDef++ ) {
+  for ($iDef = 0 ; $iDef <= $#{$macros{$name}}; $iDef++ ) {
     my $index = $macros{$name}[$iDef];
     die if !defined($macros{$name});
     die if !defined($macros{$name}[$iDef]);
@@ -2792,7 +2790,7 @@ sub cpp_merged_branches ()
 			# print "discarding $discarded";
 		      }
 		    my $next_line = peek_fulltoken_line(1);
-		    if ((!defined($next_line)) || ($nextline !~ /^\s*\{/))
+		    if ((!defined($next_line)) || ($next_line !~ /^\s*\{/))
 		      { die "Must have seen an open brace following brances: ", peek_fulltoken_line(1); }
 		    return($parts[0]); } } } } }
 
@@ -3638,7 +3636,7 @@ PROCESSLINE:
 		     # && ((print "found lone typespec, indented=$indented, line=$line\n") ? $true : $true)
 		     && ((!$indented)
 			 && (defined(peek_fulltoken_line(1)))
-			 && (peek_fulltoken_line(1) !~ /^\s*$/))
+			 && ((peek_fulltoken_line(1)) !~ /^\s*$/))
 		     )
 		{ # Definition or declaration (probably of a function)
 		  # split over multiple lines
@@ -3681,7 +3679,7 @@ PROCESSLINE:
 		      { mdie("must be identifier or type declarator: $identifier_or_typedecl"); } }
 		  if ($debug_type_match)
 		    { print "matched type declarator <$typespec><$declarator>\n"; }
-		  # print "maybe matched type declarator <$1><$2><$3><$4><$5><$6><$7><$8><$9> <<", defined($macros{$6}[0]), (defined($macros{$6}[0]) ? (">><<$macros{$6}[0] $macros{$6}[1] |$mdef_name[$macros{$6}[1]]|$mdef_args[$macros{$6}[1]]|$mdef_body[$macros{$6}[1]]|$mdef_file[$macros{$6}[1]]|$mdef_line[$macros{$6}[1]]|") : ""), ">>\n";
+		  # print "maybe matched type declarator <$1><$2><$3><$4><$5><$6><$7><$8><$9> <<", defined($macros{$6}), (defined($macros{$6}) ? (">><<$#{$macros{$6}} $macros{$6}[0] |$mdef_name[$macros{$6}[0]]|$mdef_args[$macros{$6}[0]]|$mdef_body[$macros{$6}[0]]|$mdef_file[$macros{$6}[0]]|$mdef_line[$macros{$6}[0]]|") : ""), ">>\n";
 
 		  # Fallthroughs below depend on the fact that this is the last
 		  # clause in the elsif chain: there's nothing else we would
@@ -3702,7 +3700,7 @@ PROCESSLINE:
 		      # print "rejected declarator $declarator\n";
 		    }
 		  elsif (($nextchar eq "(")
-			 # Implied by "defined($macros{$declarator}[0])"
+			 # Implied by "defined($macros{$declarator}))"
 			 # && ($declarator =~ /^$identifier_re$/o)
 			 && exists($macros{$declarator})
 			 # This test is intended to skip over macros that
@@ -3725,7 +3723,7 @@ PROCESSLINE:
 		      # This isn't quite right if the dependentons aren't
 		      # compatible.
 		      if (exists($macros{$identifier})
-			  && ($macros{$identifier}[0] == 1))
+			  && ($#{$macros{$identifier}} == 0))
 			{ # ... expand macro ...;
 			  # goto PROCESSLINE;
 			}
@@ -4571,7 +4569,7 @@ sub categorize_macro_name ($)
       # Note that accessing $macros{$name}[0] ends up adding $name to the
       # hash %macros, even though the value is undefined.
       return; }
-  my $numdefs = $macros{$name}[0];
+  my $numdefs = $#{$macros{$name}} + 1;
   # if the assertion below gets tripped, it's likely that
   # somewhere we're mistakenly adding to %macros unintentionally
   die "numdefs not defined for $name" if !defined($numdefs);
@@ -4586,7 +4584,7 @@ sub categorize_macro_name ($)
 
   # Categorize each definition body.
   { my $i;
-    for ($i = 1; $i <= $numdefs; $i++)
+    for ($i = 0; $i < $numdefs; $i++)
       { my $mdef_index = $macros{$name}[$i];
 	if (!defined($mdef_category[$mdef_index]))
 	  { categorize_macro_def($mdef_index); }
@@ -4597,7 +4595,7 @@ sub categorize_macro_name ($)
   if ($debug_categorize_macro)
     { my @cat_and_type = ();
       my $i;
-      for ($i = 1; $i <= $numdefs; $i++)
+      for ($i = 0; $i < $numdefs; $i++)
 	{ my $mdef_index = $macros{$name}[$i];
 	  my $this_type = $mdef_type[$mdef_index];
 	  push(@cat_and_type,
@@ -4610,10 +4608,10 @@ sub categorize_macro_name ($)
   # Fix: this isn't quite right; rather than two literal categorizations
   # resulting in another literal categorizations, they should go to "some
   # constant" unless the values are identical.
-  my $type = $mdef_type[$macros{$name}[1]];
-  my $category = $mdef_category[$macros{$name}[1]];
+  my $type = $mdef_type[$macros{$name}[0]];
+  my $category = $mdef_category[$macros{$name}[0]];
   { my $i;
-    for ($i = 2; $i <= $numdefs; $i++)
+    for ($i = 1; $i < $numdefs; $i++)
       { my $mdef_index = $macros{$name}[$i];
 	$category = category_lub($category, $mdef_category[$mdef_index]);
 	# Type is allowed to be undefined; it's ignored for some categories.
@@ -4757,7 +4755,7 @@ sub categorize_macro_def ($)
 	      if (defined($macros{$var}))
 		{ my $varclass;
 		  my $i;
-		  foreach $i ($macros{$var})
+		  foreach $i (@{$macros{$var}})
 		    { if ($mdef_category[$i] == $catNOTYET)
 			{ categorize_macro_def($i); }
 		      if (!defined($varclass))
@@ -4832,7 +4830,7 @@ CATEGORIZED:
 sub is_fun_decl_arg_macro ($)
 { my ($identifier) = check_args(1, @_);
 
-#  print STDERR "is_fun_decl_arg_macro: $identifier $macros{$identifier}[0] ", join(', ',(map {$mdef_args[$macros{$identifier}[$_]]} (1..$macros{$identifier}[0]))), "\n";
+#  print STDERR "is_fun_decl_arg_macro: $identifier $#{$macros{$identifier}} ", join(', ',(map {$mdef_args[$macros{$identifier}[$_]]} (0..$#{$macros{$identifier}}))), "\n";
 
   # don't require only 2 definitions-- require > 1 and
   # check that all definitions
@@ -4841,12 +4839,12 @@ sub is_fun_decl_arg_macro ($)
 
   die "is_fun_decl_arg_macro: $identifier" if (!exists $macros{$identifier});
 
-  # FIX: use @m_i = @{$macros{$identifier}}, to reduce repetitivity
-  my $cMacroDefs = $macros{$identifier}[0];
+  # MNFIX: use @m_i = @{$macros{$identifier}}, to reduce repetitivity
+  my $cMacroDefs = $#{$macros{$identifier}} + 1;
 
   # Check to make sure the macro has multiple
   # definitions-- do this first for speed efficiency
-  if ($cMacroDefs == 1) {
+  if ($cMacroDefs <= 1) {
 #    print STDERR "=> false0\n";
     return $false;
   }
@@ -4855,7 +4853,19 @@ sub is_fun_decl_arg_macro ($)
   my $one_expanded_to_itself = $false;
 
   { my $i;
-    foreach $i (1..$cMacroDefs) {
+    foreach $i (0..($cMacroDefs-1)) {
+      if (!defined($identifier)) {
+	die "identifier not defined";
+      }
+      if (!defined($macros{$identifier})) {
+	die "\$macros{" . $identifier . "} not defined";
+      }
+      if (!defined($macros{$identifier}[$i])) {
+	die "\$macros{" . $identifier . "} not defined, cMacroDefs = $cMacroDefs";
+      }
+      if (!defined($mdef_args[$macros{$identifier}[$i]])) {
+	die "mdef_args of \$macros{" . $identifier . "}[$i] not defined";
+      }
       if (count_macro_args($mdef_args[$macros{$identifier}[$i]]) != 1) {
 	#      print STDERR "=> false1 at $i\n";
 	return $false;
@@ -4899,7 +4909,7 @@ sub is_fun_decl_arg_macro ($)
 sub is_semi_fun_decl_arg_macro ($)
 { my ($identifier) = check_args(1, @_);
 
-#  print STDERR "is_fun_decl_arg_macro: $identifier $macros{$identifier}[0] ", join(', ',(map {$mdef_args[$macros{$identifier}[$_]]} (1..$macros{$identifier}[0]))), "\n";
+#  print STDERR "is_fun_decl_arg_macro: $identifier $#{$macros{$identifier}} ", join(', ',(map {$mdef_args[$macros{$identifier}[$_]]} (0..$#{$macros{$identifier}}))), "\n";
 
   # don't require only 2 definitions-- require > 1 and
   # check that all definitions
@@ -4909,7 +4919,7 @@ sub is_semi_fun_decl_arg_macro ($)
   die "is_fun_decl_arg_macro: $identifier" if (!exists $macros{$identifier});
 
   # FIX: use @m_i = @{$macros{$identifier}}
-  my $cMacroDefs = $macros{$identifier}[0];
+  my $cMacroDefs = @{$macros{$identifier}} + 1;
 
   # Check to make sure the macro has multiple
   # definitions-- do this first for speed efficiency
@@ -4922,7 +4932,7 @@ sub is_semi_fun_decl_arg_macro ($)
   my $one_expanded_to_itself = $false;
 
   { my $i;
-    foreach $i (1..$macros{$identifier}[0]) {
+    foreach $i (0..$#{$macros{$identifier}}) {
       if (count_macro_args($mdef_args[$macros{$identifier}[$i]]) != 1) {
 #      print STDERR "=> false1 at $i\n";
 	return $false;
@@ -4968,7 +4978,7 @@ sub is_void_macro ($)
   die "is_void_macro: $identifier" if (!exists $macros{$identifier});
 
   # FIX: use @m_i = @{$macros{$identifier}}
-  my $cMacroDefs = $macros{$identifier}[0];
+  my $cMacroDefs = $#{$macros{$identifier}} + 1;
 
   # Check to make sure the macro has multiple
   # definitions-- do this first for speed efficiency
@@ -4981,7 +4991,7 @@ sub is_void_macro ($)
   my $one_expanded_to_void = $false;
 
   { my $i;
-    foreach $i (1..$macros{$identifier}[0]) {
+    foreach $i (0..$#{$macros{$identifier}}) {
       my $args = $mdef_args[$macros{$identifier}[$i]];
       my $body = $mdef_body_noc[$macros{$identifier}[$i]];
 
@@ -5456,7 +5466,7 @@ sub initialize_builtin_macros () {
 
   my $mac;
   foreach $mac ((@empty_def_macros,@string_def_macros,@num_def_macros)) {
-    $macros{$mac} = [0];
+    $macros{$mac} = [];
     $macros_uses{$mac} = [0,0,0];
     $macros_c_undefs{$mac} = 0;
     $macros_used_in_functions{$mac} = [];
@@ -5464,11 +5474,12 @@ sub initialize_builtin_macros () {
   }
 
   foreach $mac (@empty_def_macros) {
-    $macros{$mac} = [1,$cBuiltinMacros];
+    $macros{$mac} = [$cBuiltinMacros];
     $mdef_name[$cBuiltinMacros] = $mac;
     $mdef_args[$cBuiltinMacros] = "";
     $mdef_body[$cBuiltinMacros] = " /* Fake built-in null define */";
     $mdef_body_noc[$cBuiltinMacros] = "";
+    $mdef_dependenton[$cBuiltinMacros] = [];
     $mdef_file[$cBuiltinMacros] = $built_in_fake_file;
     $mdef_line[$cBuiltinMacros] = 0;
     $mdef_physical_lines[$cBuiltinMacros] = 0;
@@ -5488,11 +5499,12 @@ sub initialize_builtin_macros () {
   }
 
   foreach $mac (@string_def_macros) {
-    $macros{$mac} = [1,$cBuiltinMacros];
+    $macros{$mac} = [$cBuiltinMacros];
     $mdef_name[$cBuiltinMacros] = $mac;
     $mdef_args[$cBuiltinMacros] = "";
     $mdef_body[$cBuiltinMacros] = "\"\" /* Fake built-in string */";
     $mdef_body_noc[$cBuiltinMacros] = "\"\"";
+    $mdef_dependenton[$cBuiltinMacros] = [];
     $mdef_file[$cBuiltinMacros] = $built_in_fake_file;
     $mdef_line[$cBuiltinMacros] = 0;
     $mdef_physical_lines[$cBuiltinMacros] = 0;
@@ -5504,7 +5516,7 @@ sub initialize_builtin_macros () {
   }
 
   foreach $mac (@num_def_macros) {
-    $macros{$mac} = [1,$cBuiltinMacros];
+    $macros{$mac} = [$cBuiltinMacros];
     $mdef_name[$cBuiltinMacros] = $mac;
     $mdef_args[$cBuiltinMacros] = "";
     $mdef_body[$cBuiltinMacros] = "1 /* Fake built-in number */";
@@ -5732,10 +5744,10 @@ sub compute_macros_used_in_functions () {
 sub mindex_from_name_file_line ($$$) {
   my ($name,$file,$line) = check_args(3, @_);
 
-  my $cDefs = $macros{$name}[0];
-  my $i = 1;
+  my $cDefs = $#{$macros{$name}} + 1;
 
-  while ( $i <= $cDefs ) {
+  my $i = 0;
+  while ( $i < $cDefs ) {
     my $mi = $macros{$name}[$i];
     my $c_phys_lines = $mdef_physical_lines[$mi];
     my $first_phys_line = $mdef_line[$mi];
@@ -6442,7 +6454,7 @@ find_macro_definitions();	# also counts other preprocessor usage
 # Print number of definitions for each macro
 # { my $name;
 #   for $name (sort keys %macros)
-#     { print "$name $macros{$name}[0]\n"; } }
+#     { print "$name $#{$macros{$name}}\n"; } }
 
 if (!$opt_1)
 { if ($opt_v) { print STDERR "done finding macro definitions; now finding macro uses...\n"; }
