@@ -4,4 +4,11 @@
 #define BOD BING
 #define BING foo
 
+
+#define BING(a,b,c)  a a #a
+
+BING(x,y,z)
+
 FOO
+
+
