@@ -75,6 +75,7 @@ sub Startup {
 
 sub Exit {
   my ($retval) = @_;
+  select(STDERR); dump_uses();
   close(TP);
   close(TPSOURCE);
   print MAPPING "))\n";
@@ -90,6 +91,47 @@ sub do_define {
   print CPP "In do_define w/ body = $name_args_body\n";
   print CPP ": $fname [$s_start,$s_end]\n";
   print STDERR ": ParseStateStack: ", join(",",cpp::ParseStateStack()), "\n";
+}
+
+
+sub add_defn {
+  my ($mname,$fname, $s_start, $s_end) = @_;
+  if (!defined($c_definitions{$mname})) {
+    $c_definitions{$mname} = 0;
+  }
+  my $i = $c_definitions{$mname}++;
+  $macro_definitions{$mname}[$i]{'fname'} = $fname;
+  $macro_definitions{$mname}[$i]{'s_start'} = $s_start;
+  $macro_definitions{$mname}[$i]{'s_end'} = $s_end;
+}
+
+sub add_use {
+  my ($mname,$fname, $s_start, $s_end, $expansion) = @_;
+  if (!defined($c_uses{$mname})) {
+    $c_uses{$mname} = 0;
+  }
+  my $i = $c_uses{$mname}++;
+  $macro_uses{$mname}[$i]{'fname'} = $fname;
+  $macro_uses{$mname}[$i]{'s_start'} = $s_start;
+  $macro_uses{$mname}[$i]{'s_end'} = $s_end;
+  $macro_uses{$mname}[$i]{'expn'} = $expansion;
+}
+
+
+sub dump_uses {
+  foreach my $mname (sort keys %macro_definitions) {
+    my $cUses = $c_uses{$mname};
+    $cUses = 0 if !defined($cUses);
+    print "$mname has $cUses uses\n";
+    for (my $i = 0; $i < $cUses; $i++ ) {
+      my $hashref = $macro_uses{$mname}[$i];
+      my $fname = $hashref->{'fname'};
+      my $s_start = $hashref->{'s_start'};
+      my $s_end = $hashref->{'s_end'};
+      my $expn = $hashref->{'expn'};
+      print "$i : $fname:[$s_start:$s_end] -> $expn\n";
+    }
+  }
 }
 
 sub handle_directive {
@@ -119,9 +161,10 @@ sub create_def {
   }
   print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'doc \"$mname defined\")\n";
   push @{$macro_name{$mname}{defs}}, [ $fname, $s_start,$s_end ];
+  add_defn($mname,$fname,$s_start,$s_end);
   @{$macro_name{$mname}{currdef}} = ( $fname, $s_start,$s_end );
   if (!FIsDeclAllowable()) {
-    annotate_definition('xform',"Parse stack may not be appropriate for a declaration",$mname,$s_start,$s_end);
+    annotate_definition('xform',"Parse stack may not be appropriate for a declaration",$mname,$fname,$s_start,$s_end);
     print STDERR ":**BETTER NOT CHANGE THIS TO A DECL!\n";
   }
   select $old;
@@ -174,8 +217,9 @@ sub do_undef {
 
 sub pre_do_undef {
   my ($s_start,$s_end,$mname) = @_;
+  my $fname = cpp::Fname();
   print CPP "pre_do_undef of $mname [$s_start,$s_end]\n";
-  annotate_definition_with_undef('doc',$mname,$s_start,$s_end);
+  annotate_definition_with_undef($mname,$fname,$s_start,$s_end);
 }
 
 sub delete_def {
@@ -216,16 +260,16 @@ sub macro_arg_exp  {
 }
 
 sub annotate_definition {
-  my ($prop, $message, $mname, $s, $e) = @_;
+  my ($prop, $message, $mname, $fname, $s, $e) = @_;
   my ($fnamedef, $s_start, $s_end) = @{$macro_name{$mname}{currdef}};
-  my $fname = cpp::Fname();
-  print STDERR "\"$mname\"\n";
+  print STDERR "\"$mname\" from $fnamedef, $s_start:$s_end\n";
   print TPSOURCE "#$fnamedef:(add-text-property $s_start $s_end \'$prop \"$message at $fname:$s,$e\")\n";
 }
 
 
 sub annotate_definition_with_use {
-  annotate_definition('use',"Use",@_);
+  my $expansion = shift @_;
+  annotate_definition('use',"Use ($expansion)",@_);
 }
 
 sub annotate_definition_with_undef {
@@ -246,7 +290,8 @@ sub expand_macro {
   my $cbuffersBack;
   my $fname = cpp::Fname();
   my $old = select;
-  annotate_definition_with_use($mname,$s_start,$s_end);
+  annotate_definition_with_use($expansion,$mname,$fname,$s_start,$s_end);
+  add_use($mname,$fname,$s_start,$s_end,$expansion);
   select CPP;
 
   print "\nexpand_macro $mname = ", cpp::ExpansionLookup($mname), ", source offset: $s_start - $s_end, $cbuffersDeep [$has_escapes]; ", 
@@ -323,6 +368,7 @@ sub do_elif {
   my ($conditional, $skipped, $fSkipping) = @_;
   print CPP "do_elif_eval on $conditional ($skipped), ", !$fSkipping?"Not ":"", "skipped\n";
 }
+
 sub do_xifdef {
   my ($kind,$conditional, $trailing_garbage, $skipped, $fSkipping, $s_start) = @_;
   my $fname = cpp::Fname();
@@ -355,11 +401,17 @@ sub do_ifndef {
 }
 
 sub do_else {
-  my ($orig_conditional, $trailing_garbage, $skipped, $fSkipping) = @_;
+  my ($orig_conditional, $trailing_garbage, $skipped, $fSkipping, $s_start) = @_;
+  my $s_end = cpp::CchOffset() + 1;
   print CPP "do_else (orig conditional was $orig_conditional) [$trailing_garbage] ($skipped), ",
   !$fSkipping?"Not ":"", "skipped\n";
   @state_stack = cpp::ParseStateStack();
   print CPP ": Stack: @state_stack\n";
+  my $fname = cpp::Fname();
+  if ($fSkipping) {
+    print TPSOURCE "#$fname:(put-face-property-if-none $s_start $s_end \'font-lock-reference-face)\n";
+    print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'doc \"Skipped due to else of $orig_conditional\")\n";
+  }
 }
 
 sub do_endif {
