@@ -163,8 +163,7 @@ cat c-files-listing | $0 -i -d ~/macros/data/stable:pkgname
 #  * do type inference for macro arguments, type lookup for globals and functions.
 # 	This entails checking for free variables and more.
 #  * find all non-dependent macros -- including those mentioned in #if lines.
-#  *  (maybe
-# 	do this automatically by reading lots of standard header files?
+#       (maybe do this automatically by reading lots of standard header files?
 # 	Then note which header files have been read so we don't reread them.)
 #  * check for side effects in macros (eg, function calls in an argumentless
 # 	macro probably prevent it from being turned into a const, unless
@@ -707,12 +706,14 @@ my @mdef_physical_lines;
 my @mdef_physical_ncnb_lines;
 my @mdef_freefuns;
 my @mdef_direct_inclusion_dependenton;		# cpp conditions, not just symbols
-my @mdef_direct_expansion_uses;	# direct expansion uses (symbols in expansion)
+my @mdef_direct_expansion_uses;	# direct expansion uses (symbols in body/expansion)
 my @mdef_category;
 my @mdef_type;			# a C type, like UINT; not always meaningful
 my @mdef_properties;
 my @mdef_free_vars;		# comma-separated list of variable names
 my @mdef_evilness;
+
+my %file_direct_inclusion_dependenton;
 
 # These are for aggregate information -- that is, information about a macro
 # gleaned by combining information about all its definitions.
@@ -1912,37 +1913,40 @@ sub getline_handle_preprocessor_command ($$$$$)
 	  parse_error("Bad argument to #include: $cpp_cmd_arg\n");
 	  # Just fall through if one of the OK-to-ignore includes
 	} else {
-	  my $angled_include = $false;
+	  my $angled_include;
 	  my $include_file;
 	  if (defined($1)) {
 	    $angled_include = $true;
 	    $include_file = $1;
 	  } else {
+	    $angled_include = $false;
 	    $include_file = $2;
 	  }
 	  my $complete_filename = complete_include_pathname($include_file, $angled_include);
 	  if (!defined($complete_filename))
 	    { # FIX:  make complete_include_pathname work when $angled_include
 	      # is false, and then restore this (and eliminate the "else"...)
-	      # mdie("Can't resolve include file $include_file");
+	      mdie("Can't resolve include file $include_file");
 	    }
-	  else {
-	    # Check to see if we're already reading this file anyway
-	    # if we resolved the filename to a real file,
-	    # and we've not already added the file to our list we need to parse
-	    if (scalar(grep($_ eq $complete_filename, @files_included)) == 0) {
-	      # FIX: may want to insert this where we are
-	      # or do some sort of recursive reading of *all* included files
-	      # WEIRD: Why does this cause a problem in parsing a macro argument
-	      #      when I use @files instead of @files_included
-	      if (!forbidden_file($complete_filename))
-		{ push @files, $complete_filename;
-		  push @files_included, $complete_filename;
-		  $file_inclusion_method{$complete_filename} = "FromInclude" .
-		    ($angled_include? "<>" : '""');
-		  # print STDERR "Adding \"$complete_filename\" as $file_inclusion_method{$complete_filename}\n";
-		}
-	    }
+
+	  # ***** Add file dependence here *****
+
+
+	  # Check to see if we're already reading this file anyway
+	  # if we resolved the filename to a real file,
+	  # and we've not already added the file to our list we need to parse
+	  if (scalar(grep($_ eq $complete_filename, @files_included)) == 0) {
+	    # FIX: may want to insert this where we are
+	    # or do some sort of recursive reading of *all* included files
+	    # WEIRD: Why does this cause a problem in parsing a macro argument
+	    #      when I use @files instead of @files_included
+	    if (!forbidden_file($complete_filename))
+	      { push @files, $complete_filename;
+		push @files_included, $complete_filename;
+		$file_inclusion_method{$complete_filename} = "FromInclude" .
+		  ($angled_include? "<>" : '""');
+		# print STDERR "Adding \"$complete_filename\" as $file_inclusion_method{$complete_filename}\n";
+	      }
 	  }
 	}
       }
@@ -4922,8 +4926,8 @@ sub get_macro_properties ($)
 		|| exists($typedefs{$var})
 		|| ($var =~ /^$reserved_word_re$/)
 		|| ($body =~ /(\.|->|\bstruct|\bunion)\s*$var\b/)
-		|| ($body =~ /\b$var\s*\*\s*\)/)
-		|| ($body =~ /\b$var\s*\(/))
+		|| ($body =~ /\b\Q$var\E\s*(\*\s*)+\)/)
+		|| ($body =~ /\b\Q$var\E\s*\(/))
 	      { delete $vars{$var}; } }
 	if (scalar(keys %vars) > 0)
 	  { my $body_remaining = $body;
@@ -5383,39 +5387,6 @@ sub initialize_builtin_macros () {
   return;
 }
 
-## Should not be called any longer.
-# # Returns the index in the mdef arrays where the info is stored.
-# sub introduce_builtin_mdef ($mac)
-# {
-#   my ($mac) = check_args(1, @_);
-#   croak "Shouldn't call introduce_builtin_mdef";
-#   my $index = 0;
-# #  my $index = $cBuiltinMacros;
-# #  $cBuiltinMacros++;
-# 
-#   introduce_new_macro($mac);
-#   $macros{$mac} = [$index];
-#   $mdef_name[$index] = $mac;
-#   $mdef_formals[$index] = "";
-#   $mdef_direct_inclusion_dependenton[$index] = [];
-#   $mdef_file[$index] = $built_in_fake_file;
-#   $mdef_line[$index] = 0;
-#   $mdef_physical_lines[$index] = 0;
-#   $mdef_category[$index] = $catNOT_YET;
-# 
-#   $mdef_direct_expansion_uses[$index] = [];
-# 
-#   # FIX: initialize all the mdef_XXX arrays
-#   #    $mdef_physical_ncnb_lines[$index] = 0;
-#   #    $mdef_physical_dependenton[$index] = 0;
-#   #    $mdef_physical_expansion_uses[$index] = 0;
-#   #    $mdef_physical_type[$index] = 0;
-#   #    $mdef_physical_category[$index] = 0;
-#   #    $mdef_physical_evilness[$index] = 0;
-# 
-#   return $index;
-# }
-
 # analyze_for_macro_use($spliced_line)
 # looks for macros in $spliced_line (which is simplified) and saves the file,line#
 
@@ -5557,7 +5528,8 @@ sub words_in ($)
   # \W+ is probably more efficient than \b for the split criterion.
   # Without this, we can get an empty first component.
   $text =~ s/^\W+//;
-  return split(/\W+/,$text);
+  # \W+ in place of char class is wrong:  $ may appear in identifier.
+  return split(/[^a-zA-Z0-9_\$]+/,$text);
 }
 
 sub identifiers_in ($)
@@ -5787,9 +5759,15 @@ sub update_categories_for ($$) {
 sub get_include_path () {
   check_args(0, @_);
   @include_path = (
+		   # Platform-independent
 		   "/usr/local/include",
+		   # Linux
 		   "/usr/local/.contrib/gcc-2.7.2/i586-unknown-linux/include",
 		   "/usr/local/.contrib/gcc-2.7.2/lib/gcc-lib/i586-unknown-linux/2.7.2/include",
+		   # Solaris
+		   "/usr/local/sparc-sun-solaris2.5/include",
+		   "/usr/local/lib/gcc-lib/sparc-sun-solaris2.5/2.7.2.f.1/include",
+		   # Platform-independent
 		   "/usr/include",
 #FIX: Should I include "."?  If so, then we have to be careful about
 # multiple inclusions of header files in the project, since they will
@@ -6403,11 +6381,11 @@ if ($opt_g)
 $fDebugCmdProcessing && print "ARGV = @ARGV";
 
 # Add the rest of the arguments to the files list
-{ foreach my $file (@ARGV) {
-    if (!forbidden_file($file))
-      { push @files,$file;
-	$file_inclusion_method{$file} = "FromCmdLine"; }
-  } }
+foreach my $file (@ARGV) {
+  if (!forbidden_file($file))
+    { push @files,$file;
+      $file_inclusion_method{$file} = "FromCmdLine"; }
+}
 
 get_include_path();
 initialize_builtin_macros();
