@@ -831,12 +831,12 @@ void print_caret(char *s, int pos)
 
     fputs("^\n",stderr);
 }
- 
+
 /***********************************************************************/
 
 void ct_yywarn(char *s)
 {
-    fprintf(stderr,"%s:%d: Warning - %s:\n%s",
+    fprintf(stderr,"%s%s:%d: Warning - %s:\n%s",SzIsSpeculative(),
          Parse_TOS->filename, Parse_TOS->yylineno, s, line_buf); 
     print_caret(line_buf,Parse_TOS->yycolno);
 }
@@ -845,10 +845,13 @@ void ct_yywarn(char *s)
 
 int ct_yyerr(char *s)
 {
-    fprintf(stderr,"%s:%d: %s:\n%s",
+    fprintf(stderr,"%s%s:%d: %s:\n%s",SzIsSpeculative(),
          Parse_TOS->filename, Parse_TOS->yylineno, s, line_buf); 
     print_caret(line_buf,Parse_TOS->yycolno);
 
+    if (FIsSpeculative()) {
+	return 0;
+    }	
     if (++err_cnt >= 10){
         fprintf(stderr,"Too many errors (%d detected) - quitting.\n",
                 err_cnt );
@@ -864,11 +867,14 @@ int ct_yyerror(char *s)
 {
         /* Insure temination */
     line_buf[MAX_TOKN_LEN-1] = '\0';
-    fprintf(stderr,"%s:%d: Parse error before '%s'\n%s",
+    fprintf(stderr,"%s%s:%d: Parse error before '%s'\n%s",SzIsSpeculative(),
          Parse_TOS->filename, Parse_TOS->yylineno, toksym(err_tok,0),
          line_buf); 
     print_caret(line_buf,Parse_TOS->yycolno);
 
+    if (FIsSpeculative()) {
+	return 0;
+    }	
     if (++err_cnt >= 10){
         fprintf(stderr,"Too many errors (%d detected) - quitting.\n",
                 err_cnt );
