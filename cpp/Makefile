@@ -229,7 +229,9 @@ PCP3_SOURCES := lexer.l gram.y pcpp.c pcpp.h cpplib.c cpplib.h cpphook.c cpphook
 		version.c backcalls.xs bison-stack.c bison-stack.h \
 		ct-heap.c ct-nmetab.c ct-prnttree.c \
 		ct-symtab.c ct-token.c  ct-tree.c \
-		ct-tree_stk.c
+		ct-tree_stk.c globals.h heap.h identify.h macro.h nmetab.h \
+		tree.h tree_stk.h utype.h token.h prnttree.h ct-config.h \
+		perly-undefs.h
 
 CT_GRAMMAR_OBJECTS := lexer.o gram.tab.o ct-heap.o ct-nmetab.o ct-prnttree.o ct-symtab.o ct-token.o ct-tree.o ct-tree_stk.o
 
@@ -242,10 +244,27 @@ SD_OBJECTS = scan-decls.o cpplib.o cpphash.o cppalloc.o cpperror.o cppexp.o vers
 
 all: pcp3 paper/backcalls.tex paper/pcp3-hooks.tex
 
+
+alllines: lines ctlines cpplines pcplines
+
 lines:	$(PCP3_SOURCES) cpphook.pm
 	wc -l $^ > lines
 	(echo "Backcalls:"; grep '\\backcall{' backcalls.xs | wc -l ) >> lines
 	(echo "Hooks:"; grep '\\hook{' paper/pcp3-hooks.tex | wc -l ) >> lines
+
+ctlines: lexer.l gram.y ct-heap.c ct-nmetab.c ct-prnttree.c \
+		ct-symtab.c ct-token.c ct-tree.c \
+		ct-tree_stk.c \
+		tree.h tree_stk.h utype.h token.h prnttree.h ct-config.h
+	cat $^ | c-remove-comments -s | wc -l > $@
+
+cpplines: cpplib.c cpplib.h cpphash.c cpphash.h cppalloc.c cpperror.c cppexp.c \
+		version.c  perly-undefs.h
+	cat $^ | c-remove-comments -s | wc -l > $@
+
+pcplines: bison-stack.c bison-stack.h  pcpp.c pcpp.h cpphook.c cpphook.h
+	cat $^ | c-remove-comments -s | wc -l > $@
+
 
 
 # Making the preprocessor/parser
