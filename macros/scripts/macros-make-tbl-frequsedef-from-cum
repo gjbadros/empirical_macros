@@ -47,15 +47,18 @@ foreach $file (@files) {
   print STDERR "pkg_total = $total{$pkg}", "\n" if $fDebug;
 
   my $i = 0;
+#  print STDERR $file, "\n";
   foreach $line (@buckets) {
     my $n = $total{$pkg};
     while (<IN>) {
+      last if /^Category:/;
       if (defined($_)) {
 	chop;
 	($bucket,$n) = split;
 	last if $bucket == $line;
       }
     }
+    last if /^Category:/;
     if (!defined($column{"<total>"}[$i])) {
       $column{"<total>"}[$i] = 0;
     }
