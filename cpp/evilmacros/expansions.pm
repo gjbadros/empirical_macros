@@ -62,7 +62,7 @@ sub Startup {
   open(TYPES,">$prefix.types") || die "Cannot open $prefix.types: $!";
   open(EXPAND,">$prefix.exps") || die "Cannot open $prefix.exps: $!";
 #  open(EXP_CL,">$prefix.expcl") || die "Cannot open $prefix.expcl: $!";
-  open(TOKEN,">$prefix.tokens") || die "Could not open $prefix.tokens: $!";
+#  open(TOKEN,">$prefix.tokens") || die "Could not open $prefix.tokens: $!";
   open(FUNCTIONS,">$prefix.funcs") || die "Cannot open $prefix.funcs: $!";
   print STDERR "STARTUP...\n";
   $| = 1; # Turn on autoflush
@@ -291,11 +291,13 @@ sub do_include {
 #  print "Was working on: ", pcp3::Fname(), "\n";
   my $retval = $true;
   if (exists $already_included{$file_as_resolved}) {
-    return false;
+    return $false;
   }
   # Mark the file as included in the expansions list
   my $fname = $file_as_resolved;
-  print EXPAND "$fname: FILE_IS_BEING_INCLUDED_GJB_MDE, -1, -1\n";
+  if ($fname !~ /^@/) { #ignore @NOTFOUND@ or @REDUNDANT_INCLUDE@ values
+    print EXPAND "$fname: FILE_IS_BEING_INCLUDED_GJB_MDE, -1, -1\n";
+  }
   $already_included{$file_as_resolved} = $true;
   return $retval;
 }
@@ -504,7 +506,7 @@ AddHook("PRE_DO_UNDEF",\&pre_do_undef);
 #AddHook("CPP_OUT",\&cpp_out);
 AddHook("EXPAND_MACRO",\&expand_macro);
 #AddHook("MACARG_EXP",\&macro_arg_exp);
-AddHook("MACRO_CLEANUP",\&macro_cleanup);
+#AddHook("MACRO_CLEANUP",\&macro_cleanup);
 #AddHook("IFDEF_MACRO",\&ifdef_macro);
 #AddHook("IFDEF_LOOKUP_MACRO",\&ifdef_lookup_macro);
 #AddHook("SPECIAL_SYMBOL",\&special_symbol);
@@ -522,10 +524,10 @@ AddHook("DO_ENDIF",\&do_endif);
 #AddHook("INCLUDE_FILE",\&include_file);
 #AddHook("DONE_INCLUDE_FILE",\&done_include_file);
 AddHook("EXIT",\&Exit);
-AddHook("TOKEN",\&Got_token);
+#AddHook("TOKEN",\&Got_token);
 #AddHook("TOKEN",\&Got_token2);
-AddHook("FUNCTION",\&do_function);
-AddHook("FUNC_PROTO",\&do_func_proto);
+#AddHook("FUNCTION",\&do_function);
+#AddHook("FUNC_PROTO",\&do_func_proto);
 #AddHook("FUNC_CALL",\&do_func_call);
 #AddHook("ANNOTATE",\&annotate);
 #AddHook("POP_BUFFER",\&pop_buffer);
