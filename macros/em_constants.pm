@@ -6,7 +6,7 @@ require Exporter;
 @ISA = qw(Exporter);
 # Use below line to generate the @EXPORT line
 #perl -ne 'BEGIN {print "\@EXPORT = qw("; } END {print ");\n";} print "$1 " if /([$%@]\w+)\s+/'
-@EXPORT = qw($true $false $OBSOLETE $DANGER $EVIL $ILLEGAL $catNOTYET $catINPROCESS $catMULTIPLE $catNULLDEFINE $catEXP $catEXPASSIGN $catEXPFREE $catLITERAL $catCONSTANT $catSOMECONSTANT $catFAILURE $catHASTYPEARG $catMACROFUN $catMACROTYPE $catUSESTYPEARG $catASM $catSYNTAX $catTYPE $catRESDWORD $catSTATEMENT $catRECURSIVE $catMISMATCH $catPASTING $catSTRINGIZE @categoryname $typeFAIL $typeBOOL $typeCHAR $typeUCHAR $typeSCHAR $typeSHORT $typeUSHORT $typeINT $typeUINT $typeLONG $typeULONG $typeFLOAT $typeDOUBLE $typeLDOUBLE $typeSTRING $typeNUMBER $typeUNKNOWN $typeUNSPECIFIED %type_num @type_name_array $c_ftype @ftype_ALL %InclusionMethod_to_Index $ftype_HEADER_Start $ftype_NONHEADER_Start @ftype_CODE @ftype_HEAD @ftype_NOT_INCLUDED @ftype_INCLUDED @ftype_NONHEADER_NOT_INCLUDED @ftype_NONHEADER_INCLUDED @ftype_HEADER_NOT_INCLUDED @ftype_HEADER_INCLUDED $built_in_fake_file $i_usage_code $i_usage_macro $i_usage_cond @i_usage_all);
+@EXPORT = qw($true $false $OBSOLETE $DANGER $EVIL $ILLEGAL $catNOTYET $catINPROCESS $catNODEF $catMULTIPLE $catNULLDEFINE $catEXP $catEXPASSIGN $catEXPFREE $catLITERAL $catCONSTANT $catSOMECONSTANT $catFAILURE $catHASTYPEARG $catMACROFUN $catMACROTYPE $catUSESTYPEARG $catASM $catSYNTAX $catTYPE $catRESDWORD $catSTATEMENT $catRECURSIVE $catMISMATCH $catPASTING $catSTRINGIZE @categoryname $typeFAIL $typeBOOL $typeCHAR $typeUCHAR $typeSCHAR $typeSHORT $typeUSHORT $typeINT $typeUINT $typeLONG $typeULONG $typeFLOAT $typeDOUBLE $typeLDOUBLE $typeSTRING $typeNUMBER $typeUNKNOWN $typeUNSPECIFIED $typeNODEF %type_num @type_name_array $c_ftype @ftype_ALL %InclusionMethod_to_Index $ftype_HEADER_Start $ftype_NONHEADER_Start @ftype_CODE @ftype_HEAD @ftype_NOT_INCLUDED @ftype_INCLUDED @ftype_NONHEADER_NOT_INCLUDED @ftype_NONHEADER_INCLUDED @ftype_HEADER_NOT_INCLUDED @ftype_HEADER_INCLUDED $built_in_fake_file $i_usage_code $i_usage_macro $i_usage_cond @i_usage_all);
 
 ###########################################################################
 ### Constants
@@ -52,38 +52,39 @@ $ILLEGAL = 4;
 
 $catNOTYET = 0;		# shouldn't be used; should be undefined instead
 $catINPROCESS = 1;
-$catMULTIPLE = 2;
-$catNULLDEFINE = 3;
+$catNODEF = 2;
+$catMULTIPLE = 3;
+$catNULLDEFINE = 4;
 # Expressions
-$catEXP = 4;
-$catEXPASSIGN = 5;
-$catEXPFREE = 6;		# expression with free variables
-$catLITERAL = 7;		# also specify the literal value
-$catCONSTANT = 8;		# need to also specify the particular value, if possible
-$catSOMECONSTANT = 9;	# a constant, but not known which (e.g., multiple #defines)
+$catEXP = 5;
+$catEXPASSIGN = 6;
+$catEXPFREE = 7;		# expression with free variables
+$catLITERAL = 8;		# also specify the literal value
+$catCONSTANT = 9;		# need to also specify the particular value, if possible
+$catSOMECONSTANT = 10;	# a constant, but not known which (e.g., multiple #defines)
 # Non-expressions
-$catFAILURE = 10;		# shouldn't have just one, should have many
-$catHASTYPEARG = 11;		# macro argument has a type
+$catFAILURE = 11;		# shouldn't have just one, should have many
+$catHASTYPEARG = 12;		# macro argument has a type
 # These shouldn't be failures
-$catMACROFUN = 12;
-$catMACROTYPE = 13;
-$catUSESTYPEARG = 14;
+$catMACROFUN = 13;
+$catMACROTYPE = 14;
+$catUSESTYPEARG = 15;
 
 # New categories -- higher numbers take precedence over lower ones
 # Be sure to keep in sync w/ strings of @categoryname
-$catASM = 15;
-$catSYNTAX = 16;		# this goes along with MISMATCH, sort of
-$catTYPE = 17;
-$catRESDWORD  = 18;
-$catSTATEMENT = 19;  # STATEMENT-s likely contain reserved words, but are more specific
-$catRECURSIVE = 20;
-$catMISMATCH  = 21;
-$catPASTING   = 22;
-$catSTRINGIZE = 23;
+$catASM = 16;
+$catSYNTAX = 17;		# this goes along with MISMATCH, sort of
+$catTYPE = 18;
+$catRESDWORD  = 19;
+$catSTATEMENT = 20;  # STATEMENT-s likely contain reserved words, but are more specific
+$catRECURSIVE = 21;
+$catMISMATCH  = 22;
+$catPASTING   = 23;
+$catSTRINGIZE = 24;
 
 
 @categoryname = (
-		    'uncategorized', 'being_categorized',
+		    'uncategorized', 'being_categorized', 'never_defined',
 		    'multiply_categorized', 'null_define',
 		    'expression', 'expression_with_assignment',
 		    'expression_with_free_variables',
@@ -99,6 +100,7 @@ $catSTRINGIZE = 23;
 		    'token_pasting',
 		    'stringization',
 		   );
+
 
 ###########################################################################
 ### Types
@@ -124,6 +126,7 @@ $typeSTRING = 14;
 $typeNUMBER = 15;
 $typeUNKNOWN = 16;		# we know it's some type, but don't know which
 $typeUNSPECIFIED = 17;		# declared w/o a type (e.g., as function arg)
+$typeNODEF = 18;		# no definition (symbol inferred to be macro)
 
 %type_num = ('short' => $typeSHORT, 'short int' => $typeSHORT,
 		'signed short' => $typeSHORT, 'signed short int' => $typeSHORT,
@@ -142,15 +145,17 @@ $typeUNSPECIFIED = 17;		# declared w/o a type (e.g., as function arg)
 		'char *' => $typeSTRING, 'char*' => $typeSTRING);
 
 @type_name_array = ('typeFAIL', 'bool',
-		       'char', 'unsigned char', 'signed char',
-		       'short', 'unsigned short',
-		       'int', 'unsigned int',
-		       'long', 'unsigned long',
-		       'float', 'double', 'long double',
-		       'char *',
-		       'typeNUMBER',
-		       'typeUNKNOWN',
-		       'typeUNSPECIFIED');
+		    'char', 'unsigned char', 'signed char',
+		    'short', 'unsigned short',
+		    'int', 'unsigned int',
+		    'long', 'unsigned long',
+		    'float', 'double', 'long double',
+		    'char *',
+		    'typeNUMBER',
+		    'typeUNKNOWN',
+		    'typeUNSPECIFIED',
+		    'typeNODEFINITION'
+		    );
 
 
 ## Five different kinds of line counts that we care about are:

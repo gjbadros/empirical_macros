@@ -6,8 +6,9 @@ require Exporter;
 @ISA = qw(Exporter);
 @EXPORT = qw(get_spliced_cline get_spliced_cline_maybe_ungot get_fulltoken_cline
 	     peek_fulltoken_cline
+	     cline_simplify
 	     cline_resetinvars cline_ungot_string cline_ungot_size cline_ungot_phys_lines
-	     $cline_simplify $debug_cline);
+	     $cline_simplify_strings $debug_cline);
 use checkargs;
 use strict;
 use Carp;
@@ -27,7 +28,8 @@ cline -- Read physical, logical, or full-token lines from C program files
   cline_ungot_string()
   cline_ungot_size()
   cline_ungot_phys_lines()
-  $cline_simplify
+  cline_simplify(line)
+  $cline_simplify_strings
   $debug_cline
 
 =head1 DESCRIPTION
@@ -73,8 +75,9 @@ my $false = (1 == 0);
 my $char_literal_contents_re = '(\\\\?.|\\\\[0-7]{3})';
 my $non_escaped_double_quote_re = '(^|[^\\\\])(\\\\\\\\)*\"';
 
-my $cline_incomment = $false;		# in /* */ style comment
-my $cline_instring = $false;
+use vars qw($cline_incomment $cline_instring);
+$cline_incomment = $false;		# in /* */ style comment
+$cline_instring = $false;
 
 sub cline_resetinvars ()
 {
@@ -125,13 +128,13 @@ sub cline_ungot_phys_lines ()
 ### Exported
 
 # Don't declare with "my" because can be dynamically bound
-use vars qw($cline_simplify $debug_cline);
+use vars qw($cline_simplify_strings $debug_cline);
 
 $debug_cline = $false;
-# If $cline_simplify is set, then character and string literals are
+# If $cline_simplify_strings is set, then character and string literals are
 #   replaced by 'a' and "" respectively.  That lets us do a simple
 #   syntactic check for parens, braces, commas, etc.
-$cline_simplify = $false;
+$cline_simplify_strings = $false;
 
 
 ###########################################################################
@@ -146,7 +149,7 @@ $cline_simplify = $false;
 
 # Returns: (simplified string, num_ncnb_lines)
 #  * The simple result contains no comments, and its strings and character
-#    constants have been simplified if $cline_simplify (which see) is true.
+#    constants have been simplified if $cline_simplify_strings (which see) is true.
 # cline_updateinvars is called only by get_spliced_cline at present, but could
 #   conceivably be called by others, particularly to aid in removing comments
 #   or string/character literals.
@@ -156,9 +159,10 @@ sub cline_updateinvars ($)
   my ($remaining) = check_args(1, @_);
   my $result = "";
   my $seen_ncnb = 0;		# not a boolean, but 0 or 1 (like a boolean)
+  my $simple_char = "'~'";	# not 'a' because we'd identify it as a macro
 
   if ($debug_cline)
-    { print "cline_updateinvars ($cline_simplify): $remaining\n"; }
+    { print "cline_updateinvars ($cline_simplify_strings): $remaining\n"; }
 
   if ($remaining =~ /\n./)
     { die "Call cline_updateinvars on a physical line, not one with embedded newline"; }
@@ -176,7 +180,7 @@ sub cline_updateinvars ($)
 	  if ($remaining =~ m/$non_escaped_double_quote_re/o)
 	    # Found a non-escaped double quote
 	    { # print "non-escaped double quote: $result|$remaining|$PREMATCH|$MATCH|$POSTMATCH\n";
-	      if ($cline_simplify)
+	      if ($cline_simplify_strings)
 		{ $result .= "\""; }
 	      else
 		{ $result .= $PREMATCH . $MATCH; }
@@ -186,7 +190,7 @@ sub cline_updateinvars ($)
 	      $cline_instring = $false; }
 	  else
 	    { # print "$current_file:", current_line_no(), ": in string after line $_[0]";
-	      if (!$cline_simplify)
+	      if (!$cline_simplify_strings)
 		{ if ($debug_cline)
 		    { print "not simplifying; appending '$remaining'\n"; }
 		  $result .= $remaining; }
@@ -199,8 +203,8 @@ sub cline_updateinvars ($)
 	  $result .= $PREMATCH;
 	  if ($match eq "\'")
 	    { if ($postmatch =~ m/^$char_literal_contents_re\'/o)
-		{ if ($cline_simplify)
-		    { $result .= "'a'"; }
+		{ if ($cline_simplify_strings)
+		    { $result .= $simple_char; }
 		  else
 		    { $result .= "'" . $MATCH; }
 		  $remaining = $POSTMATCH; }
@@ -208,8 +212,8 @@ sub cline_updateinvars ($)
                 # No newline, since $_[0] has one.
 		{ evilprint("illegal: bad character constant $match" . add_newline($postmatch) . "    in $_[0]");
 		  if ($postmatch =~ /\'/)
-		    { if ($cline_simplify)
-			{ $result .= "'a'"; }
+		    { if ($cline_simplify_strings)
+			{ $result .= $simple_char; }
 		      else
 			{ $result .= "'" . $MATCH; }
 		      $remaining = $POSTMATCH; }
@@ -251,6 +255,21 @@ sub cline_updateinvars ($)
 }
 
 
+# Special-purpose variant of cline_updateinvars that removes comments,
+# simplifies strings.
+sub cline_simplify ($)
+{
+  my ($arg) = check_args(1, @_);
+
+  local $cline_incomment = $false;
+  local $cline_instring = $false;
+  local $cline_simplify_strings = $true;
+
+  my ($result, $seen_ncnb) = cline_updateinvars($arg);
+  return $result;
+}
+
+
 ###########################################################################
 ### Copied from em_analyze
 ###
@@ -278,7 +297,7 @@ sub append_lines ($$)
 #  * The raw result contains explicit backslash-newline combinations; callers
 #    should remove them if desired.
 #  * The simple result contains no comments, and its strings and character
-#    constants have been simplified if $cline_simplify (which see) is true.
+#    constants have been simplified if $cline_simplify_strings (which see) is true.
 # Always reads directly from input, never from ungotlines.
 # Optional argument $cpp_comment is true if we are in a "CPP comment" -- that
 #   is, in "#if 0", in the else part of "#if 1", or similar.  This prevents
@@ -305,7 +324,7 @@ sub get_spliced_cline ($;$)
       if (substr($raw_line, -1) eq "\\")
 	{ evilprint("evil: file ends with backslash (no newline)\n");
 	  # What is the point of this test?  I added $true to front.
-	  if ($true || !($cline_incomment || ($cline_instring && $cline_simplify)))
+	  if ($true || !($cline_incomment || ($cline_instring && $cline_simplify_strings)))
 	    { if (substr($simple_line, -1) ne "\\")
 		{ die "Didn't find backslash-nonewline where there must be one: '$simple_line'\n"; }
 	      $simple_line = substr($simple_line, 0, length($simple_line)-1); }
@@ -315,7 +334,7 @@ sub get_spliced_cline ($;$)
 	{ if (substr($raw_line, -2) ne "\\\n")
 	    { die "Didn't find backslash-newline where there must be one: '$raw_line'\n"; }
 	  # What is the point of this test?  I added $true to front.
-	  if ($true || !($cline_incomment || ($cline_instring && $cline_simplify)))
+	  if ($true || !($cline_incomment || ($cline_instring && $cline_simplify_strings)))
 	    { if (substr($simple_line, -2) ne "\\\n")
 		{ die "Didn't find backslash-nonewline where there must be one: '$simple_line'\n"; }
 	      $simple_line = substr($simple_line, 0, length($simple_line)-2); }
@@ -342,7 +361,7 @@ sub get_spliced_cline ($;$)
 	} }
 
   # Remove the filename in #include <foo.h>, which act like quotes.
-  if ($cline_simplify && ($simple_line =~ /^(\s*\#\s*include\s+<).*>\s*$/))
+  if ($cline_simplify_strings && ($simple_line =~ /^(\s*\#\s*include\s+<).*>\s*$/))
     { $simple_line = $1 . ">\n"; }
 
   # $raw_line and $simple_line end in newline
@@ -384,7 +403,7 @@ sub get_spliced_cline_maybe_ungot ($;$)
 #  * The raw result contains explicit backslash-newline combinations; callers
 #    should remove them if desired.
 #  * The simple result contains no comments, and its strings and character
-#    constants have been simplified if $cline_simplify (which see) is true.
+#    constants have been simplified if $cline_simplify_strings (which see) is true.
 #  * The string results end with newline.
 # If calls to peek_fulltoken_line have been made, those strings are returned.
 # To simplify an arbitrary string, use cline_updateinvars.
@@ -400,7 +419,7 @@ sub get_fulltoken_cline ($;$)
   if ($cline_instring || $cline_incomment)
     { mdie("Bad instring $cline_instring or incomment $cline_incomment"); }
 
-  # print "Called get_fulltoken_line ($cline_simplify)\n";
+  # print "Called get_fulltoken_line ($cline_simplify_strings)\n";
 
   if ((@cline_ungot_raw_lines > 0) && !$peeking)
     { # print "popping cline_ungot_raw_lines $cline_ungot_raw_lines[$#cline_ungot_raw_lines]  cline_ungot_simple_lines $cline_ungot_simple_lines[$#cline_ungot_simple_lines]"; # no newline: it ends with one
@@ -468,7 +487,7 @@ sub get_fulltoken_cline ($;$)
 #  * The raw result contains explicit backslash-newline combinations; callers
 #    should remove them if desired.
 #  * The simple result contains no comments, and its strings and character
-#    constants have been simplified if $cline_simplify (which see) is true.
+#    constants have been simplified if $cline_simplify_strings (which see) is true.
 #  * The string results end in newline.
 sub peek_fulltoken_cline ($$)
 {
