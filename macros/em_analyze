@@ -26,7 +26,7 @@
 
 
 # FIX: I want to use '-$' like cpp does, not '-l'; how to do this?
-my $getopts_option_letters = 'ihvtIAaue1pTlg:d:E:P:n:F:';
+my $getopts_option_letters = 'ihvtIAaue1pTlg:d:E:P:n:F:M';
 
 # Remove the asterisks below when the options are known to the users.
 sub usage ( ) {
@@ -57,6 +57,7 @@ New options marked with *; options with ':', above, take an argument
 	This permits use of customized library header files.
 * -F [directory] Use the fast version of modules in [directory]
      (this just puts the directory ahead of the other dirs in @INC for Perl)
+  -M Provide (lots of) additional memory debugging output to stderr
 
 (Note: -{E,P} options take precedence over the -d option)
 
@@ -773,7 +774,7 @@ my $compute_transitive_dependence_info = $true;
 ## Command-line processing; add to $getopts_option_letters if you change this
 # Are these in any order?
 use vars qw($opt_i $opt_I $opt_h $opt_v $opt_t $opt_d $opt_l
-	    $opt_E $opt_P $opt_p $opt_n $opt_F
+	    $opt_E $opt_P $opt_p $opt_n $opt_F $opt_M
 	    $opt_u $opt_e $opt_1 $opt_A $opt_a $opt_g $opt_T);
 my $fIgnoreIncludes = $false;
 
@@ -6316,7 +6317,6 @@ sub complete_include_pathname ( $$$ ) {
     return ($true,$complete_file);
   }
 
-
   # NOTE: this is just like a if ($system) block, above
   if (!$system) {
     $complete_file = look_in_path_for_filename( $file );
@@ -7159,8 +7159,10 @@ for my $name (keys %macros)
 
 if (!$opt_1)
 { if ($opt_v) { print STDERR "done with that loop; now finding macro uses...\n"; }
+  dumpallvars() if $opt_M;
   if ($compute_transitive_dependence_info)
     { compute_transitive_dependences(); }
+  dumpallvars() if $opt_M;
   ## This is pass 2 over the input files
   process_macro_calls();
 }
@@ -7208,12 +7210,50 @@ select(PARSE_ERRS); $| = 1; print PARSE_ERRS "\n";
 # # close(EVIL);
 # # close(PARSE_ERRS);
 
+dumpallvars() if $opt_M;
 save_variables(extra_state_file_name($statename), @extra_state_file_vars);
 print STDERR "Save macro analysis state\n";
 SaveMacroAnalysisState($statename);
 print STDERR "Successful completion!\n";
+dumpallvars() if $opt_M;
 
 exit();
+
+use Devel::Peek 'Dump','DumpArray';
+use Devel::Symdump;
+sub dumpallvars {
+  my $old = select STDERR;
+  print "-=-=-=-=-=-=-=-=-=-=-=-=-=-\n";
+  no strict 'refs';
+  my $obj = Devel::Symdump->rnew;
+  my @vars = $obj->scalars;
+  foreach my $v (@vars) {
+    print "\$", $v, "\n";
+    Dump($$v);
+    print "---------";
+  }
+  @vars = $obj->arrays;
+  foreach my $v (@vars) {
+    print "\@", $v, "\n";
+    Dump(\@$v);
+    print "---------";
+  }
+  @vars = $obj->hashes;
+  foreach my $v (@vars) {
+    print "\%", $v, "\n";
+    Dump(\%$v);
+    print "---------";
+  }
+  # Do not even think about changing the below line! :-) --gjb
+  @vars = split(/\n/,`perl <$0 -ne \'if (/^my ([\\\$\\\@\\\%]\\w+)/) { print \$1, "\\n"; };\'`);
+  foreach my $v (@vars) {
+    my $evalstr = "Dump(\\$v);";
+    print $v, "\n";
+    eval $evalstr;
+    print "---------";
+  }
+  select $old;
+}
 
 ### Local Variables:
 ### page-delimiter: "^#################################################*\n"
