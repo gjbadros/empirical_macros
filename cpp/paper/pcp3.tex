@@ -1,0 +1,86 @@
+%-------------------------------------------------------------------------
+%  paper.tex -- The basic outline of the paper, includes all the sections
+%
+%   $Id$
+%-------------------------------------------------------------------------
+
+
+\documentclass{article}
+\usepackage{fullpage}
+%\usepackage{fancybox}
+\usepackage{graphicx}
+\usepackage{rotating}
+\usepackage{lscape}
+
+\newcommand{\file}[1]{{\small \texttt{#1}}}
+\newcommand{\email}[1]{{\small \texttt{#1}}}
+\newcommand{\program}[1]{{\small \texttt{#1}}}
+\newcommand{\syscall}[1]{{\textsf{#1}}}
+\newcommand{\sectionref}[1]{section \ref{#1}, on page \pageref{#1}}
+\newcommand{\pcp}{\mbox{\textsf{PCP}$^3$}}
+
+\title{\pcp{}: A C Front End for \\ Preprocessor Analysis and Transformation}
+\author{Greg J. Badros%
+  \thanks{Supported by a National Science Foundation
+    Graduate Fellowship. Any opinions, findings, conclusions, or
+    recommendations expressed in this publication are those of the
+    author, and do not necessarily reflect the views of the National
+    Science Foundation.}
+  }
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\end{abstract}
+
+\bigskip
+
+% Introduction, including problem statement, goals, etc
+\section{Introduction}
+\label{sec:intro}
+
+% Background
+\section{Background}
+\label{sec:background}
+
+% PCP^3
+\section{The \pcp{} Infrastructure}
+\label{sec:pcp3}
+
+% Benchmarks, results, etc.
+\section{Results}
+\label{sec:results}
+
+% Summary & Future work
+\section{Related Work}
+\label{sec:related}
+
+% Summary & Future work
+\section{Summary and Future Work}
+\label{sec:summary}
+
+\appendix
+
+\section{Hooks called by \pcp}
+\label{sec:hooks}
+
+\section{Subroutines provided by \pcp}
+\label{sec:backcalls}
+
+% References
+\newpage
+
+\nocite{ARM}
+\nocite{Stroustrup97}
+\nocite{Stroustrup94}
+
+\bibliographystyle{alpha}
+\bibliography{library}
+
+\end{document}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: t
+%%% End: 
