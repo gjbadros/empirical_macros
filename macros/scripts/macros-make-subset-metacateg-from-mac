@@ -38,7 +38,6 @@ BEGIN {
   make_mapping_for($i++,@mcat_STATEMENT);
   make_mapping_for($i++,@mcat_TYPE);
   make_mapping_for($i++,@mcat_SYNTAX);
-  make_mapping_for($i++,@mcat_RECURSIVE);
   make_mapping_for($i++,@mcat_NON_C_CODE);
   make_mapping_for($i++,@mcat_SYMBOL_UNKNOWN);
   make_mapping_for($i++,@mcat_OTHER);

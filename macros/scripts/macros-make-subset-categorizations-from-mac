@@ -58,8 +58,6 @@ BEGIN {
 		      'macro_as_type' => $i++,
 		      'uses_type_argument' => $i++,
 
-		      'recursive' => $i++,
-
 		      'LAST' =>$i++
 		     );
   my $lastargv = "";
