@@ -216,7 +216,9 @@ my $hex_literal_re = '(0x[0-9a-fA-F]+)([uUlL]?[uUlL]?)';
 my $dec_oct_literal_re = '(\d+)([uUlL]?[uUlL]?)';
 
 # Character and string literals
-my $char_literal_contents_re = '(\\\\?.|\\\\[0-7]{1,3})';
+# NOTE: GJB changed the below to {1,3}, but ANSI requires exactly 3 --
+# will just evilprint an error.  Changed back to 3
+my $char_literal_contents_re = '(\\\\?.|\\\\[0-7]{3})';
 my $char_literal_re = "L?'" . $char_literal_contents_re . "'";
 my $non_escaped_double_quote_re = '(^|[^\\\\])(\\\\\\\\)*\"';
 # non-greedy '.*?' because '.*' matches too much, skips over intervening quotes
@@ -583,13 +585,19 @@ my @rg_cppcmdcounts = { "define" => 0 } x $c_ft;
 
 my $cpp_cmds;			# total preprocessor commands
 my $cpp_cmds_ni;		# total preprocessor commands
+my $cpp_cmds_h;
+my $cpp_cmds_h_ni;
+my $cpp_cmds_c;
+my $cpp_cmds_c_ni;
 
 # Initialize cppcmdcount{"define"} so that we don't get uninitialized values
 # when we try processing the macros (in case there were no macros)
 my %cppcmdcount = (); # number of uses of each cpp command
 # cppcmdcount_ni is like cppcmdcount, but only for files listed on cmd line
 # ni == "not includes"
-my %cppcmdcount_ni = (); # number of uses of each cpp command
+my %cppcmdcount_ni = (); # number of uses of each cpp command, NI
+my %cppcmdcount_h_ni = (); # number of uses of each cpp command, header NI
+my %cppcmdcount_c_ni = (); # number of uses of each cpp command, code NI
 
 
 my $symtab_scopes = 0;		# the number of scopes, less the global scope
@@ -1013,6 +1021,28 @@ sub output_stats
     sum_array(@rg_cp_phys_lines[@ft_NOT_INCLUDED]);
   my $cpp_physical_code_lines_ni =
     sum_array(@rg_cp_phys_code_lines[@ft_NOT_INCLUDED]);  
+
+  my $logical_lines_h_ni = 
+    sum_array(@rg_logl_lines[@ft_HEAD_NOT_INCLUDED]);
+  my $physical_lines_h_ni =
+    sum_array(@rg_phys_lines[@ft_HEAD_NOT_INCLUDED]);
+  my $ncnb_physical_lines_h_ni =
+    sum_array(@rg_ncnb_lines[@ft_HEAD_NOT_INCLUDED]);
+  my $cpp_physical_lines_h_ni =
+    sum_array(@rg_cp_phys_lines[@ft_HEAD_NOT_INCLUDED]);
+  my $cpp_physical_code_lines_h_ni =
+    sum_array(@rg_cp_phys_code_lines[@ft_HEAD_NOT_INCLUDED]);  
+
+  my $logical_lines_c_ni = 
+    sum_array(@rg_logl_lines[@ft_CODE_NOT_INCLUDED]);
+  my $physical_lines_c_ni =
+    sum_array(@rg_phys_lines[@ft_CODE_NOT_INCLUDED]);
+  my $ncnb_physical_lines_c_ni =
+    sum_array(@rg_ncnb_lines[@ft_CODE_NOT_INCLUDED]);
+  my $cpp_physical_lines_c_ni =
+    sum_array(@rg_cp_phys_lines[@ft_CODE_NOT_INCLUDED]);
+  my $cpp_physical_code_lines_c_ni =
+    sum_array(@rg_cp_phys_code_lines[@ft_CODE_NOT_INCLUDED]);  
   
   if ($logical_lines == 0) {
     print STDERR "No lines read! Perhaps you meant to use the -i option?\n";
@@ -1049,24 +1079,73 @@ sub output_stats
       printf STATS "%2.2f ", pct2($v,$physical_lines_ni);
     }
     print STATS "\n";
+
+
+
+    printf STATS "#DIRECTIVES_CNI#: ";
+    while ( ($h,$v) = each(%cppcmdcount_c_ni) ) {
+      print STATS "$h ";
+    }
+    print STATS "\n";
+    printf STATS "DIRECTIVES_CNI: ";
+    while ( ($h,$v) = each(%cppcmdcount_c_ni) ) {
+      print STATS "$v ";
+    }
+    print STATS "\n";
+    print STATS "DIRECTIVES_CNI%LL: ";
+    while ( ($h,$v) = each(%cppcmdcount_c_ni) ) {
+      printf STATS "%2.2f ", pct2($v,$logical_lines_c_ni);
+    }
+    print STATS "\n";
+
+    print STATS "DIRECTIVES_CNI%NCNB: ";
+    while ( ($h,$v) = each(%cppcmdcount_c_ni) ) {
+      printf STATS "%2.2f ", pct2($v,$ncnb_physical_lines_c_ni);
+    }
+    print STATS "\n";
+
+    print STATS "DIRECTIVES_CNI%PHYS: ";
+    while ( ($h,$v) = each(%cppcmdcount_c_ni) ) {
+      printf STATS "%2.2f ", pct2($v,$physical_lines_c_ni);
+    }
+    print STATS "\n";
+
+
+
+    printf STATS "#DIRECTIVES_HNI#: ";
+    while ( ($h,$v) = each(%cppcmdcount_h_ni) ) {
+      print STATS "$h ";
+    }
+    print STATS "\n";
+    printf STATS "DIRECTIVES_HNI: ";
+    while ( ($h,$v) = each(%cppcmdcount_h_ni) ) {
+      print STATS "$v ";
+    }
+    print STATS "\n";
+    print STATS "DIRECTIVES_HNI%LL: ";
+    while ( ($h,$v) = each(%cppcmdcount_h_ni) ) {
+      printf STATS "%2.2f ", pct2($v,$logical_lines_h_ni);
+    }
+    print STATS "\n";
+
+    print STATS "DIRECTIVES_HNI%NCNB: ";
+    while ( ($h,$v) = each(%cppcmdcount_h_ni) ) {
+      printf STATS "%2.2f ", pct2($v,$ncnb_physical_lines_h_ni);
+    }
+    print STATS "\n";
+
+    print STATS "DIRECTIVES_HNI%PHYS: ";
+    while ( ($h,$v) = each(%cppcmdcount_h_ni) ) {
+      printf STATS "%2.2f ", pct2($v,$physical_lines_h_ni);
+    }
+    print STATS "\n";
+
+
     
     print STATS "#LINES#: physical logical ncnb_phys cpp_phys cpp_phys_code\n";
     print STATS "$physical_lines $logical_lines $ncnb_physical_lines $cpp_physical_lines $cpp_physical_code_lines\n";
     print STATS "#LINESNI#: physical logical ncnb_phys cpp_phys cpp_phys_code\n";
     print STATS "$physical_lines_ni $logical_lines_ni $ncnb_physical_lines_ni $cpp_physical_lines_ni $cpp_physical_code_lines_ni\n";
-    # printf STATS "EVILSTATS: $cObsoleted obsoleted (%2.2f%), $cDanger dangerous (%2.2f%), $cEvil evil (%2.2f%), $cIllegal illegal (%2.2f%)\n",
-    # pct($cObsoleted), pct($cDanger), pct($cEvil), pct($cIllegal);
-    
-    # Show categorization
-    #print STATS "CATEGORIZATION:";
-    #my $catname;
-    #foreach $catname (@categoryname) {
-    #  print STATS "\t$catname"; 
-    #}
-    #print STATS "\n";
-    ##print STATS "CATEGORIZATION#:";
-    # Need to count up total numbers for each categorization.
-    # print STATS "CATEGORIZATION: $cppcmdcount{"define"} $cNullDefine $cPreventMI $cSimpleConstant $cSimpleConstantWithDefault $cSimpleStrConstant $cCastedConstant $cSimpleExpression $cWithNullArgs $cWithArgs $cUncategorized\n";
     print STATS "\n";
   }
   
@@ -4072,6 +4151,12 @@ sub compute_global_cpp_sums {
   
   $cpp_cmds = sum_array(@rg_cpp_cmds[@ft_ALL]);
   $cpp_cmds_ni = sum_array(@rg_cpp_cmds[@ft_NOT_INCLUDED]);
+
+  $cpp_cmds_c = sum_array(@rg_cpp_cmds[@ft_CODE]);
+  $cpp_cmds_c_ni = sum_array(@rg_cpp_cmds[@ft_CODE_NOT_INCLUDED]);
+
+  $cpp_cmds_h = sum_array(@rg_cpp_cmds[@ft_HEAD]);
+  $cpp_cmds_h_ni = sum_array(@rg_cpp_cmds[@ft_HEAD_NOT_INCLUDED]);
   
   my $hashref;
   my $key;
@@ -4091,16 +4176,32 @@ sub compute_global_cpp_sums {
   }
 
   foreach $hashref (@rg_cppcmdcounts[@ft_NOT_INCLUDED]) {
-    #  for (;  $i < $#rg_cppcmdcounts; $i++) {
-    #    foreach $key (keys %{$rg_cppcmdcounts[$i]}) {
     foreach $key (keys %{$hashref}) {
       if (!defined($cppcmdcount_ni{$key})) {
 	$cppcmdcount_ni{$key} = 0;
       }
       $cppcmdcount_ni{$key} += $ {$hashref}{$key};
-      #print STDERR "KEY=$key, adding ", $ {$hashref}{$key}, "\n";
     }
   }
+
+  foreach $hashref (@rg_cppcmdcounts[@ft_CODE_NOT_INCLUDED]) {
+    foreach $key (keys %{$hashref}) {
+      if (!defined($cppcmdcount_c_ni{$key})) {
+	$cppcmdcount_c_ni{$key} = 0;
+      }
+      $cppcmdcount_c_ni{$key} += $ {$hashref}{$key};
+    }
+  }
+
+  foreach $hashref (@rg_cppcmdcounts[@ft_HEAD_NOT_INCLUDED]) {
+    foreach $key (keys %{$hashref}) {
+      if (!defined($cppcmdcount_h_ni{$key})) {
+	$cppcmdcount_h_ni{$key} = 0;
+      }
+      $cppcmdcount_h_ni{$key} += $ {$hashref}{$key};
+    }
+  }
+
 }
 
   
