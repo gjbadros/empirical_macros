@@ -379,7 +379,7 @@ sub get_spliced_cline ($;$)
 	    { $simple_line = append_lines($simple_line, $next_simple_line); }
 	  if ($next_raw_line =~ m/^\s*$/)
 	    { # $next_raw_line is blank.  $raw_line has no newline.
-	      push(@{$warnings}, "dangerous: blank line follows continuation character:\n    $raw_line\n"); }
+	      push(@{$warnings}, "dangerous: blank line follows continuation character\n"); }
 	} }
 
   # Remove the filename in #include <foo.h>, which act like quotes.
