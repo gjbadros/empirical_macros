@@ -720,6 +720,8 @@ int CchOffset_internal(cpp_reader *pfile);
 
 int CbuffersDeep(cpp_reader *pfile);
 
+void cpp_print_file_and_line (cpp_reader *pfile);
+
 #ifdef __cplusplus
 }
 #endif

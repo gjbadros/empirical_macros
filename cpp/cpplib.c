@@ -30,6 +30,7 @@ Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  You are forbidden to forbid anyone else to use, share and improve
  what you give them.   Help stamp out software-hoarding!  */
 
+#include "pcpp.h"
 #include <string.h>
 #include <unistd.h>
 #include <assert.h>
@@ -1979,9 +1980,14 @@ cpp_pop_buffer (cpp_reader *pfile, cpp_expand_info *pcei)
 #ifdef STATIC_BUFFERS
   (*buf->cleanup) (buf, pfile, pcei);
   gjb_call_hooks_i(CPP_OPTIONS(pfile),HI_POP_BUFFER,CbuffersDeep(pfile)-1);
-  if (buf->fFromPerl)
+  if (buf->fFromPerl) {
     gjb_call_hooks_i(CPP_OPTIONS(pfile),HI_POP_PERL_BUFFER,CbuffersDeep(pfile)-1);
-  return ++CPP_BUFFER (pfile);
+  }
+  ++CPP_BUFFER (pfile);
+  if (buf->fFromPerl) {
+     pfile->only_seen_white = 1;
+  }
+  return CPP_BUFFER(pfile);
 #else
   cpp_buffer *next_buf = CPP_PREV_BUFFER (buf);
   next_buf->prior_args = buf->args;
@@ -6789,7 +6795,23 @@ cpp_handle_options (pfile, argc, argv)
 	opts->in_fname = argv[i];
     } else {
       switch (argv[i][1]) {
-
+      case '-':
+	if (strcmp(argv[i]+2,"yydebug") == 0)
+	  ct_yydebug = 1;
+	else if (strcmp(argv[i]+2,"noyydebug") == 0)
+	  ct_yydebug = 0;
+	else if (strcmp(argv[i]+2,"noparse") == 0)
+	  fShouldParse = 0;
+	else if (strcmp(argv[i]+2,"hooks") == 0)
+	  {
+	  if (i + 1 == argc)
+	    fatal ("Filename missing after `%s' option", argv[i]);
+	  szHooksFile = argv[i+1];
+	  i++;
+	  }
+	else 
+	  fatal("Unrecognized option after --",0);
+	break;
       case 'q':
 	opts->fWarnMissingHooks = FALSE;
 	break;
@@ -7820,8 +7842,7 @@ cpp_read_check_assertion (cpp_reader *pfile)
 }
 
 void
-cpp_print_file_and_line (pfile)
-     cpp_reader *pfile;
+cpp_print_file_and_line (cpp_reader *pfile)
 {
   cpp_buffer *ip = cpp_file_buffer (pfile);
 
