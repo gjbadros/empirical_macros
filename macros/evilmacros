@@ -216,7 +216,7 @@ my $hex_literal_re = '(0x[0-9a-fA-F]+)([uUlL]?[uUlL]?)';
 my $dec_oct_literal_re = '(\d+)([uUlL]?[uUlL]?)';
 
 # Character and string literals
-my $char_literal_contents_re = '(\\\\?.|\\\\[0-7][0-7][0-7])';
+my $char_literal_contents_re = '(\\\\?.|\\\\[0-7]{1,3})';
 my $char_literal_re = "L?'" . $char_literal_contents_re . "'";
 my $non_escaped_double_quote_re = '(^|[^\\\\])(\\\\\\\\)*\"';
 # non-greedy '.*?' because '.*' matches too much, skips over intervening quotes
@@ -1696,8 +1696,12 @@ sub getline_handle_preprocessor_line
       $line = $POSTMATCH;
       $line =~ s/\s+$//;	# remove trailing whitespace
       return getline_handle_preprocessor_command($cpp_cmd, $line); }
+  elsif ($line =~ m/^\#\s*\d+\s*\".*\"\s*$/) 
+    { #FIX: should we count these
+      evilprint("File might be preprocessor's output--line marker found at $current_file:" . current_line_no() . "\n");
+    }
   else
-    { mdie("Strange preprocessor line $line"); }
+    { mdie("Strange preprocessor line |$line|"); }
 }
 
 # This is a catchall for everything that has to be done to a preprocessor line.
@@ -2306,7 +2310,8 @@ sub parse_function_decl_args
   # definition or declaration, so perhaps pass that information in.
   # Disambiguate later.
   # print "looking for type or type declarator in $text\n";
-  while ($text =~ /^\s*(($type_declarator_re)|($type_re))\s*[,\)]/o)
+  # GJBCHANGE: added \.\.\. for ellipses
+  while ($text =~ /^\s*(($type_declarator_re)|($type_re)|(\.\.\.))\s*[,\)]/o)
     { push(@arg_decls, $1);
       $text = $POSTMATCH;
       if (substr($MATCH, -1) eq "\)")
@@ -3696,7 +3701,8 @@ sub check_macro_body
 # Still use regular die for real fatal errors
 sub mdie {
   my ($msg) = check_args_at_least(1,"mdie",caller,@_);
-  print STDERR "$current_file:@{[ current_line_no() ]}: ", @_, "\n";
+  my ($file,$line) = (caller)[1,2];
+  print STDERR "$file:$line on $current_file:@{[ current_line_no() ]}: ", @_, "\n";
   exit -1;
 }
 
@@ -4314,7 +4320,7 @@ if ($opt_d) {
 }
 
 if ($opt_E) { open(EVIL,">$opt_E") || die "Failed opening $opt_E"; }
-  else { open(EVIL,">-") || die "Failed opening stdout!"; }
+  elsif (!$opt_d) { open(EVIL,">-") || die "Failed opening stdout!"; }
 if ($opt_S) { open(STATS,">$opt_S") || die "Failed opening $opt_S"; }
 if ($opt_F) { open(FUNCTIONS,">$opt_F") || die "Failed opening $opt_F"; }
 if ($opt_D) { open(DEFINES,">$opt_D") || die "Failed opening $opt_D"; }
