@@ -11,6 +11,7 @@ PKG=$1; shift
 FLAGS=($*)
 cd $PKG
 
+(echo "\nmacros-make-data-analyze starting..."; date) >> failures 
 for i in *(/); do 
   echo $i
   pushd $i
@@ -20,3 +21,4 @@ for i in *(/); do
          (cd ..; echo $i >> failures)
   popd
 done
+(echo "macros-make-data-analyze done!"; date) >> failures
