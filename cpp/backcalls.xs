@@ -323,6 +323,26 @@ PushBuffer($buffer_to_push)
 	}
 	cpp_push_buffer(&parse_in,szBuf,len,1 /* FROM PERL */);
 
+###%\backcall{}{EnterScope}{}
+###% Enters a new scoping level; useful in combination
+###% with PushBuffer() for causing code to be parsed without
+###% affecting the current symbol table directly.
+void
+EnterScope()
+	PPCODE:
+	enter_scope(ParseStack->contxt);
+
+
+###%\backcall{}{ExitScope}{}
+###% Exits the current scoping level; useful in combination
+###% with PushBuffer() for causing code to be parsed without
+###% affecting the current symbol table directly.
+void
+ExitScope()
+	PPCODE:
+	exit_scope(ParseStack->contxt);
+
+
 
 ###%\backcall{}{SetParseDebugging}{}
 ###% Set the yydebug flag to TRUE for the underlying parser.
