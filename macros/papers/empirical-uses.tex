@@ -2,6 +2,7 @@
 % macros-paper.tex
 \documentclass[11pt]{article}
 \usepackage{epsfig}
+\usepackage{dcolumn}
 
 % the "fullpage" package does almost the same thing
 % as the below lines-- it doesn't make things quite as
@@ -29,7 +30,6 @@
 \title{An Empirical Analysis of C Preprocessor Use}
 
 \author{Michael Ernst%
-  \thanks{Email addresses: \{{\tt mernst},{\tt gjb},{\tt notkin}\}{\tt @cs.washington.edu}}
   \and Greg J. Badros%
   \thanks{Supported by a National Science Foundation
     Graduate Fellowship. Any opinions, findings, conclusions, or
@@ -38,11 +38,11 @@
     Science Foundation.}
   \and David Notkin}
 
-\date{Department of Computer
-Science and Engineering\\
-University of Washington\\
-Box 352350\\
-Seattle, WA  98195-2350  USA\\
+\date{Department of Computer Science and Engineering \\
+University of Washington \\
+Box 352350 \\
+Seattle, WA  98195-2350  USA \\
+{\small \{{\tt mernst},{\tt gjb},{\tt notkin}\}{\tt @cs.washington.edu}} \\
 \today}  
 
 \maketitle
@@ -62,7 +62,7 @@ Seattle, WA  98195-2350  USA\\
   between C functions and their use of macros, and the macros that are
   difficult to express in terms of other C or C++ language features.  We
   report on the analysis, in particular illustrating data that are
-  material when considering the development of tools for C or C++.  The
+  material to the development of tools for C or C++.  The
   results (and the supporting framework) lay the foundation for
   developing a tool to reduce usage of the preprocessor by translating
   from C to C++.
@@ -74,18 +74,16 @@ Seattle, WA  98195-2350  USA\\
 \section{Introduction}
 
 The C programming language~\cite{ansi} is intimately connected to its macro
-preprocessor, Cpp~\cite[Ch.3]{Harbison91}.  In a sense C is not a complete
-programming language without the preprocessor, which supplies essential 
-facilities such as
-file inclusion, defining constants and macros, and conditional compilation
-which are present in essentially every C program.   
+preprocessor, Cpp~\cite[Ch.~3]{Harbison91}.  In a sense C is not a complete
+programming language without the preprocessor, which supplies essential
+facilities such as file inclusion, defining constants and macros, and
+conditional compilation which are present in essentially every C program.
 While the preprocessor can be used in simple or well-structured ways to
-improve portability, performance, or readability, it also lends itself to 
+improve portability, performance, or readability, it also lends itself to
 arbitrary source code manipulations that complicate understanding of the
-program by both software engineers and tools.
-This relationship
-between the C language and the preprocessor has a number of consequences,
-many of which were probably not anticipated by the original designers.
+program by both software engineers and tools.  This relationship between
+the C language and the preprocessor has a number of consequences, many of
+which were probably not anticipated by the original designers.
 
 Stroustrup puts the consequences of this relationship in perspective:
 \begin{quote}
@@ -330,27 +328,22 @@ conveyed is about the program as a whole.
 \section{Occurrence of Preprocessor Directives}
 \label{sec:directives}
 
-The first question we asked was simple: how often do
-preprocessor directives appear in C programs?
-Figure~\ref{fig:directives_per_ncnb} shows the data for the packages we
-analyzed.  Each group of bars in the figure represents the percentage of
-NCNB lines attributed to the specified category of directives, with each
-individual bar showing the percentage for a specific package (the NCNB
-line count is shown in the legend with the package name).  Conditional
-compilation directives are grouped together, as are ``other'' directives.
+Figure~\ref{fig:directives_per_ncnb} shows how often preprocessor
+directives appear in the programs we analyzed.  Each group of bars in the
+figure represents the percentage of NCNB lines attributed to the specified
+category of directives, with each individual bar showing the percentage for
+a specific package (the NCNB line count is shown in the legend with the
+package name).  Conditional compilation directives are grouped together, as
+are ``other'' directives (such as {\tt \#error} and {\tt \#pragma}).  These
+numbers do not include Cpp directives discovered in system header files,
+only in files included in the package.\footnote{Only
+  Figures~\ref{fig:use_count} and~\ref{fig:define_usage}, which relate to
+  macro expansion rather than macro definition or general preprocesor
+  usage, include macros defined in system files --- though even in those
+  figures, only expansions in user code, not in system headers, are counted.}
 
-%The figure contains six rows, *****
-%There are five rows in the figure, each of which has a
-%separate bar for each of the packages we analyzed.  The topmost row
-%shows the total percentage of lines in the package that represent
-%preprocessor directives.  The rows below the topmost one show the
-%percentage of lines in the package attributed to a subset of
-%preprocessor directives: (a) {\tt #undef} is the next row down, (b)
-%{\tt \#include} is the next row down, (c) {\tt \#define} is the next
-%row down, (d) the conditional compilation directives ({\tt \#ifdef},
-%{\tt \#ifndef}, {\tt \#if}, {\tt \#endif}, {\tt \#else}, and
-%{\tt \#elif}) are combined into a single group shown in the next row,
-%and (e) any other directives in the bottom row. 
+% Conditional compilation =  ({\tt \#ifdef},
+% {\tt \#ifndef}, {\tt \#if}, {\tt \#endif}, {\tt \#else}, and {\tt \#elif})
 
 \begin{figure}
 \centerline{\epsfig{file=directives-per-line.eps}}
@@ -361,36 +354,91 @@ compilation directives are grouped together, as are ``other'' directives.
 \label{fig:directives_per_ncnb}
 \end{figure}
 
-Perhaps the most surprising information here is the percentage of the
-NCNB program lines that are preprocessor directives: the number varies
-by about a factor of five across packages.  About one third of the
-packages have directives for over 10\% of their lines, and about one
-out of eight exceed 20\%.  On average, conditional compilation
-directives account for just under half (47.4\%) of the total
-directives in all packages, {\tt \#define}s account for another
-29.5\%, {\tt \#include}s account for 18.9\%, and the other directives
-are in the noise.
-The percentage of {\tt \#define}s varies by a factor of 14
-across the packages, {\tt \#include}s by a factor of 25, and
-conditional compilation directives by a factor of about 16.
-
-Figure~\ref{fig:total_directives} shows the percentage of the total
-directive count attributed to each category of directives.  One
-noticeable outlying point is the ``other'' directives of the flex
-package; this is accounted for by its aggressive use of the
-{\tt \#line} directive; the {\tt \#line} directive accounts for most of the
-``other'' directives for groff and gawk as well.  Flex is also unusual in
-its very low percentage (0.4\% of NCNB lines) of {\tt \#include}s; zsh and 
-rcs share this characteristic, with percentages of 0.4\% and 0.3\%
-respectively.  The percentages of {\#include} with respect to total
-preprocessor directives (shown in Figure~\ref{fig:total_directives}) is
-about 4\% for flex and rcs and about 6\% for zsh.
+The percentage of NCNB program lines that are preprocessor directives
+varies by about a factor of five across packages.  Half of the packages
+have directives for over 8\% of their lines, and one in eight exceed 20\%,
+indicating quite heavy use of the preprocessor.
 
 \begin{figure}
 \centerline{\epsfig{file=directives-breakdown.eps}}
 \caption{Type of directive as a fraction of total directives.}
 \label{fig:total_directives}
 \end{figure}
+
+Figure~\ref{fig:total_directives} presents the same data arranged by
+package, to show the percentage of the total directive count attributed to
+each category of directives.
+On average, conditional compilation directives account
+for just under half (47\%) of the total directives in all packages, {\tt
+\#define}s account for another 30\%, {\tt \#include}s account for 19\%,
+and the other directives are in the noise.  The percentage of {\tt
+\#define}s varies by a factor of 14 across the packages, {\tt \#include}s
+by a factor of 25, and conditional compilation directives by a factor of
+about 16.
+
+
+\subsection{Packages with heavy preprocessor use}
+
+glibc, gzip, remind, and bash use the preprocessor most; the first three
+have preprocessor directives as over 20\% of NCNB lines.
+
+glibc's heavy preprocessor use is largely accounted for by {\tt \#include}
+directives.  Its files average just 42 NCNB lines each, and most contain
+several {\tt \#include} directives.  Of the 1684 files, 182 are header files
+consisting of a single {\tt \#include} line, which relieves glibc users of
+the need to know in which directory a service really resides.
+
+gzip {\tt \#define}s disproportionately many macros as literals (that is,
+these macros act like {\tt const} variables) for arguments to system calls,
+enumerated values, directory components, and more.  (This is evidence of a
+good programming style.)  gzip also contains many conditional compilation
+directives, since low-level file operations (such as setting creation time
+and access control bits, accessing directories, and so forth) are done
+differently on different systems; gzip is a highly portable program.
+
+In order to support speakers of many different languages, remind uses {\tt
+\#define}d constants for basically all user output.  It also contains
+disproportionately many conditional compilation directives; over half of
+these test the definedness of \verb|HAVE_PROTO|, in order to provide both
+K\&R and ANSI prototypes.  
+
+Like gzip, bash is portable across a large variety of systems, but bash
+uses even more operating system services.  Ninety-seven percent of bash's
+conditional compilation directives test the definedness of a macro whose
+presence or absence is a boolean flag indicating what features the current
+system supports.  The presence or absence of a feature requires different
+(or sometimes additional) system calls or other code.
+
+
+\subsection{The {\tt \#line} and {\tt \#undef} directives}
+
+Sometimes the definedness of a macro is used as a boolean value, as in bash
+(see immediately above).  However, {\tt \#undef} is only rarely used to set
+such macros to ``false''.  Most uses of {\tt \#undef} immediately precede a
+definition of the just-undefined macro, in order to avoid preprocessor
+warnings about incompatible macros redefinitions.  (In glibc, almost all
+undefs are used for this purpose, and 216 of the 614 {\tt \#undef}s appear
+in a single file which constists of a long series of {\tt \#undef} followed
+by a single {\tt \#include}.)
+
+Every use of {\tt \#line} (in bash, cvs, flex, fvwm, gawk, and groff)
+appears in lex or yacc output which is provided to let packages build on
+systems which don't have those packages installed.  For instance, flex uses
+itself to parse its input, but also includes an already-procesed version of
+its input specification (that is, C code corresponding to a {\tt .l} file)
+for bootstrapping.
+
+
+
+[[[FIX THIS:]]]
+
+Flex is also unusual in
+its very low percentage (0.4\% of NCNB lines) of {\tt \#include}s; zsh and 
+rcs share this characteristic, with percentages of 0.4\% and 0.3\%
+respectively.  The percentages of {\#include} with respect to total
+preprocessor directives (shown in Figure~\ref{fig:total_directives}) is
+about 4\% for flex and rcs and about 6\% for zsh.
+
 
 \section{Frequency of Defined Macro Usage}
 \label{sec:usage}
@@ -419,7 +467,7 @@ defined and used in practice?
 \begin{figure}
 {\small
   \setlength{\tabcolsep}{.25em}
-  \input{freq_of_def-tbl.tex}%
+  \centerline{\input{freq_of_def-tbl.tex}}%
 }
 \caption{Number of definitions per Cpp identifier.  The numbers in the
   table represent the percentage of identifiers which are defined a given
@@ -456,7 +504,7 @@ the interactions among the definitions for a given symbol.
 \begin{figure}
 {\small
   \setlength{\tabcolsep}{.25em}
-  \input{freq_of_use-tbl.tex}%
+  \centerline{\input{freq_of_use-tbl.tex}}%
 }
 \caption{Number of expansions per Cpp macro.  The numbers in the
   table represent the percentage of identifiers which are expanded a given
@@ -558,10 +606,13 @@ variables by the preprocessor.
 %    * expression sans assignment
 %    * expression with assignment
 
-\item[Statement]  The macro body is a statement.  Such macros can be
+\item[Statement]  The macro body is a statement such as ``{\tt x = 3;}'' or
+  ``{\tt \verb|{| int x = y*y; printf("\%d", x); \verb|}|}''.  A use of such
+  a macro should not be followed by a semicolon; since the body is
+  already a complete statement, the extra semicolon can cause problems such as 
+  mis-parsing of nested {\tt if} statements.  Such macros can be
   confusing to use, because programmers are inclined to add a semicolon
-  after a call to such a macro, which can cause problems such as 
-  mis-parsing of nested {\tt if} statements.  The
+  after invocations that look like functions;   the
   well-known \verb|do {|\ldots\verb|} while (0)| partial statement trick
   solves this problem.  To our surprise, we found very few uses of that
   construct, but many instances of a macro that expanded to a statement
@@ -581,8 +632,8 @@ variables by the preprocessor.
   static}, mentioned above), those which expand to a delimiter such as
   {\tt ,} or {\tt ;}, and those with mismatched parentheses, brackets, or
   braces.  (The latter are often used to create a block and perform actions
-  that must occur at its beginning and end, such as \verb|BEGIN_GCPRO| and
-  \verb|END_GCPRO|.)
+  that must occur at its beginning and end, such as \verb|BEGIN_GC_PROTECT| and
+  \verb|END_GC_PROTECT|.)
 
 \item[Classification failure]  Frequent reasons that our
 classification heuristics failed
@@ -646,10 +697,13 @@ the macros with free variables (essentially achieving dynamic scoping)
 is needed to see which of the roughly 33\% of expression macros should
 be easy to handle in a conversion process.
 
+% The following isn't quite enough to get the columns lined up in this table.
+% \newcolumntype{d}{D{.}{.}{2}}
+% \begin{tabular}{|l|d|d|d|d|d|d|d|}\hline
 \begin{figure}
 {\small
   \setlength{\tabcolsep}{.25em}
-  \input{categories-tbl.tex}%
+  \centerline{\input{categories-tbl.tex}}%
 }
 \caption{Categorization of macro definition bodies; each row sums to 100\%.}
 \label{fig:categorization}
@@ -678,20 +732,18 @@ Even with significant expertise in using C, C++, and the Cpp macro
 preprocessor, these data showed us a far broader and diverse use of
 preprocessing than we had anticipated.  
 
-We wrote a collection of Perl scripts to produce and analyze these
-data.  As we developed them, we slowly shifted from a lexical analysis
-of the source to a syntactic analysis of the source.  For example, we
-now properly parse virtually all declarations in every package.  We're
-pursuing even more analysis, pushing into semantics.  For instance, we
-can now determine which identifiers are free variables within a
-defined macro.  We are also close to inferring the types of
-macro bodies, one of several steps necessary before we
-can attempt to build a converter from C to C++.  Once we can usefully
-convert C to C++, eliminating most macro usages (except for
-{\tt \#include}s), this would not only programmers to shift to C++ and
-its constructs more easily, but even more importantly, it would
-greatly simplify the development of source-level debuggers, call graph
-extractors, and other programming support tools.
+We wrote a collection of Perl scripts to produce and analyze these data.
+As we developed them, we slowly shifted from a lexical analysis of the
+source to a syntactic analysis of the source.  For example, we now properly
+parse virtually all declarations in every package.  We're pursuing even
+more analysis, pushing into semantics.  For instance, we can now determine
+which identifiers are free variables within a defined macro.  We are also
+close to inferring the types of macro bodies, one of several steps
+necessary before we can attempt to build a converter from C to C++ which
+eliminates most macro usages (except for {\tt \#include}).  Such a
+translator would both enable programmers to shift to C++ and its constructs
+more easily and simplify the development of source-level debuggers,
+call graph extractors, and other programming support tools.
 
 %[FIX: We catch errors that you miss when you look at post-processed code
 %since we look at all branches.]
