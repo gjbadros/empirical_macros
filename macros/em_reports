@@ -13,7 +13,7 @@
 #   _ni = non-include; for a file, means it was on command line (?)
 #   mi = method of inclusion; why this file is being processed
 
-my $getopts_option_letters = 'ihvtIAau1pTg:d:D:M:S:F:L:C:c:s:';
+my $getopts_option_letters = 'ihvtIAau1pTg:d:D:M:S:F:L:C:P:c:s:';
 
 # FIX: remove -D -U -S -F -L -C options.
 
@@ -30,9 +30,10 @@ New options marked with *; options with ':', above, take an argument
   -D [file]  output the names of the macros (and number of times defined)
   -U [file]  output macro usage information
   -S [file]  output the per directive statistics to file
-  -F [file]  output the function information to a file
-  -L [file]  output the file's lines/functions information to a file
-  -C [file]  show categorizations to file
+  -F [file]  output the function information to file
+  -L [file]  output the file's lines/functions information to file
+  -C [file]  output categorizations to file
+  -P [file]  output dependence info to file
   -c [file]  output cond. compilation directive statistics to file
   -E [file]  send evil macros to file instead of stdout
   -s [file]  the state file to use [\"state\" by default]
@@ -108,7 +109,7 @@ my $debug_cpp_if_comments = $false;
 ## Command-line processing
 # Are these in any order?
 use vars qw($opt_i $opt_I $opt_h $opt_v $opt_t $opt_d
-	    $opt_D $opt_M $opt_S $opt_F $opt_L $opt_C $opt_c $opt_p
+	    $opt_D $opt_M $opt_S $opt_F $opt_L $opt_C $opt_P $opt_c $opt_p
 	    $opt_u $opt_1 $opt_A $opt_a $opt_g $opt_T $opt_s);
 my $fIgnoreIncludes = $false;
 
@@ -162,10 +163,10 @@ use vars qw($getopts_option_letters $c_reserved_type_word_alternatives
     @getline_ungot_simple_lines @dependenton $incomment $instring
     %parsevars %parsefuns %parsetypes $parse_exp_saw_equals
     @symtab_identifiers @symtab_types $scopemarker $wf_last_filename
-    $wf_last_line_no $wf_last_index %inclusion_dependenton
-    %inclusion_dependees %inclusion_dependee_lines
-    %expansion_dependenton %expansion_dependees
-    %expansion_dependee_lines
+    $wf_last_line_no $wf_last_index
+    %inclusion_dependenton %inclusion_dependees %inclusion_dependee_lines
+    %expansion_dependenton %expansion_dependees %expansion_dependee_lines
+    %either_dependee_lines
     @rg_ccd_cat_counts
 );
 
@@ -268,10 +269,9 @@ sub output_stats ()
 
   # -M = dump the macro stats
   if ($opt_M) {
-    my $name;
     select MACROS;
     print "#MACROS#: name cDefs cUndefs cCodeUses cMacroUses cCondUses cTotalUses HowUsed Categories InclusionMethods (%functionsThatUseIt)\n";
-    foreach $name (sort keys %macros) {
+    foreach my $name (sort keys %macros) {
       #print STDERR "MNAME=$name, @{$macros{$name}}\n";
       #my $i = $macros{$name}[1];  #Should this now be 0?
       #die "i not defined for $name" if (!defined($i));
@@ -302,14 +302,12 @@ sub output_stats ()
 
   if ($opt_D) {
     select DEFINES;
-    my $name;
 # don't want extra lines-- harder for postprocessing tools
 #    print  "\n";
     print "#DEFINITIONS#: name iDef inclusion_method filename line args plines p_ncnb_lines categorization (%macrosUsedInExpansion)\n";
-    foreach $name (sort keys %macros) {
+    foreach my $name (sort keys %macros) {
       # Could also print number of times it's defined.
-      my $iDef;
-      for ( $iDef = 0; $iDef <= $#{$macros{$name}}; $iDef++ ) {
+      for (my $iDef = 0; $iDef <= $#{$macros{$name}}; $iDef++ ) {
 	my $i = $macros{$name}[$iDef];
 	if ($mdef_file[$i] ne $built_in_fake_file) {
 	  #print STDERR "NAME=$name,", join(", ",@{$macros{$name}}),"\n";
@@ -332,22 +330,18 @@ sub output_stats ()
   if ($opt_F) {
     select FUNCTIONS;
     print "#functionId cMacroExpansions (%the macros)\n";
-    my $function_name_id;
-    foreach $function_name_id (sort keys %function_name_to_macros_it_uses) {
+    foreach my $function_name_id (sort keys %function_name_to_macros_it_uses) {
       print $function_name_id,scalar(@{$function_name_to_macros_it_uses{$function_name_id}}),"\n%",
       join(",",@{$function_name_to_macros_it_uses{$function_name_id}}), "\n";
     }
   }
 
   if ($opt_L) {
-    my $filename;
     select FUNCLINES;
-    foreach $filename (sort keys %files_function_lines) {
+    foreach my $filename (sort keys %files_function_lines) {
       print "file: $filename\n", join("\n ",@{$files_function_lines{$filename}}), "\n";
     }
-    my $function;
-    foreach $function (sort keys %function_to_locs) {
-      my $info;
+    foreach my $function (sort keys %function_to_locs) {
       print "function: $function ";
       my @infos = @{$function_to_locs{$function}};
       if ($#infos == 0)
@@ -355,7 +349,7 @@ sub output_stats ()
       else {
 	# avoid extra semicolon at end of line
 	my @one_file_results = (); # each elt describes one file
-	foreach $info (@infos) {
+	foreach my $info (@infos) {
 	  # Don't really need semicolon at end of last entry
 	  push(@one_file_results, join(', ',@$info));
 	}
@@ -372,8 +366,7 @@ sub output_stats ()
   # conditional compilation directive statistics
   if ($opt_c) {
     select CCDSTATS;
-    my $i;
-    foreach $i (0..$#cond_category_name) {
+    foreach my $i (0..$#cond_category_name) {
       print $cond_category_name[$i], ": ",
       sum_array(map {$_->[$i]} @rg_ccd_cat_counts[@ftype_ALL]),
       "\n";
@@ -383,10 +376,8 @@ sub output_stats ()
   # macro categories
   if ($opt_C) {
     select CATEG;
-    my $name;
-    foreach $name (sort keys %macros) {
-      my $iDef;
-      for ($iDef = 0 ; $iDef <= $#{$macros{$name}}; $iDef++ ) {
+    foreach my $name (sort keys %macros) {
+      for (my $iDef = 0 ; $iDef <= $#{$macros{$name}}; $iDef++ ) {
 	my $index = $macros{$name}[$iDef];
 	my $category = $mdef_category[$index];
 	my $type = $mdef_type[$index];
@@ -412,6 +403,57 @@ sub output_stats ()
     }
   }
 
+  if ($opt_P)
+    { select DEPEND;
+      # print "===========================================================================\n";
+      print "Macro dependence info\n";
+      for my $macro_name (sort keys %macros)
+	{ print "$macro_name\n";
+	  if (scalar(@{$macros{$macro_name}}) > 0)
+	    { for my $i (@{$macros{$macro_name}})
+		{ print "  def #$i: incl_dep: @{$mdef_direct_inclusion_dependenton[$i]}\n";
+		    print "           exp_dep: @{$mdef_direct_expansion_uses[$i]}\n"; } }
+	  else
+	    { print "  no def; used on $macros_used_by_cpp{$macro_name}\n"; }
+	  if (scalar(keys %{$inclusion_dependenton{$macro_name}}) > 0)
+	    { print "  i_depon: ", join(' ',keys %{$inclusion_dependenton{$macro_name}}), "\n"; }
+	  if (scalar(keys %{$inclusion_dependees{$macro_name}}) > 0)
+	    { print "  i_depee: ", join(' ',keys %{$inclusion_dependees{$macro_name}}), "\n"; }
+	  if ($inclusion_dependee_lines{$macro_name} > 0)
+	    { print "  i_depee_lines: ", $inclusion_dependee_lines{$macro_name}, "\n"; }
+	  if (scalar(keys %{$expansion_dependenton{$macro_name}}) > 0)
+	    { print "  e_depon: ", join(' ',keys %{$expansion_dependenton{$macro_name}}), "\n"; }
+	  if (scalar(keys %{$expansion_dependees{$macro_name}}) > 0)
+	    { print "  e_depee: ", join(' ',keys %{$expansion_dependees{$macro_name}}), "\n"; }
+	  if ($expansion_dependee_lines{$macro_name} > 0)
+	    { print "  e_depee_lines: ", $expansion_dependee_lines{$macro_name}, "\n"; }
+	  if ($either_dependee_lines{$macro_name} > 0)
+	    { print "  tot_depee_lines: ", $either_dependee_lines{$macro_name}, "\n"; } }
+
+      print "\n\nDEFS BY LINES PRODUCT";
+      my %defs_lines = ();
+      for my $macro_name (keys %macros)
+	{ my $num_defs = scalar(@{$macros{$macro_name}});
+	  my $dep_lines = $either_dependee_lines{$macro_name};
+	  $defs_lines{$macro_name} =
+	    ($num_defs == 0) ? $dep_lines : $num_defs * $dep_lines; }
+      my $prev_product = -1;
+      for my $macro_name (sort { ($defs_lines{$b} <=> $defs_lines{$a})
+				|| (scalar(@{$macros{$b}}) <=> scalar(@{$macros{$a}})) }
+			  (keys %macros))
+	{ my $this_product = $defs_lines{$macro_name};
+	  ## Print one line per product
+	  #  if ($this_product == $prev_product)
+	  #	{ print ", ", $macro_name; }
+	  #  else
+	  #	{ print "\n", $this_product, "\t", $macro_name;
+	  #	  $prev_product = $this_product; }
+	  # Print one line per macro name
+	  print "\n$this_product\t$macro_name\t = ", scalar(@{$macros{$macro_name}}), " * ($inclusion_dependee_lines{$macro_name} + $expansion_dependee_lines{$macro_name})";
+	}
+      print "\n";
+    }
+
   select;
   compute_freq_use_info();
   compute_freq_def_info();
@@ -419,8 +461,7 @@ sub output_stats ()
   select(FREQUSE);
   OutputCountsHistogramCum(0,$macros_c_most_uses,
 			   make_cum_array(@macros_c_number_uses));
-  my $cat;
-  foreach $cat (0..$catLast) {
+  foreach my $cat (0..$catLast) {
     local $WARNING = 0;
     print "\n#Category: $categoryname[$cat]\n";
     OutputCountsHistogramCum(0,$macros_c_most_uses_for[$cat],
@@ -430,7 +471,7 @@ sub output_stats ()
   select(FREQDEF);
   OutputCountsHistogramCum(1,$macros_c_most_defs,
 			   make_cum_array(@macros_c_number_defs));
-  foreach $cat (0..$catLast) {
+  foreach my $cat (0..$catLast) {
     local $WARNING = 0;
     print "Category: $categoryname[$cat]\n";
     OutputCountsHistogramCum(1,$macros_c_most_defs_for[$cat],
@@ -471,9 +512,8 @@ sub UniquifyAndSortList (@) {
 # of the macro with a given name
 sub CategoriesForMacroName ($) {
   my ($name) = check_args(1,@_);
-  my $iDef;
   my @list = ();
-  for ($iDef = 0 ; $iDef <= $#{$macros{$name}}; $iDef++ ) {
+  for (my $iDef = 0 ; $iDef <= $#{$macros{$name}}; $iDef++ ) {
     my $index = $macros{$name}[$iDef];
     die if !defined($macros{$name});
     die if !defined($macros{$name}[$iDef]);
@@ -488,9 +528,8 @@ sub CategoriesForMacroName ($) {
 # files in which the macro with a given name is defined
 sub InclusionMethodsForMacroName ($) {
   my ($name) = check_args(1,@_);
-  my $iDef;
   my @list = ();
-  for ($iDef = 0 ; $iDef <= $#{$macros{$name}}; $iDef++ ) {
+  for (my $iDef = 0 ; $iDef <= $#{$macros{$name}}; $iDef++ ) {
     my $index = $macros{$name}[$iDef];
     die if !defined($macros{$name});
     die if !defined($macros{$name}[$iDef]);
@@ -509,8 +548,7 @@ sub OutputHistogram ($$$;$) {
   my ($heading,$hashref,$divisor,$fPrintHeading) = check_args_range(3,4,@_);
   my @headings_list = ();
   my @values_list = ();
-  my $h;
-  foreach $h (sort keys %$hashref) {
+  foreach my $h (sort keys %$hashref) {
     push @headings_list, $h;
     my $v = $hashref->{$h};
     if ($divisor == 0) {
@@ -560,8 +598,7 @@ sub compute_global_cpp_sums () {
 # occur inside the package
 sub MacroNotDefinedInsidePackage ($) { # returns bool
   my ($name) = check_args(1,@_);
-  my $iDef;
-  for ($iDef = 0 ; $iDef <= $#{$macros{$name}}; $iDef++ ) {
+  for (my $iDef = 0 ; $iDef <= $#{$macros{$name}}; $iDef++ ) {
     my $index = $macros{$name}[$iDef];
     my $filename = $mdef_file[$index];
     if ($file_inclusion_method{$filename} eq "FromStdin") {
@@ -578,8 +615,7 @@ sub compute_freq_use_info () {
   check_args(0, @_);
   $macros_c_most_uses = 0;
   # sum of slice @{$macros_uses{$name}}[@i_usage_all] is the total no. uses for macro
-  my $name;
-  foreach $name (keys %macros) {
+  foreach my p$name (keys %macros) {
     next if MacroNotDefinedInsidePackage($name);
     my $index = $macros{$name}[0]; #FIXGJB: do not just look at first definition
     my $category = $mdef_category[$index];
@@ -596,8 +632,7 @@ sub compute_freq_def_info () {
   check_args(0, @_);
   $macros_c_most_defs = 0;
   # $#{$macros{$name}} is the number of macro definitions of $name
-  my $name;
-  foreach $name (keys %macros) {
+  foreach my $name (keys %macros) {
     next if MacroNotDefinedInsidePackage($name);
     my $index = $macros{$name}[0];  #FIXGJB: do not just look at first definition
     my $category = $mdef_category[$index];
@@ -613,9 +648,8 @@ sub compute_freq_def_info () {
 sub OutputCountsHistogramRaw ($$@) {
   my ($low,$high,@counts) = @_;
   my $total = sum_array(@counts);
-  my $i;
   print "Total", $total, "\n";
-  for ($i = $low; $i <= $high; $i++) {
+  for (my $i = $low; $i <= $high; $i++) {
     print $i, defined($counts[$i])? $counts[$i] : 0 , "\n";
   }
 }
@@ -623,9 +657,8 @@ sub OutputCountsHistogramRaw ($$@) {
 sub OutputCountsHistogramCum ($$@) {
   my ($low,$high,@counts) = @_;
   my $total = $counts[$#counts];
-  my $i;
   print "Total", $total, "\n";
-  for ($i = $low; $i <= $high; $i++) {
+  for (my $i = $low; $i <= $high; $i++) {
     print $i, defined($counts[$i])? $counts[$i] : 0 , "\n";
   }
 }
@@ -653,8 +686,7 @@ sub pct2 ($$) {
 sub sum_array (@) {
   my (@args) = @_;
   my $sum = 0;
-  { my $elt = 0;
-    foreach $elt (@args)
+  { foreach my $elt (@args)
       { $sum += $elt if defined $elt; } }
   return $sum;
 }
@@ -667,8 +699,7 @@ sub make_cum_array (@) { # returns @cum_array
   my (@args) = @_;
   my @cum_array = ();
   my $sum = 0;
-  my $elt = 0;
-  foreach $elt (@args) {
+  foreach my $elt (@args) {
     $sum += $elt if defined $elt;
     push @cum_array, $sum;
   }
@@ -681,10 +712,8 @@ sub make_cum_array (@) { # returns @cum_array
 sub sum_parallel_hashes { # returns void; output in $_[0]
   my ($dest_hashref,@array_of_hash_refs) = check_args_at_least(1,@_);
   no strict 'refs';  #FIX: Must I do this?
-  my $hashref;
-  my $key;
-  foreach $hashref (@array_of_hash_refs) {
-    foreach $key (keys %{$hashref}) {
+  foreach my $hashref (@array_of_hash_refs) {
+    foreach my $key (keys %{$hashref}) {
       if (!defined($dest_hashref->{$key})) {
 	# print STDERR "UNDEF: $key\n";
 	$dest_hashref->{$key} = 0;
@@ -789,6 +818,10 @@ if ($opt_d) {
     open(CATEG,">$dir/${basename}catg") || die "Failed opening $!";
   }
 
+  if (!$opt_P) {
+    open(CATEG,">$dir/${basename}depend") || die "Failed opening $!";
+  }
+
   if (!$opt_c) {
     open(CCDSTATS,">$dir/${basename}ccd") || die "Failed opening $!";
   }
@@ -804,6 +837,7 @@ if ($opt_L) { open(FUNCLINES,">$opt_L") || die "Failed opening $opt_L"; }
 if ($opt_D) { open(DEFINES,">$opt_D") || die "Failed opening $opt_D"; }
 if ($opt_M) { open(MACROS,">$opt_M") || die "Failed opening $opt_M"; }
 if ($opt_C) { open(CATEG,">$opt_C") || die "Failed opening $opt_C"; }
+if ($opt_P) { open(DEPEND,">$opt_P") || die "Failed opening $opt_P"; }
 if ($opt_c) { open(CCDSTATS,">$opt_c") || die "Failed opening $opt_c"; }
 if ($opt_I) { $fIgnoreIncludes = $true; }
 if ($opt_t) { $outOFS = "\t"; } # use tab for OFS
@@ -820,6 +854,7 @@ if ($opt_d) {
   $opt_F = $true;
   $opt_L = $true;
   $opt_C = $true;
+  $opt_P = $true;
   $opt_c = $true;
 }
 
