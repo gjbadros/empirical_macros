@@ -3894,7 +3894,10 @@ sub process_function_definition_or_declaration
 		$arg_names[$i] = "UNNAMED_REST_ARG"; }
 	    else
 	      { # We add to @arg_decls only things parsed as one of the above.
-		mdie("Can't parse as type or type declarator: '$decl'\nspecial = $type_re_special"); } } }
+		parse_error("Can't parse as type or type declarator: '$decl'\nspecial = $type_re_special");
+		$arg_types[$i] = $typeINT;
+		$arg_names[$i] = "Couldn't parse";
+	      } } }
       if ($remaining =~ /^\s*;/)
 	{ $remaining = $POSTMATCH; }
       elsif ($remaining =~ /^\s*,/)
