@@ -289,10 +289,20 @@ sub category_lub ( $$ )
     { return $c1; }
   elsif (($c1 == $catNOT_YET) || ($c2 == $catNOT_YET))
     { mdie("Shouldn't see catNOT_YET: $c1, $c2"); }
-  # If one is $catIN_PROCESS, $catNULL_DEFINE, or $catNO_DEF, return the other
-  elsif (($c1 == $catIN_PROCESS) || ($c1 == $catNULL_DEFINE) || ($c1 == $catNO_DEF))
+  # If one is $catIN_PROCESS or $catNO_DEF, return the other
+  elsif (($c1 == $catIN_PROCESS) || ($c1 == $catNO_DEF))
     { return $c2; }
-  elsif (($c2 == $catIN_PROCESS) || ($c2 == $catNULL_DEFINE) || ($c2 == $catNO_DEF))
+  elsif (($c2 == $catIN_PROCESS) || ($c2 == $catNO_DEF))
+    { return $c1; }
+  # if one is $catNULL_DEFINE, return the other
+  elsif ($c1 == $catNULL_DEFINE)
+    { return $c2; }
+  elsif ($c2 == $catNULL_DEFINE)
+    { return $c1; }
+  # if one is $catSYMBOL_UNKNOWN, return the other
+  elsif ($c1 == $catSYMBOL_UNKNOWN)
+    { return $c2; }
+  elsif ($c2 == $catSYMBOL_UNKNOWN)
     { return $c1; }
   # If both are literal, constant, or someconstant, return someconstant
   elsif ((($c1 == $catLITERAL) || ($c1 == $catCONSTANT)
@@ -306,15 +316,20 @@ sub category_lub ( $$ )
 	 && (($c2 == $catLITERAL) || ($c2 == $catCONSTANT)
 	     || ($c2 == $catSOME_CONSTANT) || ($c2 == $catEXP)))
     { return $catEXP; }
-  # if one is symbolunknown, chose the other if it's a symbol, type, or expression
-  elsif (($c1 == $catSYMBOL_UNKNOWN)
-	 && (($c2 == $catRESERVED_WORD) || ($c2 == $catFUNCTION_NAME)
-	     || ($c2 == $catTYPE) || ($c2 == $catEXP)))
-    { return $c2; }
-  elsif (($c2 == $catSYMBOL_UNKNOWN)
-	 && (($c1 == $catRESERVED_WORD) || ($c1 == $catFUNCTION_NAME)
-	     || ($c1 == $catTYPE) || ($c1 == $catEXP)))
-    { return $c1; }
+#   # if one is symbolunknown, chose the other if it's a known symbol, type,
+#   # constant, or expression
+#   elsif (($c1 == $catSYMBOL_UNKNOWN)
+# 	 && (($c2 == $catRESERVED_WORD) || ($c2 == $catFUNCTION_NAME)
+# 	     || ($c2 == $catTYPE)
+# 	     || ($c2 == $catLITERAL) || ($c2 == $catCONSTANT)
+# 	     || ($c2 == $catSOME_CONSTANT) || ($c2 == $catEXP)))
+#     { return $c2; }
+#   elsif (($c2 == $catSYMBOL_UNKNOWN)
+# 	 && (($c1 == $catRESERVED_WORD) || ($c1 == $catFUNCTION_NAME)
+# 	     || ($c1 == $catTYPE)
+# 	     || ($c1 == $catLITERAL) || ($c1 == $catCONSTANT)
+# 	     || ($c1 == $catSOME_CONSTANT) || ($c1 == $catEXP)))
+#     { return $c1; }
   # if one is symbols, choose the other if it's resdword or type
   elsif (($c1 == $catSYMBOLS)
 	 && (($c2 == $catRESERVED_WORD) || ($c2 == $catTYPE)))
@@ -344,6 +359,10 @@ sub category_lub ( $$ )
   elsif ((($c1 == $catSTATEMENTS_SANS_SEMI) && ($c2 == $catPARTIAL_STATEMENT))
 	 || (($c2 == $catSTATEMENTS_SANS_SEMI) && ($c1 == $catPARTIAL_STATEMENT)))
     { return $catPARTIAL_STATEMENTS; }
+# Is this the right or wrong thing to do?  I'm not sure.
+#   # If one is failed, return failed
+#   elsif (($c1 == $catFAILURE) || ($c2 == $catFAILURE))
+#     { return $catFAILURE; }
   # otherwise, return generic "multiple"
   else
     { return $catMULTIPLE; }
