@@ -20,6 +20,7 @@ extern "C" {
 #include "pcpp.h"
 #include "cpplib.h"
 #include "cpphash.h"
+#include "bison-stack.h"
 #ifdef __cplusplus
 }
 #endif
@@ -244,6 +245,15 @@ ParseStateStack()
 	    XPUSHs(sv_2mortal(newSViv(*++ssp1)));
 
 void
+SetParseStateStack()
+	PPCODE:
+	int i = 0;
+	while (i < items) {
+	    short val = (int)SvIV(ST(i));
+	    i++;
+	}
+
+void
 SetParseDebugging()
 	CODE:
 	ct_yydebug = 1;
@@ -253,3 +263,36 @@ void
 ResetParseDebugging()
 	CODE:
 	ct_yydebug = 0;
+
+void
+YYPushStackState()
+	CODE:
+	PushStackState();
+
+void
+YYPopAndRestoreStackState()
+	CODE:
+	PopAndRestoreStackState();
+
+void
+YYPopAndDiscardStackState()
+	CODE:
+	PopAndDiscardStackState();
+
+void
+YYSwapStackState()
+	CODE:
+	SwapStackState();
+
+void
+YYPushDupTopStackState()
+	CODE:
+	PushDupTopStackState();
+
+bool
+YYFCompareTopStackState()
+	CODE:
+	RETVAL = FCompareTopStackState();
+	OUTPUT:
+	RETVAL
+
