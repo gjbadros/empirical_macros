@@ -56,10 +56,41 @@ translators to C++.
 
 \section{Introduction}
 
-[Includes motivation, how we ran the ``experiment'', logical vs. NC-NB
-lines vs. physical lines, etc.]
+The C programming language~\cite{kr,ansi} is intimately connected to
+its macro preprocessor [any cites?].  That is, nobody writes programs
+in ``pure'' C; facilities of the preprocessor such as including other
+files, defining constants and macros, conditional compilation,
+etc. are present in essentially every program.  This relationship
+between the C language and the preprocessor has a number of
+consequences, many of which were probably not anticipated by the
+original designers.  
+
+[Includes motivation, how we ran the ``experiment'', etc.]
 
 \section{Related Work}\label{sec:related}
+
+\section{Gathering and Analyzing the Data}\label{sec:gathering}
+
+A number of our analyses refer to the ``number of lines'' in a
+program.  We distinguish three ways of counting lines:
+\begin{itemize}
+
+\item {\em Physical} lines refers to the actual numbers of lines in
+the file; in Unix terms, this is the number of newline characters plus
+one.  
+
+\item {\em Logical} lines merges lines logically continued onto the
+next physical line using a continuation character.  This count is at
+most as large at the physical line count. [Question: I'm assuming that
+you do this for the lines that the preprocessor eats and those that
+the C compiler ultimately gets.]
+
+\item {\em Non-comment/Non-blank (NCNB)} lines eliminates any lines
+that contain only comments or that are blank lines (consisting only of
+whitespace).  [Question: Again, I'm assuming this holds across all
+lines in the file.]
+
+\end{itemize}
 
 \section{Occurrence of Preprocessor Directives}\label{sec:directives}
 
@@ -73,11 +104,12 @@ labeled.  (The \verb+#endif+ directive has been eliminated since it is
 the sum of the \verb+#if#+, \verb+#ifdef#+ and \verb+#ifndef#+ directives;
 the line counts were also reduced by this amount.)
 
-Perhaps the most remarkable information here is the percentage of the
+Perhaps the most surprising information here is the percentage of the
 program lines that are preprocessor directives: under any of our
 interpretations of lines, at least 11\% of the program consists of
-preprocessor directives.  
-
+preprocessor directives.  Of these, about half are \verb+#define#
+directives.  [We'll want to insert a breakdown of what kinds of
+defines these are.]
 
 [This will be I and II.]
 
