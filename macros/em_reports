@@ -486,7 +486,7 @@ sub output_stats ()
 			   make_cum_array(@macros_c_number_defs));
   foreach my $cat (0..$catLast) {
     local $WARNING = 0;
-    print "Category: $categoryname[$cat]\n";
+    print "\n#Category: $categoryname[$cat]\n";
     OutputCountsHistogramCum(1,$macros_c_most_defs_for[$cat],
 			     make_cum_array(@{$macros_c_number_defs_for[$cat]}));
   }
