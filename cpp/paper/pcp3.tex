@@ -72,7 +72,7 @@
 \label{sec:summary}
 
 \appendix
-
+{\small 
 \section{Hooks called by \pcp}
 \label{sec:hooks}
 \begin{itemize}
@@ -84,9 +84,8 @@
 \label{sec:backcalls}
 \begin{itemize}
 \input{backcalls.tex}
-
 \end{itemize}
-
+}
 
 % References
 \newpage
@@ -99,10 +98,24 @@
 \nocite{Harbison91}   % C Ref Man
 \nocite{Stroustrup97} % C++, 3rd
 \nocite{Stroustrup94} % C++, 2nd
+\nocite{Kernighan88}  % C, 2nd
 \nocite{Flanagan96}   % Java in a Nutshell
+\nocite{BtYACC}
+\nocite{EmpCpp-TR}
+\nocite{GCC}
+\nocite{CTree}
+\nocite{TXL}
+\nocite{Cordy92}
+\nocite{BtYACC}
+\nocite{Bison}
+\nocite{Flex}
+\nocite{Krone94}
+\nocite{Griswold96}
+\nocite{Atkinson96}
+\nocite{CD2DraftStandard}
 
 \bibliographystyle{alpha}
-\bibliography{library,articles}
+\bibliography{library,articles,pcp3}
 
 \end{document}
 
