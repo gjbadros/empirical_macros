@@ -77,25 +77,25 @@ Box 352350, Seattle, WA  98195-2350  USA \\
 
 \begin{abstract}
   The C programming language is intimately connected to its macro
-  preprocessor, Cpp.  This relationship hinders tools built to engineer C
-  programs, such as compilers, debuggers, call graph extractors, and
-  translators.  Most tools make no attempt to analyze macro usage, but
-  simply preprocess their input, which results in a number of negative
-  consequences; an analysis that takes Cpp into account is preferable.  In
-  order to determine how the preprocessor is used in practice, and the
-  feasibility of automatic analysis of preprocessor use, this paper
-  analyzes {\numpackages} packages comprising {\numlinesalmost} lines of publicly
-  available C code.  We determine the incidence of C preprocessor
-  usage\,---\,whether in macro definitions, macro uses, or dependences upon
-  macros\,---\,that is complex, potentially problematic, or inexpressible
-  in terms of other C or C++ language features.  We taxonomize these
-  various aspects of preprocessor use and particularly note data that are
-  material to the development of tools for C or C++, including translating
-  from C to C++ to reduce preprocessor usage.  Our results show that while
-  most Cpp usage follows fairly simple patterns, an effective program
-  analysis tool must address the preprocessor.
-  These results are of interest to language designers, tool writers,
-  programmers, and software engineers.
+  preprocessor, Cpp.  This relationship hinders tools built to
+  engineer C programs, such as compilers, debuggers, call graph
+  extractors, and translators.  Most tools make no attempt to analyze
+  macro usage, but simply preprocess their input, which results in a
+  number of negative consequences; an analysis that takes Cpp into
+  account is preferable.  To determine how the preprocessor is used in
+  practice, this paper analyzes {\numpackages} packages comprising
+  {\numlinesalmost} lines of publicly available C code.  We determine
+  the incidence of C preprocessor usage\,---\,whether in macro
+  definitions, macro uses, or dependences upon macros\,---\,that is
+  complex, potentially problematic, or inexpressible in terms of other
+  C or C++ language features.  We taxonomize these various aspects of
+  preprocessor use and particularly note data that are material to the
+  development of tools for C or C++, including translating from C to
+  C++ to reduce preprocessor usage.  Our results show that while most
+  Cpp usage follows fairly simple patterns, an effective program
+  analysis tool must address the preprocessor.  These results are of
+  interest to language designers, tool writers, programmers, and
+  software engineers.
 \end{abstract}
 
 \noindent
@@ -107,16 +107,30 @@ inclusion, macro, macro substitution, conditional compilation, empirical study
 
 \section{Introduction}
 
-The C programming language~\cite{KernighanR88,Harbison91} is incomplete
-without its macro preprocessor, Cpp.  By supplying such facilities as file
-inclusion, definition of constants and macros, and conditional compilation,
-Cpp can define new syntax, abbreviate repetitive or complicated constructs,
-or eliminate reliance on a compiler implementation to propagate symbolic
-constants, open-code functions, eliminate dead code, and short-circuit
-constant tests.  Cpp also permits system dependences to be made explicit
-and tested, resulting in a clearer separation of concerns.  In addition,
-Cpp permits a single source to contain multiple different dialects of C,
-such as supporting both K\&R-style and ANSI-style declarations.
+The C programming language~\cite{KernighanR88,Harbison91} is
+incomplete without its macro preprocessor, Cpp.  Cpp can be used to
+define constants, define new syntax, abbreviate repetitive or
+complicated constructs, support conditional compilation, and 
+reduce or eliminate reliance on a compiler implementation to perform 
+many optimizations.
+%propagate symbolic
+%constants, open-code functions, eliminate dead code, and short-circuit
+%constant tests.
+Cpp also permits system dependences to be made explicit, resulting in
+a clearer separation of concerns.  In addition, Cpp permits a single
+source to contain multiple different dialects of C, such as both
+K\&R-style and ANSI-style declarations.
+
+%The C programming language~\cite{KernighanR88,Harbison91} is incomplete
+%without its macro preprocessor, Cpp.  By supplying such facilities as file
+%inclusion, definition of constants and macros, and conditional compilation,
+%Cpp can define new syntax, abbreviate repetitive or complicated constructs,
+%or eliminate reliance on a compiler implementation to propagate symbolic
+%constants, open-code functions, eliminate dead code, and short-circuit
+%constant tests.  Cpp also permits system dependences to be made explicit
+%and tested, resulting in a clearer separation of concerns.  In addition,
+%Cpp permits a single source to contain multiple different dialects of C,
+%such as supporting both K\&R-style and ANSI-style declarations.
 
 % Indeed, one cannot write practical C programs without these facilities.
 
@@ -136,23 +150,23 @@ problem to programmers, maintainers, people porting code, and tool
 builders''~\cite[p.~424]{Stroustrup-DesignEvolution}.
 
 Given the wide range of possible uses of the preprocessor, our
-research addresses the question of how it is actually used in {\em
-practice\/}.  Our statistical analysis of over two dozen C programs
-comprising over a million lines of code provides significant insights
-with respect to this question.  
+research addresses the question of how it is actually used in
+practice.  Our statistical analysis of {\numpackages} C programs
+comprising {\numslinesalmost} lines of code provides significant
+insights with respect to this question.  We undertook this effort
+after we failed to find any remotely similar data and analysis in the
+literature.
 
-We had two initial motivations for pursuing this line of research.
-One, we wanted to know how difficult it would be, in practice, to
-vastly reduce the usage of the preprocessor when converting a program
-from C to C++.  Two, we wanted to know how difficult it would be to
-produce a tool framework that would simplify the development of tools
-that are knowledgeable about the preprocessor.
+We had three initial motivations for pursuing this line of research.
+First, we wanted to evaluate the potential for vastly reducing the
+usage of the preprocessor when converting a program from C to C++.
+Second, we wanted to know how difficult it would be to produce a
+framework preprocessor-aware tools.  Third, we wanted to develop a
+tool for identifying common pitfalls in the use of macros.
 
-Our data and our insights take substantive steps towards answering
-these two questions; throughout the body of the paper, we use these
-two issues as the primary basis for putting the data into context.  We
-believe, however, that the utility of the data could extend further.
-
+These motivations drove our selection of the data we extracted and the
+analyses that we performed.  Our data, our analyses, and our insights
+take substantative steps towards answering these three questions.
 Overall, our analysis confirms that the C preprocessor is used in
 exceptionally broad and diverse ways, complicating the development of
 C programming support tools.  About two-thirds of macro definitions
@@ -163,6 +177,29 @@ try).  While these kinds of macros predominate, the preprocessor is so
 heavily used that it is worthwhile to understand, annotate, or
 eliminate the remaining one-third of the macros, which are most likely
 to cause difficulties.
+
+%We had two initial motivations for pursuing this line of research.
+%One, we wanted to know how difficult it would be, in practice, to
+%vastly reduce the usage of the preprocessor when converting a program
+%from C to C++.  Two, we wanted to know how difficult it would be to
+%produce a tool framework that would simplify the development of tools
+%that are knowledgeable about the preprocessor.
+%
+%Our data and our insights take substantive steps towards answering
+%these two questions; throughout the body of the paper, we use these
+%two issues as the primary basis for putting the data into context.  We
+%believe, however, that the utility of the data could extend further.
+%
+%Overall, our analysis confirms that the C preprocessor is used in
+%exceptionally broad and diverse ways, complicating the development of
+%C programming support tools.  About two-thirds of macro definitions
+%and uses are relatively simple, of the variety that a programmer could
+%understand through simple but tedious effort or that a relatively
+%unsophisticated tool could manage (although in practice very few even
+%try).  While these kinds of macros predominate, the preprocessor is so
+%heavily used that it is worthwhile to understand, annotate, or
+%eliminate the remaining one-third of the macros, which are most likely
+%to cause difficulties.
 
 Section~\ref{sec:background} provides additional detail about the
 difficulties imposed by the preprocessor.
