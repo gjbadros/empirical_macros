@@ -93,8 +93,8 @@ sub create_predef {
 
 sub cpp_out {
   my ($sz) = @_;
-  my $cch_output = cpp::CBytesOutput();
-  my ($cch_offset,$junk) = cpp::CchOffset();
+  my $cch_output = cpp::CbytesOutput();
+  my $cch_offset = cpp::CchOffset();
   print MAPPING "'($cch_offset . $cch_output)\n";
   if ($top_level_mname ne "") {
     $top_level_full_expansion .= $sz;
@@ -121,8 +121,9 @@ sub delete_def {
 
 sub macro_cleanup {
   my ($mname) = @_;
-  my ($offset, $cbb) = cpp::CchOffset();
-  my $cbytesOutput = cpp::CBytesOutput();
+  my $offset  = cpp::CchOffset();
+  my $cbb = cpp::CbuffersBack();
+  my $cbytesOutput = cpp::CbytesOutput();
   my $fname = cpp::Fname();
   print "macro_cleanup $mname; source $offset, $cbb; output $cbytesOutput\n";
   if ($mname eq $top_level_mname) {
@@ -144,7 +145,7 @@ $top_level_mname = "";
 sub expand_macro {
   my ($mname,$expansion,$length,$raw_call,$has_escapes,$cbuffersDeep,$cargs,@args) = @_;
   my ($exp_offset, $cbb) = cpp::SumCchExpansionOffset();
-  my $cBytesOutput = cpp::CBytesOutput();
+  my $cBytesOutput = cpp::CbytesOutput();
   my $start = $cBytesOutput + 1 + $exp_offset - ($cbb > 0? $length - 1:0);
   my $end = $start + $length;
   my $call_length = length("$mname$raw_call");
@@ -152,14 +153,13 @@ sub expand_macro {
   my $fname = cpp::Fname();
 
   if ($has_escapes == 0) {
-    ($s_end, $cbuffersBack) = cpp::CchOffset();
-    die if $cbb != $cbuffersBack;
+    $s_end = cpp::CchOffset();
     $s_end++;
     $s_start = $s_end - $call_length;
     $top_level_mname = $mname;
   }
 
-  print "\nexpand_macro $mname = ", cpp::lookup($mname), ", source offset: $s_start - $s_end, $cbuffersDeep [$has_escapes]; ", 
+  print "\nexpand_macro $mname = ", cpp::ExpansionLookup($mname), ", source offset: $s_start - $s_end, $cbuffersDeep [$has_escapes]; ", 
       cpp::FExpandingMacros(), " in $fname\n";
   print " : expansion of $mname => $expansion (length $length:offset $start - $end [$cBytesOutput + $exp_offset + 1])\n";
   chomp $raw_call;
@@ -192,7 +192,7 @@ sub expand_macro {
 
 sub ifdef_macro {
   my ($mname,$expansion,$length,$raw_call,$cargs) = @_;
-  my $start = cpp::CBytesOutput()+1;
+  my $start = cpp::CbytesOutput()+1;
   my $end = $start + $length - 3; # Subtract off for the @ @, and it's an inclusive range
   print "ifdef_macro $mname => $expansion (offset $start - $end)\n";
 }
@@ -277,7 +277,8 @@ sub done_include_file {
 sub Got_token {
   my ($token,$sz) = @_;
   print  "TOKEN: $sz;", substr($token,4),", FExpandingMacros = ",cpp::FExpandingMacros(),
-   ", CchOffset = ", (cpp::CchOffset())[0], "\n";
+   ", CchOffset = ", cpp::CchOffset(), ";", join("<-",cpp::MacroExpansionHistory()),"\n";
+  print ": ArgOf = ", cpp::ArgOf(), "\n";
 }
 
 sub do_function {
