@@ -18,7 +18,7 @@
 
 # FIX: the options are non-orthogonal ... this is confusing
 sub usage {
-   die "@_\nUsage: $0 [-ihvDsS] <files>
+  die "@_\nUsage: $0 [-ihvDsS] <files>
   -i  use files listed on stdin [one per line] in addition to any on cmd line
   -h  display this help message
   -v  be verbose and list files as they are processed to stderr
@@ -135,6 +135,7 @@ my @categoryname = ('uncategorized', 'being categorized', 'multiply categorized'
 ## Perhaps give actual constant, so it can be determined.
 sub category_lub
 { my ($c1, $c2) = @_;
+  check_args(2, "category_lub", @_);
   return (($c1 == $c2) ? $c1 : $catMULTIPLE);
 }
 
@@ -150,7 +151,7 @@ sub category_lub
 # These regexps are intended not to include any leading or trailing space
 
 # FIX: this regexp is lame-- L,x,U needed for 0x80 << 1LU
-my $re_constant_exp = '[-LxU0-9() \t<>+=*|&%!]+';	# note this matches whitespace
+my $constant_exp_re = '[-LxU0-9() \t<>+=*|&%!]+';	# note this matches whitespace
 
 # Types and declarations/definitions.
 my $type_specifier_re = '\b\w+\b(\s+\b\w+\b)*'; # 1 group
@@ -260,12 +261,14 @@ my @type_name_array = ('typeFAIL', 'bool',
 sub is_number
 {
   my ($arg) = @_;
+  check_args(1, "is_number", @_);
   $arg =~ /^\d+$/;
 }
 
 sub type_name
 {
   my ($type) = @_;
+  check_args(1, "type_name", @_);
   if (is_number($type))
     { return $type_name_array[$type]; }
   else
@@ -275,6 +278,7 @@ sub type_name
 sub type_to_num
 {
   my ($type) = @_;
+  check_args(1, "type_to_num", @_);
   # print "type = $type; type_num{type} = $type_num{$type} \n";
   $type =~ s/\s+/ /og; # compress multiple spaces to just one
   if (defined($type_num{$type}))
@@ -290,6 +294,7 @@ sub type_to_num
 sub infer_int_type
 {
   my ($int) = @_;
+  check_args(1, "infer_int_type", @_);
   if ($int =~ /^0[xX]/)
     # Hex
     { # return first of ($typeUINT $typeLONG $typeULONG) in which the number fits
@@ -303,6 +308,7 @@ sub infer_int_type
 
 sub type_integral_p
 { my ($type) = @_;
+  check_args(1, "type_integral_p", @_);
   return (($type == $typeBOOL)
 	  || ($type == $typeCHAR) || ($type == $typeUCHAR) || ($type == $typeSCHAR)
 	  || ($type == $typeSHORT) || ($type == $typeUSHORT)
@@ -314,6 +320,7 @@ sub type_integral_p
 
 sub type_dereference
 { my ($type) = @_;
+  check_args(1, "type_dereference", @_);
   if ($type == $typeSTRING)
     { return $typeCHAR; }
   if ($type =~ /(\*|\[\])\s*$/)
@@ -325,7 +332,7 @@ sub type_dereference
 # The full parentheses are necessary (but I don't think they are sufficient)
 # to avoid misparsing nested function types.  Maybe that doesn't happen...
 
-# sub type_apply
+# sub type_apply ...
 
 
 ### Type conversions
@@ -335,6 +342,7 @@ sub type_dereference
 sub type_unsigned
 {
   my ($type) = @_;
+  check_args(1, "type_unsigned", @_);
   if (($type == $typeCHAR) || ($type == $typeSCHAR))
     { return $typeUCHAR; }
   elsif ($type == $typeSHORT)
@@ -350,6 +358,7 @@ sub type_unsigned
 sub type_signed
 {
   my ($type) = @_;
+  check_args(1, "type_signed", @_);
   if (($type == $typeCHAR) || ($type == $typeUCHAR))
     { return $typeSCHAR; }
   elsif ($type == $typeUSHORT)
@@ -365,6 +374,7 @@ sub type_signed
 sub type_long
 {
   my ($type) = @_;
+  check_args(1, "type_long", @_);
   if ($type == $typeCHAR)
     { return $typeLONG; }
   elsif ($type == $typeUCHAR)
@@ -392,6 +402,7 @@ sub type_long
 # Can also return short, ushort.
 sub type_lub
 { my ($t1, $t2) = @_;
+  check_args(2, "type_lub", @_);
   # This test works whether $t1, $t2 are numbers or strings
   if ($t1 eq $t2)
     { return $t1; }
@@ -487,6 +498,7 @@ my @dependenton = ();
 ### Read files, save info about macros
 sub find_macro_definitions
 {
+  check_args(0, "find_macro_definitions", @_);
   if ($finding_macro_defs)
     { die "Called find_macro_definitions, but already finding macrodefs"; }
   local $finding_macro_defs = $true;
@@ -516,6 +528,7 @@ sub find_macro_definitions
 sub process_macro_definition
 {
   my ($def) = @_;
+  check_args(1, "process_macro_definition", @_);
   # print "process_macro_definition <<$def>>\n";
   my ($name, $args, $body) = macroparse($def);
 
@@ -541,6 +554,7 @@ sub process_macro_definition
 
 sub output_stats
 {
+  check_args(0, "output_stats", @_);
 
   if ($lines == 0) {
     print STDERR "No lines read! Perhaps you meant to use the -i option?\n";
@@ -602,7 +616,8 @@ sub output_stats
 
 # pct(x) returns a percentage of macros defined
 sub pct {
-  my ($x) = $_[0];
+  my ($x) = @_;
+  check_args(0, "pct", @_);
   if (!defined($x))
     { return; }
   if ($x < 0 || $x > $cppcmdcount{"define"}) {
@@ -613,6 +628,7 @@ sub pct {
 
 sub test_typedecl_regexp
 {
+  check_args(0, "test_typedecl_regexp", @_);
   my $file;
   foreach $file (@ARGV)
     { $currentfile = $file;	# $file is localized to foreach loop
@@ -672,6 +688,7 @@ sub getline
 { my ($dont_pop) = @_;
   if (!defined($dont_pop))
     { $dont_pop = $false; }
+  check_args_range(0, 1, "getline", @_);
 
   if ($instring || $incomment)
     { die "Bad instring $instring or incomment $incomment"; }
@@ -702,8 +719,8 @@ sub getline
 	      my $nextline;
 	      if ($nextline = <INPUT>)
 		{ $nextline = updateinvars($nextline);
-		  $result = appendlines($result, $nextline);
-		  # The appendlines trims trailing spaces, prettying the message.
+		  $result = append_lines($result, $nextline);
+		  # The append_lines trims trailing spaces, prettying the message.
 		  if ($nextline =~ m/^\s*$/)
 		    {		# No \n at end: $result ends in a newline
 		      print EVIL "$currentfile:$.: dangerous: blank line follows continuation character:\n    $result"; }
@@ -718,7 +735,7 @@ sub getline
 	      if ($nextline = <INPUT>)
 		{ $lines++;
 		  $nextline = updateinvars($nextline);
-		  $result = appendlines($result, $nextline); }
+		  $result = append_lines($result, $nextline); }
 	      else
 		{ print EVIL "$currentfile:$.: dangerous: file ends in comment:\n    $result";
 		  $incomment = 0; } }
@@ -732,7 +749,7 @@ sub getline
 		  $nextline = updateinvars($nextline);
 		  # Strict ANSI C does not permit newlines in string constants;
 		  # perhaps warn.
-		  # Not "$result = appendlines($result, $nextline);" because in string.
+		  # Not "$result = append_lines($result, $nextline);" because in string.
 		  $result = $result . $nextline;
 		}
 	      else
@@ -757,6 +774,7 @@ sub getline
 # sub ungetline
 # {
 #   my ($ungotline) = @_;
+#   check_args(0, "ungetline", @_);
 #   push (@getline_ungotlines, $ungotline);
 # }
 
@@ -767,6 +785,7 @@ sub getline
 sub peekline
 {
   my ($arg) = @_;
+  check_args(1, "peekline", @_);
   if (!defined($arg))
     { $arg = 1; }
 
@@ -809,6 +828,7 @@ sub peekline
 # braces less the number of close braces.  could count parens, too...
 sub bracechange
 { my ($line) = @_;
+  check_args(1, "bracechange", @_);
   # print "bracechange $line";
   my $result = 0;
   while ($line =~ /[\{\}]/)
@@ -832,6 +852,7 @@ sub bracechange
 sub updateinvars
 {
   my ($remaining) = @_;
+  check_args(1, "updateinvars", @_);
   my $result;
   my $computeresult = ($getline_nocomment || $getline_simplify);
   if ($computeresult)
@@ -925,6 +946,7 @@ sub updateinvars
 sub remove_comments
 {
   my ($input) = @_;
+  check_args(1, "remove_comments", @_);
   local $getline_nocomment = $true;
   local $getline_simplify = $false;
   my $result = updateinvars($input);
@@ -941,6 +963,7 @@ sub remove_comments
 # sub has_token
 # {
 #   my ($token, $line) = @_;
+#   check_args(1, "has_token", @_);
 #   if (!defined($token)) { die "undefined token, line $line\n"; }
 #   if (!defined($line)) { die "undefined line, token $token\n"; }
 # 
@@ -975,6 +998,7 @@ sub remove_comments
 sub getline_handle_preprocessor_line
 {
   my ($line) = @_;
+  check_args(1, "getline_handle_preprocessor_line", @_);
   if ($line =~ /^\#\s*$/)
     { # null preprocessor command; do nothing
     }
@@ -1010,6 +1034,7 @@ sub getline_handle_preprocessor_command
 {
   # $cpp_cmd and $cpp_cmd_arg contain no leading or trailing space.
   my ($cpp_cmd, $cpp_cmd_arg) = @_;
+  check_args(2, "getline_handle_preprocessor_command", @_);
   # print "getline_handle_preprocessor_command <<$cpp_cmd>> <<$cpp_cmd_arg>>\n";
 
   if ($finding_macro_defs)
@@ -1071,7 +1096,9 @@ sub getline_handle_preprocessor_command
 # Read and discard lines until we find the matching #endif
 # No return value.
 sub discard_to_endif
-{ my $if0depth = 1;
+{
+  check_args(0, "discard_to_endif", @_);
+  my $if0depth = 1;
   my $line;
   while ($if0depth > 0)
     { if (not ($line = <INPUT>))
@@ -1111,10 +1138,14 @@ sub discard_to_endif
 #	   anyway
 
 sub then_part
-
+{
+  # *****
+}
 
 sub check_for_braceunbalanced_if
-{ my @line;
+{
+  check_args(0, "check_for_braceunbalanced_if", @_);
+  my @line;
   my @braces;
   $line[1] = peekline(1);
   if (!is_cpp_command($line[1]))
@@ -1135,6 +1166,7 @@ sub check_for_braceunbalanced_if
 
 sub merge_brace_unbalanced_lines
 { my ($line1, $line2) = @_;
+  check_args(2, "merge_brace_unbalanced_lines", @_);
   my $result = "";
 
   while ($true)
@@ -1161,6 +1193,7 @@ sub merge_brace_unbalanced_lines
 
 sub is_cpp_command
 { my ($line) = @_;
+  check_args(1, "is_cpp_command", @_);
   $line =~ /^\#/;
 }
 
@@ -1168,6 +1201,7 @@ sub is_cpp_command
 sub trim_whitespace
 {
   my ($result) = @_;
+  check_args(1, "trim_whitespace", @_);
   $result =~ s/^\s+//;
   $result =~ s/\s+$//;
   # if ($result =~ /^\s+(.*)$/) { $result = $1; }
@@ -1179,9 +1213,10 @@ sub trim_whitespace
 
 # This pretties things up but changes contents of line-spanning strings,
 # so don't call it if ARG1 ends inside a string.
-sub appendlines
+sub append_lines
 {
   my ($arg1, $arg2) = @_;
+  check_args(2, "append_lines", @_);
   # "+", not "*", so don't introduce spaces where there were none before
   # Do I need \Z instead of $?  It seems I don't...
   $arg1 =~ s/[ \t\n]+$/ /;
@@ -1192,8 +1227,8 @@ sub appendlines
 # Return an array of three elements: name, args, def.
 # None have leading or trailing whitespace
 sub macroparse
-{ if (@_ != 1) { die "Wrong number of arguments to macrobody."; }
-  my ($line) = @_;
+{ my ($line) = @_;
+  check_args(1, "macroparse", @_);
   # print "macroparse $_[0]\n";
   # Match zero or more, not one or more, spaces before definition.
   # (Perhaps warn if zero are matched.)
@@ -1225,7 +1260,8 @@ my %parsetypes = ();
 
 sub parse_expression
 {
-  my ($exp) = $_[0];
+  my ($exp) = @_;
+  check_args(0, "parse_expression", @_);
   # Could use undef instead...
   %parsevars = ();
   %parsefuns = ();
@@ -1243,6 +1279,9 @@ sub parse_expression
 sub parse_exp_nocommaop
 {
   my ($exp, $ignoretypes) = @_;
+  if (!defined($ignoretypes))
+    { $ignoretypes = $false; }
+  check_args_range(1, 2, "parse_exp_nocommaop", @_);
   local $commaop = $false;
   return parse_exp($exp, $ignoretypes);
 }
@@ -1250,6 +1289,9 @@ sub parse_exp_nocommaop
 sub parse_exp_commaop
 {
   my ($exp, $ignoretypes) = @_;
+  if (!defined($ignoretypes))
+    { $ignoretypes = $false; }
+  check_args_range(1, 2, "parse_exp_commaop", @_);
   local $commaop = $true;
   return parse_exp($exp, $ignoretypes);
 }
@@ -1265,6 +1307,7 @@ sub parse_exp
   my ($exp, $ignoretypes) = @_;
   if (!defined($ignoretypes))
     { $ignoretypes = $false; }
+  check_args_range(1, 2, "parse_exp", @_);
   # If ignoretypes is set, then we don't try to infer types, look up types
   # of unknown functions, or set symbol tables.  We do still compute types
   # for literals and return a type, I think.
@@ -1364,7 +1407,7 @@ sub parse_exp
   elsif ($exp =~ /^$identifier_re/o)
     { my ($var) = $1;
       my ($remaining) = $';
-      categorizeMacroName($var);
+      categorize_macro_name($var);
       my $vartype = $mntype{$var};
       if (!defined($vartype))
 	# Need to do a MUCH better job here; in particular, infer a type.
@@ -1390,6 +1433,7 @@ sub parse_exp
 sub parse_arglist
 {
   my ($ftype, $arglist) = @_;
+  check_args(2, "parse_arglist", @_);
 
   # Need a notation for function types; maybe just -> in front.
   while (!($arglist =~ /^\s*\)/))
@@ -1410,6 +1454,7 @@ sub parse_arglist
 sub parse_array_initializer
 {
   my ($initlist) = @_;
+  check_args(1, "parse_array_initializer", @_);
 
   # print "parse_array_initializer $initlist"; # $initlist ends in newline
 
@@ -1446,6 +1491,7 @@ my @argtypes;
 sub parse_function_decl_args
 {
   my ($argdecls) = @_;
+  check_args(1, "parse_function_decl_args", @_);
   my $remaining = $argdecls;
   @argnames = ();
   @argtypes = ();
@@ -1513,6 +1559,7 @@ my %argnametype;
 sub parse_KandR_function_arg_decls
 {
   my ($argdecls) = @_;
+  check_args(1, "parse_KandR_function_arg_decls", @_);
   %argnametype = ();
   while (!($argdecls =~ /^\s*\{/))
     { # print "parsing K&R function arg decls $argdecls\n";
@@ -1549,6 +1596,7 @@ sub parse_KandR_function_arg_decls
 sub parse_exp_follower
 {
   my ($type, $follow) = @_;
+  check_args(2, "parse_exp_follower", @_);
   $follow =~ s/^\s+//;		# remove leading space
 
   if (!defined($type)) { die "type undefined $follow\n"; }
@@ -1618,6 +1666,7 @@ sub parse_exp_follower
 sub bool_op_p
 {
   my ($op) = @_;
+  check_args(1, "bool_op_p", @_);
   return ($op =~ /[<=>!]=|&&|\|\||<|>/);
 }
 
@@ -1642,6 +1691,7 @@ sub bool_op_p
 
 sub get_macro_call_types
 {
+  check_args(0, "get_macro_call_types", @_);
   local $getting_macro_call_types = $true;
   local $getline_nocomment = $true;
   local $getline_simplify = $true;
@@ -1762,7 +1812,7 @@ PROCESSLINE:
 		    # Only need to check the new stuff, not the whole thing.
 		    { while (!($remaining =~ /;/))
 			{	# print "no semicolon, so appending a line to $remaining\n";
-			  $remaining = appendlines($remaining, getline()); } }
+			  $remaining = append_lines($remaining, getline()); } }
 		  # print "found semicolon (or nextchar is open paren) in $remaining\n";
 		  if ($nextchar eq "(")
 		    {		# found (start of) function definition or prototype
@@ -1771,7 +1821,7 @@ PROCESSLINE:
 		      # Only need to check the new stuff, not the whole thing.
 		      while (!($remaining =~ /\)/))
 			{ print "no close paren, so appending a line to $remaining\n";
-			  $remaining = appendlines($remaining, getline()); }
+			  $remaining = append_lines($remaining, getline()); }
 		      if (!($remaining =~ /\)/))
 			{ die "There must be a close paren.\n"; }
 		      # print "found function $identifier; remaining $remaining\n";
@@ -1794,7 +1844,7 @@ PROCESSLINE:
 		      while ($remaining =~ /^\s*$/)
 			{	# print "no semi or brace, so appending a line to $remaining\n";
 			  my $nextline = getline();
-			  $remaining = appendlines($remaining, $nextline); }
+			  $remaining = append_lines($remaining, $nextline); }
 		      # $remaining is nonempty; if first character is
 		      # semicolon, then this is a declaration, else a definition
 		      if ($remaining =~ /^\s*;/)
@@ -1822,7 +1872,7 @@ PROCESSLINE:
 
 			      while (!($remaining =~ /\{/))
 				{ # print "no brace, so appending a line to $remaining\n";
-				  $remaining = appendlines($remaining, getline()); }
+				  $remaining = append_lines($remaining, getline()); }
 			      $remaining = parse_KandR_function_arg_decls($remaining);
 			      # Make sure that the argument list matches the declarators
 			      { { my $index;
@@ -1993,6 +2043,7 @@ ATCOMMA:
 sub skip_expression_nocommaop
 {
   my ($input) = @_;
+  check_args(1, "skip_expression_nocommaop", @_);
   my ($type, $remaining);
 
   # print "skipping expression $input\n";
@@ -2025,6 +2076,7 @@ my $scopemarker = "scope marker";	# contains space, as no real variable can
 sub show_symtab
 {
   my ($text) = @_;
+  check_args(1, "show_symtab", @_);
   if ($#symtab_identifiers != $#symtab_types)
     { die "symtab_identifiers and symtab_types arrays have different lengths ($#symtab_identifiers != $#symtab_types)\n"; }
   print "{SYMBOL TABLE $text at line $.:\n";
@@ -2041,6 +2093,7 @@ sub show_symtab
 
 sub enter_scope
 {
+  check_args(0, "enter_scope", @_);
   push(@symtab_identifiers, $scopemarker);
   push(@symtab_types, 0);
   $symtab_scopes++;
@@ -2049,7 +2102,7 @@ sub enter_scope
 
 sub exit_scope
 {
-  # exit a scope
+  check_args(0, "exit_scope", @_);
   # show_symtab("exiting scope $symtab_scopes");
   if ($#symtab_identifiers == -1)
     { die "Trying to exit scope at line $., but empty symtab_identifiers array at beginning.\n"; }
@@ -2065,6 +2118,7 @@ sub exit_scope
 
 # sub symtab_scopes
 # {
+#   check_args(0, "symtab_scopes", @_);
 #   my $result = 1;
 #   my $id;
 #   for $id (@symtab_identifiers)
@@ -2076,6 +2130,7 @@ sub exit_scope
 sub symtab_add
 {
   my ($identifier, $type) = @_;
+  check_args(2, "symtab_add", @_);
   if (!defined($identifier))
     { die "symtab_add: undefined identifier, type $type"; }
   if (!defined($type))
@@ -2087,6 +2142,7 @@ sub symtab_add
 sub symtab_lookup
 {
   my ($var) = @_;
+  check_args(1, "symtab_lookup", @_);
   my $index;
   for ($index = $#symtab_identifiers; $index >= 0; $index--)
     { if ($var eq $symtab_identifiers[$index])
@@ -2105,7 +2161,8 @@ sub symtab_lookup
 
 # # FIsNumConst(string)  returns 1 iff string matches a numeric const regexp
 # sub FIsNumConst {
-#   my $str = $_[0];
+#   my ($str) = @_;
+#   check_args(1, "FIsNumConst", @_);
 #   if ($str =~ /^\(?-?\d+\.?\d*\)?$/ || # decimal 2.
 #       $str =~ /^\(?-?\d*\.?\d+\)?$/ || # fraction .2
 #       $str =~ /^0x[\d|a-f|A-F]+$/ ||   # hex
@@ -2116,19 +2173,21 @@ sub symtab_lookup
 #   }
 # }
 
-sub testcategorizeMacro
+sub test_categorize_macro
 { my ($body) = @_;
+  check_args(1, "test_categorize_macro", @_);
   $mbody[1000] = $body;
   $mname[1000] = "dummy";
   $margs[1000] = "(arg)";
   undef $mcategory[1000];
-  categorizeMacro(1000);
+  categorize_macro(1000);
   print $categoryname[$mcategory[1000]] . "\n";
 }
 
 # Takes macro name as argument; categorizes each of the macro's definitions
-sub categorizeMacroName
+sub categorize_macro_name
 { my ($name) = @_;
+  check_args(1, "categorize_macro_name", @_);
   if (defined($mntype{$name}))
     { return; }
   my $numdefs = $macros{$name}[0];
@@ -2140,7 +2199,7 @@ sub categorizeMacroName
   { my $i;
     for ($i = 1; $i <= $numdefs; $i++)
       { if (!defined($mcategory[$macros{$name}[$i]]))
-	  { categorizeMacro($macros{$name}[$i]);
+	  { categorize_macro($macros{$name}[$i]);
 	    if (!defined($type))
 	      { $type = $mtype[$i];
 		$category = $mcategory[$i]; }
@@ -2153,8 +2212,9 @@ sub categorizeMacroName
 
 
 # Takes index into macro arrays as argument
-sub categorizeMacro
+sub categorize_macro
 { my ($index) = @_;
+  check_args(1, "categorize_macro", @_);
 
   # print "Categorizing $index $mname[$index]$margs[$index] $mbody[$index]\n";
 
@@ -2219,7 +2279,7 @@ sub categorizeMacro
 		    my $i;
 		    foreach $i ($macros{$var})
 		      { if ($mcategory[$i] == $catNOTYET)
-			  { categorizeMacro($i); }
+			  { categorize_macro($i); }
 			if (!defined($varclass))
 			  { $varclass = $mcategory[$i]; }
 			elsif ((($mcategory[$i] == $catLITERAL)
@@ -2298,8 +2358,9 @@ sub categorizeMacro
 }
 
 # # Uses $lastline global, too
-# sub categorizeMacro
+# sub categorize_macro
 # { my ($name, $args, $fullbody) = @_;
+#   check_args(1, "categorize_macro", @_);
 #   if ($fullbody =~ m!^(.*?)\s*(/\*.*\*/\s*)*(//.*)?$!) {
 #     # $1 matches non-commented part w/ leading,trailing ws removed
 #     $body = $1;
@@ -2380,11 +2441,12 @@ sub checkmacrodef
 # returns zero if it was ok
 # otherwise $EVIL $DANGER $OBSOLETE $ILLEGAL
 # (each individual bits)
-sub checkmacrobody
-{ my $body = $_[0];
+sub check_macro_body
+{ my ($body) = @_;
+  check_args(1, "check_macro_body", @_);
   my $result = 0;
-  if ($#_ != 0) { die "Wrong number of arguments to checkmacrobody."; }
-  # print "checkmacrobody: $body\n";
+  if ($#_ != 0) { die "Wrong number of arguments to check_macro_body."; }
+  # print "check_macro_body: $body\n";
   my $indquote = 0;
   my $insquote = 0;
   my $incomment = 0;
@@ -2456,8 +2518,8 @@ sub checkmacrobody
 	    { my $nextline;
 	      if ($nextline = getline())
 		# Get some more text, and look for the comment close there.
-		{ $body = appendlines($body, $nextline);
-		  $postmatch = appendlines($', $nextline);
+		{ $body = append_lines($body, $nextline);
+		  $postmatch = append_lines($', $nextline);
 		}
 	      else
 		{ $result |= $EVIL;
@@ -2492,6 +2554,34 @@ sub checkmacrobody
 
 
 ###########################################################################
+### Miscellaneous
+###
+
+sub check_args
+{
+  if (@_ < 2) { die "check_args needs at least 2 args, got: @_\n"; }
+  my ($num_formals, $function_name, @args) = @_;
+  my $num_actuals = @args;
+  if ($num_actuals != $num_formals)
+    { die "function $function_name expected $num_formals argument",
+      ($num_formals == 1) ? "" : "s", ", got $num_actuals",
+      ($num_actuals == 0) ? "" : ": @args", "\n"; }
+}
+
+sub check_args_range
+{
+  if (@_ < 3) { die "check_args needs at least 3 args, got: @_\n"; }
+  my ($min_formals, $max_formals, $function_name, @args) = @_;
+  my $num_actuals = @args;
+  if (($num_actuals < $min_formals) || ($num_actuals > $max_formals))
+    { die "function $function_name expected $min_formals-$max_formals arguments, got $num_actuals",
+      ($num_actuals == 0) ? "" : ": @args", "\n"; }
+}
+
+
+
+
+###########################################################################
 ### Testing
 ###
 
@@ -2518,8 +2608,8 @@ sub checkmacrobody
 # print "<<" . parse_expression ("(unsigned)(1<<HASH_BITS)") . "\n";
 # print "<<" . parse_expression ("(1<<HASH_BITS)") . "\n";
 # print "<<" . parse_expression ("\"foo\"") . ">>\n";
-# print "<<" . testcategorizeMacro("\"\\037\\235\"") . ">>\n";
-# print "<<" . testcategorizeMacro("\"\037\235\"") . ">>\n";
+# print "<<" . test_categorize_macro("\"\\037\\235\"") . ">>\n";
+# print "<<" . test_categorize_macro("\"\037\235\"") . ">>\n";
 # if (parse_expression ("\"foo\"")) { print "FOO is true "; } else { print "false"; }
 # if (0) { print "ZERO is true "; } else { print "false"; }
 # print type_name(parse_expression("0400")) . "\n";
@@ -2540,20 +2630,20 @@ sub checkmacrobody
 # print type_name(parse_expression("(long)strstart - block_start")) . "\n";
 # print type_name(parse_expression("(eof)")) . "\n";
 # print type_name(parse_expression("(uch)get_byte()")) . "\n";
-# testcategorizeMacro("(uch)get_byte()");
+# test_categorize_macro("(uch)get_byte()");
 # print type_name(parse_expression("memset ((voidp)(s), 0, (n))")) . "\n";
 # print type_name(parse_expression("((char_type *)(&d_buf[DIST_BUFSIZE-1]))")) . "\n";
 # print type_name(parse_expression("((ush)(uch)((p)[0]) | ((ush)(uch)((p)[1]) << 8))")) . "\n";
 # print type_name(parse_expression("((ulg)(SH(p)) | ((ulg)(SH((p)+2)) << 16))")) . "\n";
 # print type_name(parse_expression("malloc((size_t)(items)*(size_t)(size))")) . "\n";
-# testcategorizeMacro("memset ((voidp)(s), 0, (n))");
-# testcategorizeMacro("((char_type *)(&d_buf[DIST_BUFSIZE-1]))");
-# testcategorizeMacro("((ush)(uch)((p)[0]) | ((ush)(uch)((p)[1]) << 8))");
-# testcategorizeMacro("((ulg)(SH(p)) | ((ulg)(SH((p)+2)) << 16))");
-# testcategorizeMacro("malloc((size_t)(items)*(size_t)(size))");
+# test_categorize_macro("memset ((voidp)(s), 0, (n))");
+# test_categorize_macro("((char_type *)(&d_buf[DIST_BUFSIZE-1]))");
+# test_categorize_macro("((ush)(uch)((p)[0]) | ((ush)(uch)((p)[1]) << 8))");
+# test_categorize_macro("((ulg)(SH(p)) | ((ulg)(SH((p)+2)) << 16))");
+# test_categorize_macro("malloc((size_t)(items)*(size_t)(size))");
 # $foo = "x"; $foo =~ /x/; print defined($'), defined($'), defined($'), "\n";
 # print ("" eq "\n"), "\n";
-# testcategorizeMacro("(inptr < insize ? inbuf[inptr++] : fill_inbuf(0))");
+# test_categorize_macro("(inptr < insize ? inbuf[inptr++] : fill_inbuf(0))");
 # print type_name(parse_expression("(inptr < insize ? inbuf[inptr++] : fill_inbuf(0))")) . "\n";
 # print type_name(parse_expression("inptr < insize")) . "\n";
 # print type_name(parse_expression("inbuf[inptr++]")) . "\n";
@@ -2616,11 +2706,11 @@ print "Processing " . $cppcmdcount{"define"} . " macros\n";
       #   print "\n  $mname[$index]";
       #   if (defined($margs[$index])) { print $margs[$index]; }
       #   print " $mbody[$index]\n";
-      categorizeMacro($index);
+      categorize_macro($index);
     } }
 
 # 	  # Nothing to check if this is just making the macro defined w/o a body.
-# 	  if (defined($mdef) && ($flags = checkmacrobody($mdef)) != 0) {
+# 	  if (defined($mdef) && ($flags = check_macro_body($mdef)) != 0) {
 # 	    $cEvil++ if $flags & $EVIL;
 # 	    $cIllegal++ if $flags & $ILLEGAL;
 # 	    $cObsoleted++ if $flags & $OBSOLETE;
