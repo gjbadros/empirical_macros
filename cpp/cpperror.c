@@ -27,6 +27,7 @@ Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #endif /* not EMACS */
 
 #include "cpplib.h"
+#include "pcpp.h"
 #include <stdio.h>
 
 /* Print the file names and line numbers of the #include
