@@ -26,11 +26,16 @@ MAC  := $(addsuffix .mac,$(PKGS))
 CCD  := $(addsuffix .ccd,$(PKGS))
 USECUM  := $(addsuffix .frequse_cum,$(PKGS))
 DEFCUM  := $(addsuffix .freqdef_cum,$(PKGS))
+CATUSECUM  := $(wildcard cat-*.frequse_cum)
+CATDEFCUM  := $(wildcard cat-*.freqdef_cum)
+
 PERR := $(addsuffix .perr,$(PKGS))
 
 TEXT_TABLES :=	tbl-package-sizes \
 		tbl-def-frequency \
 		tbl-use-frequency \
+		tbl-cat-def-frequency \
+		tbl-cat-use-frequency \
 		tbl-where-used \
 		tbl-ccd-categories
 
@@ -46,6 +51,8 @@ ALL_TABLES := $(TEXT_TABLES) $(RAW_TABLES) $(LATEX_TABLES) $(CVT_LATEX_TABLES)
 PAPER_TABLES :=  \
 	tbl-def-frequency \
 	tbl-use-frequency \
+	tbl-cat-def-frequency \
+	tbl-cat-use-frequency \
 	tbl-directives-breakdown \
 	tbl-where-used \
 	tbl-def-categories \
@@ -57,6 +64,7 @@ all:	$(ALL_TABLES)
 
 clean:
 	rm -f $(ALL_TABLES)
+	rm -fr made-catdefuse
 
 ###########################################################################
 ### Data
@@ -88,11 +96,23 @@ tbl-def-frequency: $(DEFCUM)
 tbl-use-frequency: $(USECUM)
 	macros-make-tbl-frequsedef-from-cum $^ > $@
 
+tbl-cat-def-frequency: made-catdefuse $(CATDEFCUM)
+	macros-make-tbl-frequsedef-from-cum $(CATDEFCUM) > $@
+
+tbl-cat-use-frequency: made-catdefuse $(CATUSECUM)
+	macros-make-tbl-frequsedef-from-cum $(CATUSECUM) > $@
+
 tbl-where-used: $(MAC)
 	macros-make-how-used-ni-tbl-from-mac $^ > $@
 
 tbl-ccd-categories: $(CCD)
 	( head -1 $< && grep -v '^#' $^ | sed -e 's/:/	/' -e 's/.ccd//' ) > $@
+
+# this file is just a note that we have the cat-* files around, now
+made-catdefuse:	$(DEFCUM) $(USECUM)
+	rm *.*-* cat-* # careful w/ what this deletes!
+	macros-extract-defuse-categories $^
+	date > made-catdefuse
 
 ###########################################################################
 ### Raw tables
