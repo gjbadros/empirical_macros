@@ -1530,8 +1530,8 @@ sub update_for_cond_comp_directive ($$) {
 #  }
   @words = possible_macro_names_in(cline_simplify($args));
   my $ccdCategory;
-  # FIXGJB: This should perhaps use cpp_trivially_{false,true}_condition.
-  if (scalar(@words) == 0 && ($args eq "0" || $args eq "1" || $args =~ /^0\s*&&/)) {
+  if (cpp_trivially_false_condition($args) ||
+      cpp_trivially_true_condition($args)) {
     $ccdCategory = $ccatCOMMENTING;
   } else {
     if (scalar(@words) == 0) {
@@ -1541,7 +1541,7 @@ sub update_for_cond_comp_directive ($$) {
 	$ccdCategory = $ccatPORT_LANLIB;
 	goto CCD_DONE;
       }
-      print STDERR "CCD_LEXICAL_CATEGORY: No words!\n$cpp_cmd, $args\n";
+      print STDERR "CCD_LEXICAL_CATEGORY: No words!\n  #$cpp_cmd, $args\n";
       return;
     }
     foreach my $word (@words) {
@@ -5927,9 +5927,12 @@ sub SaveMacroAnalysisState
   undef @mdef_body_simple;
 
   # "export" these vars through the state file to em_reports
+  # NOTE: be very careful to not have duplicates in this list, since
+  # we undefine them as they are printed out (the second occurrence
+  # that is output will be empty, and that will be the one that
+  # em_reports will try to use)
   my @vars_list = qw(
     %macros %macros_c_undefs %macros_uses
-    %macros_file_line_uses %macros_used_in_functions
     @mdef_name @mdef_args @mdef_body
     @mdef_file @mdef_line @mdef_physical_lines
     @mdef_physical_ncnb_lines @mdef_freefuns
@@ -5940,23 +5943,28 @@ sub SaveMacroAnalysisState
     @rg_cppcmdcounts @rg_category_counts
     @rg_physical_lines @rg_ncnb_lines
     @rg_cpp_phys_lines @rg_cpp_phys_ncnb_lines
-    @rg_cpp_cmds @rg_category_counts
+    @rg_cpp_cmds @rg_ccd_cat_counts
     %file_inclusion_method %function_name_to_macros_it_uses
     %files_function_lines %function_to_locs
     %inclusion_dependenton %inclusion_dependees %inclusion_dependee_lines
     %expansion_dependenton %expansion_dependees %expansion_dependee_lines
     %either_dependee_lines
-    @mdef_direct_inclusion_dependenton
-    @rg_ccd_cat_counts
     %macros_used_by_cpp
 		     );
 
+  undef %macros_used_in_functions;  #FIXGJB: We probably want this info,
+  # but maybe we can settle for a count of No. of different fns which use
+  # the macro or just not bother with it
+
+  my $es = "";
   foreach my $i (0..$#vars_list) {
     my $v = $vars_list[$i];
     my $g = $v;
     $g =~ s/[\@\%\$]/\*/;
-    my $es = sprintf "print OUTSTATE Data::Dumper->Dumpxs([\\%s],[\"%s\"]);", $v,$g;
-#    print STDERR $es, "\n";
+    $es = "print OUTSTATE Data::Dumper->Dumpxs([\\$v],[\"$g\"]);\n";
+    print STDERR $es;
+    eval $es;
+    $es = "undef $v;\n";
     eval $es;
   }
 
@@ -6110,6 +6118,7 @@ if ($opt_v) { print STDERR "Processing ", scalar(@files), " files",
 
 ## This is pass 1 over the input files
 find_macro_definitions();	# also counts other preprocessor usage
+if ($opt_v) { print STDERR "Done finding macro definitions.\n"; }
 { my %unused_macros = ();
   for my $word (keys %macros_used_by_cpp)
     { if (!defined($macros{$word}))
@@ -6123,6 +6132,7 @@ find_macro_definitions();	# also counts other preprocessor usage
 
 
 # Kind of a hack
+if ($opt_v) { print STDERR "Another loop over the macros...\n"; }
 for my $name (keys %macros)
   { if (is_fun_decl_arg_macro($name))
       { $fun_decl_arg_macros{$name} = $true; }
@@ -6143,7 +6153,7 @@ for my $name (keys %macros)
 #   { print "$body\n"; }
 
 if (!$opt_1)
-{ if ($opt_v) { print STDERR "done finding macro definitions; now finding macro uses...\n"; }
+{ if ($opt_v) { print STDERR "done with that loop; now finding macro uses...\n"; }
   compute_transitive_macro_dependences();
   ## This is pass 2 over the input files
   process_macro_calls();
@@ -6151,6 +6161,9 @@ if (!$opt_1)
 
 if ($opt_v) { print STDERR "Computing macro/function use relations...\n"; }
 compute_macros_used_in_functions();
+undef %macros_file_line_uses;
+if ($opt_v) { print STDERR "Undef-ed \%macros_file_line_uses\n"; }
+
 
 ### All the files have been read; now process the macros
 print STDERR "Categorizing $cMacrosInTables macros\n";
