@@ -10,7 +10,7 @@ USER_PREFIX = /homes/gws/gjb/macros
 
 # Directories
 PKG_DIR := /tmp/gjb/packages
-PKG_PREFIX := ""   # Use only packages that start with these chars
+PKG_PREFIX := "?"   # Use only packages that start with these chars
 ANALYZE_OUTPUT_DIR := /tmp/gjb/data
 COMMON_DIR := $(shell dirname `ls -l Makefile | awk '{print $$NF}'`)
 #COMMON_DIR := /homes/gws/mernst/research/notkin/macros/scripts
@@ -30,7 +30,7 @@ include Makefile.user
 SCRIPTS := em_analyze em_reports em_constants.pm em_util.pm cline.pm
 SCRIPTSPATH := $(addprefix $(USER_PREFIX)/,$(SCRIPTS))
 
-PKGS := $(shell zsh -c "echo $(PKG_DIR)/$(PKG_PREFIX)*(/:t) | sed -e 's/-[^ ]*//g'")
+PKGS := $(shell zsh -c "setopt extendedglob; echo $(PKG_DIR)/*(/:t) | sed -e 's/-[^ ]*//g'")
 
 STATE := $(addsuffix .state,$(PKGS))
 STAT := $(addsuffix .stat,$(PKGS))
@@ -90,9 +90,14 @@ clean_reports:
 # Could also depend on $(PKG_DIR)/$(ANALYZE_OUTPUT_DIR)*/c-files-listing
 %.state: #[REMOVE THIS # TO DEPEND ON SCRIPTS] $(COMMON_DIR)/../em_analyze
 	em_make_state_file $(PKG_DIR) $(ANALYZE_OUTPUT_DIR) $@ $(EXTRA_ANALYZE_FLAGS) || echo $< >> $(ANALYZE_OUTPUT_DIR)/failures
+	chgrp macros `basename $@ .state`
+	chmod g+rw `basename $@ .state`
 
 %.stat: %.state #[REMOVE THIS # TO DEPEND ON SCRIPTS] $(COMMON_DIR)/../em_reports
 	em_reports -s $< -t $(EXTRA_REPORTS_FLAGS) -d $(ANALYZE_OUTPUT_DIR):`echo $@ | sed -e 's/\.stat$$//'`
+	chgrp macros `basename $@ .state`
+	chmod g+rw `basename $@ .state`
+
 
 ###########################################################################
 ### Text tables
@@ -177,6 +182,8 @@ package_num_files:
 ###
 
 showvars:
+	@echo PKG_DIR = $(PKG_DIR)
+	@echo PKG_PREFIX = =$(PKG_PREFIX)=
 	@echo PKGS = $(PKGS)
 	@echo STAT = $(STAT)
 	@echo TEXT_TABLES = $(TEXT_TABLES)
