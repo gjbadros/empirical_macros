@@ -130,6 +130,10 @@ delete_macro (cpp_reader *pfile, HASHNODE *hp)
   if (hp == *hp->bucket_hdr)
     *hp->bucket_hdr = hp->next;
 
+  /* FIXGJB: don't do this when it's really a deep copy! */
+  if (chashtab != 0)
+    return;
+
   if (hp->type == T_MACRO)
     {
       DEFINITION *d = hp->value.defn;
