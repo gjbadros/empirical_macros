@@ -73,32 +73,104 @@ Box 352350, Seattle, WA  98195-2350  USA \\
 
 \section{Introduction}
 
-The C programming language~\cite{ansi} is intimately connected to its macro
-preprocessor, Cpp~\cite[Ch.~3]{Harbison91}.   C is incomplete without the
-preprocessor, which supplies essential 
-facilities such as file inclusion, definition of constants and macros, and
-conditional compilation.
-While disciplined use of  the preprocessor can reduce programmer effort and 
-improve portability, performance, or readability, Cpp also lends itself to
-arbitrary source code manipulations that complicate understanding of the
-program by both software engineers and tools.  The designer of C++, which
-shares C's preprocessor, also noted these problems:
-``Occasionally, even the most extreme uses of Cpp are useful, but its
-facilities are so unstructured and intrusive that they are a constant
-problem to programmers, maintainers, people porting code, and tool
+The C programming language~\cite{ansi} is intimately connected to its
+macro preprocessor, Cpp~\cite[Ch.~3]{Harbison91}.  In particular, the
+preprocessor supplies essential facilities such as file inclusion,
+definition of constants and macros, and conditional compilation; these
+can be used to define new syntax, abbreviate repetitive or complicated
+constructs, or eliminate reliance on a compiler implementation to
+inline functions, propagate symbolic constants, eliminate dead code,
+and short-circuit constant tests.  The latter guarantees are
+especially valuable for compilers that do a poor job optimizing or
+when the programmer wishes to override the compiler's heuristics.  Cpp
+also permits system dependences to be made explicit and tested,
+resulting in a clearer separation of concerns.  Finally, Cpp permits a
+single source to contain multiple different dialects of C; a frequent
+use is to support both K\&R-style and ANSI-style declarations.
+
+Indeed, one cannot write practical C programs without these
+facilities.  While disciplined use of the preprocessor can reduce
+programmer effort and improve portability, performance, or
+readability, Cpp also lends itself to arbitrary source code
+manipulations that complicate understanding of the program by both
+software engineers and tools.  The designer of C++, which shares C's
+preprocessor, also noted these problems: ``Occasionally, even the most
+extreme uses of Cpp are useful, but its facilities are so unstructured
+and intrusive that they are a constant problem to programmers,
+maintainers, people porting code, and tool
 builders.''~\cite[p.~424]{Stroustrup-DesignEvolution}
 
+Tools\,---\,and, to a lesser degree, software engineers\,---\,have
+three options for coping with Cpp.  They may ignore preprocessor
+directives altogether, accept only post-processed code (usually by
+running Cpp on their input), or attempt to emulate the preprocessor.
+Each approach has different strengths and weaknesses.
 
-\subsection{The analyses}
+\begin{itemize}
 
-To build a better understanding of how the preprocessor is used,
-we wrote tools to analyze preprocessor usage and ran them on {\numpackages}
-C packages comprising {\numlines} lines of code.  Figure~\ref{fig:packages}
-describes the packages and lists their sizes in terms of physical lines (or
-newline characters) and non-comment, non-blank (NCNB) lines, which
-disregards lines consisting of only comments or whitespace.  The remainder
-of the analysis uses only the NCNB length, which more accurately reflects
-the amount of source code.
+\item Ignoring preprocessor directives is an option for approximate
+tools (such as those based on lexical or approximate parsing
+techniques).  However, if accurate information about function extents,
+scope nesting, declared variables and functions, and other aspects of
+a program are required, the preprocessor cannot be ignored.
+
+\item Operating on post-processed code, the most common strategy, is
+simple to implement, but then the tool's input differs from what the
+programmer sees.  Even when line number mappings are maintained, other
+information is lost in the mapping back to the original source code.
+For instance, source-level debuggers have no symbolic names or types
+for constants and functions introduced via {\tt \#define}, nor can
+tools trace or set breakpoints in function macros, as they can for
+ordinary functions (even those that have been
+inlined~\cite{Zellweger83:TR}).  As another example, Siff and Reps
+describe a technique that uses type inferencing to produce C++
+function templates from C; however, the input is ``a C program
+component that $\ldots$ has been preprocessed so that all include
+files are incorporated and all macros
+expanded~\cite[p.~145]{Siff-fse96}.''  Such preprocessing may limit
+the readability and reusability of the resulting C++ templates.  As
+yet another related example, call graph extractors generally work in
+terms of the post-processed code, even when a human is the intended
+consumer of the call graph~\cite{Murphy-icse18}.  Some tools even
+leave the software engineer responsible for inferring the mapping
+between the original and the post-processed source, which is an
+undesirable and error-prone situation.
+
+In addition, a tool that manipulates post-processed code cannot be run
+on a non-syntactic program or one that will not preprocess on the
+platform on which the tool is being run.  These constraints complicate
+porting and maintenance, two of the situations in which program
+understanding and transformation tools are most likely to be needed.
+Additionally, a tool supplied with only one post-processed
+instantiation of the source code cannot reason about the program as a
+whole, only about that version that results from one particular set of
+preprocessor variables.  For instance, a bug in one configuration may
+not be discovered despite exhaustive testing of other configurations
+that do not incorporate particular code or do not admit particular
+execution paths.
+
+\item The final option, emulating the preprocessor, is fraught with
+difficulty.  Macro definitions consist of complete tokens but need not
+be complete expressions or statements.  Conditional compilation and
+alternative macro definitions lead to very different results from a
+single original program text.  Preprocessing adds complexity to an
+implementation, which must trade off performing preprocessing against
+maintaining the code in close to its original form.  Extracting
+structure from macro-obfuscated source is not a task for the
+faint-hearted.  Despite these problems, in many situations only some
+sort of preprocessing or Cpp analysis can produce useful answers.
+
+\end{itemize}
+
+To build a better understanding of how the preprocessor is used, with
+the intent of helping tool builders select among these approaches, we
+performed an analysis of preprocessor usage across {\numpackages} C
+packages comprising {\numlines} lines of code.
+Figure~\ref{fig:packages} describes the packages and lists their sizes
+in terms of physical lines (or newline characters) and non-comment,
+non-blank (NCNB) lines, which disregards lines consisting of only
+comments or whitespace.  The remainder of the analysis reports in
+terms of NCNB length.
 
 \begin{figure}
 \centering
@@ -111,35 +183,20 @@ the amount of source code.
 \label{fig:packages}
 \end{figure}
 
-
 Overall, our analysis confirms that the C preprocessor is used in
-exceptionally broad and diverse ways, complicating the development of C
-programming support tools.  On the other hand, the analysis also convinces
-us that, by extending our analysis framework with some class type
-inferencing techniques (similar to those used by Siff and Reps for C to C++
-translation~\cite{Siff-fse96}, O'Callahan and Jackson for program
-understanding~\cite{OCallahan-icse97}, and others), we can take significant
-steps towards a tool that usefully converts a high percentage of Cpp code
-into C++ language features.\footnote{Preliminary results indicate that many
-  C++ packages rely heavily on Cpp, even when C++ supports a nearly
-  identical language construct, probably due to a combination of trivial
-  translations from C to C++ and of C programmers becoming C++ programmers
-  without changing their habits.} We are interested not in translations
-that merely allow a C program to be compiled by a C++ compiler (which is
-usually easy, by intentional design of C++) but those that take advantage
-of the added richness and benefits of C++ constructs.
-
-In terms of the complexity of preprocessor usage, the results reported here
-contain both good news and bad.  By far
-the largest number of macro definitions and uses are relatively simple, of
-the variety that a programmer could understand without undue effort (although
-perhaps requiring tedious work) or that a relatively unsophisticated tool
-could understand (although in practice very few even try).  Despite the
-preponderance of innocuous macros, the preprocessor is so heavily used that
-the remaining ones are numerically significant.  It is precisely these
-macros that are mostly likely to cause difficulties, and there are enough
-of them to be problematic in practice and to make the effort of
-understanding, annotating, or eliminating them worthwhile.
+exceptionally broad and diverse ways, complicating the development of
+C programming support tools.  In terms of the complexity of
+preprocessor usage, the results reported here contain both good news
+and bad.  By far the largest number of macro definitions and uses are
+relatively simple, of the variety that a programmer could understand
+without undue effort (although perhaps requiring tedious work) or that
+a relatively unsophisticated tool could understand (although in
+practice very few even try).  Despite the preponderance of innocuous
+macros, the preprocessor is so heavily used that the remaining ones
+are numerically significant.  It is precisely these macros that are
+mostly likely to cause difficulties, and there are enough of them to
+be problematic in practice and to make the effort of understanding,
+annotating, or eliminating them worthwhile.
 
 %% The tool is completely uninteresting; why would anyone care?
 % We wrote a collection of Perl scripts to produce and analyze these data.
@@ -156,7 +213,6 @@ understanding, annotating, or eliminating them worthwhile.
 % call graph extractors, and other programming support tools.
 
 
-
 %[FIX: We catch errors that you miss when you look at post-processed code
 %since we look at all branches.]
 %
@@ -164,92 +220,9 @@ understanding, annotating, or eliminating them worthwhile.
 %maybe give some hints here too.]
 
 
-\subsection{Coping with Cpp}
-
-Tools\,---\,and, to a lesser degree, software engineers\,---\,have three
-options for coping with Cpp.    They may ignore preprocessor directives
-(including macro definitions) altogether, accept only post-processed code
-(usually by running Cpp on their input), or attempt to emulate the
-preprocessor.
-
-Ignoring preprocessor directives is an option for approximate tools (such
-as those based on lexical or approximate parsing techniques), but accurate
-information about function extents, scope nesting, declared variables and
-functions, and other aspects of a program requires addressing the
-preprocessor.
-
-Operating on post-processed code, the most common strategy, is simple to
-implement, but then the tool's input differs from what the
-programmer sees.  Even when line number mappings are maintained, other
-information is lost in the mapping back to the original source code.
-For instance, source-level debuggers have no symbolic names or types
-for constants and functions introduced via {\tt \#define}, nor can tools
-trace or set breakpoints in function macros, as they can for ordinary
-functions (even those that have been inlined~\cite{Zellweger83:TR}).
-As another example, Siff
-and Reps describe a technique that uses type inferencing to produce
-C++ function templates from C; however, the input is ``a C program
-component that $\ldots$ has been preprocessed so that all include
-files are incorporated and all macros
-expanded~\cite[p.~145]{Siff-fse96}.''  Such preprocessing may limit
-the readability and reusability of the resulting C++ templates.  As
-yet another related example, call graph extractors generally work in
-terms of the post-processed code, even when a human is the intended
-consumer of the call graph~\cite{Murphy-icse18}.  Some tools even
-leave the software engineer responsible for inferring the mapping between the
-original and the post-processed source, which is an undesirable and
-error-prone situation.
-
-A tool that first preprocesses code, or takes already-preprocessed code as
-input, cannot be run on a non-syntactic program or one that will not
-preprocess on the platform on which the tool is being run.  These
-constraints complicate porting and maintenance, two of the situations in
-which program understanding and transformation tools are most likely to be
-needed.  Additionally, a tool supplied with only one post-processed
-instantiation of the source code cannot reason about the program as a
-whole, only about that version that results from one particular set of
-preprocessor variables.  For instance, a bug in one configuration may not
-be discovered despite exhaustive testing of other configurations that do
-not incorporate particular code or do not admit particular execution paths.
-
-The third option, emulating the preprocessor, is fraught with difficulty.
-Macro definitions consist of complete tokens but need not be complete
-expressions or statements.  Conditional compilation and alternative macro
-definitions lead to very different results from a single original program
-text.  Preprocessing adds complexity to an implementation, which must trade
-off performing preprocessing against maintaining the code in close to its
-original form.  Extracting structure from macro-obfuscated source is not a
-task for the faint-hearted.  Despite these problems, in many situations
-only some sort of preprocessing or Cpp analysis can produce useful answers.
-
-All three approaches would be unnecessary if programs did not use
-preprocessor directives.  This is exactly what Stroustrup suggests:
-\begin{quote}
-  I'd like to see Cpp abolished.  However, the only realistic and
-  responsible way of doing that is first to make it redundant, then
-  encourage people to use the better alternatives, and {\em then\/}\,---\,years
-  later\,---\,banish Cpp into the program development environment with the
-  other extra-linguistic tools where it
-  belongs~\cite[p.~426]{Stroustrup-DesignEvolution}.
-\end{quote}
-C++ contains features\,---\,such as constant variables, inline functions,
-templates, and reference parameters\,---\,that obviate many uses of Cpp.
-Thus, translation to C++ is a path for partial elimination of Cpp.
-This study indicates the
-feasibility\,---\,and our framework for analyzing preprocessor usage
-provides a basis for the development\,---\,of an automatic translator with
-two attractive properties.  It would take as input C programs complete with
-preprocessor directives, and it would map many\,---\,preferably
-most\,---\,uses of directives into C++ language features.  (It is not
-practical to eliminate all uses of Cpp.  For example, C++ currently
-provides no replacement for the {\tt \#include} directive, or for
-stringization or pasting.  Macros that cannot be eliminated might be
-annotated with their types or 
-effects on parser or program state, so that even tools that do no Cpp
-analysis can operate correctly on such programs.)
-
 Another niche already filled by our tool is that of a ``macro lint''
-program which warns of potentially dangerous (or non-standard) uses of Cpp.
+program which warns of potentially dangerous (or non-standard) uses of
+Cpp.
 
 %O'Callahan and Jackson also use type
 %inference, although for program understanding rather than translation;
@@ -257,21 +230,8 @@ program which warns of potentially dangerous (or non-standard) uses of Cpp.
 %code~\cite{OCallahan-icse97}.
 
 
-\subsection{Cpp: not all bad}
 
-Despite its evident shortcomings, Cpp is a useful and often necessary
-adjunct to C, for it provides capabilities unavailable in the language or
-its implementations.  Cpp permits definition of portable language
-extensions that can define new syntax, abbreviate repetitive or complicated
-constructs, or eliminate reliance on a compiler implementation to
-open-code (inline) functions, propagate symbolic constants, eliminate dead
-code, and short-circuit constant tests.  The latter guarantees are
-especially valuable for compilers that do a poor job optimizing or when the
-programmer wishes to override the compiler's heuristics.  Cpp also permits
-system dependences to be made explicit and tested, resulting in a clearer
-separation of concerns.  Finally, Cpp permits a single source to contain
-multiple different dialects of C; a frequent use is to support both
-K\&R-style and ANSI-style declarations.
+
 
 %% NEED A REFERENCE TO DEBUGGER HERE!
 %% also mention Emacs hide-ifdef mode
@@ -903,6 +863,55 @@ fairly restricted ways, perhaps because other uses would be too
 complicated.)  A dialog among users, compiler writers, tool writers, and
 language theorists is necessary when introducing a feature in order to
 prevent unforeseen consequences from turning it into a burden.
+
+
+[[inserted from intro: surely not yet in the right place]
+On the other hand, the analysis also
+convinces us that, by extending our analysis framework with some class
+type inferencing techniques (similar to those used by Siff and Reps
+for C to C++ translation~\cite{Siff-fse96}, O'Callahan and Jackson for
+program understanding~\cite{OCallahan-icse97}, and others), we can
+take significant steps towards a tool that usefully converts a high
+percentage of Cpp code into C++ language
+features.\footnote{Preliminary results indicate that many C++ packages
+rely heavily on Cpp, even when C++ supports a nearly identical
+language construct, probably due to a combination of trivial
+translations from C to C++ and of C programmers becoming C++
+programmers without changing their habits.} We are interested not in
+translations that merely allow a C program to be compiled by a C++
+compiler (which is usually easy, by intentional design of C++) but
+those that take advantage of the added richness and benefits of C++
+constructs.
+
+All three approaches would be unnecessary if programs did not use
+preprocessor directives.  This is exactly what Stroustrup suggests:
+\begin{quote}
+  I'd like to see Cpp abolished.  However, the only realistic and
+  responsible way of doing that is first to make it redundant, then
+  encourage people to use the better alternatives, and {\em then\/}\,---\,years
+  later\,---\,banish Cpp into the program development environment with the
+  other extra-linguistic tools where it
+  belongs~\cite[p.~426]{Stroustrup-DesignEvolution}.
+\end{quote}
+C++ contains features\,---\,such as constant variables, inline functions,
+templates, and reference parameters\,---\,that obviate many uses of Cpp.
+Thus, translation to C++ is a path for partial elimination of Cpp.
+
+This study indicates the feasibility\,---\,and our framework for
+analyzing preprocessor usage provides a basis for the
+development\,---\,of an automatic translator with two attractive
+properties.  It would take as input C programs complete with
+preprocessor directives, and it would map many\,---\,preferably
+most\,---\,uses of directives into C++ language features.  (It is not
+practical to eliminate all uses of Cpp.  For example, C++ currently
+provides no replacement for the {\tt \#include} directive, or for
+stringization or pasting.  Macros that cannot be eliminated might be
+annotated with their types or effects on parser or program state, so
+that even tools that do no Cpp analysis can operate correctly on such
+programs.)
+
+]]
+
 
 
 %% See slide 15 and its notes from Mike's quals talk.
