@@ -1084,10 +1084,11 @@ gjb_call_hooks_i_i_szl(struct cpp_options *opts, HOOK_INDEX ih, int s, int e,
   dSP;
   int count;
   int retval;
-
-  
   if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return -1;
+
+  ENTER ;
+  SAVETMPS;
 
   PUSHMARK(sp);
   XPUSHs(sv_2mortal(newSViv(s)));
@@ -1112,7 +1113,6 @@ gjb_call_hooks_i_i_szl(struct cpp_options *opts, HOOK_INDEX ih, int s, int e,
   FREETMPS ;
   LEAVE ;
   return retval;
-
 }
 
 
