@@ -57,10 +57,6 @@ Michael D. Ernst <F<mernst@cs.washington.edu>>
 ### To do
 ###
 
-# Not sure whether I should export cline_updateinvars.  Maybe have a
-# separate version for simplification; but when should simplification ever
-# be necessary?
-
 
 ###########################################################################
 ### Variables
@@ -172,6 +168,9 @@ sub cline_updateinvars ($)
     { if ($cline_incomment)
 	{ if ($remaining =~ /\*\//)
 	    { $remaining = $POSTMATCH;
+	      if (($result =~ /\w\Z(?!\n)/) # word consitutent at end (no \n)
+		  && ($remaining =~ /^\w/))
+		{ push(@{$warnings}, "illegal: old-style token pasting\n    in $_[0]"); }
 	      $cline_incomment = $false; }
 	  else
 	    { goto UIV_RETURN; } }
@@ -198,7 +197,7 @@ sub cline_updateinvars ($)
 	      goto UIV_RETURN; } }
       # If not instring, \" suffices instead of the more complicated
       # regexp that checks for leading backslashes.
-      elsif ($remaining =~ m/\/[\*\/]|[\'\"]/)
+      elsif ($remaining =~ m/\/[\*\/]|\*\/|[\'\"]/)
 	{ my $match = $MATCH;
 	  my $postmatch = $POSTMATCH;
 	  $result .= $PREMATCH;
@@ -237,6 +236,8 @@ sub cline_updateinvars ($)
 	      if ($PREMATCH !~ /^\s*$/)
 		{ $seen_ncnb = 1; }
 	      $cline_incomment = $true; }
+	  elsif ($match eq "*/")
+	    { push(@{$warnings}, "illegal: comment terminator */ not in comment\n    in $_[0]"); }
 	  else
 	    { croak("cline_updateinvars: what match?  $match in $_[0]"); } }
       else
@@ -257,7 +258,7 @@ sub cline_updateinvars ($)
 
 
 # Special-purpose variant of cline_updateinvars that removes comments,
-# simplifies strings.
+# simplifies strings.  Ignores warnings.
 sub cline_simplify ($)
 {
   my ($arg) = check_args(1, @_);
@@ -267,6 +268,16 @@ sub cline_simplify ($)
   local $cline_simplify_strings = $true;
 
   my ($result, $seen_ncnb, $warnings) = cline_updateinvars($arg);
+  # Not sure if eliminating space is the right thing; but if mdef_body_simple
+  # isn't stored in state file, it must be done here or elsewhere.
+  $result =~ s/^\s+//;
+  $result =~ s/\s+$//;
+  $result =~ s/\n/ /;
+  if ($cline_incomment)
+    { croak "argument ends in comment: $arg"; }
+  if ($cline_instring)
+    { croak "argument ends in string: $arg"; }
+
   return $result;
 }
 
@@ -366,13 +377,19 @@ sub get_spliced_cline ($;$)
 	{ push(@{$warnings}, "dangerous: file ends with continuation character:\n    $raw_line\n"); }
       else
 	{ $num_physical_lines++;
+	  my $old_incomment = $cline_incomment;
 	  my $old_instring = $cline_instring;
-	  my ($next_simple_line, $next_ncnb_lines) =
+	  my ($next_simple_line, $next_ncnb_lines, $next_warnings) =
 	    ($cpp_comment ? ($next_raw_line, 0, []) : cline_updateinvars($next_raw_line));
 	  $num_ncnb_lines += $next_ncnb_lines;
 	  $raw_line = $raw_line . $next_raw_line;
+	  push(@{$warnings}, @{$next_warnings});
 	  if ($debug_cline)
-	    { print "splicing '$simple_line' '$next_simple_line'\n"; }
+	    { print "splicing simple '$simple_line' '$next_simple_line'\n"; }
+	  if ($old_incomment
+	      && ($simple_line =~ /\w\Z(?!\n)/)
+	      && ($next_simple_line =~ /^\w/))
+	    { push(@{$warnings}, "illegal: old-style token pasting"); }
 	  if ($old_instring && $cline_simplify_strings)
 	    { $simple_line .= $next_simple_line; }
 	  else
@@ -470,12 +487,17 @@ sub get_fulltoken_cline ($;$)
       # perhaps check for $mdef_name and mention it in message if it's set
       while ($cline_incomment || $cline_instring)
 	{
+	  my $old_incomment = $cline_incomment;
 	  my $old_instring = $cline_instring;
 	  my ($next_raw, $next_simple, $next_phys, $next_ncnb, $next_warnings) = get_spliced_cline($filehandle);
 	  if ($next_raw)
 	    # Strict ANSI C does not permit newlines in string constants;
 	    # perhaps warn.  On the other hand, most compilers permit it.
 	    { $raw_result = $raw_result . $next_raw;
+	      if ($old_incomment
+		  && ($simple_result =~ /\w\Z(?!\n)/)
+		  && ($next_simple =~ /^\w/))
+		{ push(@{$warnings}, "illegal: old-style token pasting"); }
 	      if ($old_instring && $cline_simplify_strings)
 		{ $simple_result .= $next_simple; }
 	      else
