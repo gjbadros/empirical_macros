@@ -4,8 +4,7 @@
 
 PKG_DIR := /tmp/mernst/packages
 
-# FIX: These files should be generated from the directory
-# names under PKG_DIR
+# FIX: These files should be generated from the directory names under PKG_DIR
 
 # "make data" makes these files.
 # other targets operate on these files.
@@ -26,41 +25,68 @@ RAW_TABLES := raw-directives-hist
 
 LATEX_TABLES :=	tbl-categories.tex
 
-CVT_LATEX_TABLES :=	$(patsubst %,%.tex,$(TEXT_TABLES))
+CVT_LATEX_TABLES := $(patsubst %,%.tex,$(TEXT_TABLES))
 
-all:	$(LATEX_TABLES) $(CVT_LATEX_TABLES) $(RAW_TABLES)
+ALL_TABLES := $(TEXT_TABLES) $(RAW_TABLES) $(LATEX_TABLES) $(CVT_LATEX_TABLES)
+
+all:	$(ALL_TABLES)
 
 clean:
-	rm -f $(LATEX_TABLES) $(CVT_LATEX_TABLES) $(RAW_TABLES)
+	rm -f $(ALL_TABLES)
+
+###########################################################################
+### Data
+###
+
+data:
+	macros-make-data $(PKG_DIR)
+
+###########################################################################
+### Text tables
+###
+
+text_tables:	$(TEXT_TABLES)
+
+tbl-package_sizes: $(STAT)
+	macros-make-package-sizes-tbl-from-stat $^ > $@
+
+tbl-def_frequency: $(MAC)
+	macros-make-def-frequency-tbl-from-mac $^
+	echo $(patsubst %.mac,%.freqdef,$^) | xargs -n12 paste /homes/gws/gjb/macros/freqdef.buckets >> $@
+
+tbl-how_used_ni: $(MAC)
+	macros-make-how-used-ni-tbl-from-mac $^ > $@
+
+###########################################################################
+### Raw tables
+###
+
+raw-directives-hist: $(STAT)
+	macros-make-directives-raw-hist-from-stats $^ > $@
+
+package_and_sizes-tbl.txt: $(STAT)
+	macros-make-package-sizes-tbl-from-stat $^ > $@
+
+
+###########################################################################
+### LaTeX tables
+###
+
+tbl-categories.tex: $(STAT)
+	macros-make-categories-tbl-from-stat-pct $^ > $@
+
+$(CVT_LATEX_TABLES): %.tex: %
+	latexify $< > $@
+
+###########################################################################
+### Etc.
+###
 
 showvars:
 	echo $(TEXT_TABLES)
 	echo $(RAW_TABLES)
 	echo $(LATEX_TABLES)
 	echo $(CVT_LATEX_TABLES)
-
-text_tables:	$(TEXT_TABLES)
-
-$(CVT_LATEX_TABLES): %.tex: %
-	latexify $< >$@
-
-tbl-package_sizes: $(STAT)
-	macros-make-package-sizes-tbl-from-stat $^ >$@
-
-tbl-def_frequency: $(MAC)
-	macros-make-def-frequency-tbl-from-mac $^
-	echo $(patsubst %.mac,%.freqdef,$^) | xargs -n12 paste /homes/gws/gjb/macros/freqdef.buckets >>$@
-
-tbl-how_used_ni: $(MAC)
-	macros-make-how-used-ni-tbl-from-mac $^ >$@
-
-tbl-categories.tex: $(STAT)
-	macros-make-categories-tbl-from-stat-pct $^ >$@
-
-raw-directives-hist: $(STAT)
-	macros-make-directives-raw-hist-from-stats $^ >$@
-
-data:
-	macros-make-data $(PKG_DIR)
+	echo $(ALL_TABLES)
 
 .PHONY: all clean showvars text_tables data
