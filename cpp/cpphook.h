@@ -24,6 +24,8 @@ typedef enum hook_index_constants {
   HI_HANDLE_DIRECTIVE,
 ///% {$directive_name} Called exactly once for each directive.  $directive_name is
 ///% the directive as it appeared in the source code with the leading # removed.
+///% If the hook returns a 0, do not execute the C code for this directive; this
+///% is useful for ignoring line directives.
 
   HI_DO_DEFINE,
 ///% {$s_start,$s_end,$name_args_body} Called exactly once for each #define. 
@@ -55,6 +57,8 @@ typedef enum hook_index_constants {
 ///% in angle brackets signifying a system include file; $SKIP_DIRS, for whether this
 ///% is an #include_next directive; and $IMPORTING, for whether this is an #import
 ///% directive.
+///% If the hook returns 0, do not include that file -- useful for letting the perl
+///% code control whether inclusions are done, for preventing multiple-inclusions.
 
   HI_DO_IF,
 ///% {$s_start,$s_end, $conditional, $skipped, $value} 
@@ -392,7 +396,7 @@ void gjb_call_hooks_void(struct cpp_options *, HOOK_INDEX);
 
 void gjb_call_hooks_i(struct cpp_options *, HOOK_INDEX, int);
 
-void gjb_call_hooks_sz(struct cpp_options *, HOOK_INDEX, char *);
+int gjb_call_hooks_sz(struct cpp_options *, HOOK_INDEX, char *);
 
 void gjb_call_hooks_sz_sz(struct cpp_options *, HOOK_INDEX, char *, char *);
 
