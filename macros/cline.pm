@@ -62,6 +62,17 @@ Michael D. Ernst <F<mernst@cs.washington.edu>>
 # separate version for simplification; but when should simplification ever
 # be necessary?
 
+# Copied from em_analyze --gjb
+# This only adds input_file_and_line; is it now gratuitous?
+sub mdie ($@) {
+  my (@msg) = check_args_at_least(1, @_);
+  # Could use croak instead.
+  my ($file,$line) = (caller)[1,2];
+  print STDERR "$file:$line ",
+      # (defined($current_function) ? "function $current_function " : ""),
+      "on ", input_file_and_line(), ": ", @msg, "\n";
+  exit -1;
+}
 
 ###########################################################################
 ### Variables
