@@ -65,7 +65,7 @@ cpp_print_containing_files (cpp_reader *pfile)
 	    fprintf (stderr, ",\n                ");
 	}
 
-      fprintf (stderr, " from %s:%ld", ip->nominal_fname, line);
+      /*      fprintf (stderr, " from %s:%ld", ip->nominal_fname, line); */
     }
   if (! first)
     fprintf (stderr, ":\n");
