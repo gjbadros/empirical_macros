@@ -14,6 +14,7 @@ typedef enum hook_index_constants {
   HI_EXIT,
   HI_HANDLE_DIRECTIVE,
   HI_DO_DEFINE,
+  HI_PRE_DO_UNDEF,
   HI_DO_UNDEF,
   HI_DO_INCLUDE,
   HI_DO_IF,
@@ -44,6 +45,7 @@ typedef enum hook_index_constants {
   HI_FUNCTION,
   HI_FUNC_CALL,
   HI_ANNOTATE,
+  HI_POP_BUFFER,
 } HOOK_INDEX;
 // end hook_index_constants
 
@@ -87,6 +89,9 @@ void gjb_call_hooks_macro_cleanup(struct cpp_options *opts, HOOK_INDEX ih,
 void gjb_call_hooks_sz_szl_szl(struct cpp_options *, HOOK_INDEX, 
 			       char *, char *, int, char *, int);
 
+void gjb_call_hooks_sz_szl_szl_i(struct cpp_options *, HOOK_INDEX, 
+				 char *, char *, int, char *, int, int);
+
 void gjb_call_hooks_szl_sz_i(struct cpp_options *, HOOK_INDEX, char *, int, char *, int);
 
 void gjb_call_hooks_szl_szl_i(struct cpp_options *, HOOK_INDEX, 
@@ -116,11 +121,17 @@ void gjb_call_hooks_i_i_szl_sz_defn(struct cpp_options *, HOOK_INDEX, int, int,
 void gjb_call_hooks_i_i_szl_i(struct cpp_options *opts, HOOK_INDEX ih, int s, int e,
 			      char *sz, int cch, int i);
 
+void gjb_call_hooks_i_i_szl(struct cpp_options *opts, HOOK_INDEX ih, int s, int e,
+			    char *sz, int cch);
+
 
 void gjb_call_hooks_szx4(struct cpp_options *, HOOK_INDEX, char *, char *, char *, char *);
 
 void gjb_call_hooks_sz_szlx3_i(struct cpp_options *, HOOK_INDEX, char *, 
 			       char *, int,  char *, int,  char *, int,   int);
+
+void gjb_call_hooks_sz_szlx3_i_i(struct cpp_options *, HOOK_INDEX, char *, 
+				 char *, int,  char *, int,  char *, int,   int, int);
 
 void gjb_call_hooks_szlx3_i(struct cpp_options *, HOOK_INDEX,
 			    char *, int,  char *, int,  char *, int,   int);
