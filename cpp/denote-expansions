@@ -94,7 +94,12 @@ while (<IN>) {
     $out_file = $filename;
     open(INFILE,"<$filename") or die "Could not open source file $filename for reading: $!";
   }
-#  print OUT "$mname, $ichStart, $ichEnd\n";
+#  print STDERR "$mname, $ichStart, $ichEnd\n";
+  if ($mname eq "FILE_IS_BEING_INCLUDED_GJB_MDE" && $ichStart < 0 && $ichEnd < 0) {
+    # hack to be sure each header file that is included gets a file created
+    # in the munged hierarchy
+    next;
+  }
   my $ichLast = tell INFILE;
   my $cchToRead = $ichStart - $ichLast -1;
   if ($cchToRead < 0) {
