@@ -177,6 +177,7 @@ sub simplify_path_name ( $ ) {
   while (($result =~ s%//%/%g) && $result ne $path) {
     $path = $result;
   }
+  return $result;
 }
 
 1; #Successful import
