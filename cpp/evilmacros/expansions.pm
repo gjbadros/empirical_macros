@@ -63,8 +63,8 @@ sub Got_token {
 }
 
 sub Exit {
-  output_functions_listing();
   my ($retval) = @_;
+  output_functions_listing();
 }
 
 sub add_use {
@@ -156,6 +156,7 @@ sub create_def {
 
 sub do_undef {
   my ($s_start,$s_end,$mname, $cDeletes) = @_;
+  print STDERR "DO UNDEF\n";
 }
 
 
@@ -188,7 +189,13 @@ sub pre_do_undef {
   my ($s_start,$s_end,$mname) = @_;
   my $fname = pcp3::Fname();
   print CPP "pre_do_undef of $mname [$s_start,$s_end]\n";
-  return 0; # do not do the undef
+  my $retval = 0; # by default, do not do the undef
+  if ($macro_nestings_deep == 0) {
+    $retval = 1;
+  } else {
+    print STDERR "Ignoring UNDEF\n";
+  }
+  return $retval;
 }
 
 sub delete_def {
