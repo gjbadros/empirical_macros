@@ -3264,7 +3264,7 @@ find_macro_definitions();	# also counts other preprocessor usage
   for $name (keys %macros)
     { if (is_fun_decl_arg_macro($name))
 	{ $fun_decl_arg_macros{$name} = $true; } } }
-print "fun_decl_arg_macros: ", join(" ", (keys %fun_decl_arg_macros)), "\n";
+# print "fun_decl_arg_macros: ", join(" ", (keys %fun_decl_arg_macros)), "\n";
 
 # { my $ofdefs;
 #   for $ofdefs (1..$macros{"OF"}[0])
