@@ -1863,7 +1863,11 @@ do_define (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *li
   struct cpp_options *opts = CPP_OPTIONS (pfile);
   int cchOffsetStart = pfile->buffer->prev - pfile->buffer->buf + 1;
   int cchOffsetEnd = pfile->buffer->cur - pfile->buffer->buf + 1;
-
+  if (pfile->buffer->fFromPerl) 
+    {
+    cchOffsetStart += pfile->buffer->ichSourceStart - 2;
+    cchOffsetEnd +=  pfile->buffer->ichSourceStart - 2;
+    }
 
 #if 0
   /* If this is a precompiler run (with -pcp) pass thru #define commands.  */
