@@ -45,8 +45,9 @@ Michael D. Ernst <F<mernst@cs.washington.edu>>
 
 ## Need to check that use of caller(1) really gives desired results.
 ## Need to give input chunk information.
+## Is this obviated by Perl 5.003's declarations?  Not entirely, I think.
 
-sub check_args
+sub check_args ($@)
 {
   my ($num_formals, @args) = @_;
   my ($pack, $file_arg, $line_arg, $subname, $hasargs, $wantarr) = caller(1);
@@ -67,7 +68,7 @@ sub check_args
   return @args;
 }
 
-sub check_args_range
+sub check_args_range ($$@)
 {
   my ($min_formals, $max_formals, @args) = @_;
   my ($pack, $file_arg, $line_arg, $subname, $hasargs, $wantarr) = caller(1);
@@ -86,7 +87,7 @@ sub check_args_range
   return @args;
 }
 
-sub check_args_at_least
+sub check_args_at_least ($@)
 {
   my ($min_formals, @args) = @_;
   my ($pack, $file_arg, $line_arg, $subname, $hasargs, $wantarr) = caller(1);
