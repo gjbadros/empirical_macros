@@ -96,6 +96,9 @@ TEXT_TABLES :=	tbl-package-sizes \
 		tbl-cat-def-frequency \
 		tbl-cat-ddf-frequency \
 		tbl-cat-use-frequency \
+		tbl-avg-def-frequency \
+		tbl-avg-ddf-frequency \
+		tbl-avg-use-frequency \
 		tbl-where-used \
 		tbl-ccd-categories \
 		tbl-properties-subset \
@@ -215,7 +218,7 @@ tbl-package-sizes: $(STAT)
 	macros-make-package-sizes-tbl-from-stat $^ > $@
 
 tbl-package-sizes-with-uses: tbl-package-sizes made-catdefuse
-	macros-make-tbl-package-sizes-with-uses $^ > $@
+	macros-make-tbl-package-sizes-with-uses tbl-package-sizes > $@
 
 # To add commas, do this in Emacs:
 # (query-replace-regexp "\\([0-9]\\)\\([0-9][0-9][0-9]\\)\\([^0-9]\\)" "\\1,\\2\\3" nil)
@@ -239,6 +242,15 @@ tbl-cat-ddf-frequency: made-catdefuse
 
 tbl-cat-use-frequency: made-catdefuse
 	macros-make-tbl-frequsedef-from-cum $(CATUSECUM) > $@
+
+tbl-avg-def-frequency: $(DEFCUM)
+	macros-make-average-frequsedef-from-cum $^ > $@
+
+tbl-avg-ddf-frequency: $(DDFCUM)
+	macros-make-average-frequsedef-from-cum $^ > $@
+
+tbl-avg-use-frequency: $(USECUM)
+	macros-make-average-frequsedef-from-cum $^ > $@
 
 tbl-where-used: $(HMAC)
 	macros-make-how-used-ni-tbl-from-hmac.pl $^ > $@
