@@ -24,7 +24,6 @@ Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <EXTERN.h>               /* from the Perl distribution     */
 #include <perl.h>                 /* from the Perl distribution     */
 #undef yydebug
-extern int yydebug;
 #undef yyparse
 /* Avoid some warnings by undef-fing  perl's TRUE and FALSE macros, 
    since cpp redefs them */
@@ -33,6 +32,7 @@ extern int yydebug;
 
 #include "cpplib.h"
 #include "cpphook.h"
+#include "cppmain.h"
 #include <stdio.h>
 
 #ifndef EMACS
@@ -167,6 +167,28 @@ void cpp_functions_init(void) {
   boot_backcalls(NULL);
 }
 
+int fShouldParse = 1;
+
+
+int
+cppmain_handle_options (cpp_reader *pfile, int argc, char **argv)
+{
+  int i;
+  for (i = 0; i < argc; i++) 
+    {
+    if (argv[i][0] == '-' && argv[i][1]== '-')
+      {
+      if (strcmp(argv[i]+2,"yydebug") == 0)
+	yydebug = 1;
+      else if (strcmp(argv[i]+2,"noparse") == 0)
+	fShouldParse = 0;
+      continue;
+      }
+    return i;
+    }
+  return i;
+}
+
 int
 main (int argc, char **argv, char **env)
 {
@@ -176,17 +198,20 @@ main (int argc, char **argv, char **env)
   int perl_exit_status = 0;
   struct cpp_options *opts = &options;
   int return_exit_code = SUCCESS_EXIT_CODE;
-  int fShouldParse = 0;
 
   /* Perl startup code */
-  char *startup_code[] = { "", "-I", "/tmp/gjb/cpp", "-e", "use cpphook;" };
+  char *startup_code[] = { "", "-I", "/tmp/gjb/cpp", "-e", "use cpphook" };
   my_perl = perl_alloc();
   perl_construct( my_perl );     
-  perl_parse(my_perl, cpp_functions_init, 5, startup_code, NULL);
-  perl_exit_status = perl_run(my_perl);
-  // FIXGJB: why does this not exit on compile errors???
+  perl_exit_status = perl_parse(my_perl, cpp_functions_init, 
+				sizeof(startup_code)/sizeof(startup_code[0]), 
+				startup_code, NULL);
+
+  // exit if we got compilation (parse) errors!
   if (perl_exit_status)
-    die("Problem use-ing cpphook!");
+    die("Problem use-ing cpphook!  Check that perl file for compilation errors.");
+
+  perl_run(my_perl);
 
   gjb_call_hooks_void(opts,STARTUP);
 
@@ -198,7 +223,8 @@ main (int argc, char **argv, char **env)
   parse_in.data = opts;
 
   init_parse_options (opts);
-  
+  argi += cppmain_handle_options (&parse_in, argc - argi, argv + argi);
+
   argi += cpp_handle_options (&parse_in, argc - argi , argv + argi);
   if (argi < argc)
     fatal ("Invalid option `%s'", argv[argi]);
@@ -215,15 +241,9 @@ main (int argc, char **argv, char **env)
   else if (! freopen (opts->out_fname, "w", stdout))
     cpp_pfatal_with_name (&parse_in, opts->out_fname);
 
-/* FIXGJB: make this a flag */
-#ifdef GJB_PARSE
-  fShouldParse = 1;
-#else
-  fShouldParse = 0;
-#endif
-
   if (!fShouldParse)
     {
+    fprintf(stderr,"Option --noparse given, just running cpp w/o grammar!\n");
     for (;;)
       {
       enum cpp_token kind;
@@ -242,10 +262,11 @@ main (int argc, char **argv, char **env)
     }
   else
     {
-    yydebug = 0; /* FIXGJB: make this a flag */
-    fprintf(stderr,"Starting parse...\n");
+    if (yydebug)
+      fprintf(stderr,"Calling yyparse()...\n");
     yyparse();
-    fprintf(stderr,"Done parse...\n");
+    if (yydebug)
+      fprintf(stderr,"Returned from yyparse()!\n");
     }
 
   cpp_finish (&parse_in);
