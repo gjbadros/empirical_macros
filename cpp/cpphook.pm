@@ -290,6 +290,9 @@ sub do_if {
   print CPP "do_if on $conditional evals to $value ";
   print CPP ", skipping $skipped" if $skipped ne "";
   print CPP "\n";
+  cpp::YYPushStackState();
+  @state_stack = cpp::ParseStateStack();
+  print CPP ": Stack: @state_stack\n";
 }
 
 sub do_elif {
@@ -312,11 +315,14 @@ sub do_ifdef {
 sub do_ifndef {
   my ($kind,$conditional, $trailing_garbage, $skipped, $value) = @_;
   print CPP "do_ifndef on $conditional [$trailing_garbage] ($skipped) evals to $value\n";
+  cpp::YYPushStackState();
+  @state_stack = cpp::ParseStateStack();
+  print CPP ": Stack: @state_stack\n";
 }
 
 sub do_else {
   my ($orig_conditional, $trailing_garbage, $skipped) = @_;
-  print CPP "do_else (orig conditional was $orig_conditional) [$trailing_garbage] skipped $skipped\n";
+  print CPP "do_else (orig conditional was $orig_conditional) [$trailing_garbage] skipped ($skipped)\n";
 #  cpp::YYSwapStackState();
   @state_stack = cpp::ParseStateStack();
   print CPP ": Stack: @state_stack\n";
@@ -324,6 +330,7 @@ sub do_else {
 
 sub do_endif {
   my ($orig_conditional, $trailing_garbage) = @_;
+  chomp($trailing_garbage);
   print CPP "do_endif (orig conditional was $orig_conditional) [$trailing_garbage]\n";
   @state_stack = cpp::ParseStateStack();
   print CPP ": Stack: @state_stack\n";
@@ -354,9 +361,11 @@ sub done_include_file {
 sub Got_token {
   my ($token,$mname,$argno,$raw,@history) = @_;
   my @nests = cpp::MacroExpansionHistory();
- $argof = cpp::ArgOf();
+  my $fname = cpp::Fname();
+
+  $argof = cpp::ArgOf();
   print  TOKEN "TOKEN: $raw;", substr($token,4),", FExpandingMacros = ",cpp::FExpandingMacros(),
-   ", CchOffset = ", cpp::CchOffset(), "; CbytesOutput = ", cpp::CbytesOutput(),"\n";
+   ", CchOffset = $fname:", cpp::CchOffset(), "; CbytesOutput = ", cpp::CbytesOutput(),"\n";
   print TOKEN ": Nests: ",join("<-",@nests),"\n";
   print TOKEN ": History: ",join("<-",@history),"\n";
   print TOKEN ": From $mname\n";
