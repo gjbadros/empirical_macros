@@ -36,6 +36,10 @@ Boston, MA 02111-1307, USA.
 
 #include <stdio.h>
 
+#ifdef USE_DMALLOC
+#include <dmalloc.h>
+#endif
+
 typedef unsigned char U_CHAR;
 
 /* This is used for communicating lists of keywords with cccp.c.  */

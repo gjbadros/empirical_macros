@@ -62,3 +62,7 @@ xcalloc (unsigned number, unsigned size)
     memory_full ();
   return ptr;
 }
+
+#ifdef USE_DMALLOC
+#include "dmalloc.h"
+#endif
