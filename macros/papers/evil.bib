@@ -416,35 +416,6 @@ They also break down the 166 uses of #ifdef into categories:
                  of a MOP.",
 }
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% I haven't yet read the following articles.
-%%%
-
-@InProceedings{favre:97,
-  author =       "Jean-Marie Favre",
-  title =        "{CPP} Denotational Semantics and its Application to
-                 Software Maintenance",
-  booktitle =    "1st Euromicro Working Conference on Software
-                 Maintenance and Reengineering CSMR 97",
-  month =        mar,
-  year =         "1997",
-  publisher =    "IEEE Computer Society Press",
-  abstract =     "Very often, portability of large software products is
-                 achieved via the empirical use of old tools like CPP,
-                 the preprocessor of the C language. Though powerful low
-                 level features like conditional compilation cause
-                 serious maintenance problems. There is a lack of
-                 adequate tools to support such activities. This paper
-                 presents our approach to this problem. We introduce
-                 APP, an abstract language semantically equivalent to
-                 CPP but based on traditional programming-in-the-small
-                 concepts. A rigorous description of the semantics of
-                 this language makes it possible to develop reliable
-                 reverse engineering tools.",
-  class =        "Reverse_Engineering, Reverse_Design,
-                 Configuration_Structures",
-  sender =       "antonio@ifi.unizh.ch",
-}
 
 
 @InProceedings{Favre96,
@@ -484,6 +455,78 @@ value, different view for tool and programmer.
 Notes that APP will give a semantics for Cpp.
 This is a precursor to Favre96, and it even shares some of the same text.
 Not really worth citing.
+
+
+@TechReport{SpulerS92,
+  author = 	 "David A. Spuler and A. Sayed Muhammed Sajeev",
+  title = 	 "Static detection of preprocessor macro errors in {C}",
+  institution =  "James Cook University",
+  year = 	 1992,
+  number =	 "92/7",
+  address =	 "Townsville, Australia",
+  URL = 	 "http://www.cs.jcu.edu.au/ftp/pub/techreports/92-7.ps.gz",
+}
+18 pages
+David Spuler: dspuler at phuket.bmc.com
+Abstract:
+  The preprocessor incorporated into the C language is often used to substitute
+  in-line code for function calls using preprocessor macros. However, the
+  semantics of macro calls are different to those for function calls and there
+  are a number of common pitfalls. This paper examines the most common errors
+  and presents a number of algorithms whereby the compiler can detect these
+  errors at compile-time. The algorithms vary in complexity from a simple
+  analysis of lexical tokens in the preprocessor to examination of the parse
+  tree within the parser. Most of the algorithms have been implemented in a
+  prototype C macro checker called Check.
+Describes a series of errors in macro definitions or use:
+ * missing braces on multiple statement macros
+ * dangling else in macros containing if
+ * side effects to macro calls
+ * operator precedence errors
+"Many" of the checks have been implemented in a tool called Check.
+Except for operator precedence errors, everything is at the lexical level:
+no parsing, lots of approximations (eg, suppress certain errors if any
+statement-like token appears in a macro).  Unsubstantiated claims about
+what extra work (parsing, etc.) is worthwhile and what isn't.  Much of the
+paper discusses precedence work:  a parse-free technique on definitions,
+and a version with parsing which examines invocations to show uses which
+actually trigger the problem.  No reports about running it on actual code
+(except an implication that it's being used for a programming class).
+[[Also see David A. Spuler, Check: A Better Checker for C, B Sc (Honours)
+Thesis, James Cook Universaity, Townsville, Australia (1990).]]
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% I haven't yet read the following articles.
+%%%
+
+@InProceedings{favre:97,
+  author =       "Jean-Marie Favre",
+  title =        "{CPP} Denotational Semantics and its Application to
+                 Software Maintenance",
+  booktitle =    "1st Euromicro Working Conference on Software
+                 Maintenance and Reengineering CSMR 97",
+  month =        mar,
+  year =         "1997",
+  publisher =    "IEEE Computer Society Press",
+  abstract =     "Very often, portability of large software products is
+                 achieved via the empirical use of old tools like CPP,
+                 the preprocessor of the C language. Though powerful low
+                 level features like conditional compilation cause
+                 serious maintenance problems. There is a lack of
+                 adequate tools to support such activities. This paper
+                 presents our approach to this problem. We introduce
+                 APP, an abstract language semantically equivalent to
+                 CPP but based on traditional programming-in-the-small
+                 concepts. A rigorous description of the semantics of
+                 this language makes it possible to develop reliable
+                 reverse engineering tools.",
+  class =        "Reverse_Engineering, Reverse_Design,
+                 Configuration_Structures",
+  sender =       "antonio@ifi.unizh.ch",
+}
 
 
 Other Favre papers in English (from
@@ -532,50 +575,6 @@ http://www-adele.imag.fr/users/Jean-Marie.Favre/):
      13th International Computer Software and Applications Conference, 
      Orlando (Florida), September, pp. 404-411, 
      1989. 
-
-
-@TechReport{SpulerS92,
-  author = 	 "David A. Spuler and A. Sayed Muhammed Sajeev",
-  title = 	 "Static detection of preprocessor macro errors in {C}",
-  institution =  "James Cook University",
-  year = 	 "1992",
-  OPTkey = 	 "",
-  OPTtype = 	 "",
-  OPTnumber = 	 "92/7",
-  OPTaddress = 	 "Townsville, Australia",
-  OPTmonth = 	 "",
-  OPTnote = 	 "",
-  OPTannote = 	 "",
-  URL = 	 "http://www.cs.jcu.edu.au/ftp/pub/techreports/92-7.ps.gz",
-}
-18 pages
-David Spuler: dspuler at phuket.bmc.com
-Abstract:
-  The preprocessor incorporated into the C language is often used to substitute
-  in-line code for function calls using preprocessor macros. However, the
-  semantics of macro calls are different to those for function calls and there
-  are a number of common pitfalls. This paper examines the most common errors
-  and presents a number of algorithms whereby the compiler can detect these
-  errors at compile-time. The algorithms vary in complexity from a simple
-  analysis of lexical tokens in the preprocessor to examination of the parse
-  tree within the parser. Most of the algorithms have been implemented in a
-  prototype C macro checker called Check.
-Describes a series of errors in macro definitions or use:
- * missing braces on multiple statement macros
- * dangling else in macros containing if
- * side effects to macro calls
- * operator precedence errors
-"Many" of the checks have been implemented in a tool called Check.
-Except for operator precedence errors, everything is at the lexical level:
-no parsing, lots of approximations (eg, suppress certain errors if any
-statement-like token appears in a macro).  Unsubstantiated claims about
-what extra work (parsing, etc.) is worthwhile and what isn't.  Much of the
-paper discusses precedence work:  a parse-free technique on definitions,
-and a version with parsing which examines invocations to show uses which
-actually trigger the problem.  No reports about running it on actual code
-(except an implication that it's being used for a programming class).
-[[Also see David A. Spuler, Check: A Better Checker for C, B Sc (Honours)
-Thesis, James Cook Universaity, Townsville, Australia (1990).]]
 
 
 Understanding code containing preprocessor construct
