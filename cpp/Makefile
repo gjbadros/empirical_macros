@@ -16,7 +16,7 @@ ALL_CFLAGS = $(INTERNAL_CFLAGS) $(X_CFLAGS) $(T_CFLAGS) $(CFLAGS) $(XCFLAGS) -g 
 srcdir = .
 PERLARCHDIR = /uns/lib//perl5.004/arch
 
-INCLUDES = -I. -I$(srcdir) -I$(srcdir)/config -I$(PERLARCHDIR)/CORE
+INCLUDES = -I$(srcdir) -I$(srcdir)/config -I$(PERLARCHDIR)/CORE
 
 
 # Common prefix for installation directories.
