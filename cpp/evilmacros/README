@@ -39,14 +39,18 @@ How To Use Pcp3 To Preprocess A Package
    pcp3-compare-exps-vs-c-files-listing
    # check that for every .c file, a .exps file exists
 
-6b) For each .c file remaining, create the .exps file by making that .o file
+6b) Fix the differences in .c files:
+    "<" difference:
+      make the file (run normal make from its directory),
+      or remove the .exps (and other) files if this is a pcp3 error
+    ">" difference:
+      Ignore the following:
+       * files for a different architecture (OS/2, Amiga, etc.)
+       * system-related files already provided by Linux (alloca, vms*)
+      Otherwise, create the .exps file by making that .o file
         make -k CC=gcc-pcp3 *****.o
-    (may need to touch-oldify the .o file first).
-    Do this in its own directory, not from the top-level directory.
-
-    Ignore the following:
-     * files for a different architecture (OS/2, Amiga, etc.)
-     * system-related files already provided by Linux (alloca, vms*)
+      (may need to touch-oldify the .o file first).
+      Do this in its own directory, not from the top-level directory.
 
 7) pcp3-combine-expansions
    # To create expansions.lst
