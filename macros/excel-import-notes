@@ -32,4 +32,8 @@
    those data files, and they may have other problems)
 
 11) Ctrl-p to print a graph to psc2es, Ctrl-Shift-P to print a graph to a file (will be prompted for name)
+  -> Use the sheet name (on the tab at bottom of window) as the filename for exported .ps
+
+12) Convert eps using (from ~gjb/bin/share)
+for i in *.ps; do ps-ms-cleanup $i; fix-ms-ps $i; excel-ps-to-eps $i; done
 
