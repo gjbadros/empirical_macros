@@ -61,6 +61,7 @@ sub Startup {
   open(VARS,">$prefix.vars") || die "Cannot open $prefix.vars: $!";
   open(TYPES,">$prefix.types") || die "Cannot open $prefix.types: $!";
   open(EXPAND,">$prefix.exps") || die "Cannot open $prefix.exps: $!";
+  open(CMDLNDEFS,">$prefix.defgjbmde") || die "Cannot open $prefix.defgjbmde: $!";
 #  open(EXP_CL,">$prefix.expcl") || die "Cannot open $prefix.expcl: $!";
 #  open(TOKEN,">$prefix.tokens") || die "Could not open $prefix.tokens: $!";
   open(FUNCTIONS,">$prefix.funcs") || die "Cannot open $prefix.funcs: $!";
@@ -492,6 +493,22 @@ sub macro_cleanup {
   select $old;
 }
 
+# This will get called with some of the built-in definitions, too.
+# in particular, I see:
+#
+# define __ELF__ 1
+# define unix 1
+# define i386 1
+# define linux 1
+#
+# as the first 4 lines of all *.defgjbmde files
+# --12/13/98 gjb
+
+sub cmd_line_def {
+  my ($def) = @_;
+  print CMDLNDEFS "#define $def\n";
+}
+
 
 # Add the hooks, now
 
@@ -536,6 +553,7 @@ AddHook("EXIT",\&Exit);
 #AddHook("TYPEDEF",\&do_typedef);
 #AddHook("VARDECL",\&do_vardecl);
 AddHook("POP_PERL_BUFFER",\&pop_perl_buffer);
+AddHook("CMD_LINE_DEF",\&cmd_line_def);
 
 
 1;
