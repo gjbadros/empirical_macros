@@ -923,9 +923,7 @@ declaration: decl_specs opt_init_decl_list SEMICOLON
  		      gjb_call_hooks_sz(CPP_OPTIONS(&parse_in),HI_VARDECL,
 			  	        rm->data.sval->str);
 		    }
-		  } /* FIXGJB: else {
-	 	    fIsFunc = 1;
-		  } */
+		  }
                   here = rest;
                 } while (here != NULL);
 #ifdef FIXGJB_MOVED
