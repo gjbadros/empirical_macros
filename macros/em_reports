@@ -457,7 +457,8 @@ sub output_stats ()
 			keys %prop_histogram) {
 	print "$prop_histogram{$prop} ", string_from_prop($prop) . "\n";
       }
-      print "#Macro definition property percentages\n";
+      my $cMacrosInTables = $#mdef_properties + 1;
+      print "#Macro definition property percentages: total definitions = $cMacrosInTables\n";
       my $i = 0;
       my $cASSIGN = 0;
       my $cFREE_VAR = 0;
@@ -468,7 +469,6 @@ sub output_stats ()
       my $cASSEMBLY_CODE = 0;
       my $cPASTING = 0;
       my $cSTRINGIZE = 0;
-      my $cMacrosInTables = $#mdef_properties + 1;
       while ($i < $cMacrosInTables) {
 	$cASSIGN++ if ($mdef_properties[$i] & $propASSIGN);
 	$cFREE_VAR++ if ($mdef_properties[$i] & $propFREE_VAR);
@@ -481,15 +481,15 @@ sub output_stats ()
 	$cSTRINGIZE++ if ($mdef_properties[$i] & $propSTRINGIZE);
 	$i++;
       }
-      printf "%2.2g${OFS}assign\n", 100*$cASSIGN/$cMacrosInTables;
-      printf "%2.2g${OFS}free_var\n", 100*$cFREE_VAR/$cMacrosInTables;
-      printf "%2.2g${OFS}invokes_macro\n", 100*$cINVOKES_MACRO/$cMacrosInTables;
-      printf "%2.2g${OFS}passes_type_as_arg\n", 100*$cPASSES_TYPE_AS_ARG/$cMacrosInTables;
-      printf "%2.2g${OFS}uses_macro_as_type\n", 100*$cUSES_MACRO_AS_TYPE/$cMacrosInTables;
-      printf "%2.2g${OFS}uses_arg_as_type\n", 100*$cUSES_ARG_AS_TYPE/$cMacrosInTables;
-      printf "%2.2g${OFS}assembly_code\n", 100*$cASSEMBLY_CODE/$cMacrosInTables;
-      printf "%2.2g${OFS}pasting\n", 100*$cPASTING/$cMacrosInTables;
-      printf "%2.2g${OFS}stringize\n", 100*$cSTRINGIZE/$cMacrosInTables;
+      prop_line_for('assign',$cASSIGN,$cMacrosInTables);
+      prop_line_for('free_var',$cFREE_VAR,$cMacrosInTables);
+      prop_line_for('invokes_macro',$cINVOKES_MACRO,$cMacrosInTables);
+      prop_line_for('passes_type_as_arg',$cPASSES_TYPE_AS_ARG,$cMacrosInTables);
+      prop_line_for('uses_macro_as_type',$cUSES_MACRO_AS_TYPE,$cMacrosInTables);
+      prop_line_for('uses_arg_as_type',$cUSES_ARG_AS_TYPE,$cMacrosInTables);
+      prop_line_for('assembly_code',$cASSEMBLY_CODE,$cMacrosInTables);
+      prop_line_for('pasting',$cPASTING,$cMacrosInTables);
+      prop_line_for('stringize',$cSTRINGIZE,$cMacrosInTables);
     }
 
   if ($opt_P)
@@ -880,6 +880,11 @@ sub output_stats ()
   if ($opt_v) { print STDOUT "done\n"; }
 }
 
+# Use to print out the PROP file's output
+sub prop_line_for {
+  my ($label,$value,$total) = check_args(3,@_);
+  printf "%d${OFS}%2.2g%%${OFS}%s\n", $value, 100*$value/$total,$label;
+}
 
 sub HistogramNumericFromList (@) {
   my %histogram = ();
