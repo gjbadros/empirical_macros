@@ -23,6 +23,8 @@ sub Startup {
   print STDERR "STARTUP...\n";
   open(CHOUT,">chout.listing") || die "Could not open output file: $!";
   open(TOKEN,">token.listing") || die "Could not open output file: $!";
+  open(MAPPING,">mapping") || die "Could not open output file: $!";
+  print MAPPING "(setq char-mapping (list\n";
   open(TP,">textprops.el") || die "Could not open output file: $!";
   open(TPSOURCE,">textprops-source.el") || die "Could not open output file: $!";
 #  select CHOUT;
@@ -32,6 +34,10 @@ sub Startup {
 
 sub Exit {
   my ($retval) = @_;
+  close(TP);
+  close(TPSOURCE);
+  print MAPPING "))\n";
+  close(MAPPING);
   close(CHOUT); # Not really necessary of course
   close(TOKEN); # Not really necessary of course
   print "Exiting with status $retval\n";
@@ -87,7 +93,13 @@ sub create_predef {
 
 sub cpp_out {
   my ($sz) = @_;
-  print "OUTED: $sz\n";
+  my $cch_output = cpp::CBytesOutput();
+  my ($cch_offset,$junk) = cpp::CchOffset();
+  print MAPPING "'($cch_offset . $cch_output)\n";
+  if ($top_level_mname ne "") {
+    $top_level_full_expansion .= $sz;
+  }
+
 #  print "$sz\n";
 #  print "|"; # just print separator
 }
@@ -107,6 +119,18 @@ sub delete_def {
   print "delete_def $keyword, $fExists\n";
 }
 
+sub macro_cleanup {
+  my ($mname) = @_;
+  my ($offset, $cbb) = cpp::CchOffset();
+  my $cbytesOutput = cpp::CBytesOutput();
+  my $fname = cpp::Fname();
+  print "macro_cleanup $mname; source $offset, $cbb; output $cbytesOutput\n";
+  if ($mname eq $top_level_mname) {
+    print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'doc \"$mname final expansion: $top_level_full_expansion\")\n";
+    $top_level_full_expansion = "";    
+    $top_level_mname = "";
+  }
+}
 
 sub macro_arg_exp  {
   my ($mname,$raw,$number) = @_;
@@ -116,6 +140,7 @@ sub macro_arg_exp  {
 $lastdoc = "";
 $s_start = 0;
 $s_end = 0;
+$top_level_mname = "";
 sub expand_macro {
   my ($mname,$expansion,$length,$raw_call,$has_escapes,$cbuffersDeep,$cargs,@args) = @_;
   my ($exp_offset, $cbb) = cpp::SumCchExpansionOffset();
@@ -131,6 +156,7 @@ sub expand_macro {
     die if $cbb != $cbuffersBack;
     $s_end++;
     $s_start = $s_end - $call_length;
+    $top_level_mname = $mname;
   }
 
   print "\nexpand_macro $mname = ", cpp::lookup($mname), ", source offset: $s_start - $s_end, $cbuffersDeep [$has_escapes]; ", 
@@ -251,7 +277,7 @@ sub done_include_file {
 sub Got_token {
   my ($token,$sz) = @_;
   print  "TOKEN: $sz;", substr($token,4),", FExpandingMacros = ",cpp::FExpandingMacros(),
-   ", CchOffset = ", cpp::CchOffset(), "\n";
+   ", CchOffset = ", (cpp::CchOffset())[0], "\n";
 }
 
 sub do_function {
@@ -277,6 +303,7 @@ AddHook("CPP_ERROR",\&cpp_error);
 AddHook("CPP_OUT",\&cpp_out);
 AddHook("EXPAND_MACRO",\&expand_macro);
 AddHook("MACARG_EXP",\&macro_arg_exp);
+AddHook("MACRO_CLEANUP",\&macro_cleanup);
 AddHook("IFDEF_MACRO",\&ifdef_macro);
 AddHook("SPECIAL_SYMBOL",\&special_symbol);
 AddHook("COMMENT",\&comment);
