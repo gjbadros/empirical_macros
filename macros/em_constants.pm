@@ -21,7 +21,7 @@ require Exporter;
 
  @mcat_NULL @mcat_LITERAL @mcat_NONLITERAL_EXPRESSION
  @mcat_STATEMENT @mcat_SYNTAX @mcat_TYPE @mcat_RECURSIVE
- @mcat_NON_C_CODE @mcat_OTHER @mcat_FAILURE
+ @mcat_NON_C_CODE @mcat_OTHER @mcat_SYMBOL_UNKNOWN @mcat_FAILURE
 
  $propNONE $propASSIGN $propFREE_VAR $propINVOKES_MACRO
  $propPASSES_TYPE_AS_ARG $propUSES_MACRO_AS_TYPE $propUSES_ARG_AS_TYPE
@@ -210,7 +210,8 @@ if ((not defined($categoryname[$catLast]))
 @mcat_SYNTAX = qw( catUNBALANCED catPUNCTUATION );
 @mcat_RECURSIVE = qw( catRECURSIVE );
 @mcat_NON_C_CODE = qw( catCOMMAND_LINE catASSEMBLY_CODE );
-@mcat_OTHER = qw( catRESERVED_WORD catFUNCTION_NAME catSYMBOL_UNKNOWN catSYMBOLS);
+@mcat_SYMBOL_UNKNOWN = qw( catSYMBOL_UNKNOWN );
+@mcat_OTHER = qw( catRESERVED_WORD catFUNCTION_NAME catSYMBOLS);
 
 
 
