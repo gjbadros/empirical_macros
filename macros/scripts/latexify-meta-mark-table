@@ -10,20 +10,22 @@ print '
 %\newcommand{\black}{\ensuremath{\blacksquare}}
 \newcommand{\black}{\vrule height5.5pt depth0.5pt width6pt}
 {\small
-\addtolength{\columnsep}{-.5\columnsep}
+\addtolength{\tabcolsep}{-.6\tabcolsep}
 % The *{n}{c|} below creates n duplicate columns of that type (centered, here)
 \begin{tabular}{|r|*{10}{c|}ll}\cline{1-11}
-\rotatebox{90}{\parbox{1in}{Percentage of ' ."$cdefined". ' \\\\ multiply-defined \\\\ macro names}~} &
-\rotatebox{90}{Null define~} &
-\rotatebox{90}{Constant~} &
-\rotatebox{90}{Expression~} &
-\rotatebox{90}{Statement~} &
-\rotatebox{90}{Type related~} &
-\rotatebox{90}{Syntactic~} &
-\rotatebox{90}{Symbols~} &
-\rotatebox{90}{Unknown symbol~} &
-\rotatebox{90}{Not C code~} &
-\rotatebox{90}{Failed classification~}
+% The struts ensure that all the columns are equally wide.
+\newlength{\headht}\settowidth{\headht}{Percentage of ' . $cdefined . '~}
+\rotatebox{90}{\parbox{\headht}{Percentage of ' . $cdefined . '~ \\\\ multiply-defined~ \\\\ macro names\\strut~}} &
+\rotatebox{90}{Null define~\\strut} &
+\rotatebox{90}{Constant~\\strut} &
+\rotatebox{90}{Expression~\\strut} &
+\rotatebox{90}{Statement~\\strut} &
+\rotatebox{90}{Type related~\\strut} &
+\rotatebox{90}{Syntactic~\\strut} &
+\rotatebox{90}{Symbols~\\strut} &
+\rotatebox{90}{Unknown symbol~\\strut} &
+\rotatebox{90}{Not C code~\\strut} &
+\rotatebox{90}{Failed classification~\\strut}
 \\\\ \cline{1-11}
 ';
 }
@@ -46,13 +48,14 @@ while (<>) {
   ($count,$marks) = /^( +\d+)\s(.*)$/;
 
   # print STDERR "$count <<$marks>>\n";
-  $marks =~ s/\^.*$//;
-  @m = split(//,$marks);
-  $out = join("&", @m);
-  $out =~ s/\*/\\black/g;
-  $out =~ s/\</\$\\Leftarrow\$/g;
-
+  # Omit lines for less than one-twentieth of a percent
   if (100*$count/$sum >= 0.05) {
+    $marks =~ s/\^.*$//;
+    @m = split(//,$marks);
+    $out = join("&", @m);
+    $out =~ s/\*/\\black/g;
+    $out =~ s/\</\$\\Leftarrow\$/g;
+
     if ($pct == 0) {
       print "$count &";
     } else {
