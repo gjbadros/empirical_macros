@@ -71,6 +71,9 @@ find-c | evilmacros -iv -d ~/macros/data/stable
 # but that is easy to do from the shell.
 
 #Complex execution (use zsh):
+#
+# for i in *(/); do echo $i; pushd $i; find-c | evilmacros -i -d $TM:${i%%-*} >$i.out 2> $i.err; popd; done 
+#
 # ext=all; p=~/505/data; for i in *(/); do pushd $i; find-c | nice evilmacros -i -D$p/$i.def.$ext -e$p/$i.em.$ext -c$p/$i.cat.$ext -S$p/$i.stat.$ext > $p/$i.out.$ext 2> $p/$i.err.$ext; popd; done
 # alias find-c='find . \( -name UNUSED -o -name CVS -o -name SCCS -o -name RCS \) -prune -o \( -name "*.[chCH]" -o -name "*.[cC][cC]" -o -name "*.[cC][pP][pP]" \) -print'
 # ext=all; p=/tmp/mernst/data; for i in *(/); do pushd $i; find-c | nice /homes/rivers/mernst/research/notkin/macros/evilmacros-961223 -i -D$p/$i.def.$ext -e$p/$i.em.$ext -c$p/$i.cat.$ext -S$p/$i.stat.$ext > $p/$i.out.$ext 2> $p/$i.err.$ext; popd; done
@@ -113,31 +116,7 @@ find-c | evilmacros -iv -d ~/macros/data/stable
 #    the first and last physical lines associated with the current lines being
 #    processed; in general, prefer the former to the latter, except when
 #    the end of a function definition, etc.
-
-
-# FIXGJB: Update and organize this list.
-
-# Greg:
-#  cppcmdcount is not getting set any longer
-#  get_fulltoken_line():
-#    new global variable $current_lineno or some such, like $.
-#    for each PHYSICAL line, accumulate into counts of:
-# 	blank lines, comment lines, and code lines.  (Sum will
-# 	be more than total, since lines can contain both comments and code,
-# 	or both comments and preprocessor directives.)
-#  % #def/cpp-directives for .c files and .h files separately.
-#  # of preprocessor directives
-#    preprocessor directives as % of physical lines
-#         (all and noncomment-nonblank)
-#  arrange to process #include files as well as those specified on the
-#     command line.  Deal with
-#     #include <> as well as #include "".  Make the value of
-#     $file_inclusion_method{$filename} indicate whether this file occurred in the command
-#     line or not, and if not whether it was a "" or a <> included file.  If
-#     you wanted to build a dag of #include links while you were at it, that
-#     would be nice (we'll need to eventually), but it isn't essential yet.
-#  count calls to macros; process to determine which functions they are in
-# 
+#
 # Small code stuff:
 #  * when body = expression + semicolon, warn; but check that every use of
 # 	the macro is followed by a semicolon, and if so, eliminate the one
@@ -151,11 +130,11 @@ find-c | evilmacros -iv -d ~/macros/data/stable
 #  * Warn about "#define foo(bar)".  Legal, but probably a mistake.
 #  * Recognize macros that build assembly code, and treat/report specially?
 # 	(What % of interesting macros are such?)
-#  * Look for __XXX__ (eg, built-in macro __LINE__) in the files.  In general,
-# 	we can't know all the things that are macros, but can try; look at
-# 	Makefiles and such.
+#  * Look for macro definitions from makefiles (-D option to compiler)
+# 	we can't know all the things that are macros, but can try
 #  * Warn if missing parens around arg in body, or missing parens around
 # 	whole body.
+# FIXMERNST: Isn't this done?
 #  * Keep track of the current conditional compilation constraints
 #  * Warn about multi-line comments/strings in macro definitions.  (Plus
 # 	option to turn this off.)
@@ -164,7 +143,7 @@ find-c | evilmacros -iv -d ~/macros/data/stable
 #  * Try other (non-gcc) preprocessors on the problematic stuff, to see if they
 # 	deal with it identically.
 #  * Get more packages (eg GNAT), until nishin:/tmp is full.  Then stop.
-# 	Ask support about /tmp policy.
+# 	/tmp policy is basically that they'll try not to blow stuff away
 #  * Add additional pass for function and global types before inferring macro
 # 	invocation types.  Does a tool already exist to compute this for us?
 # 
@@ -191,7 +170,6 @@ find-c | evilmacros -iv -d ~/macros/data/stable
 #  * write type and side-effect specifications for library functions (maybe
 # 	do this automatically by reading lots of standard header files?
 # 	Then note which header files have been read so we don't reread them.)
-#  * process #include files -- but only once per file
 #  * check for side effects in macros (eg, function calls in an argumentless
 # 	macro probably prevent it from being turned into a const, unless
 # 	the call is to a known side-effect-less library function
@@ -768,18 +746,14 @@ my @rg_cpp_cmds = (0) x $c_ftype;
 # the number of times a macro definition was categorized as uncategorized
 # for files of type $ft_index
 # (much like @rg_cpp_cmds list of hashes)
-# FIX: don't require listing these all over again to initialize properly
-my @rg_category_counts; #({})
+my @rg_category_counts;
 
+# These get computed using ft_ slices
 my %category_counts_ni = ();
 my %category_counts_c_ni = ();
 my %category_counts_hdr_ni = ();
 
-
-
-# fixgjb: try omitting this and other pre-initializations, or comment why
-# the initialization is necessary.
-my @rg_cppcmdcounts; #({}) x $c_ftype;
+my @rg_cppcmdcounts;
 
 #my $physical_lines = 0;		# as they appear to tools
 #my $ncnb_physical_lines = 0;	# non-comment, non-blank lines
@@ -806,7 +780,6 @@ my $cpp_cmds_c_ni;
 
 # Initialize cppcmdcount{"define"} to avoid uninitialized values
 # when processing the macros (in case there were no macros).
-# FIX: don't duplicate this information from rg_cppcmdcounts
 my %cppcmdcount = (
    "define" => 0,
    "elif" => 0,
@@ -848,7 +821,6 @@ my $built_in_fake_file = "%Built In%";
 # (start_line, function_name, end_line)
 my %files_lines;
 
-# fixgjb: Is this comment correct?
 # %function_to_locs is a hash from function name to a list of lists of
 #   (file,start,end), one per definition of that function.
 my %function_to_locs;
@@ -1123,8 +1095,7 @@ sub process_macro_undefinition {
 sub macro_dependenton
 {
   my ($macro_name, @dependenton) = check_args_at_least(1, @_);
-  # ***** FIX:  Is this right at all?  Should it be @{$macros{$macro_name}} ??
-  my @indices = @macros{$macro_name};
+  my @indices = @{$macros{$macro_name}};
   shift(@indices);		# eliminate the count of size
   my @result = ($false);
   # scratch indices, since I must pass in at least one index.
@@ -1273,7 +1244,6 @@ sub negate_cpp_if_condition
 
 # FIX: these sub-parts might better be broken up into functions
 # FIX: use "select" instead of print FILEHANDLE repeatedly
-#FIX: Get stats on number of macros only #undef-d, etc.
 sub output_stats
 {
   check_args(0, @_);
@@ -1464,8 +1434,6 @@ sub output_stats
     # undef $OFS if (defined($OFS));
   }
 
-  #FIXNOW -- Categorizations should probably get put in the per
-  #definition macro file, as well, and statistics need to be accumulated
   if ($opt_C) {
     my $name;
     foreach $name (sort keys %macros) {
@@ -1625,8 +1593,8 @@ $commaop = $true;		# whether commas should be operators or not
 # Result ends with newline.
 # With argument, doesn't pop (actually, shift) from getline_ungot_{raw,simple}_lines.
 #
-# FIX: when simplifying (2nd pass), we need to remove the chars betwen < & >
-# on a #include line-- they act like quotes -- MERNST do this in updateinvars
+# FIXMERNST: when simplifying (2nd pass), we need to remove the chars betwen < & >
+# on a #include line-- they act like quotes -- do this in updateinvars perhaps
 # 
 # Constructing simplified values are a bit wasteful on the first pass, when we
 # only care about macro definitions; special-case that?
@@ -3168,11 +3136,10 @@ sub get_macro_call_types
   local $finding_macro_uses = $true;
   local $getline_simplify = $true;
   local $merge_cpp_if_branches = $true;
-  my $ifiles = 0;
-#  foreach $this_file (@files)
-  for (; $ifiles <= $#files; $ifiles++)
+  my $ifiles;
+  for ($ifiles = 0; $ifiles <= $#files; $ifiles++)
     { $current_file = $files[$ifiles];
-      # FIX: don't assert this
+      # shouldn't have already set this value
       die if defined($files_lines{$current_file});
       @{$files_lines{$current_file}} = ();
       $current_ftype_index = compute_ftype_index($current_file);
@@ -4250,7 +4217,7 @@ sub is_fun_decl_arg_macro
 
   die "is_fun_decl_arg_macro: $identifier" if (!exists $macros{$identifier});
 
-  # FIX: use $m_i = $macros{$identifier}
+  # FIX: use @m_i = @{$macros{$identifier}}, to reduce repetitivity
   my $cMacroDefs = $macros{$identifier}[0];
 
   # Check to make sure the macro has multiple
@@ -4270,15 +4237,6 @@ sub is_fun_decl_arg_macro
     }
     my $args = $mdef_args[$macros{$identifier}[$_]];
     my $body = $mdef_body_noc[$macros{$identifier}[$_]];
-    ## Oughtn't need this: take simplified definition.
-    #     #FIX: better way to remove comments?
-    #     # Remove comments
-    #     $body =~ s%//.*$%%g;
-    #     $body =~ s%/\*.*?\*/%%g;
-    #     #FIX: better way to remove l/t whitespace?
-    #     # Remove leading/trailing whitespace
-    #     $body =~ s%^\s*%%g;
-    #     $body =~ s%\s*$%%g;
 
     my $expands_to_just_parens = $false;
     my $expands_to_itself = $false;
@@ -4323,7 +4281,7 @@ sub is_semi_fun_decl_arg_macro
 
   die "is_fun_decl_arg_macro: $identifier" if (!exists $macros{$identifier});
 
-  # FIX: use $m_i = $macros{$identifier}
+  # FIX: use @m_i = @{$macros{$identifier}}
   my $cMacroDefs = $macros{$identifier}[0];
 
   # Check to make sure the macro has multiple
@@ -4343,15 +4301,6 @@ sub is_semi_fun_decl_arg_macro
     }
     my $args = $mdef_args[$macros{$identifier}[$_]];
     my $body = $mdef_body_noc[$macros{$identifier}[$_]];
-    ## Oughtn't need this: take simplified definition.
-    #     #FIX: better way to remove comments?
-    #     # Remove comments
-    #     $body =~ s%//.*$%%g;
-    #     $body =~ s%/\*.*?\*/%%g;
-    #     #FIX: better way to remove l/t whitespace?
-    #     # Remove leading/trailing whitespace
-    #     $body =~ s%^\s*%%g;
-    #     $body =~ s%\s*$%%g;
 
     my $expands_to_just_paren = $false;
     my $expands_to_itself = $false;
@@ -4389,7 +4338,7 @@ sub is_void_macro
 
   die "is_void_macro: $identifier" if (!exists $macros{$identifier});
 
-  # FIX: use $m_i = $macros{$identifier}
+  # FIX: use @m_i = @{$macros{$identifier}}
   my $cMacroDefs = $macros{$identifier}[0];
 
   # Check to make sure the macro has multiple
@@ -4678,8 +4627,10 @@ sub count_macro_args {
 }
 
 
-# Initialize these
-# FIX: comment this better
+# Initialize the lists of hashes
+# for each filetype.
+# This is done so that the outputs across all files
+# has the same columns, and none missing
 sub initialize_lists_of_hashes {
   check_args(0, @_);
   my $i;
@@ -4852,7 +4803,7 @@ sub analyze_for_macro_use {
 }
 
 # cached values for which_function
-# FIX: perhaps we can simulate static function variables
+# FIXPERL: perhaps we can simulate static function variables
 # by putting functions that need them after a "package" declaration
 # to change their scope.  We might then need to access globals explicitly,
 # but it could be worth it-- definitely if we move to separate files
@@ -4925,14 +4876,6 @@ sub which_function {
     die "Uexpected case in which_function: $filename:$line_no, @$listref[$i,$i+2]:\
 $i $#{$listref}\n";
   }
-
-  # FIX: remove these debug messages
-#  if (defined($fn_name)) {
-#    print STDERR "function at $filename:$line_no => $fn_name\n";
-#  } else {
-#    print STDERR "function at $filename:$line_no => %NONE%";
-#  }
-
 
   ($wf_last_filename, $wf_last_line_no ) = ($filename,$line_no);
   $wf_last_index = $i;
