@@ -1,6 +1,12 @@
 #!/uns/bin/perl -anw
 BEGIN {
   my $i = 0;
+# we need to use $i+0, or else the value pointed to
+# by the first handful keeps getting incremented, and
+# we get uncategorized => 21, or whatever
+
+# FIX: this hash must be kept in sync with the table
+# headings in latexify-mark-table
   %categoryname = (
 		      'uncategorized' =>$i+0,
 		      'being_categorized' =>$i+0,
@@ -20,6 +26,7 @@ BEGIN {
 		      'expands_to_type' => $i++,
 		      'expands_to_reserved_word' => $i++,
 		      'statement' => $i++,
+		      'recursive' => $i++,
 		      'assembly_code' => $i++,
 		      'syntax_tokens' => $i++,
 		      'mismatched_entities' => $i++,
@@ -34,6 +41,9 @@ sub marks_for_categories {
   my $str = " " x ($categoryname{"LAST"});
   foreach $c (@$listref) {
     my $offset = $categoryname{$c};
+    if (!defined($offset)) {
+      die $c;
+    }
     substr($str,$offset,1) = "*";
   }
   return $str;
