@@ -313,7 +313,8 @@ preprocessor directives appear in C programs?
 Figure~\ref{fig:directives} shows the data for the packages we
 analyzed.  Each group of bars in the figure represents the percentage of
 NCNB lines attributed to the specified category of directives, with each
-individual bar showing the percentage for a specific package.  Conditional
+individual bar showing the percentage for a specific package (the NCNB
+line count is shown in the legend with the package name).  Conditional
 compilation directives are grouped together, as are ``other'' directives.
 
 %The figure contains six rows, *****
@@ -330,7 +331,7 @@ compilation directives are grouped together, as are ``other'' directives.
 %and (e) any other directives in the bottom row. 
 
 \begin{figure}
-goes here [FIX: blank page for insertion?]
+blank page goes here
 \caption{Percentages of Directives\label{fig:directives}}
 \end{figure}
 
@@ -342,11 +343,22 @@ out of eight exceed 20\%.  On average, conditional compilation
 directives account for just under half (47.4\%) of the total
 directives in all packages, \verb+#define+s account for another
 29.5\%, \verb+#include+s account for 18.9\%, and the other directives
-are in the noise.\footnote{The flex package had the most significant
-``other'' component, accounted for by its aggressive use of the
-\verb+\#line+ directive.} The percentage of \verb+#define+s varies by a factor of 14
+are in the noise.
+The percentage of \verb+#define+s varies by a factor of 14
 across the packages, \verb+#include+s by a factor of 25, and
 conditional compilation directives by a factor of about 16.
+
+Figure~\ref{fig:total_directives} shows the percentage of the total
+directive count attributed to each category of directives.  One
+noticeable outlying point is the ``other'' directives of the flex
+package; this is accounted for by its aggressive use of the
+\verb+#line+ directive.  Flex is also unusual in its very low
+percentage (0.04\%) of \verb+#include+s.
+
+\begin{figure}
+need 4.5 inches, I think
+\caption{Percentages of Total Directives\label{fig:total_directives}}
+\end{figure}
 
 \section{Frequency of Defined Macro Usage}\label{sec:usage}
 
@@ -405,7 +417,10 @@ the interactions among the definitions for a given symbol.
 Figure~\ref{fig:use_count} is structured as the last figure, but it
 represents the number of times that a defined name is expanded in
 either C code or preprocessor directives.  For instance, in the bc
-package, 74.58\% of the macros were expanded eight or fewer times.  
+package, 74.58\% of the macros were expanded eight or fewer times.
+(Slightly more than half of the packages are included in this figure;
+the analysis requires a second pass that does not yet handle all
+packages.) 
 
 One of the more noticeable points about these data are that almost all
 packages have a significant number of defined macros that are never
