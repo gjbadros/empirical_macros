@@ -1,0 +1,322 @@
+Introduction
+
+The C preprocessor is viewed as a source of difficulty for understanding
+and transforming C programs -- most tools just preprocess, which has
+undesirable consequences.
+Indeed, in the worst case, this makes determing the program text as
+difficult as determining the output of an ordinary program.
+In order to assess the practical difficulty of understanding uses of CPP
+(and the potential for replacement by other language constructs), we
+examined actual CPP use in 30 programs comprising approximately 2 million
+lines of source code.
+
+We identified and investigated a number of potential sources of complexity
+in understanding and translating CPP, including:
+ * high total use
+ * complicated bodies
+    * categories -- what it expands to (ie, the syntactic/parsing category)
+    * properties -- what it uses internally (eg, stringization, pasting)
+ * multiple definitions per name (and potential inconsistency)
+ * high usage
+ * where used (control, replacement)
+ * mixed usage in conditional (control)
+ * highly dependent
+    * line dependent on many macros
+    * macro controlling many lines
+    * cppp experiment
+
+One orthogonal point:
+ * variation in use (no obvious point of attack) -- true throughout.
+     No pattern according to package size, relative or absolute cppp use, etc.
+
+Methodology
+  30 packages, mix of purposes, styles, projects, authors, sizes,
+	interactive vs. not, graphical vs. not.  Nearly 2M loc;
+	nearly 1.4 M ncnb loc (this omits anything in #if 0, also)
+  Ran "configure" or equivalent on each one, in order to set up for
+	compilation (but did not attempt to compile).  This creates certain
+	header files (such as configure.h).
+  Examined all C files in a package, plus anything they included.  In
+	general, the C files are those with .c and
+	.h (and other...) extensions, but some such files don't actually contain
+	C code, and some files had other extensions (such as .def for some
+	include files).
+  We also analyzed all available headers, but we report only on the macros
+	defined in the package, on the theory that macros in libraries are
+	well-behaved and need no special attention from the programmer.
+	(Sadly, we discovered this not to be true in practice; but the
+	programmer generally has no control over libraries and their header
+	files; so we concentrate on what the programmer can control.)  Most
+	figures report only on package-defined macros; most numbers increase
+	dramatically if all macros are included.
+  Collection of scripts, approximately 11,000 lines of Perl
+
+Total usage
+ high total use: 9.6% cpp use is very high
+   one in ten noncomment, nonblank lines is a preprocessor directive
+	(this doesn't count lines which use the preprocessor, say by 
+	containing a macro or by being controlled by #if)
+   one in seven source lines is a preprocessor directive
+ for gzip, remind, and bash, the numbers are 22, 21, and 16%
+	say a few words about these
+ about 1/3 of directives are definitions
+ about 1/2 of directives are conditionals
+ The remainder are mostly inclusion
+ "line" comes only from post-processed source included for users who don't
+	have lex, yacc, etc.  We have folded all other directives into this
+	category as well; they account for .017%, or one in six thousand,
+	directives.
+ Notice the lack of uniformity; if every package relied equally on
+	definitions vs. conditionals, then each group of bars would look
+	just like the "total" group.
+
+Definitions
+ * Complicated bodies
+    * What it expands to
+	We categorized macro bodies into 28 categories; for the purposes of
+	  this paper, we coalesce these into ten higher-level categories.
+	  Say what they are.
+	For each package, we report how many definitions create an
+	  expansion which falls in each category
+	There's no patern, again.
+    * Tricky cpp uses: things slightly out of the ordinary (ie, outside the
+	  scope of C, which is why the preprocessor was used), hard to translate
+	About one in six macros (18.6%) falls into at least one category
+	We show an exact breakdown by subsets because these numbers don't add
+	  to 100% and sometimes a macro has multiple categories -- we show
+	  how they interact.
+	Not as much use of stringization, pasting as we anticipated -- we
+	  had been particularly worried about them.
+	We didn't analyze whether the free variables are globals or locals,
+	  which could substantially impact understanding/translation.
+	The uses of types are going to be problematic.
+	Not sure what else to say about this table.
+    * CPP errors (or poential errors): lint output
+	We identified a number of potentially harmful programming
+	  constructs -- those which may well be intentional, but which also
+	  might cause a macro not to behave as anticipated (and not to
+	  behave like an ordinary function).  One fourth of all definitions
+          triggered at least one such warning; across macro names, about
+	  one fourth contain a definition which triggers a warning.
+	We didn't examine every use.  Besides, the point isn't just the
+	  current uses, but also future uses:  we want these to be easy for
+	  programmers to use.
+	We also discovered a number of files which begin or end inside a
+	  brace scope or an #if scope.  Some of these were intentional, while
+	  others are bugs (such as, in one case, a failure to close a /* */
+	  style comment) which were apparently not discovered because testing
+	  did not build the package under all possible circumstances.
+
+ * Multiple (potentially inconsistent) definitions per name
+    * Multiple definitions
+	When classifying a name (as opposed to a definition), "failed
+	  classification" includes "two different defs fell into different
+	  categories".  (We could also get that even if a single
+	  definition, earlier, if it expands to just such a macro.)
+	  Explain how we combine two different categories into a single one.
+	Not C code tends to be for Makefiles; compilation lines, library
+	  filenames, and such tend to differ for each operating system.
+	Syntactic is parentheses, commas, semicolons, etc:  frequently-used,
+	It stands to reason that "failed classification" has multiple
+	  definitions, because when determining the category for a macro
+	  name, we categorize each definition, and if any of them are
+	  either failures or have different categories, then the classification
+	  for the name is "failure".  (See below, "inconsistent definitions".)
+	Few for unknown symbol, because if any def isn't unknown symbol,
+	  then neither is the entire macro.
+	By package (not pictured):  most follow the "Mean" curve.
+	  Half of packages have no macros defined more than 14 times.
+	  Notable exceptions to the rule:
+	    bc:  all macros are defined either one or two times
+	    remind:  10% of macros are defined between 11 and 15 times
+		(none defined 16 or more)
+	    gcc: over 4% of macros are defined more than 20 times
+		gcc goes 99.5% at 50 definitions
+		i.e., 99.5% of macro names are defined 50 or fewer times.
+		1 macro, CPP_PREDEFINES, is defined 181 times (and undefined
+		  198 times)
+
+    * Multiple distinct definitions
+	This uses a less strict rule than that used by CPP when determining
+	  whether to issue a warning about redefinition.  We eliminate all
+	  comments and whitespace, canonically rename all formal arguments,
+	  and compare all character and string literals to be identical.
+	  Thus, it is a lower bound on the number of truly distinct
+	  definitions, much as the previous chart was an upper bound.
+	Even when two distinct definitions are identical, if they appear in
+	  different locations then it is more likely that something used by
+	  that definition has changed.
+
+    * Inconsistent definitions
+	Even among macros with multiple definitions, those different
+	  definitions generally fall into the same, or compatible, categories.
+	The arrows indicate macros for which the names would be classified
+	  as "failure".
+	Two anomalies are due to the fact that "statement" category should
+	  really be called "statement-related":  it includes full statements,
+	  statements missing a final semicolon, partial statements,
+	  multiple statements, multiple statements plus a partial one.
+	  * no arrow on one "expression + statement", at 1.1%, because that
+		was actually "expression + semicolonless_statement" -- and
+		an expression plus a semicolon also makes a statement.
+		For instance, the expressions could have been function calls.
+		The other, just below it, has slightly fewer occurrences
+		(but both round to 1.1%; it also contains "statement", which
+		is incompatible with "expression").  Also compare the similar
+		duplication at .26% and .10%.
+          * arrow on just "statement" at .35%:  was actually
+		"semicolonless_statement semicolonless_statements statement"
+	The "symbols+expression" results from expression + function_name,
+	  also expression + symbols (where first one is macro that expands
+	  to partial expression).  [This isn't common at .64%, but is still
+	  one of the most frequently occurring failures.]
+
+Uses
+ * high usage
+	Give average uses per defined macro name
+	In the chart, a higher line indicates less use.
+	Half of all macros are used two or fewer times
+	Syntactic macros tend to be used far more often; also type-related
+	  ones.  These make sense, as they are frequently-used constructs
+	  that permeate code (appear at every definition, for instance).
+	Likewise for type-related.
+	Non-C-code, null defines (ie, every definition of the name is a
+	  null define), and constants are used least.  The latter is a bit
+	  surprising, but shows that macros are being used as a
+	  configuration mechanism rather than a linguistic mechanism.  (Do
+	  I buy that?  Maybe not.)
+	All packages follow approximately the same curve; the outlier is
+	  gnuplot.  Gnuplot uses macros less, on average, than other packages
+	  do.  Over 40% of the macros it defines are never used at all --
+	  say why.
+ * inconsistent usage
+    Macros have two general purposes:  they can control the inclusion of
+	lines of code (by appearing in a #if condition that controls that
+	line) or can change the text of a line (by being expanded on that
+	line).  Each of these uses can be modeled by C++ language features
+	-- conditionals or (for many types of substitution) consts and
+	inlines.  But when a macro is used in both ways, then there's no
+	one C++ language feature.  (Additionally, it's harder to understand
+	and to analyze a macro that's used in both ways than one that is
+	only used in one way or the other.)
+    We split macro uses into three categories:  
+	* uses in C code, where the macro's expansion controls textual replacement
+	* uses in #if, #ifdef, #ifndef, #elsif conditions
+	* uses in a macro body
+      We discarded uses in CPP conditionals whose only purpose was to
+	prevent redefinition.  (More specifically, if the condition tested
+	only definedness, the next line defined the macro, and the line
+	after that ended the CPP conditional.)
+      Uses in a macro body generally are intended to be used however the
+	containing macro is.  Since those uses also appear in this chart,
+	we did not attempt to track each such use in a body to some macro's
+	appearance in either code or a conditional.  Thus, the interesting
+	categories are "code", "conditional", "macro", "code and
+	conditional", and "no use".
+      Macros are used more frequently to expand code than to control its
+	inclusion, by a factor of ten to one.  (However, each inclusion use
+	can control many lines of code; see the dependence section, below.)
+      A surprising number -- nearly 12% -- of macros defined in a package
+	are never used at all.  For gnuplot, this number is over 40%,
+	because it includes a standard set of headers from the company that
+	wrote part of the code, and which that company includes in all its
+	products.  [Make sure that is true.]  Even discounting that
+	package, though, the numbers are remarkably high.  We would be
+	surprised if one in eight functions and variables in a package were
+	never used, even in testing code.  (The percentage of macros
+	defined in libraries/standard header files which are never used in
+	the code is enormous, but that is expected.)
+      The potentially problematic uses are those for which a macro appears
+        both in code and in a conditional; these comprise only 3.4% of all
+        macro names.
+      The numbers don't sum to 100% because of rounding.
+
+      Across packages, there is very little variation.  Packages which use
+        the preprocessor sparingly are as likely to have a high percentage
+        of mixed usage as packages which make heavy use of CPP.  (There is
+        a very slight tendency for the less aggressive packages to have
+        more uses in code, fewer uses in conditionals, and fewer macros
+        that are not used at all.)
+ * mixed usage in conditional (control)
+    Conditionals are used to check for a bunch of things (examples); but a
+      single conditional generally checks just one of these categories.  We
+      counted the number in each, and also the number that checked symbols
+      falling in multiple categories.
+    Few mixed categories.
+    Lots of variation overall.
+    What else to say about this chart?
+
+Dependences
+ Two types of dependence:  control/inclusion, and substitution/expansion
+ Explain this.  Explain how we compute it transitively.
+ The dependence charts omit Emacs and Mosaic; the full dependence
+   information for each overran the virtual memory available on the machine
+   on which we ran our experiments.  This was in large part due to
+   dependences in libraries; the Motif library is a particular problem.
+   (We had no trouble computing dependence information for Plan, which is
+   the third of our 30 packages which uses the Motif library.)
+
+ * line dependent on many macros
+    We computed, for each line, the number of macros it depends on
+    The log scale is shifted by unity in order to place 0 on the scale; most
+      (abut 57%) lines have no dependence on macros at all.  (Most lines that
+      don't expand any macros and appear in C files fall into this category.)
+    Overall, 28% of lines expand a macro -- that's quite a few.
+    The average number of macros dependent on is XXX.
+
+ * macro controlling many lines
+    Two charts for this.
+
+ * cppp experiment
+    Didn't make much of a difference at all.  Conclusion:  no one single
+      point of attack.
+
+
+Discussion
+  Related work
+    LCLint: core dumped
+      describe methodology
+
+Conclusion
+  Future work
+    Compare uses to definitions, to see if the lint problems are real or not.
+    Do classification based on expansion, which can eliminate some failures
+	(because after a few levels of expansion, what "symbols" means may
+        become obvious).
+    Do classification based on uses (eg, if every call passes a type, then
+	treat that parameter as a type even if it might not be.
+
+  Advice for cppp users
+
+===========================================================================
+
+
+===========================================================================
+
+Take a stand about whether it's hard or not, and whether it's worthwhile or
+not.
+
+===========================================================================
+
+Date: Fri, 12 Sep 1997 09:11:25 -0700
+From: Michael Ernst <mernst@cs.washington.edu>
+To: Greg Badros <gjb@cs.washington.edu>,
+        David Notkin <notkin@cs.washington.edu>
+Subject: Heavily dependent line
+
+Greg wondered which line of gcc has an expansion dependent on the
+expansions of 187 macros.  (This is an outlier:  of the 297760 lines in
+gcc, only 13 are expansion-dependent on more than 100 macros -- all of
+which fall in the range of 159 to 187 such dependences.)
+
+It's this one, whose mere appearance in the final source is dependent on
+182 macros (not such an outlier: over 10,000 lines are inclusion-dependent
+on more than that many macros):
+
+gcc-2.7.2.1/explow.c:430: dependences incl=182; exp=187; either=356
+      LEGITIMIZE_ADDRESS (x, oldx, mode, win);
+
+LEGITIMIZE_ADDRESS is defined 30 times in gcc, and one randomly-selected
+definition was 37 line long (and chock full of other macro invocations).
+
+===========================================================================

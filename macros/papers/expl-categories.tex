@@ -1,0 +1,133 @@
+\begin{description}
+  \sloppy
+  \emergencystretch=2em
+
+\item[Null define]  The {\tt \#define} gives only an
+  identifier name but no macro body, as in {\tt \#define
+  \verb|HAVE_PROTO|}\@.  Such macros appear most frequently in Cpp
+directives (such as {\tt \#ifdef}), where they are used as boolean
+variables by the preprocessor, but may also appear in code.  For instance,
+macro {\tt private} may expand either to {\tt static} or to nothing,
+depending on whether a debugging mode is set.  The definition which
+causes it to expand to nothing is categorized as a null define (the
+other is categorized as ``other syntactic macro'';  see below).
+
+\item[Constant] The macro body is either a literal or an operator
+  applied to constant values.  For instance, {\tt \#define NULL 0}, {\tt \#define
+  \verb|ARG_MAX| 131072}, and {\tt \#define ETCHOSTS "/etc/hosts"} define
+literals, while {\tt \#define \verb|RE_DUP_MAX| ((1<<15)-1)} and {\tt
+\#define \verb|RED_COLS| (1 << \verb|RED_BITS|)} (where \verb|RED_BITS| is
+a constant, possibly a literal) define constants.  Such macros act like
+{\tt const} variables.
+
+\item[Expression]  The macro body is an expression, as in {\tt \#define
+  sigmask(x) (1 << ((x)-1))}.  This expression might have a single constant
+value everywhere (the usual case for expression macros without arguments,
+most of which are classified as constants, above) or might have a
+different value on each use (the usual case for expression macros with
+arguments).
+
+% Problem: can't figure out how to get typewriter curly braces in footnote.
+\item[Statement]  The macro body is a complete statement such as
+  ``{\tt x = 3;}'', ``{\tt if (s) free(s);}'' or ``{\tt \verb|{| int x =
+    y*y; printf("\%d", x); \verb|}|}''.  Such a macro is like a function
+    returning {\tt void}, except that uses should not be followed by a
+    semicolon.\footnote{Since the body is already a complete statement, the
+      extra semicolon can cause problems such as mis-parsing of nested {\tt
+      if} statements.  Such macros can be confusing to use, because
+    programmers are inclined to add a semicolon after invocations that look
+    like functions; wrapping the body in {\tt do \{\ldots\} while (0)}, a
+    partial statement which requires a trailing semicolon, solves this
+    problem.  To our surprise, we found few uses of that construct, but
+    many error-prone instances of a macro that expanded to a statement like
+    \{\ldots\} in which a call to the macro was immediately followed by a
+    semicolon.}
+
+  This includes:
+    * statement
+  and also smaller categories:
+    * statement sans semicolon
+    * partial statement
+    * multiple statements
+    * multiple statements, last one lacks semicolon
+    * multiple statements, last one is partial
+
+\item[Type-related macros]  These macros either take a type as an argument, pass
+  a type to another macro, expand to a type or partial type, or use such a
+  macro.  Examples include {\tt \#define \verb|__ptr_t| void *}, {\tt
+  \#define \verb|__INLINE| extern inline}, {\tt \#define \verb|ALIGN_SIZE|
+  sizeof(double)}, and {\tt \#define PTRBITS \verb|__BITS|(char*)}.  Since
+  types are not first-class in C, they may not be passed to functions or
+  returned as results; additionally, these macros may produce or use only
+  part of a type (such as a storage class).  As a result, these macros may be
+  tricky to understand, and cannot be eliminated via straightforward
+  translation (though C++ templates may provide some hope).
+
+    This icludes:
+  ( catTYPE catPARTIAL_TYPE catDECLARATION catDECLARATION_SANS_SEMI)
+  where the declaration ones are quite rare.
+
+\item[Syntactic]  Like stringization and pasting, these
+  macros make essential use of the unique features of the preprocessor.
+  Our framework separately categorizes a number of such macros, including
+  those that expand to a reserved word (such as {\tt \#define private
+  static}, mentioned above), those that expand to a delimiter (such as
+{\tt \#define AND ;}), and those with mismatched parentheses, brackets, or
+braces.  The latter are often used to create a block and perform actions
+that must occur at its beginning and end, as for \verb|BEGIN_GC_PROTECT|
+and \verb|END_GC_PROTECT|.
+
+This includes ( catUNBALANCED catPUNCTUATION )
+
+\item[Symbols]
+
+This includes (catRESERVED_WORD catFUNCTION_NAME catSYMBOLS)
+
+The latter is really a failure of sorts.
+
+\item[Unknown symbol]
+
+
+
+\item[Not C code]
+
+
+
+
+
+
+\item[Failed classification]
+
+ This includes ( catNOT_YET catIN_PROCESS catNO_DEF catFAILURE
+		       catMULTIPLE ).
+
+
+  [[This needs to be rewritten, probably.]]
+  [[Need to discuss why definitions fail, and give examples.]]
+
+  Multiple adjacent identifiers\,---\,as in
+  {\tt \#define EXFUN(name, proto) name proto} and {\tt \#define
+  \verb|DO_OP|(OP,a,b) (a OP b)}\,---\,caused many failures of our
+  classification heuristics.  Of the 1025 classification failures in the
+  {\numpackages} packages, 496 were caused by a single definition in
+  \pkg{gnuplot}, {\tt \#define CUR \verb|cur_term->type.|} (the period is
+  part of the expansion), and uses of that macro, as in {\tt \#define
+  \verb|acs_plus| CUR Strings[408]}.  Four packages\,---\,\pkg{bison},
+  \pkg{gnuchess}, \pkg{remind}, and \pkg{workman}\,---\,had no macro
+  classification failures.  These packages contain 93, 297, 932, and 58 macro
+  definitions, respectively.
+
+% and illegal identifier
+%   names ({\tt \#define \verb|FAT$C_VFC| 3} for VMS compilation), tokens %$HACK
+%   ({\tt \#define \verb|LIB_PATH| /usr/ucblib}), and constants ({\tt 1ULL} for
+%   {\tt unsigned long long})
+
+%   \pkg{gnuplot}
+%   contains only 13 other failures, ghostscript has 130, and no other
+%   package stands out with many.
+
+% half appeared in \pkg{gnuplot};
+% \pkg{gnuplot}, cvs, and \pkg{groff} accounted for over 75\% of the failures, many of
+% which could be eliminated by slightly relaxing the parsing rules.
+\end{description}
+
