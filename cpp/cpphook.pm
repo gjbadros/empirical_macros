@@ -178,14 +178,6 @@ sub expand_macro {
     }
     print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'doc \"$mname expands to $expansion\")\n";
   }
-  if ($has_escapes == 0) {
-    print TP "#out:(put-face-property-if-none $start $end \'italic)\n";
-    print TP "#out:(put-mouse-face-property-if-none $start $end \'highlight)\n";
-  } else {
-    print TP "#out:(put-face-property-if-none $start $end \'bold)\n";
-    print TP "#out:(put-mouse-face-property-if-none $start $end \'secondary-selection)\n";
-  }
-  print TP "#out:(add-text-property $start $end \'doc \"Expansion of $mname\")\n";
 }
 
 sub ifdef_macro {
@@ -274,9 +266,18 @@ sub done_include_file {
 # Token's come a lot, so redirect this output somewhere else
 sub Got_token {
   my ($token,$sz) = @_;
+  my @history = cpp::MacroExpansionHistory();
   print  "TOKEN: $sz;", substr($token,4),", FExpandingMacros = ",cpp::FExpandingMacros(),
-   ", CchOffset = ", cpp::CchOffset(), ";", join("<-",cpp::MacroExpansionHistory()),"\n";
+   ", CchOffset = ", cpp::CchOffset(), "; CbytesOutput = ", cpp::CbytesOutput(),";", join("<-",@history),"\n";
   print ": ArgOf = ", cpp::ArgOf(), "\n";
+
+  my $end = cpp::CbytesOutput()+1;
+  my $start = $end-length($sz);
+  if ($#history >= 0) {
+    print TP "#out:(put-face-property-if-none $start $end \'bold)\n";
+    print TP "#out:(put-mouse-face-property-if-none $start $end \'secondary-selection)\n";
+    print TP "#out:(add-text-property $start $end \'doc \"Expansion from " , (join("<-",@history)),"\")\n";
+  }
 }
 
 sub do_function {
