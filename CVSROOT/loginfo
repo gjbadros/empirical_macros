@@ -1,2 +1,2 @@
 ALL rsh forbidden zwrite gjb mernst
-ALL mail gjb mernst -s "CVS Checkin"
+ALL mail -s "CVS Checkin" gjb mernst
