@@ -22,7 +22,7 @@ BEGIN { if (defined $ENV{"PERLINC"})
 #  Turned off testing for:
 #   Empty string
 
-my $getopts_option_letters = "ihvIuD:S:c:e:";
+my $getopts_option_letters = "ihvtIuD:S:c:e:";
 
 # Remove the asterisks below when the options
 # are known to the users
@@ -32,8 +32,9 @@ New options marked with *, options with ':', above, take an argument
   -i  use files listed on stdin [one per line] in addition to any on cmd line
   -h  display this help message
   -v  be verbose and list files as they are processed to stderr
-* -I  ignore include files--just parse files passed in
-* -u  ignore usage--do only a single pass
+* -t  use [TAB] as the OFS for the statistics files (not space)
+  -I  ignore include files--just parse files passed in
+  -u  ignore usage--do only a single pass
   -D [file]  output the names of the macros (and number of times defined)
   -S [file]  output the per directive statistics to file
   -c [file]  show categorizations to file
@@ -500,6 +501,7 @@ my $logical_lines = 0;		# line continuation doesn't increment
 my $physical_lines = 0;		# as they appear to tools
 my $ncnb_physical_lines = 0;	# non-comment, non-blank lines
 my $cpp_physical_lines = 0;	# cpp physical lines
+my $cpp_physical_code_lines = 0; # cpp physical lines
 my $cpp_cmds = 0;		# total preprocessor commands
 my $symtab_scopes = 0;		# the number of scopes, less the global scope
 ## Strings:
@@ -513,6 +515,9 @@ my $cBuiltinMacros = 0;		# The number of macros that we define
 				# before parsing-- need to be sure not
 				# to use the first $cBuiltinMacros elements of 
 				# @mXXXXX arrays
+# Highly unlikely filename, used for $mfile[$i] for builtin macros
+my $szBuiltInFakeFile = "%Built In%";
+
 
 # If remove "current" from these names, look for other vars of those names.
 my $current_file;		# the current file name
@@ -529,6 +534,9 @@ my %files;
 # @files, not this-- but that doesn't work right now for some reason.
 my @files_included;
 
+# Output field separator
+my $outOFS;
+
 # @include_path is a list of places to look for included files
 use vars '@include_path';
 
@@ -544,7 +552,8 @@ my %macros = ();	  # for each macro, list of indexes for info about it
 			  # (first list element is number of following elements)
 
 # Also want to have summary info true about all definitions...
-use vars qw(@mname @margs @mbody @mfile @mline @mplines
+# FIX: This data structure of parallel arrays needs to be improved
+use vars qw(@mname @margs @mbody @mfile @mline @mplines @mpclines
 	    @mbody_noc %mfreevars @mfreefuns
 	    @mdependenton @mtype @mcategory @mevilness);
 # These are for aggregate information.  Keep it for all macros, or just
@@ -563,7 +572,7 @@ my $debug_type_match = $false;
 my $debug_parse_function = $false;
 
 ## Command-line processing
-use vars qw($opt_i $opt_I $opt_h $opt_v $opt_D $opt_S $opt_c $opt_e $opt_u);
+use vars qw($opt_i $opt_I $opt_h $opt_v $opt_t $opt_D $opt_S $opt_c $opt_e $opt_u);
 my $fIgnoreIncludes = $false;
 
 
@@ -580,7 +589,7 @@ $merge_cpp_if_branches = $false;
 
 # For getline():
 # These can't be declared with "my" because they're dynamically bound
-use vars qw($getline_nocomment $getline_simplify $getline_nocpp $getline_physical_lines);
+use vars qw($getline_nocomment $getline_simplify $getline_nocpp $getline_physical_lines $getline_physical_code_lines);
 $getline_nocomment = $false;
 $getline_simplify = $false;
 $getline_nocpp = $false;
@@ -628,10 +637,10 @@ sub find_macro_definitions
 # trailing space), enter it into the appropriate global arrays
 sub process_macro_definition
 {
-  my ($def,$macro_physical_lines) = check_args(2, "process_macro_definition", caller, @_);
+  my ($def,$macro_physical_lines,$macro_physical_code_lines) = check_args(3, "process_macro_definition", caller, @_);
   # print "process_macro_definition <<$def>>\n";
   my ($name, $args, $body) = macroparse($def);
-
+  # print STDERR "PARSED: $name\n";
   if (!defined($args)) { $args = ""; }
   # print "parsed: |$name|$args|$body|\n";
   # Do not just use $cppcmdcount{"define"}, since our builtins require
@@ -648,7 +657,23 @@ sub process_macro_definition
   $mname[$thisnum] = $name;
   $margs[$thisnum] = $args;
   $mbody[$thisnum] = $body;
+
+  # We track both the physical lines in a macro definition
+  # (mplines) which is the extent of the macro (where it appears
+  # in the file) and the physical code lines (mpclines)
+  # which does not count comment only lines in a macro definition
+  # eg.
+  # --begin, non-inclusive--
+  # #define BOOL int /* we do not
+  #                     have a built
+  #                     in type so we
+  #                     use bool */
+  # --end, non-inclusive--
+  # would count as 4 physical lines, 1 ncnb (non-comment,non-blank)
+  # line, 1 cpp_physical_code_line, and 4 cpp_physical_lines
+
   $mplines[$thisnum] = $macro_physical_lines;
+  $mpclines[$thisnum] = $macro_physical_code_lines;
   # @mdependenton[$thisnum] = @dependenton;
   { my $i;
     $mdependenton[$thisnum][0] = @dependenton;
@@ -798,6 +823,12 @@ sub output_stats
 {
   check_args(0, "output_stats", caller, @_);
 
+  if (defined($outOFS)) {
+    $OFS = $outOFS;
+  } else {
+    $OFS = " ";
+  }
+
   if ($logical_lines == 0) {
     print STDERR "No lines read! Perhaps you meant to use the -i option?\n";
   } else {
@@ -820,8 +851,8 @@ sub output_stats
       }
       print STATS "\n";
 
-      print STATS "LINES#: physical logical ncnb_phys cpp_phys\n";
-      print STATS "$physical_lines $logical_lines $ncnb_physical_lines $cpp_physical_lines\n";
+      print STATS "LINES#: physical logical ncnb_phys cpp_phys cpp_phys_code\n";
+      print STATS "$physical_lines $logical_lines $ncnb_physical_lines $cpp_physical_lines $cpp_physical_code_lines\n";
       printf STATS "GLOBAL: $cppcmdcount{'define'} define-s (%2.2f%), " . ($cpp_cmds - $cppcmdcount{"define"}) . " other (%2.2f%), $logical_lines lines (%2.2f%), %d files\n",
       100*$cppcmdcount{"define"}/$logical_lines, 100*($cpp_cmds - $cppcmdcount{"define"})/$logical_lines,
       100*($cpp_cmds)/$logical_lines, $#ARGV+1;
@@ -850,12 +881,36 @@ sub output_stats
     # -D = dump the defines
     if ($opt_D) {
       my $name;
-      foreach $name (keys %macros) {
+      print DEFINES "MACROS#: name cDefs\n";
+      foreach $name (sort keys %macros) {
 	# Could also print number of times it's defined.
-	print DEFINES "$name\n";
+	#print STDERR "MNAME=$name, @{$macros{$name}}\n";
+	my $i = $macros{$name}[1];
+	if ($mfile[$i] ne $szBuiltInFakeFile) {
+	  print DEFINES "$name", $macros{$name}[0], "\n";
+	}
       }
+      print DEFINES "\n";
+      # FIX: add cTimesUsed, $mncategory, $mntype
+      print DEFINES "DEFINITIONS#: name iDef file line args plines pclines\n";
+      foreach $name (sort keys %macros) {
+	# Could also print number of times it's defined.
+	my $iDef = 1;
+	for ( ; $iDef <= $macros{$name}[0]; $iDef++ ) {
+	  my $i = $macros{$name}[$iDef];
+	  if ($mfile[$i] ne $szBuiltInFakeFile) {
+	    #print STDERR "NAME=$name,", join(", ",@{$macros{$name}}),"\n";
+	    print DEFINES "$name", $iDef, $i, $mfile[$i], $mline[$i], count_args($margs[$i]),
+	    $mplines[$i], $mpclines[$i], "\n";
+	  }
+	}
+      }
+
     }
   }
+  # FIXPERL: Why does this give me an unitialized variable warning?
+  # undef $OFS if (defined($OFS));
+
 }
 
 # pct(x) returns a percentage of macros defined
@@ -936,6 +991,7 @@ sub getline
   if (!defined($dont_pop))
     { $dont_pop = $false; }
   $getline_physical_lines = 0;
+  $getline_physical_code_lines = 0;
 
   if ($instring || $incomment)
     { mdie("Bad instring $instring or incomment $incomment"); }
@@ -1020,6 +1076,7 @@ sub getline
   if (($result =~ /^\#/) && !$getline_nocpp)
     { # Preprocessor line; usually just return "\n";
       $cpp_physical_lines += $getline_physical_lines if $finding_macro_defs;
+      $cpp_physical_code_lines += $getline_physical_code_lines if $finding_macro_defs;
       return getline_handle_preprocessor_line($result);
     }
 
@@ -1289,9 +1346,10 @@ sub updateinvars
     }
   
   UIV_RETURN: 
-  if ($uiv_seen_code && $finding_macro_defs) {
-    $ncnb_physical_lines++;
-    print "SC: $result";
+  if ($uiv_seen_code) {
+    $ncnb_physical_lines++ if $finding_macro_defs;
+    $getline_physical_code_lines++;
+    #print STDERR "SC: $result" if $finding_macro_defs;
   }
   return $result;
 }
@@ -1444,7 +1502,7 @@ sub getline_handle_preprocessor_command
       push(@dependenton, negate_if_condition($last)); }
   elsif ($cpp_cmd eq "define")
     { if ($finding_macro_defs)
-	{ process_macro_definition($cpp_cmd_arg,$getline_physical_lines); }
+	{ process_macro_definition($cpp_cmd_arg,$getline_physical_lines,$getline_physical_code_lines); }
     }
   elsif ($cpp_cmd eq "include")
     {
@@ -2847,12 +2905,20 @@ sub test_categorize_macro
 # Takes macro name as argument; categorizes each of the macro's definitions
 sub categorize_macro_name
 { my ($name) = check_args(1, "categorize_macro_name", caller, @_);
+  # Below line illustrates that the usage further below ends up added
+  # $macros{$name} to the hash
+  # print STDERR "CMN: $name ", defined($macros{$name})?"T":"F", "\n";
+  # The usage was: $macros{$name}[0];
+  # but has since been replaced by checking if $macros{$name} exists
   if (defined($mntype{$name}))
     { return; }
-  my $numdefs = $macros{$name}[0];
-  if (!defined($numdefs))
+  if (!defined($macros{$name}))
     { # We called this on a non-macro (we try for every name in a definition).
+      # note that accessing $macros{$name}[0] ends up adding $name to the
+      # hash %macros, even though the value is undefined
       return; }
+  my $numdefs = $macros{$name}[0];
+  die if !defined($numdefs); #FIXNOW
   my $type;
   my $category;
   { my $i;
@@ -3035,6 +3101,7 @@ sub is_fun_decl_arg_macro
 
   if (($macros{$identifier}[0] == 2)
       #Check for macro with exactly one argument
+      #FIX: use count_args
       && ($margs[$macros{$identifier}[1]] ne "") 
       && ($margs[$macros{$identifier}[2]] ne "") 
       && (!($margs[$macros{$identifier}[1]] =~ /,/))
@@ -3282,6 +3349,20 @@ sub current_line_no {
   return ($. - $#getline_ungotlines - 1);
 }
 
+# Return the number of arguments, given a macro argument
+# declaration.  Just counts number of commas, and adds 1,
+# or zero if we were passed "".
+sub count_args {
+  my ($arg_decl) = check_args(1,"count_args",caller,@_);
+  if ($arg_decl eq "") {
+    return 0;
+  } else {
+    # count the number of commas, by deleting commas
+    # (tr returns the number of deletions or substitutions)
+    return ($arg_decl =~ tr/,//d) + 1;
+  }
+}
+
 # Initialize the macros structures for the builtin macros of gcc
 # FIX: Should generalize so that it works for non-gcc compilers
 # Also, it'd be great to parse Makefile-s and look for -DMACROS 
@@ -3309,6 +3390,7 @@ sub initialize_builtin_macros {
     $mname[$cBuiltinMacros] = $_;
     $margs[$cBuiltinMacros] = "";
     $mbody[$cBuiltinMacros] = "";
+    $mfile[$cBuiltinMacros] = $szBuiltInFakeFile;
     $cBuiltinMacros++;
   }
 
@@ -3317,6 +3399,7 @@ sub initialize_builtin_macros {
     $mname[$cBuiltinMacros] = $_;
     $margs[$cBuiltinMacros] = "";
     $mbody[$cBuiltinMacros] = "\"\"";
+    $mfile[$cBuiltinMacros] = $szBuiltInFakeFile;
     $cBuiltinMacros++;
   }
 
@@ -3325,6 +3408,7 @@ sub initialize_builtin_macros {
     $mname[$cBuiltinMacros] = $_;
     $margs[$cBuiltinMacros] = "";
     $mbody[$cBuiltinMacros] = "1";
+    $mfile[$cBuiltinMacros] = $szBuiltInFakeFile;
     $cBuiltinMacros++;
   }
 
@@ -3509,6 +3593,9 @@ if ($opt_S) { open(STATS,">$opt_S") || die "Failed opening $opt_S"; }
 if ($opt_D) { open(DEFINES,">$opt_D") || die "Failed opening $opt_D"; }
 if ($opt_c) { open(CATEG,">$opt_c") || die "Failed opening $opt_c"; }
 if ($opt_I) { $fIgnoreIncludes = $true; }
+if ($opt_t) { $outOFS = "	"; } # use tab for OFS
+
+
 
 $fDebugCmdProcessing && print "@ARGV";
 
