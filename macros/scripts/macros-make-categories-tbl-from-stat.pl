@@ -7,7 +7,7 @@ BEGIN {
   use em_constants;
   use Carp;
   use vars qw($ORS $OFS $FORMAT);
-  
+  $FORMAT="%2.3f";
   my $getopts_option_letters = 'htp';
   sub usage () {
     die "@_\nUsage: $0 [-$getopts_option_letters] <*.stat files>
