@@ -84,8 +84,8 @@ my $false = (1 == 0);
 my $unknown = 'unknown';	# maybe use undef instead?  Problem: undef
 				# is a bad arg some places.
 
-# my $debug_cppp = $false;
-my $debug_cppp = $true;
+my $debug_cppp = $false;
+# $debug_cppp = $true;
 
 # Lifted from em_analyze
 my $char_literal_contents_re = '(\\\\?.|\\\\[0-7]{3})';
