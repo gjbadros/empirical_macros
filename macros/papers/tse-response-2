@@ -1,4 +1,5 @@
-[We haven't put all the answers into the text because you asked a specific
+[
+We haven't put all the answers into the text because you asked a specific
 set of questions about a specific set of comments.  You could as easily
 have asked us to expand on a different half of the text.  Pedantically
 drawing out every argument will make the paper cumbersome and difficult to
@@ -6,7 +7,7 @@ read.  We have clarified some points you asked about.  For points that we
 chose not to expand on in detail, all our other readers of the paper found
 the original text clear; if any did not, we went ahead and modified it to
 address the lack of clarity.
-
+]
 
 
 
@@ -67,12 +68,17 @@ address the lack of clarity.
 > 
 > In other words, convince us why these taxons are important and to what
 > use your taxonomy might be put.  
-> 
+
 > (Aside: I suspect that a discussion of the taxonomy will show that it
 > does not make sense to lump Makefiles and other non-C code in with the
 > C programs in the experimental measurements.)
-> 
-> 
+
+We never did so.  We did process some files containing many macro
+definitions, some of which were primarily used in C code and some of which
+were primarily used in Makefiles or elsewhere.  You might argue that this
+is bad style, but nevertheless it occurs in practice, and so we reported
+it.
+
 > A serious weakness of your paper is that your taxons are not defined
 > precisely.  You do not explain exactly what your analyzer computes or
 > how it works.  The existence of 11,000 lines of perl does not give me
