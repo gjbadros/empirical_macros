@@ -167,7 +167,13 @@ compiles.\footnote{To avoid ambiguity, we will use \emph{unprocessed} to
 
 Experienced and novice \C{} programmers alike are frustrated by
 misunderstandings of source code due to the arbitrary transformations
-\Cpp{} performs. Such confusions are easily reduced, if not eliminated,
+\Cpp{} performs. A software engineer might want to be sure that a
+function \texttt{foo} is not invoked in a given block of code.  By
+simply visually scapping that code segment, though, she may be oblivious 
+to a seemingly-unrelated macro that happens to expand to an invocation
+of the function intended to be avoided.
+
+Such confusions are easily reduced, if not eliminated,
 by allowing the software engineer to see the code exactly as the
 compiler does.  Unfortunately, that view of the program is at a level of
 abstraction lower than the unprocessed source.  Well-known
@@ -181,6 +187,17 @@ sequences of symbols that are less meaningful to a human programmer.  Every
 non-trivial \C{} program uses the preprocessor, and an empirical study
 of numerous packages written in \C{} documents the extensive use of \Cpp{}
 constructs~\cite{EmpCpp-TR}.
+
+Though the \Cpp{} is sometimes used by other languages (e.g.,
+\texttt{Java} programs and the X11 \texttt{xrdb} resource database
+language) and causes similar difficulties whenever used, we focus on
+\Cpp{}'s use with \C{} code exclusively.  We are interested in the huge
+body of \C{} programs, and helping programmers understand and extend
+those software artifacts. \Cpp{} is a necessary and integral part of the
+\C{} programming language specification.  In practice, the \C{}
+preprocessor is almost never separated from \C{} code, thus the issues
+relating the \Cpp{} arise with virtually all \C{} programs.
+
 
 %Unlike syntax-based macros~\cite{Weise93} which operate at the parser
 %level, \Cpp{} provides macros and conditional inclusion mechanisms which
@@ -262,13 +279,16 @@ We introduce a new approach that integrates the \C{} preprocessor and a
 parser in a flexible framework for statically analyzing \C{}
 source code.  The framework makes it easy for tool builders to produce
 analysis tools for \C{} source code that are capable of reasoning about the
-preprocessor.  Section~\ref{sec:framework} describes that framework and
-illustrates a sample analysis (a call-graph extraction) using the
-framework.  Section~\ref{sec:further_examples} details a pair of
-macro-expansion understanding analyses, and section~\ref{sec:pcp3} describes our
-prototype tool, \pcp{}. Finally, section~\ref{sec:related} discusses
-related work, and sections~\ref{sec:limitations} and \ref{sec:conclusion}
-review the limitations of our approach and conclude.
+preprocessor.
+
+
+%  Section~\ref{sec:framework} describes that framework and
+%illustrates a sample analysis (a call-graph extraction) using the
+%framework.  Section~\ref{sec:further_examples} details a pair of
+%macro-expansion understanding analyses, and section~\ref{sec:pcp3} describes our
+%prototype tool, \pcp{}. Finally, section~\ref{sec:related} discusses
+%related work, and sections~\ref{sec:limitations} and \ref{sec:conclusion}
+%review the limitations of our approach and conclude.
 
 \section{The Framework}
 \label{sec:framework}
@@ -284,6 +304,13 @@ language for writing the hook subroutines.  Griswold, Atkinson and McCurdy note
 that various software tools benefited from using a special-purpose
 action language~\cite{Griswold96}, and interpreted languages can
 often significantly speed development time~\cite{Scripting}.
+Additionally, \Perl{} is sufficiently similar to \C{} that it is easy to 
+learn by \C{} programmers.  \Perl{} also provides closures which make
+expressing and registering the callback routines very concise and
+readable. The nearly-immediate turn-around time that
+\Perl{} provides is especially useful when prototyping and debugging new 
+analyses.
+
 
 Callbacks can be installed on actions such as the scanning of preprocessor directives, the
 creation of a macro definition, the expansion (\ie{} use) of a macro
@@ -304,7 +331,14 @@ the backcalls in our current implementation of the framework.
 
 The callback and backcall interfaces combined with a general
 purpose scripting language provide a concise and flexible means for
-easily writing static analyses of \C{} source code.
+easily writing static analyses of \C{} source code.  The framework
+itself is extensible with additional callbacks and backcalls by
+re-compiling the analysis tool after inserting the new callback
+invocations and backcall functions.  Extending the framework is intended 
+to be a far less frequent need than using the framework to perform a new 
+analysis, so the additional developer time in writing, compiling, and
+testing C code extensions is justified.
+
 
 \begin{figure*}[t]
 \begin{center}
@@ -367,7 +401,11 @@ section suffers from many of the same shortcomings as tools that
  on preprocessed code: it reasons about only a single
 configuration of the source and eliminates all macro abstractions
 from the extracted model.  As Murphy et al.\ discuss, there are many
-degrees of freedom for call-graph extractors~\cite{Murphy98}.  A
+degrees of freedom for call-graph extractors~\cite{Murphy98}.  As
+written, the analsysis counts all function calls in macro expansions as
+occurring from the function in which the macro is expanded---the macro
+expansion itself is omitted from the call graph.  This behaviour may not 
+always be what the software engineer desires. A substantial
 strength of our framework is that it lets a tool-builder easily
 fine-tune the extraction to derive the desired view.
 
@@ -437,7 +475,11 @@ of the source within the context of how it was preprocessed.
 Given a straightforward preprocessor and parser front end, some analyses
 are impossible.  For example, since the preprocessor will skip code as
 instructed by conditional compilation directives, that source will be
-left unprocessed.
+left unprocessed. If our analysis is intended to find all invocations
+of a function, we will often want conditional-compilation branches that
+are unused for the current platform to still undergo the analysis (as
+they would by a lexical tool such as \texttt{grep}, but unlike the
+behaviour achieved by operating on preprocessed code).
 
 To permit handling the otherwise-skipped code hidden by conditional
 compilation directions such as \ppd{ifdef} and \ppd{if}, our framework
@@ -466,7 +508,7 @@ resumes.  For the symbol table, the backcalls \texttt{EnterScope} and
 \texttt{YYPushStackState} and \texttt{YYPopStackState} save and restore
 the stack of parser states.  In under fifty lines of boiler-plate code,
 an analysis tool can manage these complexities and expose the full source to
-the analysis.
+the analysis.  This template code is included with \pcp{}.
 
 Other related backcalls provide additional support for querying and
 interacting with the parser.  \texttt{ParseStateStack} returns the
@@ -481,6 +523,45 @@ whether a previously saved parser state matches the current
 configuration.  For example, an analysis can easily provide a warning
 whenever the ``if'' block and the ``else'' block of an \ppd{ifdef}
 directive leave the parser in different states.
+
+One minor complexity with analyzing both paths of a conditional
+compilation directive involves the \ppd{include} directive.  Often
+header files that might recursively include themselves are protected
+against entering an infinite inclusion loop by being enclosed in an
+\ppd{ifndef} that skips the entire file when re-included:
+
+\begin{verbatim}
+#ifndef FOO_H__
+#define FOO_H__
+
+/* body of foo.h header */
+#include "header-that-includes-foo.h"
+
+#endif
+\end{verbatim}
+
+If an analysis were always to evaluate the code inside the \ppd{ifndef},
+it would repeatedly and inifinitely re-analyze \file{foo.h}.  To avoid
+this difficulty, an analysis can simply not include a header file more
+than once.  The \texttt{DO\_INCLUDE} callback permits the software
+engineer to return \texttt{FALSE} to signify that the inclusion
+directive should be ignored.  If an analysis is using
+\texttt{PushBuffer} to process code that would otherwise be skipped,
+then only the first attempt to include a given file should be allowed:
+
+\begin{verbatim}
+sub do_include { 
+  my (undef,undef,undef,$file_as_resolved,undef) = @_;
+  return FALSE if ($already_included{$file_as_resolved});
+  $already_included{$file_as_resolved} = $true;
+  return TRUE;  # permit the inclusion
+}
+\end{verbatim}
+
+Once the file is included, the analysis continues from the new file.
+When that file is completely analyzed, the \texttt{DONE\_INCLUDE\_FILE}
+callback is invoked.  This permits the analyses to track file inclusions 
+and perform any necessary cleanup or per-header-file processing.
 
 % Possible applications
 %** Tags generation
@@ -523,7 +604,7 @@ of what is required \cite[Ch.~3]{Harbison91}.  Also note that
       expanded independently; for example \texttt{FOO(BAR,BAR)} will
       expand \texttt{BAR} twice if the expansion of \texttt{FOO} uses
       both of its arguments.  They are expanded in the order that they
-      are used in the body of the expansion (not from first formal
+      syntactically appear in the body of the expansion (not from first formal
       argument to last).
 \item The body of the top level macro is copied left to right; arguments
       are replaced with the text from their expansions.  Macro names
@@ -716,7 +797,8 @@ Our framework combines a
 \textbf{\textsf{P}}arser, a \textbf{\textsf{C}}
 \textbf{\textsf{p}}re\textbf{\textsf{p}}rocessor, and a
 \textbf{\textsf{P}}erl action language.  Thus, we have named the tool
-that implements the framework \pcppp{} or \pcp{}.  
+that implements the framework \pcppp{} or \pcp{}.\footnote{The tool is
+  available from the authors upon email request.}
 
 \subsection{Parser}
 \label{ssec:parser}
@@ -795,7 +877,8 @@ hooks (see Appendix \ref{sec:hooks}).
 The implementation of the main \pcp{} program, the (roughly thirty)
 backcalls (see Appendix \ref{sec:backcalls}),
 and the glue connecting the components totals about 1,800
-lines of \C{} code.  About 60\% of this code deals directly with passing
+lines of \C{} code.  About 60\% of this code is automatically
+generate-able and deals directly with passing
 arguments between \C{} and \Perl{}.
 
 \subsection{Performance}
