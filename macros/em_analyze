@@ -26,7 +26,7 @@
 
 
 # FIX: I want to use '-$' like cpp does, not '-l'; how to do this?
-my $getopts_option_letters = 'ihvtIAau1pTlg:d:E:P:n:F:';
+my $getopts_option_letters = 'ihvtIAaue1pTlg:d:E:P:n:F:';
 
 # Remove the asterisks below when the options are known to the users.
 sub usage ( ) {
@@ -40,6 +40,7 @@ New options marked with *; options with ':', above, take an argument
   -A  do the second pass on all files, not just those passed in
   -a  do macro statistics on all files, not just those passed in
   -u  suppress macro use analysis
+  -e  suppress macro dependence analysis
   -1  do only the first pass (don't do function parsing, usage)
 	This is a numeral 1, not a lowercase L.
 * -l  forbid the use of `\$' in identifiers, per ANSI standard
@@ -228,17 +229,14 @@ use strict;
 # Verbose error messages; not sure whether I like it.
 # use diagnostics;
 
-use File::Basename;
-
-# Permit use of $MATCH for $& and so forth.
-use English;
-
-## Other packages
-
 use Carp;
+use Data::Dumper;
+use English;			# Permit use of $MATCH for $& and so forth.
+use File::Basename;
+use IO::Handle;
+
 use checkargs;
 use cline;
-use Data::Dumper;
 use paren;
 
 use em_constants;
@@ -769,11 +767,13 @@ my $debug_dependences = $false;
 my $debug_dependences_internal = $false;
 my $debug_ccd_categories = $false;
 
-## Command-line processing
+my $compute_transitive_dependence_info = $true;
+
+## Command-line processing; add to $getopts_option_letters if you change this
 # Are these in any order?
 use vars qw($opt_i $opt_I $opt_h $opt_v $opt_t $opt_d $opt_l
 	    $opt_E $opt_P $opt_p $opt_n $opt_F
-	    $opt_u $opt_1 $opt_A $opt_a $opt_g $opt_T);
+	    $opt_u $opt_e $opt_1 $opt_A $opt_a $opt_g $opt_T);
 my $fIgnoreIncludes = $false;
 
 
@@ -1175,6 +1175,9 @@ sub macro_active ( $$ )
   # print "macro_active <= $macro_name\n";
   # print "mdid: '$macro_direct_inclusion_dependentons{$macro_name}'";
 
+  if (!$compute_transitive_dependence_info)
+    { return $true; }
+
   if (scalar(@{$macro_direct_inclusion_dependentons{$macro_name}}) == 0)
     { # die "Empty macro_direct_inclusion_dependentons for $macro_name";
       return $true; }
@@ -1330,6 +1333,18 @@ my %local_expansion_dependees;	# inverse of expansion_dependenton
 # but macros dependent on it haven't been updated.
 my @local_dependence_worklist;
 my %local_dependence_worklist_members;
+
+
+sub undef_local_inclusion_depend_vars ( )
+{ check_args(0, @_);
+  # First, really initialize the data to be empty.
+  undef %local_inclusion_dependenton;
+  undef %local_inclusion_dependees;
+  undef %local_expansion_dependenton;
+  undef %local_expansion_dependees;
+  undef @local_dependence_worklist;
+  undef %local_dependence_worklist_members;
+}
 
 
 # Not used, I think.
@@ -1520,6 +1535,7 @@ sub compute_transitive_dependences ( )
 {
   compute_transitive_file_dependences();
   compute_transitive_macro_dependences();
+  undef_local_inclusion_depend_vars();
 }
 
 # Very similar to compute_transitive_macro_dependences.
@@ -4455,13 +4471,13 @@ sub simple_macro_substitute ( $ )
     { if ($text =~ /\b$fdmacro\s*\(/)	# no /o
 	{ my $prematch = $PREMATCH;
 	  my $postmatch = $POSTMATCH;
-	  # print "Found fun_decl_arg_macro $fdmacro in $text\n";
+	  print "Found fun_decl_arg_macro $fdmacro in $text\n";
 	  my $close_paren_pos;
 	  ($close_paren_pos, $postmatch) = find_close_paren_read($postmatch);
-	  # print "close paren at $close_paren_pos in $postmatch\n";
+	  print "close paren at $close_paren_pos in $postmatch\n";
 	  my $result = $prematch . substr($postmatch, 0, $close_paren_pos)
 	    . substr($postmatch, $close_paren_pos+1);
-	  # print "simple_macro_substitute $text\n ===> $result\n";
+	  print "simple_macro_substitute $text\n ===> $result\n";
 	  return $result; } }
   return $text;
 }
@@ -4474,7 +4490,7 @@ sub simple_macro_substitute_2 ( $ )
   if ($text !~ /^($identifier_re)\s*\(/)
     { return $text; }
 
-  # print "simple_macro_substitute_2: $text\n";
+  print "simple_macro_substitute_2: $text\n";
 
   $text =~ /^($identifier_re)\s*\(/; # is this necessary?
   my $name = $1;
@@ -4523,7 +4539,7 @@ sub simple_macro_substitute_2 ( $ )
   for my $i (0 .. $#formals)
     { $result =~ s/\b$formals[$i]\b/$actuals[$i]/g; }
 
-  # print "Expanded ", add_newline($text), "to ", add_newline($result);
+  print "Expanded ", add_newline($text), "to ", add_newline($result);
 
   return $result;
 }
@@ -6245,12 +6261,12 @@ sub complete_include_pathname ( $$$ ) {
 
   # This just grabs the first file name that has the right trailing path
   # component (
-  if (grep {/^(.*$file)$/ && ($complete_file = $1);} 
-      sort { CPathComponentsOfFile($a) <=> CPathComponentsOfFile($b) }  
+  if (grep {/^(.*$file)$/ && ($complete_file = $1);}
+      sort { CPathComponentsOfFile($a) <=> CPathComponentsOfFile($b) }
       @files )  {
     return ($true,$complete_file);
   }
-    
+
 
   # NOTE: this is just like a if ($system) block, above
   if (!$system) {
@@ -6262,7 +6278,7 @@ sub complete_include_pathname ( $$$ ) {
 
   #DBG print STDERR "Found $file to be ", (defined($complete_file) ? $complete_file : "<<UNDEFINED>>"), \n";
   # returns undefined if never set
-  
+
   return ($false,$complete_file);
 }
 
@@ -6776,18 +6792,21 @@ sub SaveMacroAnalysisState ( $ )
   my ($output_filename) = check_args(1, @_);
 
   # Output big dependence variables to their own file
-  { my %namevalhash = ();
-    my $dependence_output_filename = $output_filename;
+  { my $dependence_output_filename = $output_filename;
     $dependence_output_filename =~ s/state$/dstate/;
     if ($dependence_output_filename eq $output_filename)
       { $dependence_output_filename .= "-depend"; }
-    for my $varname (@depend_state_file_vars)
-      { $namevalhash{$varname} = eval '\\' . $varname;
-	if ($@) { die "Problem evaling '$varname': $@"; } }
-    save_dependence_state($dependence_output_filename, %namevalhash);
-    # Reclaim space by undefining the variables
-    for my $varname (@depend_state_file_vars)
-      { eval "undef $varname;\n"; }
+    if ($compute_transitive_dependence_info)
+      { my %namevalhash = ();
+	for my $varname (@depend_state_file_vars)
+	  { $namevalhash{$varname} = eval '\\' . $varname;
+	    if ($@) { die "Problem evaling '$varname': $@"; } }
+	save_dependence_state($dependence_output_filename, %namevalhash);
+	# Reclaim space by undefining the variables
+	for my $varname (@depend_state_file_vars)
+	  { eval "undef $varname;\n"; } }
+    else
+      { unlink($dependence_output_filename); }
   }
 
 
@@ -6812,15 +6831,13 @@ sub SaveMacroAnalysisState ( $ )
   # but maybe we can settle for a count of No. of different fns which use
   # the macro or just not bother with it
 
-  my $es = "";
-  foreach my $i (0..$#state_file_vars) {
-    my $v = $state_file_vars[$i];
+  foreach my $v (@state_file_vars) {
     my $g = $v;
     $g =~ s/[\@\%\$]/\*/;
     # DumpxsFd used to cause trouble with closing random open files, discarding
     # buffered output.  It doesn't seem to do that any more, though...
-    $es = "Data::Dumper->DumpxsFd(fileno OUTSTATE,[\\$v],[\"$g\"]);\n";
-#    $es = "print OUTSTATE Data::Dumper->Dumpxs([\\$v],[\"$g\"]);\n";
+    my $es = "Data::Dumper->DumpxsFd(fileno OUTSTATE,[\\$v],[\"$g\"]);\n";
+#    my $es = "print OUTSTATE Data::Dumper->Dumpxs([\\$v],[\"$g\"]);\n";
     print STDERR $es if $opt_v;
     eval $es;
     $es = "undef $v;\n";
@@ -6847,6 +6864,8 @@ use Getopt::Std;
 getopts($getopts_option_letters);
 
 usage() if ($opt_h);
+
+if ($opt_e) { $compute_transitive_dependence_info = $false; }
 
 #SaveMacroAnalysisState("/tmp/gjb/macros");
 #exit 0;
@@ -6902,25 +6921,48 @@ if ($opt_g)
       $debug_dependences_internal = $false;
       $debug_ccd_categories = $false;
     }
-  elsif ($opt_g == 1) { $fDebugCmdProcessing = $true; }
-  elsif ($opt_g == 2) { $fDebugCommentRemoval = $true; }
-  elsif ($opt_g == 3) { $debug_scopes = $true; }
-  elsif ($opt_g == 4) { $debug_type_match = $true; }
-  elsif ($opt_g == 5) { $debug_parse_function = $true; }
-  elsif ($opt_g == 6) { $debug_parse_expression = $true; }
-  elsif ($opt_g == 7) { $debug_merge_branches = $true; }
-  elsif ($opt_g == 8) { $debug_parse_array_init = $true; }
-  elsif ($opt_g == 9) { $debug_peek = $true; }
-  elsif ($opt_g == 10) { $debug_getline = $true; }
-  elsif ($opt_g == 11) { $debug_categorize_macro = $true; }
-  elsif ($opt_g == 12) { $debug_cpp_if_comments = $true; }
-  elsif ($opt_g == 13) { $debug_dependences = $true; }
-  elsif ($opt_g == 14) { $debug_ccd_categories = $true; }
-  elsif ($opt_g == 15) { $debug_parse_statement = $true; }
-  elsif ($opt_g == 16) { $debug_parse_declaration = $true; }
-  elsif ($opt_g == 17) { $debug_dependences_internal = $true; }
-  else { die "Bad -g option $opt_g"; }
+  $opt_g =~ s/[ \t]+//;		# squeeze out whitespace
+  if ($opt_g !~ /[0-9]+(,[0-9]+)*/)
+    { die "Bad -g option (should be number or comma-separated list of numbers): $opt_g"; }
+  if ($opt_g =~ /\b1\b/) { $fDebugCmdProcessing = $true; }
+  if ($opt_g =~ /\b2\b/) { $fDebugCommentRemoval = $true; }
+  if ($opt_g =~ /\b3\b/) { $debug_scopes = $true; }
+  if ($opt_g =~ /\b4\b/) { $debug_type_match = $true; }
+  if ($opt_g =~ /\b5\b/) { $debug_parse_function = $true; }
+  if ($opt_g =~ /\b6\b/) { $debug_parse_expression = $true; }
+  if ($opt_g =~ /\b7\b/) { $debug_merge_branches = $true; }
+  if ($opt_g =~ /\b8\b/) { $debug_parse_array_init = $true; }
+  if ($opt_g =~ /\b9\b/) { $debug_peek = $true; }
+  if ($opt_g =~ /\b10\b/) { $debug_getline = $true; }
+  if ($opt_g =~ /\b11\b/) { $debug_categorize_macro = $true; }
+  if ($opt_g =~ /\b12\b/) { $debug_cpp_if_comments = $true; }
+  if ($opt_g =~ /\b13\b/) { $debug_dependences = $true; }
+  if ($opt_g =~ /\b14\b/) { $debug_ccd_categories = $true; }
+  if ($opt_g =~ /\b15\b/) { $debug_parse_statement = $true; }
+  if ($opt_g =~ /\b16\b/) { $debug_parse_declaration = $true; }
+  if ($opt_g =~ /\b17\b/) { $debug_dependences_internal = $true; }
 }
+if ($opt_T)
+{
+  print "fDebugCmdProcessing = $fDebugCmdProcessing\n";
+  print "fDebugCommentRemoval = $fDebugCommentRemoval\n";
+  print "debug_scopes = $debug_scopes\n";
+  print "debug_type_match = $debug_type_match\n";
+  print "debug_parse_function = $debug_parse_function\n";
+  print "debug_parse_expression = $debug_parse_expression\n";
+  print "debug_merge_branches = $debug_merge_branches\n";
+  print "debug_parse_array_init = $debug_parse_array_init\n";
+  print "debug_peek = $debug_peek\n";
+  print "debug_getline = $debug_getline\n";
+  print "debug_categorize_macro = $debug_categorize_macro\n";
+  print "debug_cpp_if_comments = $debug_cpp_if_comments\n";
+  print "debug_dependences = $debug_dependences\n";
+  print "debug_ccd_categories = $debug_ccd_categories\n";
+  print "debug_parse_statement = $debug_parse_statement\n";
+  print "debug_parse_declaration = $debug_parse_declaration\n";
+  print "debug_dependences_internal = $debug_dependences_internal\n";
+}
+
 
 # using a default directory-- only open the files that
 # aren't explicitly given
@@ -6959,6 +7001,13 @@ if ($opt_E) { open(EVIL,">$opt_E") || die "Failed opening $opt_E"; }
   elsif (!$opt_d) { open(EVIL,">-") || die "Failed opening stdout!"; }
 if ($opt_P) { open(PARSE_ERRS,">$opt_P") || die "Failed opening $opt_P"; }
   elsif (!$opt_d) { open(PARSE_ERRS,">-") || die "Failed opening stdout!"; }
+# This probably doesn't slow things down too much, and it's convenient.
+EVIL->autoflush(1);
+PARSE_ERRS->autoflush(1);
+STDIN->autoflush(1);
+STDOUT->autoflush(1);
+STDERR->autoflush(1);
+
 if ($opt_I) { $fIgnoreIncludes = $true; }
 if ($opt_t) { $outOFS = "\t"; } # use tab for OFS
 if ($opt_l) { $identifier_re = $identifier_no_dollar_re; } # no $ in identifiers
@@ -6983,7 +7032,6 @@ initialize_lists_of_hashes();
 # Testing
 if ($opt_T)
 { local $categorizing_macros = $true;
-  use IO::Handle;
   STDIN->autoflush(1);
   STDOUT->autoflush(1);
   STDERR->autoflush(1);
@@ -7047,7 +7095,8 @@ for my $name (keys %macros)
 
 if (!$opt_1)
 { if ($opt_v) { print STDERR "done with that loop; now finding macro uses...\n"; }
-  compute_transitive_dependences();
+  if ($compute_transitive_dependence_info)
+    { compute_transitive_dependences(); }
   ## This is pass 2 over the input files
   process_macro_calls();
 }

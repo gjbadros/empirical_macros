@@ -127,6 +127,8 @@ use vars qw($opt_i $opt_I $opt_h $opt_v $opt_t $opt_d
 	    $opt_u $opt_1 $opt_A $opt_a $opt_g $opt_T $opt_s);
 my $fIgnoreIncludes = $false;
 
+my $dependence_statename;
+
 
 ###########################################################################
 ### Print output statistics
@@ -177,7 +179,7 @@ sub output_statistics ( )
   # macro categories
   if ($opt_C) { output_macro_categ(); }
   if ($opt_p) { output_properties(); }
-  if ($opt_P) { output_dependences(); }
+  if ($opt_P && defined($dependence_statename)) { output_dependences(); }
   if ($opt_l) { output_lint(); }
   output_frequse();
   output_freqdef();
@@ -498,106 +500,106 @@ sub output_properties ( )
 sub output_dependences ( )
 { check_args(0, @_);
   if ($opt_v) { print STDOUT "depend..."; }
-      select DEPEND;
-      # print "===========================================================================\n";
-      print "Macro dependence info\n";
-      for my $macro_name (sort keys %macros)
-	{ print "$macro_name\n";
-	  if (scalar(@{$macros{$macro_name}}) > 0)
-	    { for my $i (@{$macros{$macro_name}})
-		{ print "  def #$i: incl_dep: @{$mdef_direct_inclusion_dependenton[$i]}\n";
-		  print "           exp_dep: @{$mdef_direct_expansion_uses[$i]}\n"; } }
-	  else
-	    { my $where_used_by_cpp = $macros_used_by_cpp{$macro_name};
-	      $where_used_by_cpp =~ s/^([0-9]+)/$files[$1]/e;
-	      print "  no def; used on $where_used_by_cpp\n"; }
-	  if (scalar(keys %{$macro_inclusion_dependenton{$macro_name}}) > 0)
-	    { print "  i_depon: ", join(' ',sort keys %{$macro_inclusion_dependenton{$macro_name}}), "\n"; }
-	  if (scalar(keys %{$macro_inclusion_dependees{$macro_name}}) > 0)
-	    { print "  i_depee: ", join(' ',sort keys %{$macro_inclusion_dependees{$macro_name}}), "\n"; }
-	  if (!exists($inclusion_dependee_lines{$macro_name}))
-	    { $inclusion_dependee_lines{$macro_name} = 0; }
-	  elsif ($inclusion_dependee_lines{$macro_name} > 0)
-	    { print "  i_depee_lines: ", $inclusion_dependee_lines{$macro_name}, "\n"; }
-	  if (scalar(keys %{$macro_expansion_dependenton{$macro_name}}) > 0)
-	    { print "  e_depon: ", join(' ',sort keys %{$macro_expansion_dependenton{$macro_name}}), "\n"; }
-	  if (scalar(keys %{$macro_expansion_dependees{$macro_name}}) > 0)
-	    { print "  e_depee: ", join(' ',sort keys %{$macro_expansion_dependees{$macro_name}}), "\n"; }
-	  if (!exists($expansion_dependee_lines{$macro_name}))
-	    { $expansion_dependee_lines{$macro_name} = 0; }
-	  elsif ($expansion_dependee_lines{$macro_name} > 0)
-	    { print "  e_depee_lines: ", $expansion_dependee_lines{$macro_name}, "\n"; }
-	  if (!exists($either_dependee_lines{$macro_name}))
-	    { $either_dependee_lines{$macro_name} = 0; }
-	  elsif ($either_dependee_lines{$macro_name} > 0)
-	    { print "  tot_depee_lines: ", $either_dependee_lines{$macro_name}, "\n"; } }
+  select DEPEND;
+  # print "===========================================================================\n";
+  print "Macro dependence info\n";
+  for my $macro_name (sort keys %macros)
+    { print "$macro_name\n";
+      if (scalar(@{$macros{$macro_name}}) > 0)
+	{ for my $i (@{$macros{$macro_name}})
+	    { print "  def #$i: incl_dep: @{$mdef_direct_inclusion_dependenton[$i]}\n";
+		print "           exp_dep: @{$mdef_direct_expansion_uses[$i]}\n"; } }
+      else
+	{ my $where_used_by_cpp = $macros_used_by_cpp{$macro_name};
+	  $where_used_by_cpp =~ s/^([0-9]+)/$files[$1]/e;
+	  print "  no def; used on $where_used_by_cpp\n"; }
+      if (scalar(keys %{$macro_inclusion_dependenton{$macro_name}}) > 0)
+	{ print "  i_depon: ", join(' ',sort keys %{$macro_inclusion_dependenton{$macro_name}}), "\n"; }
+      if (scalar(keys %{$macro_inclusion_dependees{$macro_name}}) > 0)
+	{ print "  i_depee: ", join(' ',sort keys %{$macro_inclusion_dependees{$macro_name}}), "\n"; }
+      if (!exists($inclusion_dependee_lines{$macro_name}))
+	{ $inclusion_dependee_lines{$macro_name} = 0; }
+      elsif ($inclusion_dependee_lines{$macro_name} > 0)
+	{ print "  i_depee_lines: ", $inclusion_dependee_lines{$macro_name}, "\n"; }
+      if (scalar(keys %{$macro_expansion_dependenton{$macro_name}}) > 0)
+	{ print "  e_depon: ", join(' ',sort keys %{$macro_expansion_dependenton{$macro_name}}), "\n"; }
+      if (scalar(keys %{$macro_expansion_dependees{$macro_name}}) > 0)
+	{ print "  e_depee: ", join(' ',sort keys %{$macro_expansion_dependees{$macro_name}}), "\n"; }
+      if (!exists($expansion_dependee_lines{$macro_name}))
+	{ $expansion_dependee_lines{$macro_name} = 0; }
+      elsif ($expansion_dependee_lines{$macro_name} > 0)
+	{ print "  e_depee_lines: ", $expansion_dependee_lines{$macro_name}, "\n"; }
+      if (!exists($either_dependee_lines{$macro_name}))
+	{ $either_dependee_lines{$macro_name} = 0; }
+      elsif ($either_dependee_lines{$macro_name} > 0)
+	{ print "  tot_depee_lines: ", $either_dependee_lines{$macro_name}, "\n"; } }
 
-      my %defs_lines = ();
-      my %mndefs = ();;
-      my %mndistinct_defs = ();
-      { my $total_product = 0;
-	for my $macro_name (keys %macros)
-	  { my $num_defs = scalar(@{$macros{$macro_name}});
-	    $mndefs{$macro_name} = $num_defs;
-	    my $num_distinct_defs;
-	    if ($num_defs < 2)
-	      { $num_distinct_defs = 1; }
-	    else
-	      { my %def_hash;
-		for my $i (@{$macros{$macro_name}})
-		  { my $body = $mdef_body_simple[$i];
-		    my $args = $mdef_formals[$i];
-		    # Canonicalize formal names to avoid gratuitous differences
-		    if ($args)
-		      { my @formals = formals_array($args);
-			for my $fno (0 .. $#formals)
-			  { $body =~ s/\b$formals[$fno]\b/EM_ARG_NUM_$fno/g; } }
-		    $body =~ s/\s+//g; # collapse all spaces
-		    $def_hash{$body} = $true; }
-		$num_distinct_defs = scalar(keys %def_hash); }
-	    $mndistinct_defs{$macro_name} = $num_distinct_defs;
-	    my $dep_lines = $either_dependee_lines{$macro_name};
-	    my $this_product = $num_distinct_defs * $dep_lines;
-	    $defs_lines{$macro_name} = $this_product;
-	    $total_product += $this_product; }
-	print "\n\n===========================================================================\n";
-	print "DEFS BY LINES PRODUCT: $total_product\n"; }
-      print "  product = distinct_defs [defs] * (inclusion_dependees + expansion_dependees)";
+  my %defs_lines = ();
+  my %mndefs = ();;
+  my %mndistinct_defs = ();
+  { my $total_product = 0;
+    for my $macro_name (keys %macros)
+      { my $num_defs = scalar(@{$macros{$macro_name}});
+	$mndefs{$macro_name} = $num_defs;
+	my $num_distinct_defs;
+	if ($num_defs < 2)
+	  { $num_distinct_defs = 1; }
+	else
+	  { my %def_hash;
+	    for my $i (@{$macros{$macro_name}})
+	      { my $body = $mdef_body_simple[$i];
+		my $args = $mdef_formals[$i];
+		# Canonicalize formal names to avoid gratuitous differences
+		if ($args)
+		  { my @formals = formals_array($args);
+		    for my $fno (0 .. $#formals)
+		      { $body =~ s/\b$formals[$fno]\b/EM_ARG_NUM_$fno/g; } }
+		$body =~ s/\s+//g; # collapse all spaces
+		$def_hash{$body} = $true; }
+	    $num_distinct_defs = scalar(keys %def_hash); }
+	$mndistinct_defs{$macro_name} = $num_distinct_defs;
+	my $dep_lines = $either_dependee_lines{$macro_name};
+	my $this_product = $num_distinct_defs * $dep_lines;
+	$defs_lines{$macro_name} = $this_product;
+	$total_product += $this_product; }
+    print "\n\n===========================================================================\n";
+    print "DEFS BY LINES PRODUCT: $total_product\n"; }
+  print "  product = distinct_defs [defs] * (inclusion_dependees + expansion_dependees)";
 
-      { my $prev_product = -1;
-	for my $macro_name (sort { ($defs_lines{$b} <=> $defs_lines{$a})
-				     || (scalar(@{$macros{$b}}) <=> scalar(@{$macros{$a}})) }
-			    (keys %macros))
-	  # At this point we are at the end, not beginning, of an output line
-	  { my $this_product = $defs_lines{$macro_name};
-	    ## Print one line per product
-	    #  if ($this_product == $prev_product)
-	    #	{ print ", ", $macro_name; }
-	    #  else
-	    #	{ print "\n", $this_product, "\t", $macro_name;
-	    #	  $prev_product = $this_product; }
-	    # Print one line per macro name
-	    print "\n$this_product\t$macro_name\t= $mndistinct_defs{$macro_name} [$mndefs{$macro_name}] * ($inclusion_dependee_lines{$macro_name} + $expansion_dependee_lines{$macro_name})";
-	  } }
+  { my $prev_product = -1;
+    for my $macro_name (sort { ($defs_lines{$b} <=> $defs_lines{$a})
+				 || (scalar(@{$macros{$b}}) <=> scalar(@{$macros{$a}})) }
+			(keys %macros))
+      # At this point we are at the end, not beginning, of an output line
+      { my $this_product = $defs_lines{$macro_name};
+	## Print one line per product
+	#  if ($this_product == $prev_product)
+	#	{ print ", ", $macro_name; }
+	#  else
+	#	{ print "\n", $this_product, "\t", $macro_name;
+	#	  $prev_product = $this_product; }
+	# Print one line per macro name
+	print "\n$this_product\t$macro_name\t= $mndistinct_defs{$macro_name} [$mndefs{$macro_name}] * ($inclusion_dependee_lines{$macro_name} + $expansion_dependee_lines{$macro_name})";
+      } }
 
-      print "\n\n===========================================================================\n";
-      print "LINES BY LEVEL OF MACRO DEPENDENCE\n";
-      print "Any dependence\n";
-      for my $i (0 .. $#either_dependence_count)
-	{ print "$i\t" . (defined($either_dependence_count[$i])
-			  ? $either_dependence_count[$i]
-			  : 0) . "\n"; }
-      print "Inclusion dependence\n";
-      for my $i (0 .. $#incl_dependence_count)
-	{ print "$i\t" . (defined($incl_dependence_count[$i])
-			  ? $incl_dependence_count[$i]
-			  : 0) . "\n"; }
-      print "Expansion dependence\n";
-      for my $i (0 .. $#exp_dependence_count)
-	{ print "$i\t" . (defined($exp_dependence_count[$i])
-			  ? $exp_dependence_count[$i]
-			  : 0) . "\n"; }
-    }
+  print "\n\n===========================================================================\n";
+  print "LINES BY LEVEL OF MACRO DEPENDENCE\n";
+  print "Any dependence\n";
+  for my $i (0 .. $#either_dependence_count)
+    { print "$i\t" . (defined($either_dependence_count[$i])
+		      ? $either_dependence_count[$i]
+		      : 0) . "\n"; }
+  print "Inclusion dependence\n";
+  for my $i (0 .. $#incl_dependence_count)
+    { print "$i\t" . (defined($incl_dependence_count[$i])
+		      ? $incl_dependence_count[$i]
+		      : 0) . "\n"; }
+  print "Expansion dependence\n";
+  for my $i (0 .. $#exp_dependence_count)
+    { print "$i\t" . (defined($exp_dependence_count[$i])
+		      ? $exp_dependence_count[$i]
+		      : 0) . "\n"; }
+}
 
 
 sub output_lint ( )
@@ -1200,11 +1202,14 @@ $fDebugCmdProcessing && print "@ARGV";
 
 # Read input before opening any output files, in case of trouble.
 ReadMacroAnalysisState($statename);
-my $dependence_statename = $statename;
+$dependence_statename = $statename;
 $dependence_statename =~ s/state$/dstate/;
 if ($dependence_statename eq $statename)
   { $dependence_statename .= "-depend"; }
-ReadMacroAnalysisState($dependence_statename);
+if (! -f $dependence_statename)
+  { undef $dependence_statename; }
+else
+  { ReadMacroAnalysisState($dependence_statename); }
 
 #$WARNING = 0;
 #require "dumpvar.pl";

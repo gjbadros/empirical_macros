@@ -76,5 +76,3 @@ sub dump_hashset ( $% )
       print "\n" . " " x $indent; }
   print "}";
 }
-
-
