@@ -1145,6 +1145,9 @@ sub ReadMacroAnalysisState {
   {
     #DBG print "$in\n----------------\n\n";
     eval $in;
+    if ($@)
+      { my ($varname) = split(/ = /, $in, 2);
+	die "Trouble evaling $varname from state file: $@" if $@; }
   }
   close(INPUTSTATE);
 
@@ -1173,9 +1176,19 @@ my $statename = ($opt_s || "state");
 # Do a quick test early, to avoid blowing away old output files if state
 # file can't be opened.
 open(INPUTSTATE,"<$statename") or die "Couldn't open state file $statename: $!";
+close(INPUTSTATE);
 if (-z $statename)
 { die "State file $statename has zero size:"; }
-close(INPUTSTATE);
+
+$fDebugCmdProcessing && print "@ARGV";
+
+# Read input before opening any output files, in case of trouble.
+ReadMacroAnalysisState($statename);
+#$WARNING = 0;
+#require "dumpvar.pl";
+#dumpvar();
+#exit 0;
+
 
 # using a default directory-- only open the files that
 # aren't explicitly given
@@ -1307,13 +1320,6 @@ if ($opt_T) {
   exit 0;
 }
 
-$fDebugCmdProcessing && print "@ARGV";
-
-ReadMacroAnalysisState($statename);
-#$WARNING = 0;
-#require "dumpvar.pl";
-#dumpvar();
-#exit 0;
 #print STDERR "Computing various global statistics...\n";
 compute_global_cpp_sums();
 
