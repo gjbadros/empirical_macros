@@ -4,6 +4,7 @@ BEGIN {
 
   use Getopt::Std;
   use em_constants;
+  use English;
 
   getopts($getopts_option_letters);
 
@@ -52,6 +53,11 @@ BEGIN {
 #DBG      print STDERR "Setting $catname to $j\n";
     }
   }
+
+  foreach my $i (0..$#categoryname) {
+    $CatNumber{$categoryname[$i]} = $i;
+#DBG    print STDERR "$categoryname[$i] -> $i\n";
+  }
 }
 
 
@@ -59,7 +65,7 @@ my $cdefs_min_filter = $opt_d || 0;   # only output stats with more than this ma
 sub marks_for_categories {
   $listref = $_[0];
   my $c;
-  my $str = " " x $cCategoryNames;
+  my $str = " " x ($cCategoryNames + 2);
   if (scalar(@$listref) > $cdefs_min_filter) {
     foreach $c (@$listref) {
       my $offset = $categoryname{$c};
@@ -78,25 +84,30 @@ sub marks_for_categories {
   return $str;
 }
 
-use English;
+
+sub lub_category_array( @ ) {
+  my (@cats) = @_;
+  my $result = $catNO_DEF;
+  foreach my $categ (@cats) {
+    my $numeric_categ = $CatNumber{$categ};
+#DBG    print STDERR "$categoryname[$result] + $categ ($categoryname[$numeric_categ]) -> ";
+    $result = category_lub( $result, $numeric_categ );
+#DBG    print STDERR "$result = $categoryname[$result]\n";
+  }
+#DBG  print STDERR "@cats", " -> $categoryname[$result]", (($result == $catMULTIPLE || $result == $catFAILURE)?"%%%%":""),"\n";
+  return $result;
+}
+
+
 next if /^[\#%]/;
-next unless $F[9] =~ /FromStdin/;
-next if !defined($F[8]) || $F[8] eq "NoDefinitions";
+next unless $F[10] =~ /FromStdin/;
+next if !defined($F[9]) || $F[9] eq "NoDefinitions";
 next if ($opt_m && $F[1] <= 1); # skip those w/o multiple definitions
  # the categories are not listed for cond comp directive only macros
 #i.e. macros that are used in ccd-s, but not #define-d anywhere
-my @cat = split(/,/,$F[8]);
+my @cat = split(/,/,$F[9]);
 my $row = marks_for_categories(\@cat);
 if ($opt_a || $row =~ m/\*/) {
-  print $row;
+  print $row , "^", "@cat";
 }
 print "\n";
-
-sub lub_category_array( @ ) {
-  my (@cats) = check_args_at_least(1,@_);
-  my $result = $catNO_DEF;
-  foreach my $categ (@cats) {
-    $result = category_lub( $result, $categ );
-  }
-  return $result;
-}
