@@ -7,6 +7,8 @@ read.  We have clarified some points you asked about.  For points that we
 chose not to expand on in detail, all our other readers of the paper found
 the original text clear; if any did not, we went ahead and modified it to
 address the lack of clarity.
+
+Section numbers and pages refer to the revision unless otherwise noted.
 ]
 
 
@@ -26,9 +28,15 @@ address the lack of clarity.
 > supported by the empirical work; they seem disconnected from the rest
 > of the paper.
 
+Section 1 now provides a more complete motivation.  This, in turn,
+provides a better background for the taxonomy and helps to 
+connect sections 8 and 9.  We also reference the empirical data in
+sections 8 and 9, further connecting them to the rest of the paper.
 
-> 
-> 
+In section 5.1 (p.7), we explain the methodology more precisely and
+thoroughly.
+
+
 >             OVERALL COMMENTS AND SUGGESTIONS FOR REVISION
 > 
 > It may be that the most valuable contribution of your work will come
@@ -52,6 +60,11 @@ address the lack of clarity.
 > It's hard to tell from your paper if your taxonomy is flat.  For
 > example, is ``extra-linguistic'' a taxon that is divided into other
 > taxons?
+
+Yes, it is.   Section 5.2 shows this by having sub-parts (in the
+definition list) of the section enumerate the various kinds of
+extra-linguistic constructs.  
+
 > 
 > Don't measure just for the sake of measuring; convince us that what
 > you are measuring is meaningful.  For example, you might
@@ -68,6 +81,8 @@ address the lack of clarity.
 > 
 > In other words, convince us why these taxons are important and to what
 > use your taxonomy might be put.  
+
+We do more of this now, in the expanded sections 9 and 10.
 
 > (Aside: I suspect that a discussion of the taxonomy will show that it
 > does not make sense to lump Makefiles and other non-C code in with the
@@ -98,7 +113,10 @@ it.
 >           or definedness of that macro
 > Be sure to distinguish carefully between macro names and macro
 > definitions.
-> 
+
+We doubled the length of section 3 on methodology to explain in detail
+the steps we used.
+
 > Explain exactly how the classifications are determined.  There are
 > several hints in your paper that the analysis is not very precise in
 > spots.  Two of these imprecisions must be corrected before I can
@@ -106,9 +124,19 @@ it.
 >   - You must refine your analysis so you can tell the difference
 >     between macros that refer to global variables and macros that
 >     refer to local variables or parameters.  
+
+Paragraph 3 of section 3 discusses how we accomplish this.
+
 >   - You must distinguish ordinary variables and built-in keywords from
 >     uses of similarly named macros.  A modified cpp might help with
 >     this analysis.
+
+Paragraph 4 of section 3 discusses how we accomplish this.  This
+revision required the refinement of our PCP^3 tool (an extensible cpp,
+as you suggest) and largely accounted for our delay in revising the
+paper.   However, the improvement to the accuracy of the data was
+significant and important, as you surmised.
+
 > In general, tell us exactly how well or how badly you are doing in
 > your analyses.
 > 
@@ -118,12 +146,19 @@ it.
 > quantity of data, and those readers who fail to do so will at least
 > have learned your taxonomy.
 > 
+
+We have extended and clarified sections 5.1 and 5.2, and retitled
+section 5.3 to be "Erroneous macros" to aid in  making the taxonomy more 
+clear.
+
 > When you present your taxonomy, give an example for every taxon---the
 > examples are very helpful.  Try to do something typographically to
 > make the examples easy for the reader to find.  A table of taxons with
 > short definitions (and examples if they'll fit) might be helpful.
 > Give readers every aid in understanding and remembering your taxonomy.
-> 
+
+We have added several examples.
+
 > You claim on page 3 that your taxonomy identifies innocuous and
 > problematic macro usages.  I don't see this claim borne out in the
 > paper.  This identification should be part of a clearer presentation
@@ -134,18 +169,22 @@ it.
 > or C++ would enable you to eliminate problematic usages that couldn't
 > be eliminated from ANSI C?  Support your answers with arguments or
 > evidence.
-> 
-> 
-> 
-> 
+
+Section 9 discusses some suggested extensions to C and relates those
+extensions to how they would impact our data.
+
+
 > You've taken a lot of measurements, but I didn't learn much.  What are
 > readers to *do* differently, or to *understand* better as a result of
 > your analysis?  What conclusions do you want us to draw from the data?
 > Are there other conclusions that we might have hoped to draw but that
 > are not in fact supported by the data?  In other words, is anything in
 > the paper surprising?
-> 
-> 
+
+[[ MERNST: IIRC, we chose specifically not to do this so that people
+could draw their own conclusions... I'm not sure how to address this
+question.  Did we handle it in the cover letter? ]]
+
 > You don't seem to exploit the fact that you have data from many
 > different packages.  It seems to me you're missing an opportunity to
 > correlate your measurements and classifications with things people
@@ -153,17 +192,21 @@ it.
 > independent information (even guesses) about the packages?  Bug rates?
 > Number of users?  Can your analysis of usage within a package tell us
 > anything about that package?
-> 
-> 
-> 
-> 
-> 
+
+Though this would definitely be interesting, and we now mention it in
+our new Future work section 10, it is not our intention in this paper to 
+do a longitudinal study on a single package.  We expect our work will
+encourage and enable careful study of the limitless possibilities that
+remain. 
+
 > Regarding related work, is it possible that work on software metrics
 > (complexity metrics) has completely ignored the C preprocessor?  I
 > don't know this literature at all, but I hope you can find either some
 > studies or some published evidence that the metrics community has
 > overlooked Cpp.
-> 
+
+Section 8 discusses our thorough literature search.
+
 > I would also like to know how your analysis relates to the analysis
 > performed by sophisticated tools like Gimpel's FlexeLint (aka
 > PC-Lint).  FlexeLint undoubtedly has a taxonomy of deprecated macro
@@ -173,18 +216,20 @@ it.
 > form, so it might be possible to grep error messages, or they might be
 > willing to supply code that tickles the error messages, so you could
 > identify which had to do with macros.
-> 
-> 
-> 
-> 
-> 
+
+We ran LCLint, now, and discuss those results in section 8.3, paragraph
+3.  We also added paragraph 4 to discuss FlexeLint.
+
 > The writing of your paper needs improvement, especially in the
 > introduction.  By page 6, there is no coherent story about what you
 > are doing in this paper.  What is the problem you are trying to solve?
 > The first clear indication of the goals of the work comes on page
 > 26, at the beginning of section 8.  This material should appear on
 > page 1.
-> 
+
+We expanded the introduction and split it into 2 sections to make our
+motivations more clear and earlier.
+
 > The abstract is frustrating to read.  Instead of distilling the
 > essential results of the paper, the abstract lists the problems you
 > worked on.  I recommend consulting the following short paper for
@@ -193,14 +238,18 @@ it.
 >    Landes, Kenneth K. 1966 (September). A scrutiny of the abstract.
 >    _Bulletin of the American Association of Petroleum Geologists_,
 >    50(9):1992--1993.
-> 
-> 
+
+We rewrote the abstract almost completely.
+
 > It might help your readers' understanding to pick one or two tools or
 > applications (e.g., a debugger, a test-coverage analyzer), and as you
 > go through both the taxonomy and the experimental data, to show how
 > the taxonomy and the data relate to the construction or use of such
 > tools.
-> 
+
+We do this some throughout section 5, but we've also tried to be more
+explicit and give more examples to aid the reader.
+
 > This paper presents lots of data in the form of graphs and tables, so
 > you must make extraordinary efforts to help your readers comprehend
 > it.  Figures with their captions should be meaningful on their own and
@@ -213,13 +262,12 @@ it.
 > same page as the text that discusses them---at least in a submission,
 > large chunks of white space are preferable to forcing the reader to
 > jump around.
-> 
-> 
+
+Most captions have been expanded and clarified.  
+
 > 
 > 
 >                           DETAILED COMMENTS
-> 
-> 
 > 
 
 
@@ -891,6 +939,9 @@ amounts of space to each.)
 > tools is called for.  You are, after all, claiming to identify
 > problematic usages.
 
+
+We added section 8.3 about error checking tools.
+
 > Please explain the significance of parse errors and internal bugs in
 > LCLint.  It sounds as if LCLint is nearly unusable for your
 > application suite.  How many of the packages (or source files) could
@@ -929,16 +980,24 @@ this effect if you feel it would be helpful.
 
 > Are function declarations the only declarations at issue?
 
+They are the ones that are most often mangled by cpp, yes.
+
 > I'm skeptical about moving directives into the language proper.
 > 
 > I don't buy the argument about replacing common constructs with
 > special-purpose syntax.  If you have a proposal, make it, and say what
 > it would gain.  The general argument isn't convincing by itself; there
 > must be an example.
-> 
+
+See the top of p. 30 for our now-explicit suggestions
+(#ifndefdef/#default and #import, among others).
+
 > Use your empirical data to argue the points in section 8---connect
 > this section to the rest of the paper.
-> 
+
+We do now, and this does help connect them.  Thanks!  See paragraphs
+2 and 4 of section 9.
+
 > How are the good practices in section 8 different from recommendations
 > made by others?  The benefits you list are very abstract.  Make a case
 > for concrete benefits; show the real problems that are created by
@@ -949,6 +1008,9 @@ this effect if you feel it would be helpful.
 > rest of the paper that you believe to be relevant to language design.
 > 
 > Elaborate on the third paragraph of section 9.
+
+We make specific suggestions in section 9, paragraphs 4 and 5.
+
 > 
 > 
 > Page 28:
@@ -957,6 +1019,7 @@ this effect if you feel it would be helpful.
 > incomplete or incorrect results.''  This information is very important
 > and should be included in the development of your taxonomy.
 
+We discuss this in section 5.
 
 
 > You claim to have found interesting and surprising features.  I'm not
