@@ -55,7 +55,10 @@ TEXT_TABLES :=	tbl-package-sizes \
 		tbl-cat-def-frequency \
 		tbl-cat-use-frequency \
 		tbl-where-used \
-		tbl-ccd-categories
+		tbl-ccd-categories \
+		tbl-lint-warnings \
+		tbl-properties-subset \
+		tbl-properties-percents
 
 RAW_TABLES := tbl-directives-hist tbl-directives-breakdown \
 		tbl-def-categories tbl-subset-categories
@@ -64,18 +67,7 @@ LATEX_TABLES :=	tbl-def-categories.tex tbl-subset-categories.tex
 
 ALL_TABLES := $(TEXT_TABLES) $(RAW_TABLES) $(LATEX_TABLES)
 
-PAPER_TABLES :=  \
-	tbl-package-sizes.tex \
-	tbl-def-frequency \
-	tbl-use-frequency \
-	tbl-cat-def-frequency \
-	tbl-cat-use-frequency \
-	tbl-directives-breakdown \
-	tbl-where-used \
-	tbl-def-categories \
-	tbl-ccd-categories \
-	tbl-subset-categories.tex
-
+PAPER_TABLES :=  $(TEXT_TABLES) $(LATEX_TABLES)
 
 all:	$(PAPER_TABLES)
 
