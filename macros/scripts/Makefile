@@ -256,6 +256,9 @@ tbl-properties-percents: $(PROP)
 # also, be sure that either the c-files-listing links are updated to point
 # to the current files, or that both gjb and mernst are cvs-updated after
 # changes get made to a c-files-listing files
+# Fixed up /scratch/gjb/packages using
+# for i in */munged/c-files-listing; ln -s $i ${i%%-*}-c-files-listing
+
 package_num_files:
 	cd $(PKG_DIR); \
 	(for i in *c-files-listing; do echo -n $${i%%-*} && grep -v '^\#' < $$i | wc -l; done ) | awk '{print $$1 "\t" $$2; sum += $$2} END {print "zzz<total>\t" sum}' > $(ANALYZE_OUTPUT_DIR)/$@
