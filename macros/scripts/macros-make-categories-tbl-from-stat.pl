@@ -171,7 +171,7 @@ sub sum_meta_category {
   my $sum = 0;
   foreach my $catname (@_) {
     my $catindex;
-    { no strict; $catindex = ${$catname}; }
+    { no strict; $catindex = $ {$catname}; }
     my $colname = $categoryname[$catindex];
     my $colno = $column_name_to_colno{$colname};
 #DBG    print STDERR "Catname $catname -> catindex $catindex -> colname $colname -> colno $colno\n";
