@@ -10,6 +10,7 @@ USER_PREFIX = /homes/gws/gjb/macros
 
 # Directories
 PKG_DIR := /tmp/gjb/packages
+PKG_PREFIX := ""   # Use only packages that start with these chars
 ANALYZE_OUTPUT_DIR := /tmp/gjb/data
 COMMON_DIR := $(shell dirname `ls -l Makefile | awk '{print $$NF}'`)
 #COMMON_DIR := /homes/gws/mernst/research/notkin/macros/scripts
@@ -29,7 +30,7 @@ include Makefile.user
 SCRIPTS := em_analyze em_reports em_constants.pm em_util.pm cline.pm
 SCRIPTSPATH := $(addprefix $(USER_PREFIX)/,$(SCRIPTS))
 
-PKGS := $(shell zsh -c "echo $(PKG_DIR)/*(/:t) | sed -e 's/-[^ ]*//g'")
+PKGS := $(shell zsh -c "echo $(PKG_DIR)/$(PKG_PREFIX)*(/:t) | sed -e 's/-[^ ]*//g'")
 
 STATE := $(addsuffix .state,$(PKGS))
 STAT := $(addsuffix .stat,$(PKGS))
