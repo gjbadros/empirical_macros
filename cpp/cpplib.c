@@ -626,6 +626,7 @@ cpp_define (pfile, str)
     *q = 0;
   }
   
+  gjb_call_hooks_sz(CPP_OPTIONS(pfile),HI_CMD_LINE_DEF,buf);
   do_define (pfile, NULL, buf, buf + strlen (buf));
 }
 
