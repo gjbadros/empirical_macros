@@ -449,19 +449,57 @@ XS(XS_cpp_PushBuffer)
     }
 }
 
+XS(XS_cpp_EnterScope)
+{
+    dXSARGS;
+    if (items != 0)
+	croak("Usage: cpp::EnterScope()");
+    SP -= items;
+    {
+#line 332 "backcalls.xs"
+#line 332 "backcalls.xs"
+#line 333 "backcalls.xs"
+	enter_scope(ParseStack->contxt);
+	PUTBACK;
+	return;
+#line 333 "backcalls.xs"
+#line 333 "backcalls.xs"
+#line 333 "backcalls.xs"
+    }
+}
+
+XS(XS_cpp_ExitScope)
+{
+    dXSARGS;
+    if (items != 0)
+	croak("Usage: cpp::ExitScope()");
+    SP -= items;
+    {
+#line 342 "backcalls.xs"
+#line 342 "backcalls.xs"
+#line 343 "backcalls.xs"
+	exit_scope(ParseStack->contxt);
+	PUTBACK;
+	return;
+#line 343 "backcalls.xs"
+#line 343 "backcalls.xs"
+#line 343 "backcalls.xs"
+    }
+}
+
 XS(XS_cpp_SetParseDebugging)
 {
     dXSARGS;
     if (items != 0)
 	croak("Usage: cpp::SetParseDebugging()");
     {
-#line 333 "backcalls.xs"
-#line 333 "backcalls.xs"
-#line 334 "backcalls.xs"
+#line 353 "backcalls.xs"
+#line 353 "backcalls.xs"
+#line 354 "backcalls.xs"
 	ct_yydebug = 1;
-#line 334 "backcalls.xs"
-#line 334 "backcalls.xs"
-#line 334 "backcalls.xs"
+#line 354 "backcalls.xs"
+#line 354 "backcalls.xs"
+#line 354 "backcalls.xs"
     }
     XSRETURN_EMPTY;
 }
@@ -472,13 +510,13 @@ XS(XS_cpp_ResetParseDebugging)
     if (items != 0)
 	croak("Usage: cpp::ResetParseDebugging()");
     {
-#line 343 "backcalls.xs"
-#line 343 "backcalls.xs"
-#line 344 "backcalls.xs"
+#line 363 "backcalls.xs"
+#line 363 "backcalls.xs"
+#line 364 "backcalls.xs"
 	ct_yydebug = 0;
-#line 344 "backcalls.xs"
-#line 344 "backcalls.xs"
-#line 344 "backcalls.xs"
+#line 364 "backcalls.xs"
+#line 364 "backcalls.xs"
+#line 364 "backcalls.xs"
     }
     XSRETURN_EMPTY;
 }
@@ -489,15 +527,15 @@ XS(XS_cpp_YYPushStackState)
     if (items != 0)
 	croak("Usage: cpp::YYPushStackState()");
     {
-#line 351 "backcalls.xs"
-#line 351 "backcalls.xs"
-#line 352 "backcalls.xs"
+#line 371 "backcalls.xs"
+#line 371 "backcalls.xs"
+#line 372 "backcalls.xs"
 	if (!fShouldParse) goto done;
 	PushStackState();
 	done:
-#line 354 "backcalls.xs"
-#line 354 "backcalls.xs"
-#line 354 "backcalls.xs"
+#line 374 "backcalls.xs"
+#line 374 "backcalls.xs"
+#line 374 "backcalls.xs"
     }
     XSRETURN_EMPTY;
 }
@@ -508,15 +546,15 @@ XS(XS_cpp_YYPopAndRestoreStackState)
     if (items != 0)
 	croak("Usage: cpp::YYPopAndRestoreStackState()");
     {
-#line 360 "backcalls.xs"
-#line 360 "backcalls.xs"
-#line 361 "backcalls.xs"
+#line 380 "backcalls.xs"
+#line 380 "backcalls.xs"
+#line 381 "backcalls.xs"
 	if (!fShouldParse) goto done;
 	PopAndRestoreStackState();
 	done:
-#line 363 "backcalls.xs"
-#line 363 "backcalls.xs"
-#line 363 "backcalls.xs"
+#line 383 "backcalls.xs"
+#line 383 "backcalls.xs"
+#line 383 "backcalls.xs"
     }
     XSRETURN_EMPTY;
 }
@@ -527,15 +565,15 @@ XS(XS_cpp_YYPopAndDiscardStackState)
     if (items != 0)
 	croak("Usage: cpp::YYPopAndDiscardStackState()");
     {
-#line 369 "backcalls.xs"
-#line 369 "backcalls.xs"
-#line 370 "backcalls.xs"
+#line 389 "backcalls.xs"
+#line 389 "backcalls.xs"
+#line 390 "backcalls.xs"
 	if (!fShouldParse) goto done;
 	PopAndDiscardStackState();
 	done:
-#line 372 "backcalls.xs"
-#line 372 "backcalls.xs"
-#line 372 "backcalls.xs"
+#line 392 "backcalls.xs"
+#line 392 "backcalls.xs"
+#line 392 "backcalls.xs"
     }
     XSRETURN_EMPTY;
 }
@@ -546,15 +584,15 @@ XS(XS_cpp_YYSwapStackState)
     if (items != 0)
 	croak("Usage: cpp::YYSwapStackState()");
     {
-#line 379 "backcalls.xs"
-#line 379 "backcalls.xs"
-#line 380 "backcalls.xs"
+#line 399 "backcalls.xs"
+#line 399 "backcalls.xs"
+#line 400 "backcalls.xs"
 	if (!fShouldParse) goto done;
 	SwapStackState();
 	done:
-#line 382 "backcalls.xs"
-#line 382 "backcalls.xs"
-#line 382 "backcalls.xs"
+#line 402 "backcalls.xs"
+#line 402 "backcalls.xs"
+#line 402 "backcalls.xs"
     }
     XSRETURN_EMPTY;
 }
@@ -565,15 +603,15 @@ XS(XS_cpp_YYPushDupTopStackState)
     if (items != 0)
 	croak("Usage: cpp::YYPushDupTopStackState()");
     {
-#line 389 "backcalls.xs"
-#line 389 "backcalls.xs"
-#line 390 "backcalls.xs"
+#line 409 "backcalls.xs"
+#line 409 "backcalls.xs"
+#line 410 "backcalls.xs"
 	if (!fShouldParse) goto done;
 	PushDupTopStackState();
 	done:
-#line 392 "backcalls.xs"
-#line 392 "backcalls.xs"
-#line 392 "backcalls.xs"
+#line 412 "backcalls.xs"
+#line 412 "backcalls.xs"
+#line 412 "backcalls.xs"
     }
     XSRETURN_EMPTY;
 }
@@ -584,19 +622,19 @@ XS(XS_cpp_YYFCompareTopStackState)
     if (items != 0)
 	croak("Usage: cpp::YYFCompareTopStackState()");
     {
-#line 399 "backcalls.xs"
+#line 419 "backcalls.xs"
 	bool	RETVAL;
-#line 399 "backcalls.xs"
-#line 400 "backcalls.xs"
+#line 419 "backcalls.xs"
+#line 420 "backcalls.xs"
         RETVAL = TRUE;
 	if (!fShouldParse) goto done;
 	RETVAL = FCompareTopStackState();
 	done:
-#line 405 "backcalls.xs"
+#line 425 "backcalls.xs"
 	ST(0) = boolSV(RETVAL);
 	if (SvREFCNT(ST(0))) sv_2mortal(ST(0));
-#line 405 "backcalls.xs"
-#line 405 "backcalls.xs"
+#line 425 "backcalls.xs"
+#line 425 "backcalls.xs"
     }
     XSRETURN(1);
 }
@@ -608,13 +646,13 @@ XS(XS_cpp_FLookupSymbol)
 	croak("Usage: cpp::FLookupSymbol(szSymbol)");
     {
 	char *	szSymbol = (char *)SvPV(ST(0),na);
-#line 414 "backcalls.xs"
+#line 434 "backcalls.xs"
 	str_t *pstr;
 	symentry_t *se;
-#line 416 "backcalls.xs"
+#line 436 "backcalls.xs"
 	bool	RETVAL;
-#line 416 "backcalls.xs"
-#line 417 "backcalls.xs"
+#line 436 "backcalls.xs"
+#line 437 "backcalls.xs"
 	RETVAL = FALSE;
 	if (!fShouldParse) goto done; 
 	pstr = nmelook(szSymbol,strlen(szSymbol));
@@ -626,11 +664,11 @@ XS(XS_cpp_FLookupSymbol)
 	  RETVAL = (se != NULL);
 	}
 	done:
-#line 429 "backcalls.xs"
+#line 449 "backcalls.xs"
 	ST(0) = boolSV(RETVAL);
 	if (SvREFCNT(ST(0))) sv_2mortal(ST(0));
-#line 429 "backcalls.xs"
-#line 429 "backcalls.xs"
+#line 449 "backcalls.xs"
+#line 449 "backcalls.xs"
     }
     XSRETURN(1);
 }
@@ -661,6 +699,8 @@ XS(boot_backcalls)
         newXS("cpp::ParseStateStack", XS_cpp_ParseStateStack, file);
         newXS("cpp::SetParseStateStack", XS_cpp_SetParseStateStack, file);
         newXS("cpp::PushBuffer", XS_cpp_PushBuffer, file);
+        newXS("cpp::EnterScope", XS_cpp_EnterScope, file);
+        newXS("cpp::ExitScope", XS_cpp_ExitScope, file);
         newXS("cpp::SetParseDebugging", XS_cpp_SetParseDebugging, file);
         newXS("cpp::ResetParseDebugging", XS_cpp_ResetParseDebugging, file);
         newXS("cpp::YYPushStackState", XS_cpp_YYPushStackState, file);

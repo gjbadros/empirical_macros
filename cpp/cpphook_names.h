@@ -37,6 +37,8 @@ char *hook_names[] = {
 "TOKEN",
 "FUNCTION",
 "FUNC_CALL",
+"TYPEDEF",
+"VARDECL",
 "ANNOTATE",
 "POP_BUFFER",
 "POP_PERL_BUFFER",
