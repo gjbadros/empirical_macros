@@ -4,7 +4,7 @@
 # or from the Makefile.
 use English;
 use File::Basename;
-
+use Carp;
 $fDebug = 0;
 $opt_p = 1;
 
@@ -58,7 +58,6 @@ foreach $file (@files) {
 	last if $bucket == $line;
       }
     }
-    last if /^\#?Category:/;
     if (!defined($column{"<total>"}[$i])) {
       $column{"<total>"}[$i] = 0;
     }
@@ -74,7 +73,9 @@ $total{"<total>"} = $grand_total;
 print "$label" . $OFS;
 
 foreach $pkg (sort keys %column) {
-  print "$pkg" . $OFS;
+  # Possbly remove "cat-" prefixes
+  ($pkg_display_name = $pkg) =~ s/^cat-//;
+  print "$pkg_display_name" . $OFS;
 }
 print "\n";
 my $iRow;
@@ -105,11 +106,14 @@ print "\n";
 sub pct2 ($$) {
   my ($x,$w) = @_;
   if ($w <= 0) {
-    croak("pct2: Bad divisor: $x / $w");
-    return 0;
+    if ($x > 0) {
+      croak "pct2: Bad divisor: $x / $w";
+      return 0;
+    }
+    $w = 1;
   }
   if ($x < 0 || $x > $w) {
-    print STDERR "pct2: Percentage out of range: $x / $w\n";
+    croak "pct2: Percentage out of range: $x / $w\n";
   }
   return (100*$x/$w);
 }
