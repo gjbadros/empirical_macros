@@ -56,11 +56,11 @@ sub Startup {
     $prefix = basename($source_file,".c");
   }
 
-  open(CPP,">$prefix.cPp") || die "Cannot open $prefix.cpp: $!";
+#  open(CPP,">$prefix.cPp") || die "Cannot open $prefix.cpp: $!";
   open(VARS,">$prefix.vars") || die "Cannot open $prefix.vars: $!";
   open(TYPES,">$prefix.types") || die "Cannot open $prefix.types: $!";
   open(EXPAND,">$prefix.exps") || die "Cannot open $prefix.exps: $!";
-  open(EXP_CL,">$prefix.expcl") || die "Cannot open $prefix.expcl: $!";
+#  open(EXP_CL,">$prefix.expcl") || die "Cannot open $prefix.expcl: $!";
   open(TOKEN,">$prefix.tokens") || die "Could not open $prefix.tokens: $!";
   open(FUNCTIONS,">$prefix.funcs") || die "Cannot open $prefix.funcs: $!";
   print STDERR "STARTUP...\n";
