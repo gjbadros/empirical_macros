@@ -256,7 +256,7 @@ main (int argc, char **argv, char **env)
     }
 
 
-  if (parse_in.errors)
+  if (fShouldParse && parse_in.errors)
     {
     return_exit_code = FATAL_EXIT_CODE;
     }
