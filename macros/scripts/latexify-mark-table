@@ -9,28 +9,46 @@ print '
 {\small
 \addtolength{\columnsep}{-.5\columnsep}
 \begin{tabular}{|r|*{22}{c|}}\hline
+& % # occur
+& % failed
+& % null define
+\multicolumn{3}{c|}{Constants} &
+\multicolumn{4}{c|}{Expressions} & 
+\multicolumn{2}{c|}{{\tiny Statements}} &
+\multicolumn{2}{c|}{} & % stringization and pasting
+\multicolumn{3}{c|}{Syntactic} &
+\multicolumn{4}{c|}{Type-related} &
+% recursive
+\\\\\hline
 \rotatebox{90}{Percentage of macro names} &
 \rotatebox{90}{failed categorization} &
 \rotatebox{90}{null define} &
-\rotatebox{90}{expression} &
-\rotatebox{90}{expression with assignment} &
-\rotatebox{90}{expression with free variables~} &
+
 \rotatebox{90}{literal} &
 \rotatebox{90}{constant} &
 \rotatebox{90}{some constant} &
-\rotatebox{90}{has type argument} &
+
+\rotatebox{90}{expression} &
+\rotatebox{90}{expression with assignment} &
+\rotatebox{90}{expression with free variables~} &
 \rotatebox{90}{uses macro as function} &
+
+\rotatebox{90}{assembly code} &
+\rotatebox{90}{statement} &
+
+\rotatebox{90}{token pasting} &
+\rotatebox{90}{stringization} &
+
+\rotatebox{90}{expands to reserved word} &
+\rotatebox{90}{mismatched entities} &
+\rotatebox{90}{expands to syntax tokens} &
+
+\rotatebox{90}{expands to type} &
+\rotatebox{90}{has type argument} &
 \rotatebox{90}{uses macro as type} &
 \rotatebox{90}{uses type argument} &
-\rotatebox{90}{expands to type} &
-\rotatebox{90}{expands to reserved word} &
-\rotatebox{90}{statement} &
-\rotatebox{90}{recursive} &
-\rotatebox{90}{assembly code} &
-\rotatebox{90}{expands to syntax tokens} &
-\rotatebox{90}{mismatched entities} &
-\rotatebox{90}{token pasting} &
-\rotatebox{90}{stringization}
+
+\rotatebox{90}{recursive}
 \\\\\\hline
 ';
 }

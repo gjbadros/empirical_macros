@@ -14,26 +14,35 @@ BEGIN {
 		      'being_categorized' =>$i+0,
 		      'multiply_categorized' =>$i+0,
 		      'failed_categorization' => $i++,
+
 		      'null_define' =>$i++,
-		      'expression' =>$i++,
-		      'expression_with_assignment' =>$i++,
-		      'expression_with_free_variables' =>$i++,
+
 		      'literal' =>$i++,
 		      'constant' =>$i++,
 		      'some_constant' =>$i++,
-		      'has_type_argument' => $i++,
+
+		      'expression' =>$i++,
+		      'expression_with_assignment' =>$i++,
+		      'expression_with_free_variables' =>$i++,
 		      'macro_as_function' => $i++,
-		      'macro_as_type' => $i++,
-		      'uses_type_argument' => $i++,
-		      'expands_to_type' => $i++,
-		      'expands_to_reserved_word' => $i++,
-		      'statement' => $i++,
-		      'recursive' => $i++,
+
 		      'assembly_code' => $i++,
-		      'syntax_tokens' => $i++,
-		      'mismatched_entities' => $i++,
+		      'statement' => $i++,
+
 		      'token_pasting' => $i++,
 		      'stringization' => $i++,
+
+		      'expands_to_reserved_word' => $i++,
+		      'mismatched_entities' => $i++,
+		      'syntax_tokens' => $i++,
+
+		      'expands_to_type' => $i++,
+		      'has_type_argument' => $i++,
+		      'macro_as_type' => $i++,
+		      'uses_type_argument' => $i++,
+
+		      'recursive' => $i++,
+
 		      'LAST' =>$i++
 		     );
   my $lastargv = "";
