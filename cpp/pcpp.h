@@ -19,5 +19,7 @@ extern int ct_yydebug;
 int  FIsSpeculative();
 char * SzIsSpeculative();
  
+extern char *szHooksFile;
+extern int fShouldParse;
 
 #endif _CPPMAIN_H_
