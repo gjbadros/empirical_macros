@@ -1,2 +1,2 @@
 #ALL rsh forbidden zwrite gjb
-ALL mail -s "CVS checkin `date`" gjb mernst notkin
+ALL mail -s "CVS checkin `date`" gjb mernst
