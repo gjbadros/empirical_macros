@@ -149,3 +149,64 @@ Software Engineering"}
   pages =        "156--165"
 }
 PLDI93, SIGPLAN Notices 6:28
+
+W. G. Griswold, D. C. Atkinson, C. McCurdy, ``Fast, Flexible Syntactic
+Pattern Matching and Processing,'' Proceedings of the IEEE 1996 Workshop on
+Program Comprehension, March, 1996.
+  Abstract:
+"Program understanding can be assisted by tools that match patterns in the
+program source. Lexical pattern matchers provide excellent performance and
+ease of use, but have a limited vocabulary. Syntactic matchers provide more
+precision, but may sacrifice performance, retargetability, ease of use, or
+generality.
+  "To achieve more of the benefits of both models, we extend the pattern
+syntax of awk to support matching of abstract syntax trees, as demonstrated
+in a tool called tawk. Its pattern syntax is language-independent, based on
+abstract tree patterns. As in awk, patterns can have associated actions,
+which in tawk are written in C for generality, familiarity, and
+performance. The use of C is simplified by high-level libraries and dynamic
+linking. To allow processing of program files containing non-syntactic
+constructs, mechanisms have been designed that allow transparent matching
+in a syntactic fashion. So far, tawk has been retargeted to the MUMPS and C
+programming languages.
+  "We survey and apply prototypical approaches to concretely demonstrate the
+tradeoffs. Our results indicate that tawk can be used to quickly and easily
+perform a variety of common software engineering tasks, and the extensions
+to accommodate non-syntactic features significantly extend the generality
+of syntactic matchers."
+  My comments:
+  I read a draft longer version (apparently word-for-word from the workshop,
+but with some additions such as expanded related work).
+  The goal is to provide a version of grep or awk customized for a
+particular programming language:  permit programmers to easily make queries
+over abstract syntax trees, not just the characters in a file.  The first
+half of the paper just reviews other tools (AWK, MAWK, LSME, Scruple, A*,
+Genoa) and gives examples of building call graphs from them.  The authors
+conclude that matching power, flexibility, and scalability are key (see
+section 4).  Their solution is TAWK, which builds an abstract syntax tree
+and permits regular expressions that are based on it.  As such, it is much
+more specialized to its task than are the other tools.
+  For each new language, a full parser must be written (or hooked into an
+existing grammar).  Actions are written in C for execution speed, and
+dynamically linked for compilation/loading speed.  Users may specify on the
+command line that certain symbols are typedefs.  An expert user could do a
+lot with this; but after how much overhead and learning curve?
+  Section 6.2 discusses macros at some length; the approach is to try parsing
+the body.  If the macro body parses as a C expression or statement
+(possibly sans a trailing semicolon), then leave it in the parse tree,
+along with putting it in a global data structure.  (The authors state that
+Scruple makes a similar suggestion for handling macros.)  Otherwise, first
+try parsing assuming that each macro argument (in turn) is a typedef; if
+those parses all fail, then expand the macro.  (A special version of cpp
+does this, and emits pragmas for type arguments and typedefs.)  The claim
+is that this works for the vast majority of macros.  This is somewhat
+plausible, but apparently no testing was done on programs that support
+multiple dialects/languages, etc.
+  The paper compares the various call graph extraction algorithms; naturally
+tawk wins.  It also discusses how well macros are coped with -- only 4% to
+9% of uses need to be expanded (or is that uses of 4% to 9% of macros need
+to be expanded?), but this apparently doesn't include header files.  Most
+of the macros that are expanded have empty bodies.
+  Formatting:
+Lots of confusion over "cawk" vs "tawk"; was the name recently changed?
+LaTeX spacing is messed up, eg:  "C." should be "C\@."; "\. T" should be ". T".
