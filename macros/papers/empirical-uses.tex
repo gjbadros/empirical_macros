@@ -1,0 +1,105 @@
+\documentstyle[11pt,epsf]{article}
+
+\marginparwidth 0pt
+\oddsidemargin  0pt
+\evensidemargin 0pt
+\marginparsep 0pt
+
+\topmargin   0pt
+
+\textwidth   6.5 in
+\textheight  8.5 in
+
+\begin{document}
+\bibliographystyle{plain}
+
+\title{An Empirical Analysis of the Use of the C Preprocessor}
+
+\author{Michael Ernst,\thanks{Email 
+addresses: {\tt \{mernst, gjb, notkin\}@cs.washington.edu}.  Contact author:
+mernst@cs.washington.edu.}
+\and Greg J. Badros \and David Notkin}
+
+
+\date{Department of Computer
+Science and Engineering
+\\University 
+of Washington\\
+Box 352350\\
+Seattle, WA  98195-2350\\
+\today}  
+
+\maketitle
+
+
+\begin{abstract}
+
+The C programming language is intimately connected to its macro
+preprocessor.  This relationship affects the tools (compilers,
+debuggers, call graph extractors, etc.) built to engineer C programs,
+and it affects the ease of translation to other languages such as C++.
+In this paper we analyze over 20 packages comprising 1.5 million lines
+of C code from the GNU distribution, determining the ways in which the
+preprocessor is used in practice.  We developed a framework for
+analyzing preprocessor usage, using it to extract information
+including: the percentage of preprocessor directives in C programs,
+about the frequency of use of defined macros, about the relationship
+between C functions and their use of macros, and about the macros that
+could not be easily replaced in a conversion to a language such as
+C++.  We report on the analysis, in particular illustrating data that
+are material when considering the definition of tools for C or
+translators to C++.  
+
+\end{abstract}
+
+\bigskip
+
+\section{Introduction}
+
+[Includes motivation, how we ran the ``experiment'', logical vs. NC-NB
+lines vs. physical lines, etc.]
+
+\section{Related Work}\label{sec:related}
+
+\section{Occurrence of Preprocessor Directives}\label{sec:directives}
+
+The first question we asked was a simple one: how often do
+preprocessor directives appear in C programs?
+Figure~\ref{fig:gzip_directives} shows the data for the gzip package.
+The top bars shows the percentage of lines (split into the three
+categories discussed above) coming from all preprocessor directives;
+the remaining bars show the percentages of each specific directive as
+labeled.  (The \verb+#endif+ directive has been eliminated since it is
+the sum of the \verb+#if#+, \verb+#ifdef#+ and \verb+#ifndef#+ directives;
+the line counts were also reduced by this amount.)
+
+Perhaps the most remarkable information here is the percentage of the
+program lines that are preprocessor directives: under any of our
+interpretations of lines, at least 11\% of the program consists of
+preprocessor directives.  
+
+
+[This will be I and II.]
+
+\section{Frequency of Defined Macro Usage}\label{sec:usage}
+
+[This will be III, IIIa, and IIIb,]
+
+\section{Categorization}\label{sec:categorization}
+
+[I'm not entirely sure about this; it might be just IV (evil or
+essential macros and related issues) or it might also include Mike's
+manual breakdown into categories for gzip.]
+
+\section{Discussion}\label{sec:discussion}
+
+[Includes discussion of the analyses, brief discussion of the
+``framework'', etc.]
+
+\section{Conclusion}\label{sec:conclusion}
+
+\small \bibliography{evil}
+
+
+\end{document}
+

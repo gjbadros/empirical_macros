@@ -783,8 +783,8 @@ sub process_macro_definition
 }
 
 
-#FIX:  Write this for #undef-s
-# Write process_macro_undefinition to handle #undef-s
+# process_macro_undefinition is called to handle #undef-s
+#FIX: Write this for #undef-s
 #FIX: count the number of #undef-s for each macro, too
 #FIX: Get stats on number of macros only #undef-d, etc.
 sub process_macro_undefinition {
@@ -3367,7 +3367,7 @@ sub is_fun_decl_arg_macro
 #	 { my $body = $mbody[$macros{$identifier}[3-$empty_parens]];
 #	   my $args = $margs[$macros{$identifier}[3-$empty_parens]];
 #	   # print "is_fun_decl_arg_macro $empty_parens $args $body", scalar($args =~ /^\(\s*$body\s*\)$/), "\n";
-# FIX: BUG! need to use \Q$body\E to quote regexp meta characters in the match!!!!
+# OLD BUG! need to use \Q$body\E to quote regexp meta characters in the match!!!!
 #	   if ($args =~ /^\(\s*$body\s*\)$/)
 #	     { return $true; } } }
 #  return $false;
