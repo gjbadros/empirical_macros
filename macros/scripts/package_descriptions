@@ -3,7 +3,7 @@ bc	Desktop calculator
 bison	Parser generator 
 cvs	Revision control system 
 dejagnu	Testing framework 
-emacs	Macro text editor
+emacs	Text editor
 flex	Scanner generator 
 fvwm	Window manager 
 g77	Fortran compiler 
@@ -12,16 +12,16 @@ gcc	C and C++ compiler
 genscript	Text-to-PostScript converter 
 ghostview	PostScript previewer 
 gnuchess	Chess player 
-gnuplot	Graph Plotter 
+gnuplot	Graph plotter 
 groff	Text formatter 
 gs	PostScript interpreter 
 gzip	File compressor 
 m4	Macro expander 
-mosaic	WWW Browser
+mosaic	WWW browser
 perl	Perl interpreter 
 plan	Schedule planner 
 python	Python interpreter 
-rasmol	Molecular visualization tool
+rasmol	Molecular visualization
 rcs	Revision control system 
 remind	Schedule reminder 
 workman	Audio CD player 
