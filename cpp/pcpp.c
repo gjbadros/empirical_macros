@@ -79,6 +79,9 @@ cpp_reader parse_in;
 cpp_reader *pcr = &parse_in;
 cpp_options options;
 
+char *szHooksFile = "cpphook.pm";
+
+
 /* More 'friendly' abort that prints the line and file.
    config.h can #define abort fancy_abort if you like that sort of thing.  */
 
@@ -108,25 +111,6 @@ void cpp_functions_init(void) {
 int fShouldParse = 1;
 
 
-int
-cppmain_handle_options (cpp_reader *pfile, int argc, char **argv)
-{
-  int i;
-  for (i = 0; i < argc; i++) 
-    {
-    if (argv[i][0] == '-' && argv[i][1]== '-')
-      {
-      if (strcmp(argv[i]+2,"yydebug") == 0)
-	ct_yydebug = 1;
-      else if (strcmp(argv[i]+2,"noparse") == 0)
-	fShouldParse = 0;
-      continue;
-      }
-    return i;
-    }
-  return i;
-}
-
 /* These are used by ctree's lexer to avoid really getting
    upset about errors and to augment the error output */
 int
@@ -139,7 +123,7 @@ FIsSpeculative()
 char *
 SzIsSpeculative()
 {
-  return FIsSpeculative?"SPECULATIVE:":"";
+  return FIsSpeculative()?"SPECULATIVE:":"";
 }
 
 int
@@ -158,19 +142,8 @@ main (int argc, char **argv, char **env)
   int return_exit_code = SUCCESS_EXIT_CODE;
 
   /* Perl startup code */
-  char *startup_code[] = { "", "-I", ".", "-I", "/tmp/gjb/cpp", "-e", "use cpphook;" };
-  my_perl = perl_alloc();
-  perl_construct( my_perl );     
-  perl_exit_status = perl_parse(my_perl, cpp_functions_init, 
-				sizeof(startup_code)/sizeof(startup_code[0]), 
-				startup_code, NULL);
-
-  // exit if we got compilation (parse) errors!
-  if (perl_exit_status)
-    die("Problem use-ing cpphook!  Check that perl file for compilation errors.");
-
-  perl_run(my_perl);
-  gjb_call_hooks_void(opts,HI_STARTUP);
+  char szUseFilename[256];
+  char *startup_code[] = { "", "-I", ".", "-I", "/tmp/gjb/cpp", "-e", szUseFilename };
 
   p = argv[0] + strlen (argv[0]);
   while (p != argv[0] && p[-1] != '/') --p;
@@ -181,12 +154,29 @@ main (int argc, char **argv, char **env)
 
   init_parse_options (opts);
 
-  /* FIXGJB: the argument handling needs work -- localize, or generalize! */
-  argi += cppmain_handle_options (&parse_in, argc - argi, argv + argi);
-
   argi += cpp_handle_options (&parse_in, argc - argi , argv + argi);
   if (argi < argc)
     fatal ("Invalid option `%s'", argv[argi]);
+
+  sprintf(szUseFilename,"require \'%s\';",szHooksFile);
+/* FIXGJB: make runtime option */
+#ifdef VERBOSE
+  fprintf(stderr,"Trying file \"%s\"\n",szUseFilename);
+#endif
+
+  my_perl = perl_alloc();
+  perl_construct( my_perl );     
+  perl_exit_status = perl_parse(my_perl, cpp_functions_init, 
+				sizeof(startup_code)/sizeof(startup_code[0]), 
+				startup_code, NULL);
+
+  // exit if we got compilation (parse) errors!
+  if (perl_exit_status)
+    die("Problem with hooks file!  Check that perl file for compilation errors.");
+
+  perl_run(my_perl);
+  gjb_call_hooks_void(opts,HI_STARTUP);
+
   parse_in.show_column = 1;
 
   i = push_parse_file (&parse_in, opts->in_fname);
@@ -221,7 +211,10 @@ main (int argc, char **argv, char **env)
 
   if (!fShouldParse)
     {
+    /* FIXGJB make runtime option */
+#ifdef VERBOSE
     fprintf(stderr,"Option --noparse given, just running cpp w/o grammar!\n");
+#endif
     for (;;)
       {
       cpp_annotated_token *pcat = cpp_get_token (&parse_in,0,0);
