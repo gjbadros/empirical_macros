@@ -41,7 +41,8 @@ The arguments are the same as for the DO\_\-IFDEF hook, except \$kind is either
 replaces the \$value argument and is non-zero iff the conditional fails
 (i.e., an IFDEF with a not-defined macro, or an IFNDEF with a defined macro);
 \$s\_\-branch\_\-start gives the source code character offset of the start of
-the branch taken.
+the branch taken.  Note that this hook is called after the DO\_\-IFDEF or DO\_\-IFNDEF
+hook.
 \hook{DO\_\-IFDEF}{\$s\_\-start, \$s\_\-end, \$conditional, \$trailer, \$skipped, \$value}
 Called exactly once for each \#ifdef
 (not \#if or \#ifndef) directive seen by the preprocessor. In particular,

@@ -73,6 +73,12 @@ affecting the current symbol table directly.
 Exits the current scoping level; useful in combination
 with PushBuffer() for causing code to be parsed without
 affecting the current symbol table directly.
+\backcall{}{PushHashTab}{}
+Copies the current cpp hash table and begins using the copy;  the copy
+can later be thrown out using PopHashTab()
+\backcall{}{PopHashTab}{}
+Throw out a previously pushed cpp hash table; revert to the prior
+hash table
 \backcall{}{SetParseDebugging}{}
 Set the yydebug flag to TRUE for the underlying parser.
 This results in extra state change information being sent to stderr.
