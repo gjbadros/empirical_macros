@@ -1,7 +1,7 @@
 #!/uns/bin/zsh -
 # -*- zsh -*-
 if [[ "$1"x != ""x ]]; then
-  INPUT="<$1"
+  INPUT="$1"
 else
   INPUT=""
 fi
