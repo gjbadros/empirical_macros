@@ -3,6 +3,8 @@
 package em_constants;
 require 5.000;
 require Exporter;
+use checkargs;
+
 @ISA = qw(Exporter);
 # Initially used below line to generate the @EXPORT line
 #perl -ne 'BEGIN {print "\@EXPORT = qw("; } END {print ");\n";} print "$1 " if /([$%@]\w+)\s+/'
@@ -72,6 +74,8 @@ require Exporter;
  $arb_type_binop_regexp $binop_regexp $prefix_unop_regexp
  $postfix_unop_regexp $selector_regexp
  $cpp_include_arg_re
+
+ &string_from_prop &prop_contains
 );
 #End of @EXPORT
 
@@ -227,8 +231,32 @@ $propASSEMBLY_CODE = 64;	# contains in-line assembly code
 $propPASTING   = 128;
 $propSTRINGIZE = 256;
 
+# return a comma separated sequence of properties from a bit-mapped
+# property value; e.g. 6 (=2+4) returns "free_var,invokes_macro"
+sub string_from_prop ($) {
+  my ($prop) = check_args(1, @_);
+  # NOTE: This must be kept in sync w/ the above $propXXXX vars
+  # FIXGJB: the above should be generated from a global-scope list like
+  # this, and this fn should just use that list
+  my @props = qw( assign free_var invokes_macro
+		  passes_type_as_arg uses_macro_as_type
+		  uses_arg_as_type assymbly_code
+		  pasting stringize );
+  if ($prop == 0) { return "NONE"; }
+  my $index = 0;  # the offset into the list of properties above
+  my @lprop = (); # the list of properties to create as a string and return
+  while ($prop != 0) {
+    if ($prop & 1) {
+      push @lprop, $props[$index];
+    }
+    $prop >>= 1;
+    $index++;
+  }
+  return join(",",@lprop);
+}
+
 sub prop_contains ($$)
-{ my ($prop, $bit) = checkargs(2, @_);
+{ my ($prop, $bit) = check_args(2, @_);
   return ($prop & $bit); }
 
 
