@@ -2598,8 +2598,12 @@ sub parse_exp ($;$)
   elsif (($exp =~ /^$string_literal_re/o) # literal
 	 || ($exp =~ /^\#\s*$identifier_re/)) # stringization
     # String contains no non-escaped double-quote
-    # parse_exp_follower looks for a following string, to concatenate the two.
-    { return parse_exp_follower($typeSTRING, $POSTMATCH); }
+    { # Avoid deep recursion when hundreds of string literals follow one another.
+      my $remaining = $POSTMATCH;
+      while ($remaining =~ /^\s*$string_literal_re/o)
+	{ $remaining = $POSTMATCH; }
+      # parse_exp_follower looks for a following string, to concatenate the two.
+      return parse_exp_follower($typeSTRING, $remaining); }
 
   # Literal character
   elsif ($exp =~ /^$char_literal_re/o)
