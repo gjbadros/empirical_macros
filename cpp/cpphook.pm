@@ -58,6 +58,7 @@ sub do_define {
   print CPP "In do_define w/ body = $name_args_body\n";
   print CPP ": $fname [$s_start,$s_end]\n";
   print TRACE ": ParseStateStack: ", join(",",cpp::ParseStateStack()), "\n";
+  PutFaceProperty($fname,$s_start,$s_end,"font-lock-type-face");
 }
 
 
@@ -111,7 +112,7 @@ sub dump_uses {
 	  }
 	} else {
 	  # No conflict, so do a substitution, too
-	  annotate_definition_message('text','substexpn',"$new_var /* $expansion */",$mname);
+	  annotate_definition_message('text','substexpn',"$new_var",$mname);
 	}
 	if ($new_var ne "") {
 	  annotate_definition_message('text','subst',"enum {$new_var = $expansion};",$mname);
@@ -240,7 +241,7 @@ sub macro_cleanup {
   print " : MEH = ", join("<-",cpp::MacroExpansionHistory()),"\n";
   if ($cbb == 1) {
     $top_level_full_expansion =~ s%\n%\\n\\%g;
-    print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'final-exp \"$mname final expansion: $top_level_full_expansion\")\n";
+    print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'final-exp \"$mname -> $top_level_full_expansion\")\n";
     print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'stack \"$state_stack\")\n";
     $top_level_full_expansion = "";
     $top_level_mname = "";
@@ -432,7 +433,7 @@ sub handle_unincluded_block {
   cpp::YYPushStackState();
   cpp::EnterScope();
   cpp::PushHashTab();
-  cpp::PushBuffer($skipped);
+  cpp::PushBuffer($skipped,$s_branch_start);
 }
 
 sub do_xifdef {
