@@ -633,6 +633,7 @@ my @mdef_name;
 my @mdef_args;
 my @mdef_body;			# with comments; for user output
 my @mdef_body_noc;		# no comments; for processing (does contain unsimplified strings and character literals)
+my @mdef_body_simple;		# no comments; strings and chars are simplified
 my @mdef_file;
 my @mdef_line;
 my @mdef_physical_lines;
@@ -746,6 +747,7 @@ sub process_macro_definition ($$$$)
   # $def_noc =~ s/\\\n//g;
   my ($name_ignore, $args_ignore, $body) = macrosplit($def);
   my ($name, $args, $body_noc) = macrosplit($def_noc);
+  my $body_simple = cline_simplify($body_noc);
   # print "process_macro_definition $name $macro_physical_lines $macro_physical_ncnb_lines\n";
   # print STDERR "PARSED: $name\n";
   if (!defined($args)) { $args = ""; }
@@ -773,6 +775,7 @@ sub process_macro_definition ($$$$)
   $mdef_args[$this_macro_index] = $args;
   $mdef_body[$this_macro_index] = $body;
   $mdef_body_noc[$this_macro_index] = $body_noc;
+  $mdef_body_simple[$this_macro_index] = $body_simple;
 
   # We track both the physical lines in a macro definition
   # (mdef_physical_lines) which is the extent of the macro (where it appears
@@ -1167,7 +1170,7 @@ sub compute_transitive_macro_dependences ()
 	  # # direct expansion dependences are mdef_direct_expansion_uses
 	  # for my $exp_dep (@{$mdef_direct_expansion_uses[$this_macro_index]})
 	  #  { add_expansion_dependence($name, $exp_dep); }
-	  for my $exp_dep (macros_appearing_in(cline_simplify($mdef_body_noc[$index])))
+	  for my $exp_dep (macros_appearing_in($mdef_body_simple[$index]))
 	    { add_expansion_dependence($name, $exp_dep); } } }
 
   # Maybe put some debugging output here.
@@ -1748,8 +1751,9 @@ sub getline_handle_preprocessor_command ($$$$$)
 	    # This is still hacky, as it only checks the first definition, but
 	    # it's less hacky than the below for gnuchess --gjb
 	    (!defined($macros{$cpp_cmd_arg_noc}) ||
+	     # index -1 means "last element of array"
 	     !defined($mdef_body_noc[$macros{$cpp_cmd_arg_noc}[-1]]) ||
-	     $mdef_body_noc[$macros{$cpp_cmd_arg_noc}[-1]] !~  /^(?:<(.*)>|\"(.*)\")$/)) {
+	     $mdef_body_noc[$macros{$cpp_cmd_arg_noc}[-1]] !~ /^(?:<(.*)>|\"(.*)\")$/)) {
 	  # Didn't match "foo.h" or <bar.h>, or a macro whose last definition
 	  # expands to something in quotes or brockets
 
@@ -4003,7 +4007,7 @@ sub categorize_macro_name ($)
 	{ categorize_macro_def($mdef_index); }
       # Type may be undefined; it's ingored for some categories.
       if (!defined($mdef_category[$mdef_index]))
-	{ die "Undefined category (type $mdef_type[$mdef_index]): $i $mdef_index $mdef_name[$mdef_index] $mdef_args[$mdef_index] $mdef_body[$mdef_index] $mdef_body_noc[$mdef_index]"; } }
+	{ die "Undefined category (type $mdef_type[$mdef_index]): $i $mdef_index $mdef_name[$mdef_index] $mdef_args[$mdef_index] $mdef_body[$mdef_index]"; } }
 
   if ($debug_categorize_macro)
     { my @cat_and_type = ();
@@ -4068,10 +4072,10 @@ sub categorize_macro_def ($)
   # Avoid recursive call even if possible loop in macro definitions.
   $mdef_category[$index] = $catINPROCESS;
 
-  my $body = $mdef_body_noc[$index];
+  my $body = $mdef_body_simple[$index];
   if (!defined($body))
-    { die "Why isn't mdef_body_noc[$index] defined? ($mdef_body[$index])"; }
-  $fDebugCommentRemoval && print STDERR "body = '$mdef_body[$index]'\nbody_noc = '$body'\n";
+    { die "Why isn't mdef_body_simple[$index] defined? ($mdef_body[$index])"; }
+  $fDebugCommentRemoval && print STDERR "body = '$mdef_body[$index]'\nbody_simple = '$body'\n";
 
   # Fix: are these special cases better done in parse_expression?
   my $category;
@@ -4294,7 +4298,7 @@ sub is_fun_decl_arg_macro ($)
       return $false;
     }
     my $args = $mdef_args[$macros{$identifier}[$i]];
-    my $body = $mdef_body_noc[$macros{$identifier}[$i]];
+    my $body = $mdef_body_simple[$macros{$identifier}[$i]];
 
     my $expands_to_just_parens = $false;
     my $expands_to_itself = $false;
@@ -4359,7 +4363,7 @@ sub is_semi_fun_decl_arg_macro ($)
       return $false;
     }
     my $args = $mdef_args[$macros{$identifier}[$i]];
-    my $body = $mdef_body_noc[$macros{$identifier}[$i]];
+    my $body = $mdef_body_simple[$macros{$identifier}[$i]];
 
     my $expands_to_just_paren = $false;
     my $expands_to_itself = $false;
@@ -4412,7 +4416,7 @@ sub is_void_macro ($)
 
   foreach my $i (0..$#{$macros{$identifier}}) {
     my $args = $mdef_args[$macros{$identifier}[$i]];
-    my $body = $mdef_body_noc[$macros{$identifier}[$i]];
+    my $body = $mdef_body_simple[$macros{$identifier}[$i]];
 
     if ($args ne "") {
       #      print STDERR "=> false1 at $i\n";
@@ -4867,6 +4871,7 @@ sub initialize_builtin_macros () {
 #       my $i = introduce_builtin_mdef($mac);
 #       $mdef_body[$i] = " /* Fake built-in null define */";
 #       $mdef_body_noc[$i] = "";
+#       $mdef_body_simple[$i] = "";
     $mncategory{$mac} = $catNULLDEFINE;
     $mntype{$mac} = $typeUNSPECIFIED;
     $macros_used_by_cpp{$mac} = "builtin_empty_def";
@@ -4876,6 +4881,7 @@ sub initialize_builtin_macros () {
 #       my $i = introduce_builtin_mdef($mac);
 #       $mdef_body[$i] = "\"\" /* Fake built-in string */";
 #       $mdef_body_noc[$i] = "\"\"";
+#       $mdef_body_simple[$i] = "\"\"";
     $mncategory{$mac} = $catLITERAL;
     $mntype{$mac} = $typeSTRING;
     $macros_used_by_cpp{$mac} = "builtin_string_def";
@@ -4885,6 +4891,7 @@ sub initialize_builtin_macros () {
 #       my $i = introduce_builtin_mdef($mac);
 #       $mdef_body[$i] = "1 /* Fake built-in number */";
 #       $mdef_body_noc[$i] = "1";
+#       $mdef_body_simple[$i] = "1";
     $mncategory{$mac} = $catLITERAL;
     # This isn't quite right; some are long, some float.
     $mntype{$mac} = $typeINT;
@@ -5347,6 +5354,7 @@ sub test_categorize_macro_def ($$)
     { $category = $categoryname[$category]; }
   $mdef_body[1000] = $body;
   $mdef_body_noc[1000] = $body;
+  $mdef_body_simple[1000] = $body;
   $mdef_name[1000] = "dummy";
   $mdef_args[1000] = "(arg)";
   undef $mdef_category[1000];
@@ -5665,7 +5673,7 @@ sub SaveMacroAnalysisState
   my @vars_list = qw(
     %macros %macros_c_undefs %macros_uses
     %macros_file_line_uses %macros_used_in_functions
-    @mdef_name @mdef_args @mdef_body @mdef_body_noc
+    @mdef_name @mdef_args @mdef_body @mdef_body_noc @mdef_body_simple
     @mdef_file @mdef_line @mdef_physical_lines
     @mdef_physical_ncnb_lines @mdef_freefuns
     @mdef_direct_inclusion_dependenton @mdef_direct_expansion_uses
