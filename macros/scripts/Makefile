@@ -5,8 +5,8 @@
 # Directories on uni
 PKG_DIR := /tmp/gjb/packages
 ANALYZE_OUTPUT_DIR := /tmp/gjb/data
-COMMON_DIR := $(shell dirname $$(ls -l Makefile | awk '{print $$NF}'))
 EXTRA_ANALYZE_FLAGS := -g14
+COMMON_DIR := $(shell dirname $$(ls -l Makefile | awk '{print $$NF}'))
 
 PAPER_DIR := /homes/gws/gjb/macros/papers
 
@@ -70,7 +70,7 @@ clean:
 
 data_analyze:
 	pushd $(ANALYZE_OUTPUT_DIR); \
-	macros-make-data-analyze $(PKG_DIR); \
+	macros-make-data-analyze $(PKG_DIR) $(EXTRA_ANALYZE_FLAGS); \
 	popd
 
 data_reports:

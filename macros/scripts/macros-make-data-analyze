@@ -1,13 +1,14 @@
 #!/uns/bin/zsh -f
-# macros-make-data
-EXTRA_OPTS=(-g 14)
-if [[ $# != 1 ]]; then
-  echo "Usage: $0 <packages-directory>"
+# macros-make-data-analyze
+
+if [[ $# < 1 ]]; then
+  echo "Usage: $0 <packages-directory> <flags>"
   exit -1
 fi
 
 TM=$PWD
-PKG=$1
+PKG=$1; shift
+FLAGS=($*)
 cd $PKG
 
 for i in *(/); do 
@@ -15,7 +16,7 @@ for i in *(/); do
   pushd $i
     NM=${i%%-*}
     ( cat c-files-listing || find-c ) \
-     | em_analyze -i -t $EXTRA_OPTS -d $TM:$NM > $TM/$NM.out 2> $TM/$NM.err || \
+     | em_analyze -i -t $FLAGS -d $TM:$NM > $TM/$NM.out 2> $TM/$NM.err || \
          (cd ..; echo $i >> failures)
   popd
 done
