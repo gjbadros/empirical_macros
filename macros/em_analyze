@@ -6699,9 +6699,11 @@ sub SaveMacroAnalysisState
   $Data::Dumper::Indent = 1;
 #  $Data::Dumper::Purity = 1;
 
-  open(OUTSTATE, ">$output_filename")
-    or (open(OUTSTATE, ">state" && printf STDERR "Couldn't open $output_filename, using \"state\" instead\n"))
-      or die "Failed opening output file: $!";
+# DumpxsFile prints to a file named "state"
+  system("rm state");
+#  open(OUTSTATE, ">$output_filename")
+#    or (open(OUTSTATE, ">state" && printf STDERR "Couldn't open $output_filename, using \"state\" instead\n"))
+#      or die "Failed opening output file: $!";
 
   # Try to save some space, to avoid running out of memory in Data::Dumper
   undef @mdef_body_noc;
@@ -6716,14 +6718,15 @@ sub SaveMacroAnalysisState
     my $v = $state_file_vars[$i];
     my $g = $v;
     $g =~ s/[\@\%\$]/\*/;
-    $es = "print OUTSTATE Data::Dumper->Dumpxs([\\$v],[\"$g\"]);\n";
-    # print STDERR $es;
+    $es = "Data::Dumper->DumpxsFile([\\$v],[\"$g\"]);\n";
+    print STDERR $es;
     eval $es;
     $es = "undef $v;\n";
     eval $es;
   }
 
-  close(OUTSTATE);
+#  close(OUTSTATE);
+  system("mv state $output_filename");
 }
 
 
