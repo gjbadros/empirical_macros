@@ -28,12 +28,21 @@ sub AddHook {
 
 my %macro_name;
 
+# got_c_token array tracks whether we have gotten c tokens
+# in this ifdef group
+my @got_c_token;
+my @s_start_ifdefs;
+my @s_end_ifdefs;
+
 
 # List of empirically identified "Ok" states for the parsers stack in order
 # to insert a declaration
 my @state_stacks_decl_allowable = ( [],
 				    [0],
 				    [0,26] );
+
+# Note, for efficiency this is a hash, so the 0s are dummies
+my %non_c_tokens = qw(CPP_HSPACE 0 CPP_VSPACE 0 CPP_POP 0 CPP_DIRECTIVE 0);
 
 # From The C++ Programming Language, 3rd Edition, p. 817
 my @new_cpp_keywords = 
@@ -438,11 +447,28 @@ sub do_if {
   cpp::YYPushStackState();
   @state_stack = cpp::ParseStateStack();
   print CPP ": Stack: @state_stack\n";
+  if ($value == 0) {
+    handle_unincluded_block($s_branch_start,$s_branch_end,$skipped);
+  }
+  push @got_c_token, 0;
 }
 
 sub do_elif {
   my ($s_start,$s_end,$already_did_clause, $conditional, $skipped, $value) = @_;
   print CPP "do_elif on $conditional ($skipped) evals to $value; $already_did_clause\n";
+}
+
+sub handle_unincluded_block {
+  my ($s_branch_start,$s_branch_end,$skipped) = @_;
+  my $fname = cpp::Fname();
+  print TPSOURCE "#$fname:(put-face-property-if-none $s_branch_start $s_branch_end \'font-lock-reference-face)\n";
+  print TPSOURCE "#$fname:(add-text-property $s_branch_start $s_branch_end \'doc \"Skipped due to $kind $conditional\")\n";
+  print STDERR "Pushing skipped branch\n";
+  print STDERR ": ParseStateStack: ", join(",",cpp::ParseStateStack()), "\n";
+  cpp::YYPushStackState();
+  cpp::EnterScope();
+  cpp::PushHashTab();
+  cpp::PushBuffer($skipped);
 }
 
 sub do_xifdef {
@@ -452,42 +478,32 @@ sub do_xifdef {
   print CPP "do_xifdef ($kind) on $conditional [$trailing_garbage] ($skipped), ",
   !$fSkipping?"Not ":"", "skipped\n";
   print CPP ": @[$s_start - $s_end]\n";
+  # This copy is for seeing if parse state changes at endif
+  cpp::YYPushStackState();
   if ($fSkipping) {
-    print TPSOURCE "#$fname:(put-face-property-if-none $s_branch_start $s_branch_end \'font-lock-reference-face)\n";
-    print TPSOURCE "#$fname:(add-text-property $s_branch_start $s_branch_end \'doc \"Skipped due to $kind $conditional\")\n";
-    print STDERR "Pushing skipped branch\n";
-    print STDERR ": ParseStateStack: ", join(",",cpp::ParseStateStack()), "\n";
-    cpp::YYPushStackState();
-    cpp::EnterScope();
-    cpp::PushHashTab();
-    cpp::PushBuffer($skipped);
+    handle_unincluded_block($s_branch_start,$s_branch_end,$skipped);
   }
+  push @got_c_token, 0;
 }
 
 sub do_ifdef {
   my ($s_start,$s_end,$conditional, $trailing_garbage, $skipped, $fSkipping) = @_;
   print CPP "do_ifdef on $conditional [$trailing_garbage] ($skipped), ",
   !$fSkipping?"Not ":"", "skipped\n";
-  cpp::YYPushStackState();
-  @state_stack = cpp::ParseStateStack();
-  print CPP ": Stack: @state_stack\n";
 }
 
 sub do_ifndef {
   my ($s_start,$s_end,$conditional, $trailing_garbage, $skipped, $fSkipping) = @_;
   print CPP "do_ifndef on $conditional [$trailing_garbage] ($skipped), ",
   !$fSkipping?"Not ":"", "skipped\n";
-  cpp::YYPushStackState();
-  @state_stack = cpp::ParseStateStack();
-  print CPP ": Stack: @state_stack\n";
 }
 
 sub pop_perl_buffer {
   my ($cbb) = @_;
   print CPP "POP_PERL_BUFFER, $cbb buffers back\n";
   print STDERR ": ParseStateStack: ", join(",",cpp::ParseStateStack()), "\n";
-  if (cpp::YYFCompareTopStackState()) {
-    print STDERR ": Identical!\n";
+  if (!cpp::YYFCompareTopStackState()) {
+    print STDERR ": NOT Identical!\n";
   }
   cpp::ExitScope();
   cpp::PopHashTab();
@@ -519,9 +535,17 @@ sub do_endif {
   print CPP ": Stack: @state_stack\n";
   my $fEqual = cpp::YYFCompareTopStackState();
   if (!$fEqual) {
+    # probably no big deal, but it does mean that the #ifdef does control
+    # inclusion of C code (though it could control seeing C code w/o
+    # altering the state stack
     print CPP ": STATE_STACK altered by #ifdef/#endif block\n";
   }
   cpp::YYPopAndDiscardStackState();
+  my $controlled_c_source = pop @got_c_token;
+  my $fname = cpp::Fname();
+  if ($controlled_c_source) {
+    print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'doc \"Controls C source inclusion\")\n";
+  }
 }
 
 sub add_import {
@@ -560,6 +584,10 @@ sub Got_token {
   print TOKEN ": Argno = $argno\n";
   if ($raw =~ m/^[\w\$]+$/) {
     print TOKEN ": lookup: ", cpp::FLookupSymbol($raw)? "Found symbol" : "Not found", "\n";
+  }
+  if (!exists $non_c_tokens{$token}) {
+    map { $_++}  @got_c_token;
+    print STDERR ": C Token: $raw ($token)\n";
   }
 
   my $end = cpp::CchOutput()+1;
