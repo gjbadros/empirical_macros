@@ -1,4 +1,6 @@
 #!/uns/bin/gawk
+# THIS IS OBSOLETE!
+# See macros-make-categories-tbl-from-stat.pl
 function pct(x) { 
   if (totLine == 0) { return 0 }
   if (usepct) { return (100*x/totLine) } else {return x} 

@@ -1,6 +1,11 @@
 #!/uns/bin/zsh
+# THIS IS OBSOLETE!
+# See macros-make-categories-tbl-from-stat.pl
+
 # use macros-make-categories-tbl-from-stat *.stat
 # FIX: use getopts 
+
+print -u2 "WARNING: This script is obsolete! Consider using macros-make-categories-tbl-from-stat.pl instead"
 
 # The .awk file needs to be in the same directory
 # as this script -- ${0:h} is the same as `dirname $0`
