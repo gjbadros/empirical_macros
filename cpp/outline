@@ -22,6 +22,9 @@ this project; their insights proved invaluable to this work.
 **** improved tools, program understanding
 **** higher level of abstraction
 **** less "dead code" unseen by the compiler, easier to maintain
+** But what about Legacy code?
+
+* Background
 
 ** Lots of CPP uses can be expressed in C++ language
 *** simple examples
@@ -31,9 +34,6 @@ this project; their insights proved invaluable to this work.
 **** BUT: #include still necessary, some uses of conditional compilation directives really hard, complicated macros using stringization/pasting, etc.
 *** Authors recommend this; Stroustrup, Carrol and Ellis
 
-** But what about Legacy code?
-
-* Background
 
 ** Empirical analysis to see how bad it is
 *** lots of cpp use is really simple and doesn't step outside of things doable in C++ language proper
