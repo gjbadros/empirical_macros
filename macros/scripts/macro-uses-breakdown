@@ -1,0 +1,34 @@
+#!/uns/bin/perl -wn
+# argument is *.mac files
+
+BEGIN
+{ $code_uses = 0;
+  $macro_uses = 0;
+  $cond_uses = 0;
+  $cond_redef_uses = 0;
+  $total_uses = 0;
+}
+
+if (! /^\#MACROS\#: /)
+{ my ($name,$cDefs,$cUndefs,$cCodeUses,$cMacroUses,$cCondUses,$cCondRedefUses,$cTotalUses,$HowUsed,$Categories,$InclusionMethods)
+    = split(/\t/);
+
+  chomp($InclusionMethods);
+  if ($InclusionMethods eq "FromStdin")
+    { if ($cCodeUses + $cMacroUses + $cCondUses + $cCondRedefUses != $cTotalUses)
+	{ die "Argh"; }
+      $code_uses += $cCodeUses;
+      $macro_uses += $cMacroUses;
+      $cond_uses += $cCondUses;
+      $cond_redef_uses += $cCondRedefUses;
+      $total_uses += $cTotalUses;
+    }
+}
+
+END
+{ print "Code: $code_uses\n";
+  print "Macro: $macro_uses\n";
+  print "Cond: $cond_uses\n";
+  print "CondRedef: $cond_redef_uses\n";
+  print "Total: $total_uses\n";
+}

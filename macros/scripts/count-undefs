@@ -1,0 +1,67 @@
+#!/uns/bin/perl -wn
+
+use em_constants;
+
+BEGIN
+{
+  %undefs = ();
+  %defines = ();
+  $undef_is_defined = 0;			# unconditionally defined
+  $undef_not_defined = 0;
+  $define_undeffed = 0;
+
+  $prev_was_type = 0;
+}
+
+if (/^[ \t]*\#[ \t]*undef[ \t]+($identifier_re)/o)
+{ $undefs{$1} = 1;
+  if (exists($defines{$1}))
+    { $define_undeffed += 1; }
+}
+
+elsif (/^[ \t]*\#[ \t]*define[ \t]+($identifier_re)/o)
+{ $defines{$1} = 1;
+  if (exists($undefs{$1}))
+    { delete $undefs{$1};
+      $undef_is_defined += 1; }
+}
+
+elsif ((/^$type_re[ \t]+($identifier_re)/)
+       || ($prev_was_type && /^($identifier_re)/))
+{ if (exists($undefs{$1}))
+    { delete $undefs{$1};
+      $undef_is_defined += 1; } }
+
+elsif ((/^[ \t]*\#[ \t]*ifndef[ \t]+($identifier_re)/)
+    && exists($undefs{$1}))
+{ # do nothing
+}
+
+elsif (/^[ \t]*\#[ \t]*if/)
+{ for my $k (keys %undefs)
+    { delete $undefs{$k};
+      $undef_not_defined += 1; }
+  for my $k (keys %defines)
+    { delete $defines{$k}; }
+}
+
+
+# not "elsif"
+if (/^$type_re[ \t]*$/)
+{ $prev_was_type = 1; }
+else
+{ $prev_was_type = 0; }
+
+
+END
+{
+  for my $k (keys %undefs)
+    { delete $undefs{$k};
+      $undef_not_defined += 1; }
+  for my $k (keys %defines)
+    { delete $defines{$k}; }
+
+  print "unconditionally defined: $undef_is_defined\n";
+  print "not unconditionally defined: $undef_not_defined\n";
+  print "unconditionally undeffed: $define_undeffed\n";
+}
