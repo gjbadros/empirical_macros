@@ -626,6 +626,7 @@ my $current_function;		# the current function
 my $current_function_start_line; # the first line of the current function
 				# (sometimes function headers span lines)
 my %functions = ();		# keys are all functions encountered
+				#   values are fileno:lineno, separated by ;
 my %typedefs = ();		# keys are all typedefs encountered
 
 my $current_macro_line_number;	# Used by current_line_no when categorizing macros
@@ -961,23 +962,23 @@ sub macros_in_dependentons ( @ )
 }
 
 
-## Not currently called anywhere -- and currently contains type errors!
-# Given a macro name, return a list of some of (direct)
-# must include, expansion, and may include dependences.
-sub macro_must_and_may_dependences ( $ )
-{
-  my $macro_name = check_args(1, @_);
-  my $must_dependences = macro_defined_dependentons($macro_name);
-  my %must_dep = ();
-  my %may_dep = ();
-  # Bad use of must_dependences!
-  for my $dep (@{$must_dependences})
-    { $must_dep{$dep} = $true; }
-  for my $mdef_dep (map { $mdef_direct_inclusion_dependenton[$_] } @{$macros{$macro_name}})
-    { if (! (defined($must_dep{$mdef_dep})))
-	{ $may_dep{$mdef_dep} = $true; } }
-  return ($must_dependences, keys %may_dep);
-}
+# ## Not currently called anywhere -- and currently contains type errors!
+# # Given a macro name, return a list of some of (direct)
+# # must include, expansion, and may include dependences.
+# sub macro_must_and_may_dependences ( $ )
+# {
+#   my $macro_name = check_args(1, @_);
+#   my $must_dependences = macro_defined_dependentons($macro_name);
+#   my %must_dep = ();
+#   my %may_dep = ();
+#   # Bad use of must_dependences!
+#   for my $dep (@{$must_dependences})
+#     { $must_dep{$dep} = $true; }
+#   for my $mdef_dep (map { $mdef_direct_inclusion_dependenton[$_] } @{$macros{$macro_name}})
+#     { if (! (defined($must_dep{$mdef_dep})))
+# 	{ $may_dep{$mdef_dep} = $true; } }
+#   return ($must_dependences, keys %may_dep);
+# }
 
 
 # Given a macro name, try to merge the inclusion_dependentons for all its
@@ -4448,9 +4449,9 @@ sub find_function_declarations ( $ )
 	  my ($type, $identifier) = parse_declarator($typespec, $declarator);
 
 	  if (defined($functions{$identifier}))
-	    { $functions{$identifier} .= "; " . input_file_and_line(); }
+	    { $functions{$identifier} .= ";" . input_fileno_and_line(); }
 	  else
-	    { $functions{$identifier} = input_file_and_line(); }
+	    { $functions{$identifier} = input_fileno_and_line(); }
 
 	}
       # done with this line; get another
@@ -4820,9 +4821,9 @@ sub process_function_definition_or_declaration ( $$$ )
     }
 
   if (defined($functions{$identifier}))
-    { $functions{$identifier} .= "; " . input_file_and_line(); }
+    { $functions{$identifier} .= ";" . input_fileno_and_line(); }
   else
-    { $functions{$identifier} = input_file_and_line(); }
+    { $functions{$identifier} = input_fileno_and_line(); }
 
   # We just coped with a function definition or declaration.
   # Process the rest of the line (if def, this is anything
@@ -5591,6 +5592,13 @@ sub input_file_and_line ( )
 {
   check_args(0, @_);
   return "$current_file_name:" . current_line_no();
+}
+
+# Like input_file_and_line, but terser (though less user-friendly)
+sub input_fileno_and_line ( )
+{
+  check_args(0, @_);
+  return "$current_file_number:" . current_line_no();
 }
 
 # Like die, but with file and line number prefix.  Do NOT redefine this so
@@ -6587,7 +6595,7 @@ sub test_parse_expression ( $$ )
       print STDERR "Type $parsed_type_name ($parsed_type) should have been $expected_type: $exp\n"; }
 }
 
-sub test_regexp ($$;$)
+sub test_regexp ( $$;$ )
 {
   my ($string, $regexp, $regexp_pretty) = check_args_range(2, 3, @_);
   if ($string !~ /$regexp/)	# no /o
@@ -6787,28 +6795,43 @@ sub test_misc ( )
 ### Save state
 ###
 
+# Output big dependence variables to their own file
+sub save_dependence_to_file ( $ )
+{ my ($filename) = check_args(1, @_);
+  if ($compute_transitive_dependence_info)
+    { my %namevalhash = ();
+      for my $varname (@depend_state_file_vars)
+	{ $namevalhash{$varname} = eval '\\' . $varname;
+	  if ($@) { die "Problem evaling '$varname': $@"; } }
+      save_dependence_state($filename, %namevalhash);
+    }
+  else
+    { unlink($filename); }
+  # Reclaim space by undefining the variables
+  for my $varname (@depend_state_file_vars)
+    { eval "undef $varname;\n"; }
+}
+
 sub SaveMacroAnalysisState ( $ )
+{ my ($output_filename) = check_args(1, @_);
+
+  ## Try to save some space, to avoid running out of memory in Data::Dumper
+  # undef @mdef_body_noc;
+  undef @mdef_body_simple;
+
+  #FIXGJB: We probably want this info, but maybe we can settle for a count
+  # of No. of different fns which use the macro or just not bother with it
+  undef %macros_used_in_functions;
+
+  ## Now do the actual output.
+  save_dependence_to_file(depend_state_file_name($output_filename));
+
+  save_variables($output_filename, @state_file_vars);
+}
+
+sub save_variables ( $@ )
 {
-  my ($output_filename) = check_args(1, @_);
-
-  # Output big dependence variables to their own file
-  { my $dependence_output_filename = $output_filename;
-    $dependence_output_filename =~ s/state$/dstate/;
-    if ($dependence_output_filename eq $output_filename)
-      { $dependence_output_filename .= "-depend"; }
-    if ($compute_transitive_dependence_info)
-      { my %namevalhash = ();
-	for my $varname (@depend_state_file_vars)
-	  { $namevalhash{$varname} = eval '\\' . $varname;
-	    if ($@) { die "Problem evaling '$varname': $@"; } }
-	save_dependence_state($dependence_output_filename, %namevalhash);
-	# Reclaim space by undefining the variables
-	for my $varname (@depend_state_file_vars)
-	  { eval "undef $varname;\n"; } }
-    else
-      { unlink($dependence_output_filename); }
-  }
-
+  my ($output_filename, @vars) = check_args_at_least(1, @_);
 
   $Data::Dumper::Indent = 1;
 #  $Data::Dumper::Purity = 1;
@@ -6823,15 +6846,7 @@ sub SaveMacroAnalysisState ( $ )
     print OUTSTATE "\# -*- Perl -*-\n";
     $| = 0; select(STDOUT); }
 
-  # Try to save some space, to avoid running out of memory in Data::Dumper
-  # undef @mdef_body_noc;
-  undef @mdef_body_simple;
-
-  undef %macros_used_in_functions;  #FIXGJB: We probably want this info,
-  # but maybe we can settle for a count of No. of different fns which use
-  # the macro or just not bother with it
-
-  foreach my $v (@state_file_vars) {
+  foreach my $v (@vars) {
     my $g = $v;
     $g =~ s/[\@\%\$]/\*/;
     # DumpxsFd used to cause trouble with closing random open files, discarding
@@ -7092,6 +7107,9 @@ for my $name (keys %macros)
 # Print body (less comments) for each macro definition.
 # for my $i (0..$cMacrosInTables)
 #   { print "$i $mdef_formals[$i] $mdef_body_noc[$i]\n"; }
+
+# Save some space: output and undefine variables not needed for the second pass
+save_variables(extra_state_file_name($statename), @extra_state_file_vars);
 
 if (!$opt_1)
 { if ($opt_v) { print STDERR "done with that loop; now finding macro uses...\n"; }

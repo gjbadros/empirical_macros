@@ -80,7 +80,8 @@ use checkargs;
 
  &string_from_prop &prop_contains
 
- @state_file_vars @depend_state_file_vars
+ &extra_state_file_name &depend_state_file_name
+ @state_file_vars @extra_state_file_vars @depend_state_file_vars
 );
 #End of @EXPORT
 
@@ -616,10 +617,25 @@ $cpp_include_arg_re = '(?:<(.*)>|\"(.*)\")';
 #   rg_cpp_cmds mncategory mntype mdef_evilness
 #   mdef_direct_inclusion_dependenton mdef_freefuns
 
+sub depend_state_file_name ( $ )
+{ my ($state_file_name) = check_args(1, @_);
+  my $result = $state_file_name;
+  if (!($result =~ s/state$/dstate/))
+    { $result .= "-depend"; }
+  return $result;
+}
+
+sub extra_state_file_name ( $ )
+{ my ($state_file_name) = check_args(1, @_);
+  my $result = $state_file_name;
+  if (!($result =~ s/state$/estate/))
+    { $result .= "-extra"; }
+  return $result;
+}
 
 @state_file_vars = qw(
     %macros %macros_c_undefs %macros_uses
-    @mdef_name @mdef_formals @mdef_body
+    @mdef_name @mdef_formals
     @mdef_fileno @mdef_line @mdef_physical_lines
     @mdef_physical_ncnb_lines @mdef_freefuns
     @mdef_direct_inclusion_dependenton @mdef_direct_expansion_uses
@@ -644,6 +660,11 @@ $cpp_include_arg_re = '(?:<(.*)>|\"(.*)\")';
 
     %macros_used_by_cpp %functions %typedefs
 		     );
+
+# Variables not needed after the first pass
+@extra_state_file_vars = qw(
+  @mdef_body
+			    );
 
 @depend_state_file_vars = qw(
   %macro_inclusion_dependenton

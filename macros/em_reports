@@ -135,6 +135,7 @@ my $dependence_statename;
 ###
 
 use vars @state_file_vars;
+use vars @extra_state_file_vars;
 use vars @depend_state_file_vars;
 
 # Computed from the above, but not in state file.
@@ -1152,7 +1153,7 @@ sub OutputCountsHistogramCum ( $$@ ) {
 ###########################################################################
 ### Persistence
 
-sub ReadMacroAnalysisState {
+sub read_variables {
   my ($file) = check_args(1,@_);
   local $WARNING = 0;
   no strict;
@@ -1201,15 +1202,13 @@ if (-z $statename)
 $fDebugCmdProcessing && print "@ARGV";
 
 # Read input before opening any output files, in case of trouble.
-ReadMacroAnalysisState($statename);
-$dependence_statename = $statename;
-$dependence_statename =~ s/state$/dstate/;
-if ($dependence_statename eq $statename)
-  { $dependence_statename .= "-depend"; }
+read_variables($statename);
+read_variables(extra_state_file_name($statename));
+$dependence_statename = depend_state_file_name($statename);
 if (! -f $dependence_statename)
   { undef $dependence_statename; }
 else
-  { ReadMacroAnalysisState($dependence_statename); }
+  { read_variables($dependence_statename); }
 
 #$WARNING = 0;
 #require "dumpvar.pl";
@@ -1217,8 +1216,7 @@ else
 #exit 0;
 
 
-# using a default directory-- only open the files that
-# aren't explicitly given
+# using a default directory-- only open the files that aren't explicitly given
 if (!$opt_d) { $opt_d = '.'; }
 if ($opt_d) {
   my ($dir,$basename) = split /:/,$opt_d;
