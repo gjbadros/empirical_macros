@@ -1,12 +1,9 @@
 \documentclass{article}
-\newif\ifAMS
-\IfFileExists{amssymb.sty}
-  {\AMStrue\usepackage{amssymb}}
-  {\usepackage{latexsym}}
-
 \usepackage{epsfig}
 \usepackage{dcolumn}
 \usepackage{graphics}
+
+\newcommand{\black}{\vrule height5pt depth1pt width6pt}
 
 % the "fullpage" package does almost the same thing
 % as the below lines-- it doesn't make things quite as
@@ -31,6 +28,7 @@
 \thispagestyle{empty}
 \vspace*{0.9in}
 {\small
+%
 \input{ni-marks-short.tex}
 }
 
