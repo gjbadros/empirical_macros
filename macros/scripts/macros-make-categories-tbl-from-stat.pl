@@ -56,7 +56,7 @@ BEGIN {
     print "\\begin{tabular}{|l|c|c|c|c|c|c|c|c|}\\hline\n";
   }
   print " ",       "Null",   " ",        " ",          " ",        "",         "Type",   "Not",    " ",     "Unknown",	"Failed";
-  print "Package", "define", "Literal", "Expression", "Statement", "Syntactic","related","C code", "Other", "symbol",	"classification";
+  print "Package", "define", "Constant", "Expression", "Statement", "Syntactic","related","C code", "Other", "symbol",	"classification";
 
   my ($cNull, $cLit, $cExp, $cStm, $cSyntax, $cType,
       $cNonC, $cOther, $cFail, @rest) = 0 x 40;
