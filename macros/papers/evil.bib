@@ -82,7 +82,7 @@ The use of "\relax{}" in the note prevents BibTeX from making a bad break
 
 @Manual{Dolenc90,
   title = 	 {Notes on Writing Portable Programs in {C}},
-  author =	 {Dolenc, A. and Keppel, D. and Reilly, G.V.},
+  author =	 {Dolenc, A. and Keppel, D. and Reilly, G. V.},
   edition =	 {8th Revision},
   year =	 1990,
   month =	 {November},
@@ -578,12 +578,18 @@ http://www-adele.imag.fr/users/Jean-Marie.Favre/):
      1989. 
 
 
-Understanding code containing preprocessor construct
-Panos E. Livadas, David T. Small
-IEEE Third Workshop on Program Comprehension
-Washington, November 1994
-Also:
-Understanding Code Containing Preprocessor constructs, by panos E. Livadas and David T. Small, SERC-TR-73-F, June 1994.
+
+
+@InProceedings{LivadasS94,
+  author = 	 "Panos E. Livadas and David T. Small",
+  title = 	 "Understanding code containing preprocessor constructs",
+  booktitle = 	 "IEEE Third Workshop on Program Comprehension",
+  year =	 1994,
+  address =	 "Washington, DC, USA",
+  month =	 nov # "~14-15",
+  pages =	 "89-97"
+}
+Understanding Code Containing Preprocessor constructs, by Panos E. Livadas and David T. Small, SERC-TR-73-F, June 1994.
 Description: Understanding, debugging, and maintaining software is a costly
 and difficult task. The difficulties are exacerbated in programs written to
 take advantage of preprocessing facilities. This paper examines problems
@@ -597,6 +603,51 @@ method presented is generic; to illustrate that the technique is feasible,
 we discuss ANSI C preprocessor constructs - in particular, macro
 substitution - and explain the modules developed to handle them in Ghinsu -
 an integrated maintenance environment for ANSI C programs.
+Accession No.: 4847215.
+Author:        Livadas-P-E.  Small-D-T.
+Author Affil.: Dept. of Comput. & Inf. Sci., Florida Univ., Gainesville, FL,
+               USA.
+Title:         Understanding code containing preprocessor constructs.
+Source:        Published by: IEEE Comput. Soc. Press.  Los Alamitos, CA, USA. 
+               1994.
+References:    12 refs.
+Conf. Title:   Proceedings. IEEE Third Workshop on Program Comprehension (Cat.
+               No.94TH06767).  Washington, DC, USA.  pp. 89-97.  IEEE Comput. 
+               Soc. Tech. Council on Software Eng.  14-15 Nov. 1994.
+ISBN:          0818656476.
+Language:      eng.
+Year:          1994.
+Pub. Type:     conference-proceeding (C).
+Treatment:     PRACTICAL OR PRODUCT REVIEW (P).
+Report No.:    CCCC: 0 8186 5647 6/94/$04.00.
+Pub. Country:  USA.
+Class. Code:   C6110.  C6115.  C6150G.
+Subject:       macros.  program-debugging.  programming-environments. reverse-
+               engineering.  software-maintenance.
+Identifiers:   code understanding.  preprocessor constructs.  debugging. 
+               software maintenance.  included files.  conditional
+               compilation.  macro substitution.  tokens.  source file. 
+               internal program representation. program slicing.  ripple
+               analysis.  dicing.  ANSI C preprocessor constructs. 
+               GHINSU.  integrated maintenance environment.
+Abstract:      Understanding, debugging, and maintaining software is a costly
+               and difficult task.  The difficulties are exacerbated in
+               programs written to take advantage of preprocessing facilities.
+                This paper examines problems associated with source code
+               containing preprocessor constructs-i.e. included files,
+               conditional compilation and macros.  We define the useful
+               mappings from tokens in the preprocessor's output to the source
+               file(s), and propose that by capturing these correspondences,
+               an internal program representation can be built which allows
+               for the use of maintenance techniques including program
+               slicing, ripple analysis and dicing.  The method presented is
+               generic;  to illustrate that the technique is feasible, we
+               discuss ANSI C preprocessor constructs-in particular,
+               macro substitution-and explain the modus developed to handle
+               them in GHINSU-an integrated maintenance environment for ANSI C
+               programs.
+UW Load Date   9501.
+Holdings:      Local holdings could not be determined. Consult UW catalogs.
 
 @Article{ABACUS89,
   key =          "Abacus",
@@ -731,3 +782,37 @@ an integrated maintenance environment for ANSI C programs.
   bibdate =      "Fri Aug 30 16:52:23 MDT 1996",
   acknowledgement = ack-nhfb,
 }
+
+
+Accession No.: 3813929.
+Author:        Sumerlin-W.
+Author Affil.: MMC AD Syst., Milpitas, CA, USA.
+Title:         Writing an ANSI C preprocessor.
+Source:        Programmer's Journal.  vol.8, no.6.  pp. 58, 60-2.  Nov.-Dec. 
+               1990.
+ISSN:          0747-5861.
+CODEN:         PRGJE7.
+Language:      eng.
+Year:          1990.
+Pub. Type:     journal-article (J).
+Treatment:     PRACTICAL OR PRODUCT REVIEW (P).
+Pub. Country:  USA.
+Class. Code:   C6140D.  C6150C.
+Subject:       C-language.  C-listings.  program-processors.  standards.
+Identifiers:   ANSI C. preprocessor.  ANSI standard.
+Abstract:      Considers implementation problems in complying with the new
+               ANSI C standards.  With the new ANSI C standard, there are new
+               operators, new preprocessing commands, and new specific size
+               limits.  As a result, the preprocessor has to be sensitive to
+               when it can and cannot expand macro definitions.  Due to the
+               new requirements, small design and implementation changes in
+               the preprocessor can have dramatic effects on whether the
+               preprocessor meets or misses the ANSI C standard.  The ANSI
+               standard is described in two documents.  The first provides
+               rules and examples, while the second describes why some things
+               were done the way they were.
+Holdings:      Engineering Periodicals
+                 SHELVED BY TITLE: Programmer's journal
+                 CALL NUMBER: QA76.8.I2594 P7557
+                 LIB HAS: v.1-9 no.5 (1983-Sept./Dec. 1991)  Incomplete
+
