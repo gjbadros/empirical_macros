@@ -143,6 +143,7 @@ struct cpp_buffer {
   parse_underflow_t underflow;
   parse_cleanup_t cleanup;
   void *data;
+  struct argdata *args;
   struct parse_marker *marks;
   /* Value of if_stack at start of this file.
      Used to prohibit unmatched #endif (etc) in an include file.  */
@@ -682,6 +683,8 @@ void init_parse_options (struct cpp_options *opts);
 int push_parse_file (cpp_reader *pfile, char *fname);
 void cpp_finish (cpp_reader *pfile);
 int parse_name (cpp_reader *pfile, int c);
+
+int IargWithOffset(int ich, int cargs, struct argdata *args);
 
 #ifdef __cplusplus
 }
