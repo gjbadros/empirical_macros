@@ -3,7 +3,7 @@
 # (Using the macros-* scripts)
 
 # Directories on uni
-PKG_DIR := /tmp/mernst/packages
+PKG_DIR := /tmp/gjb/packages
 ANALYZE_OUTPUT_DIR := /tmp/gjb/data
 COMMON_DIR := $(shell dirname $$(which em_analyze))
 EXTRA_ANALYZE_FLAGS := -g14
@@ -12,10 +12,11 @@ PAPER_DIR := /homes/gws/gjb/macros/papers
 
 # FIX: These files should be generated from the directory names under PKG_DIR
 
-PKGS := $(shell zsh -c "echo $(PKG_DIR)/*(:t) | sed -e 's/-[^ ]*//g'")
+PKGS := $(shell zsh -c "echo $(PKG_DIR)/*(/:t) | sed -e 's/-[^ ]*//g'")
 # "make data" makes these files.
 # other targets operate on these files.
 STATE := $(addsuffix .state,$(PKGS))
+STAT := $(addsuffix .stat,$(PKGS))
 CATG := $(addsuffix .catg,$(PKGS))
 ERR  := $(addsuffix .err,$(PKGS))
 EVIL := $(addsuffix .evil,$(PKGS))
@@ -76,7 +77,7 @@ data_reports:
 
 text_tables:	$(TEXT_TABLES)
 
-tbl-package-sizes: $(STATE)
+tbl-package-sizes: $(STAT)
 	macros-make-package-sizes-tbl-from-stat $^ > $@
 
 tbl-def-frequency: $(DEFCUM)
@@ -94,14 +95,11 @@ tbl-where-used: $(MAC)
 
 raw: $(RAW_TABLES)
 
-raw-directives-hist: $(STATE)
+raw-directives-hist: $(STAT)
 	macros-make-directives-raw-hist-from-stats $^ > $@
 
 tbl-directives-breakdown: raw-directives-hist
 	macros-bake-raw-directives-hist $^ > $@
-
-package_and_sizes-tbl.txt: $(STATE)
-	macros-make-package-sizes-tbl-from-stat $^ > $@
 
 
 ###########################################################################
