@@ -4,6 +4,9 @@
 \usepackage{dcolumn}
 \usepackage{alltt}
 
+% Delete in final version of paper.
+\newcommand{\comment}[1]{\textbf{[[#1]]}}
+
 \def\numpackages{30}
 \def\numpackageslesstwo{28}
 \def\numlines{2 million}
@@ -104,17 +107,18 @@ without its macro preprocessor, Cpp.  By supplying such facilities as file
 inclusion, definition of constants and macros, and conditional compilation,
 Cpp can define new syntax, abbreviate repetitive or complicated constructs,
 or eliminate reliance on a compiler implementation to propagate symbolic
-constants, inline functions, eliminate dead code, and short-circuit
+constants, open-code functions, eliminate dead code, and short-circuit
 constant tests.  Cpp also permits system dependences to be made explicit
 and tested, resulting in a clearer separation of concerns.  In addition,
 Cpp permits a single source to contain multiple different dialects of C,
-such as supporting both K\&R-style and ANSI-style declarations.  Indeed,
-one cannot write practical C programs without these facilities.
+such as supporting both K\&R-style and ANSI-style declarations.
+
+% Indeed, one cannot write practical C programs without these facilities.
 
 While disciplined use of the preprocessor can reduce programmer effort
 and improve portability, performance, or readability, Cpp is widely
 viewed as a source of difficulty for understanding and modifying C
-programs.  Cpp's lack of structure\,---\,it's inputs and
+programs.  Cpp's lack of structure\,---\,its inputs and
 outputs are raw token streams\,---\,engenders flexibility but allows
 arbitrary source code manipulations that complicate 
 understanding of the program by both software engineers and tools.  In
@@ -149,7 +153,7 @@ Each approach has different strengths and weaknesses.
   breakpoints in function macros, as they can for ordinary functions (even
   those that have been inlined~\cite{Zellweger83:TR}).  Siff and Reps use
   type inference to produce C++ function templates from C; however, the
-  input is ``a C program component that $\ldots$ has been preprocessed so
+  input ``has been preprocessed so
   that all include files are incorporated and all macros
   expanded''~\cite[p.~145]{Siff-fse96}.  Such preprocessing may limit the
   readability and reusability of the resulting C++ templates.  Call graph
@@ -213,7 +217,7 @@ Each approach has different strengths and weaknesses.
 %effects on parser or program state, so that even tools that do no Cpp
 %analysis can operate correctly on such programs.)
 
-Choices among these options are made in the absence of
+Choices among these options are currently made in the absence of
 an understanding of how Cpp is used in practice.
 While  Cpp's potential pitfalls are well-known, no
 previous work has examined actual use of the C preprocessor to
@@ -240,12 +244,13 @@ software engineers and tool builders:
   statement and the other expands to an expression or type.
 \item[macro pitfalls]  Macros introduce new varieties of programming
   errors, such as function-like macros that fail to swallow a following
-  semicolon and macros that fail to parenthesize, or side-effect, uses of
-  formal variables.
+  semicolon and macros that modify, or fail to parenthesize, uses of
+  their arguments.
 \item[inconsistent usage]  A macro used both for conditional compilation
   and to expand code is harder to understand than one used exclusively for one
   purpose.
-\item[mixed tests]  A single Cpp conditional may test conceptually
+\item[mixed tests]  A single Cpp conditional ({\tt \#if} directive) may
+  test conceptually
   distinct, unrelated conditions, making it difficult to perceive the
   test's purpose.
 \item[variation in use]  In the absence of a clear pattern of use or
@@ -256,7 +261,7 @@ software engineers and tool builders:
 
 We report in detail on each of these aspects of preprocessor use,
 indicating which are innocuous in practice and which problematic
-uses appear more frequently.  We also present new taxonomies of macro body
+uses appear more frequently.  We also taxonomize macro body
 expansions, macro feature usage, macro pitfalls, and conditional
 intentions.  These taxonomies improve on previous work by being more
 detailed and more accurately reflecting actual use.
@@ -266,7 +271,7 @@ exceptionally broad and diverse ways, complicating the development of C
 programming support tools.  By far the largest number of macro definitions
 and uses are relatively simple, of the variety that a programmer could
 understand through simple but tedious effort or that a relatively
-unsophisticated tool could understand (although in practice very few even
+unsophisticated tool could manage (although in practice very few even
 try).  Despite the preponderance of innocuous macros, the preprocessor is
 so heavily used that the remaining ones, which are most likely to cause
 difficulties, are numerically significant, so understanding, annotating, or
@@ -371,15 +376,16 @@ while others are text-based command-line applications.
 Figure~\ref{fig:packages} describes the packages and lists their sizes in
 terms of physical lines (newline characters) and non-comment, non-blank
 (NCNB) lines.  The NCNB figure disregards lines consisting of only comments
-or whitespace, as well as lines in a conditional that cannot evaluate to
+or whitespace,  null preprocessor directives
+(``{\tt \#}'' followed by only whitespace, which produces no output), and
+lines in a conditional that cannot evaluate to
 true (such as {\tt \#if 0}, which is frequently used to comment out code).
 The remainder of our analysis uses the NCNB length, which more accurately
 reflects the amount of source code.
 
 \begin{figure}
 \centering
-{% ``\small'' here does have an effect, despite previous comment to the contrary
-  \small
+{\small
   \setlength{\tabcolsep}{.25em}
   \input{tbl-package-sizes.tex}
 }
@@ -399,7 +405,7 @@ package be compilable, or even that the preprocessor be able to run on it.
 We generated a list of all the C files in the package (both code and header
 files).  In general, these have extensions like \file{.c}, \file{.h},
 \file{.cc}, \file{.cpp}, \file{.hxx}, etc.  We removed files with such
-extensions that don't actually contain valid C, and added others that were
+extensions that do not actually contain valid C, and added others that were
 {\tt \#include}d by valid C files (some included files have extension
 \file{.def}).
 
@@ -426,8 +432,10 @@ analysis is more thorough than traditional ``whole-program'' analyses.
 % [[We merge different Cpp branches in the code wherever possible.  Discuss
 % this a bit.]]
 
-We performed our analysis via a collection of Perl scripts, totaling
-approximately 11,000 lines (7,000 NCNB lines).  We perform approximate
+% We performed our analysis via a collection of Perl scripts, totaling
+% approximately 11,000 lines (7,000 NCNB lines).
+
+We perform approximate
 parsing because the input may not be a valid C program; as a result, we
 misinterpret some constructs, but we can cope with uncompilable C and with
 partial constructs in conditional compilation branches.  Our tool includes
@@ -441,19 +449,20 @@ generate and manipulate them, are available from the authors.
 \label{sec:first-content-section}
 
 Figure~\ref{fig:directives-breakdown} shows how often preprocessor
-directives appear in the packages we analyzed.  Each group of bars in the
-figure represents the percentage of NCNB lines
-attributed to the specified category of directives, with each individual
-bar showing the percentage for a specific package.  Conditional compilation
-directives ({\tt \#if}, {\tt \#ifdef}, {\tt \#ifndef}, {\tt \#else}, {\tt
-\#elif}, {\tt \#endif}) are grouped together.
+directives appear in the packages we analyzed.
 
 \begin{figure}
 \centerline{\epsfig{file=fig/directives-breakdown.eps,height=7.5in}}
 \captionsmall{Preprocessor directives as a fraction of non-comment,
-  non-blank (NCNB) lines.  For
-  example, 2.0\% of gzip's NCNB lines are {\tt \#include}s, and 4.4\% of all
-  lines across the packages are conditional compilation directives.}
+  non-blank (NCNB) lines.  Each group of bars represents the percentage of
+  NCNB lines attributed to the specified category of directives, with each
+  individual bar showing the percentage for a specific package.
+  Conditional compilation directives ({\tt \#if}, {\tt \#ifdef}, {\tt
+  \#ifndef}, {\tt \#else}, {\tt \#elif}, {\tt \#endif}) are grouped
+  together.  For example, the top bar of the fourth group indicates that
+  2.0\% of gzip's NCNB lines are {\tt \#include}s, and the bottom bar of the
+  fifth group indicates that 4.4\% of all lines across the packages are
+  conditional compilation directives.}
 \label{fig:directives-breakdown}
 \end{figure}
 
@@ -471,7 +480,7 @@ Conditional compilation directives account for just under half (46\%) of
 the total directives in all packages, macro definitions comprise another
 35\%, and file inclusion makes up most of the rest.  Packages are not very
 uniform in their mix of preprocessor directives, however.  (If they were,
-each group of bars in figure Figure~\ref{fig:directives-breakdown} would be
+each group of bars in Figure~\ref{fig:directives-breakdown} would be
 a scaled version of the top group.)  In particular, the prevalence of {\tt
 \#include} is essentially independent of incidence of other directives.
 The percentage of directives that are conditionals varies from 16\% to
@@ -484,12 +493,13 @@ subset of directives.
 \subsection{{\tt \#line}, {\tt \#undef}, and other directives}
 
 The definedness of a macro is often used as a boolean value.  However, {\tt
-\#undef} is rarely used to set such macros to false.  Most uses of
-{\tt \#undef} immediately precede a definition of the just-undefined macro,
-to avoid preprocessor warnings about incompatible macro redefinitions.
+\#undef} is rarely used to set such macros to false.  Most
+uses\comment{be precise} of {\tt \#undef} immediately precede a definition
+of the just-undefined macro, to avoid preprocessor warnings about
+incompatible macro redefinitions.
 
 Every use of {\tt \#line} (in \pkg{bash}, \pkg{cvs}, \pkg{flex}, \pkg{fvwm},
-\pkg{gawk}, \pkg{gcc}, \pkg{groff}, and \pkg{perl}) appears in lex or yacc
+\pkg{gawk}, \pkg{gcc}, and \pkg{perl}) appears in lex or yacc
 output that enables packages to build on systems lacking lex, yacc, or
 their equivalents.  For instance, \pkg{flex} uses itself to parse its
 input, but also includes an already-processed version of its input
@@ -499,30 +509,24 @@ bootstrapping.
 % , as are ``other'' directives (such as ).  
 % as well as user-defined ones like {\tt \#module}
 
-Rarely-appearing directives such as {\tt \#pragma}, {\tt \#assert}, and
-{\tt \#ident}, and unrecognized directives, are omitted from
-Figure~\ref{fig:directives-breakdown}.  Among the packages we studied,
-these directives account for .017\% of directives, or one in six thousand.
-Their only significant user is \pkg{g77}, which contains 154 uses of {\tt
-\#error} (representing 1.5\% of its preprocessor directives and 0.16\% of
-its NCNB lines) to check for incompatible preprocessor flags.  We ignore
-the null directive (``{\tt \#}'' followed by only whitespace), which produces
-no output.
+Figure~\ref{fig:directives-breakdown} omits unrecognized directives and
+rarely-appearing directives such as {\tt \#pragma}, {\tt \#assert}, and
+{\tt \#ident}.  Among the packages we studied, these account for
+.017\%\comment{double-check} of directives.
 
 
 \subsection{Packages with heavy preprocessor use}
 
 The \pkg{gzip}, \pkg{remind}, and \pkg{bash} packages deserve
 special attention for their heavy preprocessor usage\,---\,22\%, 21\%, and
-16\%, respectively.
+16\% of NCNB lines, respectively.
 
 \pkg{gzip} {\tt \#define}s disproportionately many macros as literals and
 uses them as arguments to system calls, enumerated values, directory
 components, and more.  These macros act like {\tt const} variables.
 \pkg{gzip} also contains many conditional compilation directives, since
-low-level file operations (such as setting creation time and access control
-bits, accessing directories, and so forth) are done differently on
-different systems.
+low-level file operations (such as accessing directories and setting access
+control bits) are done differently on different systems.
 
 \pkg{remind} supports speakers of multiple natural languages by using {\tt
 \#define}d constants for basically all user output.  It also contains
@@ -532,7 +536,7 @@ K\&R and ANSI prototypes.
 
 Like \pkg{gzip}, \pkg{bash} is portable across a large variety of
 systems, but \pkg{bash} uses even more operating system services.
-Ninety-seven percent of \pkg{bash}'s conditional compilation directives
+Ninety-seven percent\comment{don't write out} of \pkg{bash}'s conditional compilation directives
 test the definedness of a macro whose presence or absence is a boolean
 flag indicating whether the current system supports a specific feature.
 The presence or absence of a feature requires different (or sometimes
@@ -543,7 +547,7 @@ additional) system calls or other code.
 \label{sec:categorization}
 
 This section examines features of macro definitions that may complicate
-understanding the containing program.  These include macro definitions that
+understanding the containing program.  These features include macro definitions that
 expand to a partial or unidentifiable syntactic entity, take advantage of
 Cpp features that lie outside the programming language, or contain other
 error-prone constructs.  Multiple definitions of a macro name can also
@@ -552,14 +556,13 @@ thing or have incompatible bodies.
 
 Our tool successfully classified over 98\% of macros.
 %, though not all of these will be easy to understand.  
-Three quarters of macros correspond to complete
-syntactic entities in the C language; these macros should present little
-difficulty.  One sixth of macros use Cpp features unavailable in C, and one
-quarter contain latent bugs.  These numbers indicate the necessity and
-difficulty of a thorough understanding of macro definitions to a software
-engineer or tool.  Multiple definitions of a macro are generally innocuous:
-only 2\% of macro names had definitions with different abstract syntax
-trees.
+76\% of macros correspond to complete syntactic entities in the C language;
+understanding these macros should present little difficulty.  17\% of
+macros use Cpp features unavailable in C, and 24\% contain latent bugs.
+These numbers indicate the necessity and difficulty of a thorough
+understanding of macro definitions to a software engineer or tool.
+Multiple definitions of a macro are generally innocuous:  only 2\% of macro
+names had definitions with different abstract syntax trees.
 
 
 
@@ -570,7 +573,7 @@ presentation, this paper coalesces these into ten higher-level categories.
 We started with a set of categories that we expected to occur frequently
 (similar to other macro
 taxonomies~\cite{Stroustrup-DesignEvolution,Carroll95}), then iteratively
-refined them to break up overly broad categories or add unforeseen ones.
+refined them to break up overly broad categories and add add unanticipated ones.
 
 Figure~\ref{fig:categorization} reports, for each package, how many
 definitions fall into each category.  Macros that
@@ -591,7 +594,7 @@ The ten definition categories follow.
 % There's no pattern, again.  (Nor is there a pattern by package size
 % or by type of application.)
 
-% The following isn't quite enough to get the columns lined up in this table.
+% The following is not quite enough to get the columns lined up in this table.
 % \newcolumntype{d}{D{.}{.}{2}}
 % \begin{tabular}{|l|d|d|d|d|d|d|d|}\hline
 \begin{figure}
@@ -666,7 +669,7 @@ case for expression macros with arguments).
 %%    0.15%  partial_statements (4)
 % @mcat_STATEMENT = qw( catSTATEMENT catSTATEMENT_SANS_SEMI catPARTIAL_STATEMENT
 %                        catSTATEMENTS catSTATEMENTS_SANS_SEMI catPARTIAL_STATEMENTS );
-% These aren't great examples (not from actual code); but so be it, as the
+% These are not great examples (not from actual code); but so be it, as the
 % actual examples are *very* long.
 \item[Statement]\label{item:statement-category}
   The macro body is a complete statement such as
@@ -680,7 +683,7 @@ case for expression macros with arguments).
     
   To reduce the number of categories in our presentation, this statement
   category aggregates single statements (comprising 47\% of the category),
-  statements missing their final semicolon (which account for 45\%, as in
+  statements missing their final semicolon (45\% of the category, as in
   {\tt \#define QUIT if (\verb|interrupt_state|)
   \verb|throw_to_top_level|()}), multiple statements (3.0\%), multiple
 statements where the last one lacks its semicolon (3.5\%), and partial
@@ -697,7 +700,8 @@ ASSERT(p) if (!(p)) botch(\verb|__STRING|(p)); else}).
 % #folded DECLARATION into the above, TYPE
 % The DECLARATION ones are quite rare.
 \item[Type] 
-  These macros expand to a type or partial type (such as a storage class),
+  These macros expand to a type or partial type (for example, a storage
+  class such as {\tt static}),
   or expand to a declaration (possibly missing its terminating semicolon).
   Examples include
 \begin{verbatim}
@@ -838,7 +842,7 @@ appearance, both individually and in combination, in our test suite.
 
 We anticipated problems dealing with macros that use stringization and
 pasting, the two explicit extra-linguistic features of Cpp.  However, these
-macros appear in less than one tenth of one percent of all macro
+features appear in less than one tenth of one percent of all macro
 definitions.  Far more prevalent, and more problematic for program
 understanding tools, is exploitation of Cpp's lack of structure to effect
 mechanisms not available in C\@.  Cpp's inputs and outputs are
@@ -855,7 +859,8 @@ partial declarations.
     listed across the top, along with the percentage of macro definitions
     exploiting each.  Each row of the table reports the percentage of all
     macro definitions that use a particular combination of the
-    capabilities, indicated by black squares.  For instance, 0.093\% of all
+    capabilities, indicated by black squares.  For instance, the sixth
+    line indicates that 0.093\% of all
     macro definitions both perform assignment and use the result of a macro
     invocation as a type, but use none of the other extra-linguistic
     features listed.  The last five lines each represent a single macro
@@ -947,15 +952,15 @@ macro result as a type, this is impossible in C\@.
 
 \item[Stringization]
   The body uses argument stringization ({\tt \#}), which replaces its
-  argument (a preprocessor symbol) by its contents as a C string.  After
-  {\tt \#define FOO BAR BAZ}, the expression {\tt \#FOO} expands to {\tt
-  "BAR~BAZ"}.  Examples using stringization include
+  argument (a preprocessor symbol) by the symbol's contents as a C string.
+  After {\tt \#define FOO BAR BAZ}, the expression {\tt \#FOO} expands to
+  {\tt "BAR~BAZ"}.  Examples using stringization include
 \begin{verbatim}
     #define spam1(OP,DOC) {#OP, OP, 1, DOC},
     #define REG(xx) register long int xx asm (#xx)
 \end{verbatim}
   No C or C++ language mechanism can replace such macros.  This feature is
-  particularly useful in debugging, in order to print or record the exact
+  particularly useful in debugging, in order to record the exact
   operations being performed.
 
 \end{description}
@@ -965,7 +970,7 @@ macro result as a type, this is impossible in C\@.
 \subsection{Cpp pitfalls:  macro lint}
 \label{sec:lint}
 
-Differences between C's standard execution model and Cpp's macro expansion
+Differences between C's standard execution model and Cpp's macro expansion can
 give rise to unanticipated behavior from syntactically valid dangerous
 programming constructs.  Unlike the extra-linguistic constructs discussed
 in Section~\ref{sec:extra-linguistic}, these are more likely to represent bugs
@@ -981,14 +986,13 @@ macro, may well give rise to these dormant errors.
   \captionsmall{Macro lint.  This table indicates the frequency of occurrence of
     error-prone constructs in macro bodies.  Except where specifically
     noted, the percentages refer to the number of macro definitions.  Macro
-    definitions falling in the ``not C code'' category (see
-    page~\pageref{page:not-c-code}) are omitted.}
+    definitions falling in the ``not C code'' category are omitted.}
   \label{fig:macro-lint}
 \end{figure}
 
-Because it flags such errors, our tool could play the role of a macro lint.
-It discovered many more problems than we expected: one fourth of all macro
-definitions triggered at least one macro lint warning, and one fourth of
+Because it flags such errors, our tool could play the role of a macro lint
+program.  It discovered many more problems than we expected: 24\% of all
+macro definitions triggered at least one macro lint warning, and 24\% of
 macro names have a definition that triggers a warning.
 Figure~\ref{fig:macro-lint} further breaks down the warnings, which are
 described below.
@@ -1031,8 +1035,8 @@ described below.
 \end{alltt}
         the macro invocation computes the value 10, not 14.
         This warning is suppressed when the argument is the entire body
-        or is the last element of a comma-delimited list (which has 
-        low precedence).
+        or is the last element of a comma-delimited list:  the commas of
+        such lists have low precedence, making a precedence error unlikely.
 
 \item[unparenthesized body]
         The macro body is an expression that ought to be parenthesized to
@@ -1047,7 +1051,7 @@ described below.
         expression and is suppressed if the body is a single token or a
         function call (which has high precedence).
 
-\item[doesn't swallow semicolon]\label{item:swallow-semicolon}
+\item[does not swallow semicolon]\label{item:swallow-semicolon}
         The macro body takes arguments and expands into a statement or
         multiple statements.  Thus, its invocations look like function
         calls, but it cannot be legally used like a function call, as in
@@ -1061,10 +1065,11 @@ described below.
         because {\tt ABORT();} expands to two statements (the second a null
         statement), which is non-syntactic between the {\tt if} condition and
         {\tt else}.
-
-        Macros without arguments, such as {\tt \#define \verb|FORCE_TEXT|
-        \verb|text_section|();}, suppress this warning on the assumption that their
-        odd syntax will remind the programmer not to add the usual semicolon.
+        
+        This warning is suppressed for macros without arguments, such as
+        {\tt \#define \verb|FORCE_TEXT| \verb|text_section|();}, on the
+        assumption that their odd syntax will remind the programmer not to
+        add the usual semicolon.
 
         The solution to this problem is to wrap the macro body in
 \begin{alltt}
@@ -1081,12 +1086,12 @@ described below.
         which might have been intended to be {\tt \#define name (e)}.
         An empty comment is the idiomatic technique for indicating that the
         null definition is not a programming error, so a comment where the macro
-        body would be suppresses this error, as in
+        body would be suppresses this warning, as in
 \begin{verbatim}
     #define __attribute__(Spec) /* empty */
     #define ReleaseProc16(cbp) /* */
-    #define __inline /* No inline functions.  */
 \end{verbatim}
+%     #define __inline /* No inline functions.  */
 %     #define inline /**/
 
 \item[side-effected formal]
@@ -1113,22 +1118,17 @@ described below.
         swallows any {\tt else} clause that follows it.  For instance, after
 \begin{verbatim}
     #define TAINT_ENV() if (tainting) taint_env()
-    #define merge_(a,b) if (TM_DEFINED (b)) (a) = (b);
-\end{verbatim}
-        a use like
-\begin{alltt}
+    \ldots
     if ({\rm\em{}condition})
       TAINT_ENV();
     else \ldots
 \end{alltt}
         results in the {\tt else} clause being executed not if  the
-        condition is false, but if it is true (and {\tt tainting} is also
-        true).
+        condition is false, but if it is true (and {\tt tainting} is false).
         
-        This problem results from a potentially incomplete statement (though
-        an {\tt if} statement doesn't require an {\tt else} clause) which
+        This problem results from a potentially incomplete statement which
         may be attached to some following information.  It is the mirror of
-        the ``doesn't swallow semicolon'' problem listed above which
+        the ``does not swallow semicolon'' problem listed above which
         resulted from a too-complete statement that failed to be
         associated with a textually subsequent token.  The solution is
         similar: either add an else clause with an empty statement, as in
@@ -1198,10 +1198,10 @@ expansion site.
 \label{fig:freq-def-cat}
 \end{figure}
 
-In all but five packages (\pkg{remind}, \pkg{emacs}, \pkg{gcc}, \pkg{bash},
-and \pkg{dejagnu}), at least 94\% of all macros are defined three or fewer
-times.  Figure~\ref{fig:freq-def-cat} graphs the number of definitions for
-each macro name in our test suite, broken down by macro category.
+In all but four packages (\pkg{remind}, \pkg{emacs}, \pkg{gcc},
+\pkg{bash}), at least 94\% of all macros are defined three or fewer times.
+Figure~\ref{fig:freq-def-cat} graphs the number of definitions for each
+macro name in our test suite, broken down by macro category.
 (Section~\ref{sec:inconsistent} and Appendix~\ref{app:category-lub} extend
 macro body classifications to macro names.)  The average number of
 definitions is less than two, with 79\% of macros defined just once.
@@ -1272,9 +1272,9 @@ their bodies are similar or identical.
 %   \captionsmall{Summary of
 %     Figures~\ref{fig:freq-def-cat},~\ref{fig:freq-ddf-cat},
 %     and~\ref{fig:freq-use-cat}.  The table is by macro name.  Add percentages?
-%     [[The 1.0 distinct defs for unknown symbol is surprising; it indicates
-%     that it is the *same* unknown symbol in each definition (doesn't
-%     it?).  But a name is only in the category if none of its defs was
+%     [[The 1.0 distinct defs for unknown symbol is surprising; does it indicate
+%     that it is the *same* unknown symbol in each definition?
+%     But a name is only in the category if none of its defs was
 %     recognized.  Double-check this!]]}
 %   \label{fig:freq-sum-cat}
 % \end{figure}
@@ -1309,7 +1309,7 @@ identical\,---\,usually, only string contents differed.
 \subsection{Inconsistent definitions}
 \label{sec:inconsistent}
 
-%% Blech:  I don't like this paragraph.
+%% Blech:  I dislike this paragraph.
 
 This section further refines our analysis of multiply-defined macros by
 considering, rather than syntactic structure, the categorization of the
@@ -1437,7 +1437,7 @@ uses per line.  Heavy preprocessor use (high incidence of preprocessor
 directives, as reported in Figure~\ref{fig:directives-breakdown}), is only
 weakly correlated with heavy macro usage, even though many preprocessor
 directives use macros.  The language implementations in our study
-(\pkg{perl}, \pkg{gcc}, \pkg{gs}, and \pkg{python}) use macros the most.
+(\pkg{perl}, \pkg{gcc}, and \pkg{gs}) use macros the most.
 
 Macro usage also varies relative to macro definition categories of
 Section~\ref{sec:categorization}.  Figure~\ref{fig:freq-use-cat}
@@ -1462,7 +1462,7 @@ result from pervasive use of some syntactic or type macros (e.g., at every
 variable declaration), which makes understanding them critical.
 
 %          Another reason for unused macros might be uses in Makefiles and
-%          other non-C-code files that we don't examine.
+%          other non-C-code files that we do not examine.
 
 \begin{figure}
 \centerline{\epsfig{file=fig/cat-use-frequency.eps,height=7.5in}}
@@ -1520,7 +1520,7 @@ We split macro uses into three categories:
 }
 \captionsmall{Macro usage contexts.  Macros may be used in C code, in
   macro definition bodies, in conditional tests, or in some combination
-  thereof.  The numbers don't sum to 100\% because of rounding.  The 11.7\%
+  thereof.  The numbers do not sum to 100\% because of rounding.  The 11.7\%
   of ``No uses'' is the same number as the 0 uses value of the Mean line in
   Figure~\ref{fig:freq-use-cat}.}
 \label{fig:where-used}
@@ -1539,7 +1539,7 @@ definitions).  However, each use in a conditional use can control many
 lines of code, whereas each use in code affects the final program text for
 just that line; see Section~\ref{sec:dependence}.
 
-%        A definition isn't a use of the macro being defined, only of those
+%        A definition is not a use of the macro being defined, only of those
 %        in the body.  Since those are uses, 12\% is a lower bound on those
 %        that never affect the code. It would be reasonable to assign the
 %        5.4\% that are macro only, to the other categories on a pro rata basis.
@@ -1549,8 +1549,8 @@ just that line; see Section~\ref{sec:dependence}.
 %      A surprising number -- nearly 12\% -- of macros defined in a package
 %        are never used at all.  Occasionally [[find a concrete example of
 %        this]] this is a result of shipping a 
-%        standard set of headers with the package -- it's like a library for
-%        that development team, but one that can't be counted upon to exist
+%        standard set of headers with the package -- it is like a library for
+%        that development team, but one that cannot be counted upon to exist
 %        everywhere, so it has to be provided.  For gnuplot, over 24\% of
 %        macros are never used because the package's support for several
 %        terminal types, such as tgif, is unfinished (and thus unused).
@@ -1691,16 +1691,16 @@ as ``mixed'':
 % \begin{figure}
 % \centerline{\epsfig{file=fig/cat-numargs.eps,height=4in}}
 % \captionsmall{Is this worth including?
-%   [[PROBLEM:  the numbers in this legend don't accord with those in
+%   [[PROBLEM:  the numbers in this legend do not accord with those in
 %   previous legends by name.  This is because the numargs information was
 %   gleaned from the .catg file which contains only the macro bodies and
 %   the filename they were found in, thus there is no way to include macro
 %   bodies defined outside the package of macro names that are defined
 %   somewhere inside the package as is the case almost everywhere else;
-%   I'm now thinking that this information could've/should've been used
+%   I am now thinking that this information could/should have been used
 %   for aiding the categorizations: i.e., a null define taking no
 %   arguments is a lot different than one taking arguments;  since that
-%   wasn't done, I'm inclined to drop this since to avoid the
+%   was not done, I am inclined to drop this since to avoid the
 %   inconsistency in the numbers (and because it is of questionable
 %   utility as presented now --gjb]]}
 % \label{fig:cat-numargs}
@@ -1711,7 +1711,7 @@ as ``mixed'':
 % or like constants (taking no arguments).  
 % [[However, a fair number of statement macros also take no arguments.]]
 % We graphed that in
-% Figure~\ref{fig:cat-numargs}.  This seems irrelevant to me; I don't see
+% Figure~\ref{fig:cat-numargs}.  This seems irrelevant to me; I do not see
 % where to fit it in, or what to say about it.
 
 
@@ -1750,7 +1750,7 @@ dependences across file boundaries: if a macro controls whether a file is
 
 %% This makes absolutely no sense.  What is going on here?
 %% I think there's something meaningful about lopping off prefixes of must
-%% dependences, but can't puzzle it out now.  -MDE 11/1/97
+%% dependences, but cannot puzzle it out now.  -MDE 11/1/97
 % When different conditions control different definitions of a macro, uses
 % are dependent on the independent parts of those conditions.  For instance,
 % after
@@ -1795,7 +1795,7 @@ that use the Motif library.
 
 \subsection{Dependences by line}
 
-%%% Figure fig:dep-byline really belongs here, but I'm trying to put it on
+%%% Figure fig:dep-byline really belongs here, but I am trying to put it on
 %%% a separate page from fig:dep-bymacro.
 
 Figure~\ref{fig:dep-byline} graphs the percentage of lines dependent on a
@@ -1836,7 +1836,7 @@ macros.
 % This works, but the figures are upside-down.
 % \centerline{\epsfig{file=fig/exp-dep-bymacro.eps,angle=90,height=3.75in}}
 % \centerline{\epsfig{file=fig/incl-dep-bymacro.eps,angle=90,height=3.75in}}
-% Can't use ``height'' when rotating by -90 or +270; I don't know why.
+% Cannot use ``height'' when rotating by -90 or +270; I do not know why.
 % \centerline{\epsfig{file=fig/exp-dep-bymacro.eps,angle=270,width=.5\linewidth}}
 % \bigskip
 % \centerline{\epsfig{file=fig/incl-dep-bymacro.eps,angle=270,width=.5\linewidth}}
@@ -1873,20 +1873,16 @@ directives (which account for about 2.2\% of all lines) expand at least one
 macro; the rare exceptions include testing the compiling machine's
 character set.
 
-Of the ten macros that are expanded by more than 5\% of lines in a package,
-six are types ({\tt int} and {\tt rtx} in \pkg{gcc}, {\tt ANY} and {\tt
-object} in \pkg{python}, {\tt SvANY} in \pkg{perl}, and {\tt const} in
-RCS), one is a constant ({\tt NULL} in python), and three are expressions
+\comment{Rewrite this after looking at new data.}
+Of the seven macros that are expanded by more than 5\% of lines in a package,
+six are types ({\tt int} and {\tt rtx} in \pkg{gcc}, {\tt SvANY} in \pkg{perl}, and {\tt const} in
+RCS), and three are expressions
 ({\tt ip} in \pkg{workman} and {\tt ArgCount} and {\tt Args} in
-\pkg{xfig}).  Three of these ({\tt int}, {\tt const}, and {\tt NULL})
-redefine built-in C keywords or values, and those macros are not
-necessarily active on every line containing the symbol.  Likewise, {\tt ip}
-is an ordinary variable in most of its uses, though our analysis did not
-discover that fact.
+\pkg{xfig}).
 
+%% This data was pre-PCP3 and is certain to change.
 %         Outliers (> 6\% of all lines expand):
 %           int in gcc (14.85\% !)
-%           NULL, ANY, object in python
 % 
 %         Above 5\%: 
 %           SvANY in Perl
@@ -1897,7 +1893,7 @@ discover that fact.
 %           ArgCount, Args in xfig (like argc, argv)
 %           rtx in gcc (defined to int or int*)
 % 
-%         Overall, for these top 10:  6 types, 1 constant, 3 expressions
+%         Overall, for these top 10:  4 types, 3 expressions
 
 
 
@@ -2004,7 +2000,7 @@ categories.
 
 %Greg:  describe LCLint methodology and results.  Say exactly what you did
 %(i.e., how hard you tried), and what the results were.  Also, that you tried
-%on only 20, not all 30, packages, which doesn't include the biggest ones.
+%on only 20, not all 30, packages, which does not include the biggest ones.
 
 A number of tools check whether specific C programs satisfy particular
 constraints.  Various lint~\cite{Johnson77} source-code analyzers check
@@ -2031,7 +2027,7 @@ target source code's macro definitions is required.
 
 %LCLint considers assignment to a macro argument dangerous but does not
 %appear to check for assignments to local variables.~\cite[\S
-%8]{Evans:LCLint} [[Should we mention these things?  I don't want to seem
+%8]{Evans:LCLint} [[Should we mention these things?  I do not want to seem
 %nitpicky or petty, so if we mention this, mention them as differences,
 %not as things LCLint does wrong.
 %\begin{quote}
@@ -2044,9 +2040,9 @@ target source code's macro definitions is required.
 %That quotation is really easy to nitpick:
 %\begin{enumerate}
 % \item assignment parameters is fine (just turn into a reference argument) but
-%    assignment of non-parameters that aren't at global scope is quite bad.
+%    assignment of non-parameters that are not at global scope is quite bad.
 % \item in x=foo(); we do NOT want foo() to be a statement
-% \item a macro doesn't have a single type, but may have many polymorphic types
+% \item a macro does not have a single type, but may have many polymorphic types
 %\end{enumerate}
 %]]
 
@@ -2077,7 +2073,7 @@ other programming languages~\cite{Favre96}.  After a simple semantics (free
 of loops and other complicating constructs) is assigned to it, traditional
 analyses such as call graph construction, control and data flow analysis,
 slicing, and specialization can be performed on it.  The Champollion/APP
-environment doesn't support ``the full lexical conventions of the C
+environment does not support ``the full lexical conventions of the C
 language'' nor macros that take parameters, which make up 28\% of macros in
 our study.
 The Ghinsu slicing tool~\cite{LivadasS94} takes a similar approach, mapping
@@ -2086,7 +2082,7 @@ representation which supports slicing.
 
 
 %[[ What debugger does this? --11/21/97 gjb]]
-% [[ I don't remember, and couldn't find a reference.  -MDE ]]
+% [[ I do not remember, and could not find a reference.  -MDE ]]
 % Debuggers exist that can call {\tt \#define}d functions.
 
 
@@ -2269,7 +2265,7 @@ Fellowship and an IBM Cooperative Fellowship.
 % reflect the views of the National Science Foundation.
 
 
-% Not really right:  Don't want the ``References'' section head to be small.
+% Not really right:  Do not want the ``References'' section head to be small.
 {\small \bibliography{evil}}
 
 
