@@ -8,6 +8,7 @@ use em_constants;
 use checkargs;
 use File::Basename;
 
+my $prefix;
 my %macro_name;
 my %macro_name_to_def_in_filename;
 my %typedefs;
@@ -51,7 +52,7 @@ sub Startup {
   if ($fDebugParse) {
     pcp3::SetParseDebugging();
   }
-  my $prefix = "source";
+  $prefix = "source";
   if ($source_file !~ /@/) {
     $prefix = basename($source_file,".c");
   }
@@ -72,6 +73,7 @@ sub Startup {
 
 sub Exit {
   my ($retval) = @_;
+  print STDERR "Exit -- touching ${prefix}.o\n";
   output_functions_listing();
   system("touch $prefix.o");
 }
