@@ -43,7 +43,7 @@ use checkargs;
  @ftype_CODE @ftype_HEAD @ftype_NOT_INCLUDED @ftype_INCLUDED
  @ftype_NONHEADER_NOT_INCLUDED @ftype_NONHEADER_INCLUDED
  @ftype_HEADER_NOT_INCLUDED @ftype_HEADER_INCLUDED
- $built_in_fake_file
+ $built_in_fake_filename $built_in_fake_fileno
  $i_usage_code $i_usage_macro $i_usage_cond
  @i_usage_all
  @cond_category_name
@@ -447,8 +447,8 @@ $ftype_NONHEADER_Start = $ftype_NONHEADER_INPUT;
 @ftype_HEADER_NOT_INCLUDED = ($ftype_HEADER_INPUT,$ftype_HEADER_ARG);
 @ftype_HEADER_INCLUDED = ($ftype_HEADER_INCB,$ftype_HEADER_INCQ);
 
-# Highly unlikely filename, used for $mdef_file[$i] for builtin macros
-$built_in_fake_file = "%Built In%";
+$built_in_fake_filename = "%Built In%";
+$built_in_fake_fileno = 0;
 
 # enumeration for the macros_uses indices
 @i_usage_all = ($i_usage_code, $i_usage_macro, $i_usage_cond) = (0..2);
@@ -625,7 +625,7 @@ $cpp_include_arg_re = '(?:<(.*)>|\"(.*)\")';
 @state_file_vars = qw(
     %macros %macros_c_undefs %macros_uses
     @mdef_name @mdef_formals @mdef_body
-    @mdef_file @mdef_line @mdef_physical_lines
+    @mdef_fileno @mdef_line @mdef_physical_lines
     @mdef_physical_ncnb_lines @mdef_freefuns
     @mdef_direct_inclusion_dependenton @mdef_direct_expansion_uses
     @mdef_type @mdef_category @mdef_properties @mdef_free_vars
@@ -644,6 +644,7 @@ $cpp_include_arg_re = '(?:<(.*)>|\"(.*)\")';
     %file_direct_inclusion_dependentons
     %file_direct_inclusion_dependent_macros %file_inclusion_dependent_macros
     %file_included_by
+    @files %file_numbers
 
     @incl_dependence_count @exp_dependence_count @either_dependence_count
 

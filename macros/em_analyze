@@ -617,7 +617,8 @@ my %function_to_locs;
 my %function_name_to_macros_it_uses = ();
 
 # If remove "current" from these names, look for other vars of those names.
-my $current_file;		# the current file name
+my $current_file_name;		# the current file name
+my $current_file_number;
 my $current_ftype_index;		# the index of the @ftype_'s for the current file
 
 # current_line_no is now a function
@@ -630,10 +631,10 @@ my %typedefs = ();		# keys are all typedefs encountered
 
 my $current_macro_line_number;	# Used by current_line_no when categorizing macros
 
-# @files contains the list of files we want to process
 # %file_inclusion_method, a string like "#include<>", tells where file got added
-my @files;
-my %file_inclusion_method = ("%Built In%" => "BuiltIn");
+my @files = ($built_in_fake_filename);         # list of files to process
+my %file_numbers;
+my %file_inclusion_method = ($built_in_fake_filename => "BuiltIn");
 
 # files that are included should be pushed onto both @files and
 # @files_included -- the latter is used only to prevent multiple inclusion
@@ -704,7 +705,7 @@ my @mdef_formals;
 my @mdef_body;			# with comments; for user output
 my @mdef_body_noc;		# no comments; for processing (does contain unsimplified strings and character literals)
 my @mdef_body_simple;		# no comments; strings and chars are simplified
-my @mdef_file;
+my @mdef_fileno;
 my @mdef_line;
 my @mdef_physical_lines;
 my @mdef_physical_ncnb_lines;
@@ -801,12 +802,14 @@ sub find_macro_definitions ( )
 # Do not use a foreach, since we're pushing on to the end of @files,
 #   and the list foreach uses does not get updated
 #  foreach my $this_file (@files)
-  for (my $ifiles = 0; $ifiles <= $#files; $ifiles++)
-    { $current_file = $files[$ifiles];
-      $current_ftype_index = compute_ftype_index($current_file);
+  # skip index 0, which is built_in_fake_filename
+  for (my $ifiles = 1; $ifiles <= $#files; $ifiles++)
+    { $current_file_number = $ifiles;
+      $current_file_name = $files[$current_file_number];
+      $current_ftype_index = compute_ftype_index($current_file_name);
 
-      print STDERR "file: \"$current_file\"" if $opt_v;
-      if (!open(INPUT,$current_file)) {
+      print STDERR "file: \"$current_file_name\"" if $opt_v;
+      if (!open(INPUT,$current_file_name)) {
 	# fix: Add quiet option; then this will occur unless that is set.
 	print STDERR " -- failed open\n" if $opt_v;
 	next; # skip to next file if open fails
@@ -886,9 +889,9 @@ sub process_macro_definition ( $$$$ )
   $mdef_physical_ncnb_lines[$this_macro_index] = $macro_physical_ncnb_lines;
   $mdef_direct_inclusion_dependenton[$this_macro_index]
     = simplify_dependenton([ @current_inclusion_dependenton ]);
-  if (!defined($current_file))
-    { mdie("undefined current_file while processing $name"); }
-  $mdef_file[$this_macro_index] = $current_file;
+  if (!defined($current_file_name))
+    { mdie("undefined current_file_name while processing $name"); }
+  $mdef_fileno[$this_macro_index] = $current_file_number;
   $mdef_line[$this_macro_index] = current_line_no();
   # PERLNOTE: be careful not to do
   # $mdef_direct_expansion_uses[$this_macro_index] = ();  ##WRONG
@@ -1432,7 +1435,7 @@ sub add_expansion_dependence ( $$ )
 sub transitive_closure_dependences ( )
 { check_args(0, @_);
 
-  if ($opt_v) { print "Computing transitive dependences...\n"; }
+  if ($opt_v) { print STDERR "Computing transitive dependences...\n"; }
 
   # Maybe put some debugging output here.
 
@@ -1504,7 +1507,7 @@ sub transitive_closure_dependences ( )
   # whew, done computing %local_inclusion_dependenton %local_inclusion_dependees
   # %local_expansion_dependenton %local_expansion_dependees.
 
-  if ($opt_v) { print "Computing transitive dependences...done\n"; }
+  if ($opt_v) { print STDERR "Computing transitive dependences...done\n"; }
 }
 
 
@@ -1619,7 +1622,7 @@ sub compute_transitive_macro_dependences ( )
   for my $name (keys %macros)
     { my %files = ();
       for my $i (@{$macros{$name}})
-	{ my $thisfile = $mdef_file[$i];
+	{ my $thisfile = $files[$mdef_fileno[$i]];
 	  # print "for macro $name, $thisfile\n";
 	  if (!exists($files{$thisfile}))
 	    { $files{$thisfile} = $true;
@@ -1644,7 +1647,7 @@ sub compute_transitive_macro_dependences ( )
   %macro_expansion_dependenton = %local_expansion_dependenton;
   %macro_expansion_dependees = %local_expansion_dependees;
 
-  if ($opt_v) { print "Computing transitive macro dependences...done\n"; }
+  if ($opt_v) { print STDERR "Computing transitive macro dependences...done\n"; }
 }
 
 ## Now taken care of in compute_transitive_file_dependences, I think.
@@ -1722,8 +1725,10 @@ sub InclusionMethodsForMacroName ( $ ) {
     my $index = $macros{$name}[$iDef];
     mdie() if !defined($macros{$name});
     mdie() if !defined($macros{$name}[$iDef]);
-    mdie() if !defined($mdef_file[$index]);
-    my $filename = $mdef_file[$index];
+    mdie() if !defined($mdef_fileno[$index]);
+    mdie() if !defined($files[$mdef_fileno[$index]]);
+    my $fileno = $mdef_fileno[$index];
+    my $filename = $files[$fileno];
     mdie("$filename has no inclusion method") if !defined($file_inclusion_method{$filename});
     push @list, $file_inclusion_method{$filename};
   }
@@ -1797,7 +1802,7 @@ sub get_fulltoken_line (;$)
     if ($finding_macro_uses) {
       # and also only if -a is set or this is a project file
       # don't do it if -u is set (user want to ignore usage)
-      if (!$opt_u && ($opt_a || !file_was_included($current_file))) {
+      if (!$opt_u && ($opt_a || !file_was_included($current_file_name))) {
 	if (!defined($simple_result))
 	  { mdie("How can $simple_result not be defined??"); }
 	analyze_for_macro_use($simple_result);
@@ -2109,7 +2114,7 @@ sub getline_handle_preprocessor_line ( $$$$ )
       return getline_handle_preprocessor_command($cpp_cmd, $line, $line_noc, $phys_lines, $ncnb_lines); }
   elsif ($line =~ m/^\s*\#\s*\d+\s*\".*\"\s*$/)
     { #FIX: should we count these
-      evilprint("File might be preprocessor's output--line marker found at $current_file:" . current_line_no() . "\n");
+      evilprint("File might be preprocessor's output--line marker found at $current_file_name:" . current_line_no() . "\n");
       return "\n"; }
   else
     { evilprint("Strange preprocessor line |$line|\n");
@@ -2300,7 +2305,7 @@ sub cpp_handle_include ( $$ )
 	$include_file = $2;
       }
       my ($fLocallyIncluded,$complete_include_filename) =
-	complete_include_pathname($include_file, $angled_include, $current_file);
+	complete_include_pathname($include_file, $angled_include, $current_file_name);
       if (!defined($complete_include_filename))
 	{ # FIX:  make complete_include_pathname work when $angled_include
 	  # is false, and then restore this (and eliminate the "else"...)
@@ -2312,24 +2317,22 @@ sub cpp_handle_include ( $$ )
 	      { push(@{$curr_incl_dep}, $include_arg); }
 	    push(@{$file_direct_inclusion_dependentons{$complete_include_filename}},
 		 simplify_dependenton($curr_incl_dep)); }
-	  push(@{$file_included_by{$complete_include_filename}}, $current_file);
+	  push(@{$file_included_by{$complete_include_filename}}, $current_file_name);
 
 	  # Check to see if we're already reading this file anyway
 	  # if we resolved the filename to a real file,
 	  # and we've not already added the file to our list we need to parse
 	  if ($fLocallyIncluded == $false &&
-	      scalar(grep($_ eq $complete_include_filename, @files_included)) == 0) {
+	      # scalar(grep($_ eq $complete_include_filename, @files_included)) == 0)
+	      !exists($file_inclusion_method{$complete_include_filename})) {
 	    # FIX: may want to insert this where we are
 	    # or do some sort of recursive reading of *all* included files
 	    # WEIRD: Why does this cause a problem in parsing a macro argument
 	    #      when I use @files instead of @files_included
-	    if (!forbidden_file($complete_include_filename))
-	      { push @files, $complete_include_filename;
-		push @files_included, $complete_include_filename;
-		$file_inclusion_method{$complete_include_filename} = "FromInclude" .
-		  ($angled_include ? "<>" : '""');
-		#DBG print STDERR "Adding \"$complete_include_filename\" as $file_inclusion_method{$complete_include_filename}\n";
-	      }
+	    push @files_included, $complete_include_filename;
+	    add_file($complete_include_filename,
+		     "FromInclude" . ($angled_include ? "<>" : '""'));
+	    #DBG print STDERR "Adding \"$complete_include_filename\" as $file_inclusion_method{$complete_include_filename}\n";
 	  }
 	}
     }
@@ -2352,9 +2355,9 @@ sub add_macro_used_by_cpp ( $ )
 	}
       if ($debug_dependences && !defined($macros_used_by_cpp{$word}))
 	{ # No newline; $cpp_cmd_arg already has one
-	  print "Adding macro $word due to $current_file:", current_line_no(), "\n"; }
+	  print "Adding macro $word due to $current_file_name:", current_line_no(), "\n"; }
       # More efficient to set to $true, but this can be helpful for debugging.
-      $macros_used_by_cpp{$word} = $current_file . ":" . current_line_no(); }
+      $macros_used_by_cpp{$word} = $current_file_name . ":" . current_line_no(); }
 }
 
 
@@ -3641,23 +3644,25 @@ sub process_macro_calls ( )
   # Apparently local does not work for imported variables like $cline_simplify_strings
   my $old_cline_simplify_strings = $cline_simplify_strings;
   $cline_simplify_strings = $true;
-  # Not foreach because @files can change, I think.
-  for (my $ifiles = 0; $ifiles <= $#files; $ifiles++)
-    { $current_file = $files[$ifiles];
+  # Not "foreach @files" because @files can change, I think.
+  # skip index 0, which is built_in_fake_filename
+  for (my $ifiles = 1; $ifiles <= $#files; $ifiles++)
+    { $current_file_number = $ifiles;
+      $current_file_name = $files[$current_file_number];
       # shouldn't have already set this value
-      if (defined($files_function_lines{$current_file}))
-	{ mdie("Reprocessing file $current_file?"); }
-      @{$files_function_lines{$current_file}} = ();
-      $current_ftype_index = compute_ftype_index($current_file);
+      if (defined($files_function_lines{$current_file_name}))
+	{ mdie("Reprocessing file $current_file_name?"); }
+      @{$files_function_lines{$current_file_name}} = ();
+      $current_ftype_index = compute_ftype_index($current_file_name);
       if ($opt_v) {
-	print STDERR "file: \"$current_file\" ($file_inclusion_method{$current_file})";
+	print STDERR "file: \"$current_file_name\" ($file_inclusion_method{$current_file_name})";
       }
       # do not do the second pass on included files
-      if ( file_was_included($current_file) && !$opt_A) {
+      if ( file_was_included($current_file_name) && !$opt_A) {
 	print STDERR " -- skipping (use -A option to not skip)\n" if $opt_v;
-	find_function_declarations($current_file);
+	find_function_declarations($current_file_name);
 	next;
-      } elsif (!open(INPUT,$current_file)) {
+      } elsif (!open(INPUT,$current_file_name)) {
 	# fix: Shouldn't we print to STDERR unconditionally?
 	# fix: Add quiet option; then this will occur unless that is set.
 	print STDERR " -- open failed\n" if $opt_v;
@@ -3711,8 +3716,8 @@ sub process_macro_calls ( )
 	      if ((!$indented) && ($symtab_scopes != 0))
 		{ # Don't complain if case label or in specific files; but also
 		  # don't monkey ith the value of $indented.
-		  if (!(($current_file =~ /\by\.tab\.c$/)
-			|| ($current_file =~ /initscan-mvs\.c$/)
+		  if (!(($current_file_name =~ /\by\.tab\.c$/)
+			|| ($current_file_name =~ /initscan-mvs\.c$/)
 			|| ($line =~ /^case (([0-9]+)|([a-zA-Z_]+(\([a-zA-Z_]+\))?)):$/)))
 		    { parse_error("process_macro_calls: bracedepth $symtab_scopes non-indented line $line "); } }
 
@@ -3852,7 +3857,6 @@ PROCESSLINE:
 		    { print "matched type declarator <$typespec><$declarator><$nextchar>\n";
 		      print "  remaining: $remaining\n";
 		    }
-		  # print "maybe matched type declarator <$1><$2><$3><$4><$5><$6><$7><$8><$9> <<", defined($macros{$6}), (defined($macros{$6}) ? (">><<$#{$macros{$6}} $macros{$6}[0] |$mdef_name[$macros{$6}[0]]|$mdef_formals[$macros{$6}[0]]|$mdef_body[$macros{$6}[0]]|$mdef_file[$macros{$6}[0]]|$mdef_line[$macros{$6}[0]]|") : ""), ">>\n";
 
 		  # Fallthroughs below depend on the fact that this is the last
 		  # clause in the elsif chain: there's nothing else we would
@@ -4241,13 +4245,13 @@ ATCOMMA:
 			  # Need to supply both functions.
 			  my $end_line = current_line_no();
 			  # update our per-file list of function locations
-			  push(@{$files_function_lines{$current_file}},
+			  push(@{$files_function_lines{$current_file_name}},
 			       ($current_function_start_line,"$current_function",
 				$end_line));
-			  #print STDERR "FN: $current_function $current_file [$current_function_start_line,", current_line_no(), "]\n";
+			  #print STDERR "FN: $current_function $current_file_name [$current_function_start_line,", current_line_no(), "]\n";
 			  # update our per-function list of [file,startline,endline]
 			  push(@{$function_to_locs{$current_function}},
-			       [$current_file, $current_function_start_line,
+			       [$current_file_name, $current_function_start_line,
 				current_line_no() ] );
 			}
 			# This comes after the code above because it
@@ -4298,7 +4302,7 @@ ATCOMMA:
 
       # done with this file; read another
       check_file_boundary();
-      # print "closing file $current_file\n";
+      # print "closing file $current_file_name\n";
       close(INPUT);
     }
   $cline_simplify_strings = $old_cline_simplify_strings;
@@ -4433,7 +4437,7 @@ sub find_function_declarations ( $ )
       # done with this line; get another
     }
   check_file_boundary();
-  # print "closing file $current_file\n";
+  # print "closing file $current_file_name\n";
   close(INPUT);
 }
 
@@ -5041,9 +5045,9 @@ sub categorize_macro_def ( $ )
 { my ($index) = check_args(1, @_);
 
   if ($debug_categorize_macro)
-    { print "Categorizing $index $mdef_name[$index]$mdef_formals[$index] $mdef_body[$index] from $mdef_file[$index]\n"; }
+    { print "Categorizing $index $mdef_name[$index]$mdef_formals[$index] $mdef_body[$index] from $files[$mdef_fileno[$index]]\n"; }
 
-  if ($mdef_file[$index] eq $built_in_fake_file)
+  if ($mdef_fileno[$index] eq $built_in_fake_fileno)
     { mdie("Trying to categorize built-in."); }
 
   if (defined($mdef_category[$index]))
@@ -5210,8 +5214,8 @@ sub categorize_macro_def ( $ )
 
     $mdef_type[$index] = $type;
     # track our histogram of categories
-    update_categories_for($category,$mdef_file[$index]);
-    #print STDERR "$mdef_name[$index] in $mdef_file[$index], type ", compute_ftype_index($mdef_file[$index]), "\n";
+    update_categories_for($category,$files[$mdef_fileno[$index]]);
+    #print STDERR "$mdef_name[$index] in $files[$mdef_fileno[$index]], type ", compute_ftype_index($files[$mdef_fileno[$index]]), "\n";
 
     if ($debug_categorize_macro)
       { print "categorize_macro_def ($index: $mdef_name[$index]): $categoryname[$category]",
@@ -5567,7 +5571,7 @@ sub is_void_macro ( $ )
 sub input_file_and_line ( )
 {
   check_args(0, @_);
-  return "$current_file:" . current_line_no();
+  return "$current_file_name:" . current_line_no();
 }
 
 # Like die, but with file and line number prefix.  Do NOT redefine this so
@@ -5616,26 +5620,27 @@ sub current_line_no ( ) {
 }
 
 
-sub forbidden_file ( $ )
-{ my ($filename) = check_args(1, @_);
-  # bash/machines.h is for use by the makefile, not C code
-  # /usr/include/linux/linkage.h is assembly, not C code
-  # glibc/asm-syntax.h and glibc/sysdep.h are assembly, not C code
-  # print "Checking '$filename'\n";
-  if ($filename eq "/usr/include/linux/linkage.h") {
-    return $true;
-  }
-  #FIX: This should use a package name, not $opt_d
-  if (!defined($opt_d)) {
-    return $false;
-  }
-  if ((($opt_d =~ /bash/) && ($filename eq "./machines.h"))
-      || (($opt_d =~ /gawk/) && ($filename eq "./config/solaris2.cc"))
-      || (($opt_d =~ /glibc/) && (($filename =~ /\/asm-syntax\.h$/)
-				  || ($filename =~ /\/sysdep\.h$/)))) {
-    return $true;
-  }
-}
+# Should be replaced by uses of c-files-listing or better heuristics.
+# sub forbidden_file ( $ )
+# { my ($filename) = check_args(1, @_);
+#   # bash/machines.h is for use by the makefile, not C code
+#   # /usr/include/linux/linkage.h is assembly, not C code
+#   # glibc/asm-syntax.h and glibc/sysdep.h are assembly, not C code
+#   # print "Checking '$filename'\n";
+#   if ($filename eq "/usr/include/linux/linkage.h") {
+#     return $true;
+#   }
+#   #FIX: This should use a package name, not $opt_d
+#   if (!defined($opt_d)) {
+#     return $false;
+#   }
+#   if ((($opt_d =~ /bash/) && ($filename eq "./machines.h"))
+#       || (($opt_d =~ /gawk/) && ($filename eq "./config/solaris2.cc"))
+#       || (($opt_d =~ /glibc/) && (($filename =~ /\/asm-syntax\.h$/)
+# 				  || ($filename =~ /\/sysdep\.h$/)))) {
+#     return $true;
+#   }
+# }
 
 
 # Return the index into the @ftype_ arrays for the current filename.
@@ -5846,12 +5851,12 @@ sub analyze_for_macro_use ( $ ) {
     # of $cpp_defining_macro_name.
     if (defined($cpp_defining_macro_name)) {
 	my $mi = mindex_from_name_file_line($cpp_defining_macro_name,
-					    $current_file,
+					    $current_file_name,
 					    current_line_no());
 	push @{$mdef_direct_expansion_uses[$mi]}, $word;
 	# print STDERR "Macro $cpp_defining_macro_name expands to something with $word-- using index $mi\n";
     }
-    push @{$macros_file_line_uses{$word}}, ($current_file,current_line_no());
+    push @{$macros_file_line_uses{$word}}, ($current_file_name,current_line_no());
 
     $exp_deps{$word} = $true;
     foreach my $incl_dep (keys %{$macro_inclusion_dependenton{$word}})
@@ -5861,7 +5866,7 @@ sub analyze_for_macro_use ( $ ) {
   }
 
   #   if ($debug_dependences)
-  #     { print "$current_file:",current_line_no(),":\n";
+  #     { print "$current_file_name:",current_line_no(),":\n";
   #       print "  incl_dep: ", join(" ",(keys %incl_deps)), "\n";
   #       print "  exp_dep: ", join(" ",(keys %incl_deps)), "\n"; }
 
@@ -5879,12 +5884,12 @@ sub analyze_for_macro_use ( $ ) {
 	    { $incl_deps{$exp_dep} = $true; } } }
 
   if ($debug_dependences)
-    { print "$current_file:",current_line_no(),": ", add_newline($line);
+    { print "$current_file_name:",current_line_no(),": ", add_newline($line);
       print "  incl_dep: ", join(" ",(keys %incl_deps)), "\n";
-      print "  file_incl_dep: @{$file_inclusion_dependent_macros{$current_file}}\n";
+      print "  file_incl_dep: @{$file_inclusion_dependent_macros{$current_file_name}}\n";
       print "  exp_dep: ", join(" ",(keys %exp_deps)), "\n"; }
 
-  foreach my $file_incl_dep (@{$file_inclusion_dependent_macros{$current_file}})
+  foreach my $file_incl_dep (@{$file_inclusion_dependent_macros{$current_file_name}})
     { $incl_deps{$file_incl_dep} = $true; }
 
   # Now %incl_deps and %exp_deps are set for this line; for each such
@@ -6068,7 +6073,7 @@ sub mindex_from_name_file_line ( $$$ ) {
     #}
 
     #FIX: I'm not convinced about why it needs to be $first_phys_line-1
-    if ($mdef_file[$mi] eq $file &&
+    if ($files[$mdef_fileno[$mi]] eq $file &&
 	($line >= $first_phys_line-1 && $line <= $first_phys_line + $c_phys_lines)) {
       return $mi;
     }
@@ -6187,7 +6192,8 @@ sub complete_include_pathname ( $$$ ) {
   # This doesn't actually check the local directory on the theory that the
   # file should have been included on the standard input.
   #DBG print STDERR "Trying $local_name...";
-  if (scalar(grep($_ eq $local_name, @files)) != 0) {
+  # test was (scalar(grep($_ eq $local_name, @files)) != 0)
+  if (exists($file_numbers{$local_name})) {
     #DBG print STDERR "already in list!\n";
     return ($true,$local_name);
   }
@@ -6208,6 +6214,19 @@ sub complete_include_pathname ( $$$ ) {
 }
 
 
+sub add_file ( $$ )
+{ my ($file, $inclusion_method) = check_args(2, @_);
+
+  # Add leading "./" so these filenames look like those returned
+  # by complete_include_pathname.
+  if ($file !~ m/^\.?\//)
+    { $file = "./" . $file }
+  push @files,$file;
+  $file_numbers{$file} = $#files;
+  $file_inclusion_method{$file} = $inclusion_method;
+}
+
+
 ###########################################################################
 ### Testing
 ###
@@ -6222,8 +6241,7 @@ sub test_categorize_macro_def ( $$$ )
   $mdef_body_simple[1000] = $body;
   $mdef_name[1000] = "dummy";
   $mdef_formals[1000] = "(arg)";
-  $mdef_file[1000] = "test-file";
-  $file_inclusion_method{$mdef_file[1000]} = "FromStdin";
+  $mdef_fileno[1000] = $#files;
   undef $mdef_category[1000];
   categorize_macro_def(1000);
   if ($category ne $categoryname[$mdef_category[1000]])
@@ -6240,7 +6258,7 @@ sub test_cat ( $$$ )
 # This needs to test properties too
 sub test_categorize_macro_defs ( )
 {
-  $current_file = "testing";	# hack, for input_file_and_line
+  $current_file_name = "testing";	# hack, for input_file_and_line
   $current_ftype_index = 1;	# hack, for update_categories_for
 
   test_cat("literal", $propNONE, "\"\\037\\235\"");
@@ -6333,12 +6351,14 @@ sub test_typedecl_regexp ( )
 {
   check_args(0, @_);
 #  foreach my $this_file (@files)
-  for (my $ifiles = 0; $ifiles <= $#files; $ifiles++)
-    { $current_file = $files[$ifiles];
-      $current_ftype_index = compute_ftype_index($current_file);
+  # skip index 0, which is built_in_fake_filename
+  for (my $ifiles = 1; $ifiles <= $#files; $ifiles++)
+    { $current_file_number = $ifiles;
+      $current_file_name = $files[$current_file_number];
+      $current_ftype_index = compute_ftype_index($current_file_name);
       if ($opt_v)
-	{ print STDERR $current_file . "\n"; }
-      open(INPUT,$current_file) or next; # skip to next file if open fails
+	{ print STDERR $current_file_name . "\n"; }
+      open(INPUT,$current_file_name) or next; # skip to next file if open fails
       check_file_boundary();
       while ($line = get_fulltoken_line())
 	{ if ($line =~ /^$type_specifier_re/o)
@@ -6723,8 +6743,10 @@ sub SaveMacroAnalysisState
     my $v = $state_file_vars[$i];
     my $g = $v;
     $g =~ s/[\@\%\$]/\*/;
-    $es = "Data::Dumper->DumpxsFd(fileno OUTSTATE,[\\$v],[\"$g\"]);\n";
-#    $es = "print OUTSTATE Data::Dumper->Dumpxs([\\$v],[\"$g\"]);\n";
+### FIX: I have reversed the commenting on these two lines because of a bug
+### in DumpxsFd.  Change this back once the bug is corrected.
+#    $es = "Data::Dumper->DumpxsFd(fileno OUTSTATE,[\\$v],[\"$g\"]);\n";
+    $es = "print OUTSTATE Data::Dumper->Dumpxs([\\$v],[\"$g\"]);\n";
     print STDERR $es;
     eval $es;
     $es = "undef $v;\n";
@@ -6762,13 +6784,7 @@ if ($opt_i) {
   while (<STDIN>) {
     next if /^-.*$/;
     chop ($_);
-    if (!forbidden_file($_))
-      { # Add leading "./" so these filenames look like those returned
-	# by complete_include_pathname.
-	if (! m/^\.?\//)
-	  { $_ = "./" . $_ }
-	push @files,$_;
-	$file_inclusion_method{$_} = "FromStdin"; }
+    add_file($_, "FromStdin");
   }
 }
 
@@ -6871,9 +6887,7 @@ $fDebugCmdProcessing && print "ARGV = @ARGV";
 
 # Add the rest of the arguments to the files list
 foreach my $file (@ARGV) {
-  if (!forbidden_file($file))
-    { push @files,$file;
-      $file_inclusion_method{$file} = "FromCmdLine"; }
+  add_file($file, "FromCmdLine");
 }
 
 get_include_path();
@@ -6888,7 +6902,10 @@ if ($opt_T)
   STDOUT->autoflush(1);
   STDERR->autoflush(1);
 
-  $current_file = "testing";
+  add_file("testing", "FromStdin");
+  $current_file_number = $#files;
+  $current_file_name = $files[$current_file_number];
+
   test_typedecl_regexps();
   test_parse_expressions();
   test_categorize_macro_defs();
@@ -6899,22 +6916,24 @@ if ($opt_T)
 
 ## Begin processing files
 
-if ($opt_v) { print STDERR "Processing ", scalar(@files), " files",
+# "scalar(@files)" because index 0 is built_in_fake_filename
+if ($opt_v) { print STDERR "Processing $#files files",
   	                   ($opt_I ? "" : " (plus \#included files)"), "...\n"; }
 
 ## This is pass 1 over the input files
 find_macro_definitions();	# also counts other preprocessor usage
 if ($opt_v) { print STDERR "Done finding macro definitions.\n"; }
-{ my %unused_macros = ();
+{ my %undefined_macros = ();
   for my $word (keys %macros_used_by_cpp)
     { if (!defined($macros{$word}))
 	{ # It would be nice to order these better (sort by filename?)
 	  # Maybe don't complain if this is an $ifdef, or if all uses are
 	  # dependent on it being defined?
-	  $unused_macros{$word} = $macros_used_by_cpp{$word};
+	  $undefined_macros{$word} = $macros_used_by_cpp{$word};
 	  introduce_new_macro($word); } }
-  for my $word (sort { $unused_macros{$a} cmp $unused_macros{$b} } keys(%unused_macros))
-    { print EVIL "$unused_macros{$word}: macro $word never defined\n"; } }
+  for my $word (sort { $undefined_macros{$a} cmp $undefined_macros{$b} } keys(%undefined_macros))
+    { if ($macros_used_by_cpp{$word} !~ /^builtin_(empty|string|num)_def$/)
+	{ print EVIL "$undefined_macros{$word}: macro $word never defined\n"; } } }
 
 
 # Kind of a hack
@@ -6963,12 +6982,13 @@ print STDERR "Categorizing $cMacrosInTables macros\n";
       #   print "\n  $mdef_name[$i]";
       #   if (defined($mdef_formals[$i])) { print $mdef_formals[$i]; }
       #   print " $mdef_body[$i]\n";
-      # current_file and current_line_no need to be set
+      # current_file_name and current_line_no need to be set
       # while we are categorizing.  Also must always
-      # set $current_ftype_index when we change the $current_file
+      # set $current_ftype_index when we change the $current_file_name
       # (use compute_ftype_index() )
-      $current_file = $mdef_file[$i];
-      $current_ftype_index = compute_ftype_index($current_file);
+      $current_file_number = $mdef_fileno[$i];
+      $current_file_name = $files[$current_file_number];
+      $current_ftype_index = compute_ftype_index($current_file_name);
       $current_macro_line_number = $mdef_line[$i];
       categorize_macro_def($i);	# also gets properties (currently, discards)
     }
@@ -6980,8 +7000,11 @@ print STDERR "Categorizing $cMacrosInTables macros\n";
 # print STDERR "Included files:", join("\n    ",@files_included), "\n";
 # print STDERR "fun_decl_arg_macros:", join("\n",keys %fun_decl_arg_macros), "\n";
 
+close(EVIL);
+close(PARSE_ERRS);
+
 print STDERR "Save macro analysis state\n";
-SaveMacroAnalysisState("$statename");
+SaveMacroAnalysisState($statename);
 print STDERR "Successful completion!\n";
 
 exit();

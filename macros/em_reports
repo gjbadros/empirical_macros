@@ -269,7 +269,7 @@ sub output_macros ( )
     #my $i = $macros{$name}[1];  #Should this now be 0?
     #die "i not defined for $name" if (!defined($i));
 
-    #next if ($mdef_file[$i] eq $built_in_fake_file);
+    #next if ($mdef_fileno[$i] eq $built_in_fake_fileno);
 
     die if (!defined($macros_uses{$name}));
     die if (!defined($macros_c_undefs{$name}));
@@ -311,11 +311,11 @@ sub output_defines ( )
     # Could also print number of times it's defined.
     for (my $iDef = 0; $iDef <= $#{$macros{$name}}; $iDef++ ) {
       my $i = $macros{$name}[$iDef];
-      if ($mdef_file[$i] ne $built_in_fake_file) {
+      if ($mdef_fileno[$i] ne $built_in_fake_fileno) {
 	# print STDERR "NAME=$name,", join(", ",@{$macros{$name}}),"\n";
 	# Used to output $i third here, but it's irrelevant.
-	print "$name", $iDef+1, $file_inclusion_method{$mdef_file[$i]},
-	$mdef_file[$i], $mdef_line[$i], count_macro_args($mdef_formals[$i]),
+	print "$name", $iDef+1, $file_inclusion_method{$files[$mdef_fileno[$i]]},
+	$files[$mdef_fileno[$i]], $mdef_line[$i], count_macro_args($mdef_formals[$i]),
 	$mdef_physical_lines[$i], $mdef_physical_ncnb_lines[$i],
 	$categoryname[$mdef_category[$i]],
 	# FIX: add type name back in when we get that working
@@ -395,8 +395,11 @@ sub output_macro_categ ( )
       my $index = $macros{$name}[$iDef];
       my $category = $mdef_category[$index];
       my $type = $mdef_type[$index];
-      if (!defined($mdef_file[$index])) {
-	print STDERR "mdef_file[$index] not defined\n"
+      if (!defined($mdef_fileno[$index])) {
+	print STDERR "mdef_fileno[$index] not defined\n"
+	}
+      if (!defined($files[$mdef_fileno[$index]])) {
+	print STDERR "files[$mdef_fileno[$index]] not defined\n"
 	}
       if (!defined($mdef_line[$index])) {
 	print STDERR "mdef_line[$index] not defined\n"
@@ -404,7 +407,7 @@ sub output_macro_categ ( )
       if (!defined($categoryname[$category])) {
 	print STDERR "categoryname[$category] not defined\n";
       }
-      print "$mdef_file[$index]:$mdef_line[$index]: "
+      print "$files[$mdef_fileno[$index]]:$mdef_line[$index]: "
 	. ($mdef_formals[$index] ? "function, " : "") . $categoryname[$category];
       if (($category == $catEXP)
 	  || ($category == $catLITERAL)
@@ -428,7 +431,7 @@ sub output_properties ( )
   my $i = 0;
   my @mdef_properties_in_package = ();
   while ($i < $cMacrosInTables) {
-    ($i++ and next) if ($file_inclusion_method{$mdef_file[$i]} ne "FromStdin");
+    ($i++ and next) if ($file_inclusion_method{$files[$mdef_fileno[$i]]} ne "FromStdin");
     push @mdef_properties_in_package, $mdef_properties[$i];
 #DBG	print STDERR "Adding $mdef_properties[$i]\n";
     $i++;
@@ -456,7 +459,7 @@ sub output_properties ( )
 #        any of the macro name's defs occur outside the package and would end up
 #        outputting information for any definition which is defined somewhere inside
 #        the package, even those definitions from outside the package
-    ($i++ and next) if ($file_inclusion_method{$mdef_file[$i]} ne "FromStdin");
+    ($i++ and next) if ($file_inclusion_method{$files[$mdef_fileno[$i]]} ne "FromStdin");
     $cASSIGN++ if ($mdef_properties[$i] & $propASSIGN);
     $cFREE_VAR++ if ($mdef_properties[$i] & $propFREE_VAR);
     $cINVOKES_MACRO++ if ($mdef_properties[$i] & $propINVOKES_MACRO);
@@ -643,7 +646,7 @@ sub output_lint ( )
 	      print LINT "macro $macro_name: inconsistent arity @args_lengths\n";
 	    } }
       for my $i (@{$macros{$macro_name}})
-	{ if ($file_inclusion_method{$mdef_file[$i]} ne "FromInclude<>")
+	{ if ($file_inclusion_method{$files[$mdef_fileno[$i]]} ne "FromInclude<>")
 	    { $num_macro_defs++;
 	      my @complaints = ();
 	      my $body = $mdef_body_simple[$i];
@@ -790,7 +793,7 @@ sub output_lint ( )
 
 	      # Check body
 	      if ($body =~ /\n/)
-		{ die "$mdef_file[$i]:$mdef_line[$i]: newline in $macro_name (def #$i): '$body'"; }
+		{ die "$files[$mdef_fileno[$i]]:$mdef_line[$i]: newline in $macro_name (def #$i): '$body'"; }
 		  if ($mdef_body[$i] =~ /\n/)
 		    { push(@complaints,
 			   "multi-line comment or string");
@@ -838,7 +841,7 @@ sub output_lint ( )
 		  $warn_free_var++; }
 
 	      if (scalar(@complaints) > 0)
-		{ print LINT "$mdef_file[$i]:$mdef_line[$i]:\n        #define $macro_name$args $mdef_body[$i]", @complaints;
+		{ print LINT "$files[$mdef_fileno[$i]]:$mdef_line[$i]:\n        #define $macro_name$args $mdef_body[$i]", @complaints;
 		    # Separate print statement so we don't get $OFS before it
 		    print LINT "\n"; }
 	    } } }
@@ -967,8 +970,8 @@ sub InclusionMethodsForMacroName ( $ ) {
     my $index = $macros{$name}[$iDef];
     die if !defined($macros{$name});
     die if !defined($macros{$name}[$iDef]);
-    die if !defined($mdef_file[$index]);
-    my $filename = $mdef_file[$index];
+    die if !defined($files[$mdef_fileno[$index]]);
+    my $filename = $files[$mdef_fileno[$index]];
     die "$filename has no inclusion method" if !defined($file_inclusion_method{$filename});
     push @list, $file_inclusion_method{$filename};
   }
@@ -1038,7 +1041,7 @@ sub MacroNotDefinedInsidePackage ( $ ) { # returns bool
   my ($name) = check_args(1,@_);
   for (my $iDef = 0 ; $iDef <= $#{$macros{$name}}; $iDef++ ) {
     my $index = $macros{$name}[$iDef];
-    my $filename = $mdef_file[$index];
+    my $filename = $files[$mdef_fileno[$index]];
     if ($file_inclusion_method{$filename} eq "FromStdin") {
       # it is defined inside the package
       return $false;
