@@ -7,6 +7,8 @@ PKG_DIR := /tmp/mernst/packages
 # FIX: These files should be generated from the directory
 # names under PKG_DIR
 
+# "make data" makes these files.
+# other targets operate on these files.
 STAT := $(wildcard *.stat)
 CATG := $(wildcard *.catg)
 ERR  := $(wildcard *.err)

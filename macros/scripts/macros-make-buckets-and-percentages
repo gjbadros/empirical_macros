@@ -6,12 +6,11 @@ sub sum_through {
   }
   return 0;
 }
-    
+
 $file = shift @ARGV;
 
 chop($total = <>);
-
-exit if $total == 0;
+exit if ((!$total) || ($total == 0));
 
 while (<>) {
   @F = split(' ');
