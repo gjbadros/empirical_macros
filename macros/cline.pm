@@ -35,13 +35,14 @@ cline -- Read physical, logical, or full-token lines from C program files
 =head1 DESCRIPTION
 
 I<get_spliced_cline>, I<get_fulltoken_cline>, and I<peek_fulltoken_cline>
-all return a four-element list of (raw_line, simplified_line,
-num_phys_lines, num_ncnb_lines).  The optional argument to
-I<get_spliced_cline> causes it not to track comments or strings.  This
-permits processing of non-syntactic C code which is often found in CPP
-comments of the form "#if 0 ... #endif".
+all return a five-element list of (raw_line, simplified_line,
+num_phys_lines, num_ncnb_lines, warnings), where warnings is a reference to
+an array of strings.  The optional argument to I<get_spliced_cline> causes
+it not to track comments or strings.  This permits processing of
+non-syntactic C code which is often found in CPP comments of the form "#if
+0 ... #endif".
 
-I<cline_resetinvars> is used for abandoning changes made by
+I<cline_resetinvars> is used for abandoning internal state changes made by
 I<get_spliced_cline>, for example when end of file is unexpectedly
 encountered.
 
@@ -90,17 +91,20 @@ my @cline_ungot_raw_lines = ();
 my @cline_ungot_simple_lines = ();
 my @cline_ungot_phys_lines = ();
 my @cline_ungot_ncnb_lines = ();
+my @cline_ungot_warnings = ();	# a list of references to lists of strings
 
 sub cline_check_ungot_sizes ()
 { check_args(0, @_);
   if ((@cline_ungot_raw_lines != @cline_ungot_simple_lines)
       || (@cline_ungot_raw_lines != @cline_ungot_phys_lines)
-      || (@cline_ungot_raw_lines != @cline_ungot_ncnb_lines))
+      || (@cline_ungot_raw_lines != @cline_ungot_ncnb_lines)
+      || (@cline_ungot_raw_lines != @cline_ungot_warnings))
     { croak ("Unequal ungot_* sizes ",
 	     scalar(@cline_ungot_raw_lines), " ",
 	     scalar(@cline_ungot_simple_lines), " ",
 	     scalar(@cline_ungot_phys_lines), " ",
-	     scalar(@cline_ungot_ncnb_lines)); }
+	     scalar(@cline_ungot_phys_lines), " ",
+	     scalar(@cline_ungot_warnings)); }
 }
 
 sub cline_ungot_string ()
@@ -147,12 +151,9 @@ $cline_simplify_strings = $false;
 # Update the values of $cline_incomment and $cline_instring based on a new
 # physical line.
 
-# Returns: (simplified string, num_ncnb_lines)
+# Returns: (simplified string, num_ncnb_lines, warnings)
 #  * The simple result contains no comments, and its strings and character
-#    constants have been simplified if $cline_simplify_strings (which see) is true.
-# cline_updateinvars is called only by get_spliced_cline at present, but could
-#   conceivably be called by others, particularly to aid in removing comments
-#   or string/character literals.
+#    constants are simplified if $cline_simplify_strings (which see) is true.
 # I hope that always simplifying isn't terribly inefficient...
 sub cline_updateinvars ($)
 {
@@ -160,6 +161,7 @@ sub cline_updateinvars ($)
   my $result = "";
   my $seen_ncnb = 0;		# not a boolean, but 0 or 1 (like a boolean)
   my $simple_char = "'~'";	# not 'a' because we'd identify it as a macro
+  my $warnings = [];
 
   if ($debug_cline)
     { print "cline_updateinvars ($cline_simplify_strings): $remaining\n"; }
@@ -210,7 +212,7 @@ sub cline_updateinvars ($)
 		  $remaining = $POSTMATCH; }
 	      else
                 # No newline, since $_[0] has one.
-		{ evilprint("illegal: bad character constant $match" . add_newline($postmatch) . "    in $_[0]");
+		{ push(@{$warnings}, "illegal: bad character constant $match" . add_newline($postmatch) . "    in $_[0]");
 		  if ($postmatch =~ /\'/)
 		    { if ($cline_simplify_strings)
 			{ $result .= $simple_char; }
@@ -248,10 +250,10 @@ sub cline_updateinvars ($)
   UIV_RETURN:
   # Code that used to be here has been moved into callers.
   if ($debug_cline)
-    { print "cline_updateinvars returning ($cline_instring, $cline_incomment) '$result'\n"; }
+    { print "cline_updateinvars returning ($cline_instring, $cline_incomment, @{$warnings}) '$result'\n"; }
 
   # Second return value is either 0 or 1
-  return ($result, $seen_ncnb);
+  return ($result, $seen_ncnb, $warnings);
 }
 
 
@@ -265,7 +267,7 @@ sub cline_simplify ($)
   local $cline_instring = $false;
   local $cline_simplify_strings = $true;
 
-  my ($result, $seen_ncnb) = cline_updateinvars($arg);
+  my ($result, $seen_ncnb, $warnings) = cline_updateinvars($arg);
   return $result;
 }
 
@@ -286,14 +288,21 @@ sub append_lines ($$)
   return ($arg1 . $arg2);
 }
 
-
+# Add newline to end of string; return string unchanged if it already has one.
+sub add_newline ($)
+{ my ($string) = check_args(1, @_);
+  if ($string =~ m/\n$/)
+    { return $string; }
+  else
+    { return $string . "\n"; }
+}
 
 
 ###########################################################################
 ### Get spliced line
 ###
 
-# Returns (raw_line, simplified_line, num_phys_lines, num_ncnb_lines)
+# Returns (raw_line, simplified_line, num_phys_lines, num_ncnb_lines, warnings)
 #  * The raw result contains explicit backslash-newline combinations; callers
 #    should remove them if desired.
 #  * The simple result contains no comments, and its strings and character
@@ -312,17 +321,18 @@ sub get_spliced_cline ($;$)
   if (not ($raw_line))
     { return ($raw_line, $raw_line, 0, 0); }
   my $num_physical_lines = 1;
-  my ($simple_line, $num_ncnb_lines)
-    = ($cpp_comment ? ($raw_line, 0) : cline_updateinvars($raw_line));
+  my ($simple_line, $num_ncnb_lines, $warnings)
+    = ($cpp_comment ? ($raw_line, 0, []) : cline_updateinvars($raw_line));
 
   if ($debug_cline)
     { print "initial simple: $simple_line\ninitial raw: $raw_line"; }
   while ($raw_line =~ m/\\$/)	# could test against either raw or simple here
-    { # Remove backslash and possibly newline.
+    { # This line ends with a backslash (is continued on next line).
+      # Remove backslash and possibly newline.
       # Could use $raw_line = $PREMATCH, but would need to use substr or
       #   do a match against $simple_line anyway.
       if (substr($raw_line, -1) eq "\\")
-	{ evilprint("evil: file ends with backslash (no newline)\n");
+	{ push(@{$warnings}, "evil: file ends with backslash (no newline)\n");
 	  # What is the point of this test?  I added $true to front.
 	  if ($true || !($cline_incomment || ($cline_instring && $cline_simplify_strings)))
 	    { if (substr($simple_line, -1) ne "\\")
@@ -345,11 +355,11 @@ sub get_spliced_cline ($;$)
       my $next_raw_line = <$filehandle>;
       if (! $next_raw_line)
 	# Already removed backslash and newline from result.
-	{ evilprint("dangerous: file ends with continuation character:\n    $raw_line\n"); }
+	{ push(@{$warnings}, "dangerous: file ends with continuation character:\n    $raw_line\n"); }
       else
 	{ $num_physical_lines++;
 	  my ($next_simple_line, $next_ncnb_lines) =
-	    ($cpp_comment ? ($next_raw_line, 0) : cline_updateinvars($next_raw_line));
+	    ($cpp_comment ? ($next_raw_line, 0, []) : cline_updateinvars($next_raw_line));
 	  $num_ncnb_lines += $next_ncnb_lines;
 	  $raw_line = $raw_line . $next_raw_line;
 	  if ($debug_cline)
@@ -357,7 +367,7 @@ sub get_spliced_cline ($;$)
 	  $simple_line = append_lines($simple_line, $next_simple_line);
 	  if ($next_raw_line =~ m/^\s*$/)
 	    { # $next_raw_line is blank.  $raw_line has no newline.
-	      evilprint("dangerous: blank line follows continuation character:\n    $raw_line\n"); }
+	      push(@{$warnings}, "dangerous: blank line follows continuation character:\n    $raw_line\n"); }
 	} }
 
   # Remove the filename in #include <foo.h>, which act like quotes.
@@ -367,7 +377,7 @@ sub get_spliced_cline ($;$)
   # $raw_line and $simple_line end in newline
   if ($debug_cline)
     { print "get_spliced_cline returning with incomment $cline_incomment instring $cline_instring:\n >>$raw_line >>$simple_line\n"; }
-  return ($raw_line, $simple_line, $num_physical_lines, $num_ncnb_lines);
+  return ($raw_line, $simple_line, $num_physical_lines, $num_ncnb_lines, $warnings);
 }
 
 
@@ -387,7 +397,8 @@ sub get_spliced_cline_maybe_ungot ($;$)
       return(shift(@cline_ungot_raw_lines),
 	     shift(@cline_ungot_simple_lines),
 	     shift(@cline_ungot_phys_lines),
-	     shift(@cline_ungot_ncnb_lines));
+	     shift(@cline_ungot_ncnb_lines),
+	     shift(@cline_ungot_warnings));
     }
   else
     { return get_spliced_cline($filehandle, $cpp_comment); }
@@ -399,14 +410,14 @@ sub get_spliced_cline_maybe_ungot ($;$)
 
 # Read the next line from <$filehandle>, until no continuation char
 #   and not in string or comment.  The result will never end in mid-token.
-# Returns (raw_line, simplified_line, num_phys_lines, num_ncnb_lines)
+# Returns (raw_line, simplified_line, num_phys_lines, num_ncnb_lines, warnings)
 #  * The raw result contains explicit backslash-newline combinations; callers
 #    should remove them if desired.
 #  * The simple result contains no comments, and its strings and character
 #    constants have been simplified if $cline_simplify_strings (which see) is true.
 #  * The string results end with newline.
 # If calls to peek_fulltoken_line have been made, those strings are returned.
-# To simplify an arbitrary string, use cline_updateinvars.
+# To simplify an arbitrary string, use cline_simplify.
 # 
 # Constructing simplified values are a bit wasteful on the first pass, when we
 # only care about macro definitions; special-case that?
@@ -431,14 +442,15 @@ sub get_fulltoken_cline ($;$)
       return(shift(@cline_ungot_raw_lines),
 	     shift(@cline_ungot_simple_lines),
 	     shift(@cline_ungot_phys_lines),
-	     shift(@cline_ungot_ncnb_lines));
+	     shift(@cline_ungot_ncnb_lines),
+	     shift(@cline_ungot_warnings));
     }
   else
-    { my ($raw_result, $simple_result, $physical_lines, $physical_ncnb_lines)
+    { my ($raw_result, $simple_result, $physical_lines, $physical_ncnb_lines, $warnings)
 	= get_spliced_cline($filehandle);
       # don't check $simple_result, which might be simplified to "" (= false)
       if (not ($raw_result))
-	{ return ($raw_result, $simple_result, $physical_lines, $physical_ncnb_lines); }
+	{ return ($raw_result, $simple_result, $physical_lines, $physical_ncnb_lines, $warnings); }
       # This screws something up really badly.
       # if (not ($simple_result))
       #  { return $simple_result; }
@@ -446,25 +458,26 @@ sub get_fulltoken_cline ($;$)
       # perhaps check for $mdef_name and mention it in message if it's set
       while ($cline_incomment || $cline_instring)
 	{
-	  my ($next_raw, $next_simple, $next_phys, $next_ncnb) = get_spliced_cline($filehandle);
+	  my ($next_raw, $next_simple, $next_phys, $next_ncnb, $next_warnings) = get_spliced_cline($filehandle);
 	  if ($next_raw)
 	    # Strict ANSI C does not permit newlines in string constants;
 	    # perhaps warn.  On the other hand, most compilers permit it.
 	    # Don't bother avoiding append_lines if in string,
 	    # because get_spliced_cline doesn't bother either.
 	    # (Actually, I should bother, if in a string.)
-	    { $physical_lines += $next_phys;
+	    { $raw_result = $raw_result . $next_raw;
+	      $simple_result = append_lines($simple_result, $next_simple);
+	      $physical_lines += $next_phys;
 	      $physical_ncnb_lines += $next_ncnb;
-	      $raw_result = $raw_result . $next_raw;
-	      $simple_result = append_lines($simple_result, $next_simple); }
+	      push(@{$warnings}, @{$next_warnings}); }
 	  elsif ($cline_incomment)
-	    { evilprint("dangerous: file ends in comment:\n    $raw_result");
+	    { push(@{$warnings}, "dangerous: file ends in comment:\n    $raw_result");
 	      $cline_incomment = $false; }
 	  elsif ($cline_instring)
-	    { evilprint("dangerous: file ends in string:\n    $raw_result\n");
+	    { push(@{$warnings}, "dangerous: file ends in string:\n    $raw_result\n");
 	      $cline_instring = $false; }
 	  else
-	    { die "incomment $cline_incomment or instring $cline_instring must be set"; } }
+	    { croak "incomment $cline_incomment or instring $cline_instring must be set"; } }
 
       if ($debug_cline)
 	{ print STDERR "get_fulltoken_line $physical_lines: >>$simple_result>>$raw_result"; }
@@ -474,9 +487,8 @@ sub get_fulltoken_cline ($;$)
       elsif ($simple_result eq "")
 	{ mdie("empty get_fulltoken_line result"); }
       # print "get_fulltoken_line returning <<$simple_result>>\n";
-      return ($raw_result, $simple_result, $physical_lines, $physical_ncnb_lines);
+      return ($raw_result, $simple_result, $physical_lines, $physical_ncnb_lines, $warnings);
     }
-
 }
 
 
@@ -508,7 +520,8 @@ sub peek_fulltoken_cline ($$)
       return($cline_ungot_raw_lines[$index],
 	     $cline_ungot_simple_lines[$index],
 	     $cline_ungot_phys_lines[$index],
-	     $cline_ungot_ncnb_lines[$index]); }
+	     $cline_ungot_ncnb_lines[$index],
+	     $cline_ungot_warnings[$index]); }
   else
     { if ($arg < (@cline_ungot_raw_lines + 1))
 	{
@@ -524,14 +537,16 @@ sub peek_fulltoken_cline ($$)
 
       # Do the real work.
       { # print "peeking about to call get_fulltoken_line\n";
-	my ($raw, $simple, $phys, $ncnb) = get_fulltoken_cline($filehandle, $true);
+	my ($raw, $simple, $phys, $ncnb, $warnings)
+	  = get_fulltoken_cline($filehandle, $true);
 	# print "peeking found $simple";
 	push (@cline_ungot_raw_lines, $raw);
 	push (@cline_ungot_simple_lines, $simple);
 	push (@cline_ungot_phys_lines, $phys);
 	push (@cline_ungot_ncnb_lines, $ncnb);
+	push (@cline_ungot_warnings, $warnings);
 	if ($debug_cline) { print "peek_fulltoken_line($arg) returning $simple"; }
-	return($raw, $simple, $phys, $ncnb); }
+	return($raw, $simple, $phys, $ncnb, $warnings); }
     }
 }
 
