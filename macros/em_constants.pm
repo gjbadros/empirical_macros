@@ -23,6 +23,7 @@ use checkargs;
  $catRESERVED_WORD $catFUNCTION_NAME $catSYMBOL_UNKNOWN $catSYMBOLS
  $catUNBALANCED $catPUNCTUATION $catCOMMAND_LINE $catASSEMBLY_CODE
  $catMULTIPLE $catFAILURE $catLast @categoryname
+ &category_lub
 
  @mcat_NULL @mcat_LITERAL @mcat_NONLITERAL_EXPRESSION
  @mcat_STATEMENT @mcat_SYNTAX @mcat_TYPE
@@ -346,6 +347,49 @@ $ccatMISC_SYSTEM,
 $ccatOTHER,
 $ccatMIXED,
  ) = (0..$#cond_category_name);
+
+sub category_lub ( $$ )
+{ my ($c1, $c2) = check_args(2, @_);
+  if ($c1 == $c2)
+    { return $c1; }
+  elsif (($c1 == $catNOT_YET) || ($c2 == $catNOT_YET))
+    { mdie("Shouldn't see catNOT_YET: $c1, $c2"); }
+  # If one is $catIN_PROCESS, $catNULL_DEFINE, or $catNO_DEF, return the other
+  elsif (($c1 = $catIN_PROCESS) || ($c1 = $catNULL_DEFINE) || ($c1 == $catNO_DEF))
+    { return $c2; }
+  elsif (($c2 = $catIN_PROCESS) || ($c2 = $catNULL_DEFINE) || ($c2 == $catNO_DEF))
+    { return $c1; }
+  # If both are literal, constant, or someconstant, return someconstant
+  elsif ((($c1 == $catLITERAL) || ($c1 == $catCONSTANT)
+	  || ($c1 == $catSOME_CONSTANT))
+	 && (($c2 == $catLITERAL) || ($c2 == $catCONSTANT)
+	     || ($c2 == $catSOME_CONSTANT)))
+     { return $catSOME_CONSTANT; }
+  # If both are constants or expressions, return expression
+  elsif ((($c1 == $catLITERAL) || ($c1 == $catCONSTANT)
+	  || ($c1 <= $catSOME_CONSTANT) || ($c1 == $catEXP))
+	 && (($c2 == $catLITERAL) || ($c2 == $catCONSTANT)
+	     || ($c2 <= $catSOME_CONSTANT) || ($c2 == $catEXP)))
+    { return $catEXP; }
+  # if one is symbolunknown, chose the other if it's a symbol, type, or expression
+  elsif (($c1 == $catSYMBOL_UNKNOWN)
+	 && (($c2 == $catRESERVED_WORD) || ($c2 == $catFUNCTION_NAME)
+	     || ($c2 == $catTYPE) || ($c2 == $catEXP)))
+    { return $c2; }
+  elsif (($c2 == $catSYMBOL_UNKNOWN)
+	 && (($c1 == $catRESERVED_WORD) || ($c1 == $catFUNCTION_NAME)
+	     || ($c1 == $catTYPE) || ($c1 == $catEXP)))
+    { return $c1; }
+  # if one is symbols, choose the other if it's resdword or type
+  elsif (($c1 == $catSYMBOLS)
+	 && (($c2 == $catRESERVED_WORD) || ($c2 == $catTYPE)))
+    { return $c2; }
+  elsif (($c2 == $catSYMBOLS)
+	 && (($c1 == $catRESERVED_WORD) || ($c1 == $catTYPE)))
+    { return $c1; }
+  else
+    { return $catMULTIPLE; }
+}
 
 
 ###########################################################################
