@@ -1,4 +1,4 @@
-#!/uns/bin/perl -w
+#!/uns/bin/perl -w -I/tmp/gjb/cpp/xs/cpp/blib/arch -I/tmp/gjb/cpp/xs/cpp/blib/lib -I/tmp/gjb/cpp
 #$Id$
 use English;
 #use strict;
@@ -107,9 +107,11 @@ sub string_constant {
   my ($string,$lines) = @_;
   print "String_constant ($lines lines): \"$string\"\n";
 }
+
 sub do_include {
   my ($keyword, $file, $flags) = @_;
   print "do_include $keyword -> ", simplify_path_name($file),";  $flags\n";
+  print "Was working on: ", cpp::fname(), "\n";
 }
 
 # Add the hooks, now
@@ -127,7 +129,6 @@ AddHook($COMMENT,\&comment);
 AddHook($STRING_CONSTANT,\&string_constant);
 AddHook($DO_INCLUDE,\&do_include);
 
-print simplify_path_name("/usr/////include/foo"), "\n";
 
 1;
 __END__
