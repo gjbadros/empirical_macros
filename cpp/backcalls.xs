@@ -24,6 +24,7 @@ extern "C" {
 // #include "globals.h"
 #include "tree_stk.h"
 #include "nmetab.h"
+#include "lexer.h"
 
 #ifdef __cplusplus
 }
@@ -296,12 +297,20 @@ ParseStateStack()
 ###% This has the potential to break the parse, and often will outside
 ###% of the trivial case of setting the stack of states to what it already is.
 void
-SetParseStateStack()
+SetParseStateStack(...)
+	PREINIT:
+	extern short *yyss;
+	extern short *yyssp;
+	extern yysstype_p yyvsp;
 	PPCODE:
 	int i = 0;
 	if (!fShouldParse) return;
+        /* Reset stack to empty */
+        yyssp = yyss-1;
 	while (i < items) {
 	    short val = (int)SvIV(ST(i));
+            *++yyssp = val;
+            *++yyvsp = NULL;
 	    i++;
 	}
 
@@ -447,6 +456,64 @@ YYFCompareTopStackState()
 	done:
 	OUTPUT:
 	RETVAL
+
+###%\backcall{$state_num}{YYGetState}{}
+###% Return the current state of the parser.
+bool
+YYGetState()
+        PREINIT:
+	extern int yystate;
+	CODE:
+        RETVAL = 0;
+	if (!fShouldParse) goto done;
+        RETVAL = yystate;
+	done:
+	OUTPUT:
+	RETVAL
+
+###%\backcall{$state_num}{YYGetNode}{}
+###% Return the current state of the parser.
+unsigned int
+YYGetNode()
+        PREINIT:
+	extern int yystate;
+        extern tree_union ct_yylval;
+	CODE:
+        RETVAL = 0;
+	if (!fShouldParse) goto done;
+        RETVAL = (unsigned int) ct_yylval.node;
+	done:
+	OUTPUT:
+	RETVAL
+
+
+###%\backcall{}{YYSetState}{$state_number}
+###% Set the current state of the parser to $state_number
+void
+YYSetState(state_num)
+        int state_num;
+        PREINIT:
+	extern int yystate;
+        extern tree_union ct_yylval;
+	CODE:
+	if (fShouldParse) {
+          yystate = state_num;
+          ct_yylval.node = 0;
+        }
+
+###%\backcall{$state_num}{YYGetNode}{}
+###% Return the current state of the parser.
+void
+YYSetNode(node)
+	unsigned int node;
+        PREINIT:
+	extern int yystate;
+        extern tree_union ct_yylval;
+	CODE:
+	if (fShouldParse) {
+          ct_yylval.node = node;
+        }
+
 
 ###%\backcall{$fDefined}{FLookupSymbol}{$symbol_id}
 ###% Return TRUE iff $symbol_id is found in the current scope.
