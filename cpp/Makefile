@@ -6,7 +6,7 @@
 
 CCCP=cccp
 BISON = bison
-CC=gcc
+CC=gcc2.7.2
 
 CFLAGS=-DYYDEBUG
 
