@@ -15,8 +15,8 @@ COMMON_DIR := $(shell dirname $$(ls -l Makefile | awk '{print $$NF}'))
 #COMMON_DIR := /homes/gws/mernst/research/notkin/macros/scripts
 #COMMON_DIR := /homes/gws/gjb/macros/scripts
 
-EXTRA_ANALYZE_FLAGS := -v
-EXTRA_REPORTS_FLAGS := -v
+EXTRA_ANALYZE_FLAGS := -v -I.
+EXTRA_REPORTS_FLAGS := -v -I.
 #EXTRA_ANALYZE_FLAGS := -g14
 
 PAPER_DIR := $(USER_PREFIX)/papers
@@ -24,6 +24,9 @@ PAPER_CPPP_DIR := $(USER_PREFIX)/papers/cppp
 PAPER_ORIG_DIR := $(USER_PREFIX)/papers/orig
 
 include Makefile.user
+
+SCRIPTS := em_analyze em_reports em_constants.pm em_util.pm cline.pm
+SCRIPTSPATH := $(addprefix $(USER_PREFIX)/,$(SCRIPTS))
 
 PKGS := $(shell zsh -c "echo $(PKG_DIR)/*(/:t) | sed -e 's/-[^ ]*//g'")
 
@@ -165,14 +168,16 @@ tbl-subset-categories.tex: tbl-subset-categories
 ###
 
 showvars:
-	echo $(PKGS)
-	echo $(STAT)
-	echo $(TEXT_TABLES)
-	echo $(RAW_TABLES)
-	echo $(LATEX_TABLES)
-	echo $(CVT_LATEX_TABLES)
-	echo $(ALL_TABLES)
-	echo $(COMMON_DIR)
+	@echo PKGS = $(PKGS)
+	@echo STAT = $(STAT)
+	@echo TEXT_TABLES = $(TEXT_TABLES)
+	@echo RAW_TABLES = $(RAW_TABLES)
+	@echo LATEX_TABLES = $(LATEX_TABLES)
+	@echo CVS_LATEX_TABLES = $(CVT_LATEX_TABLES)
+	@echo ALL_TABLES = $(ALL_TABLES)
+	@echo COMMON_DIR = $(COMMON_DIR)
+	@echo SCRIPTS = $(SCRIPTS)
+	@echo SCRIPTSPATH = $(SCRIPTSPATH)
 
 
 copy: $(PAPER_TABLES)
@@ -187,4 +192,8 @@ copyorig: $(PAPER_TABLES)
 	perl -pi.bak -e 's/z*<total>/Total/g' $(PAPER_TABLES)
 	cp $(PAPER_TABLES) $(PAPER_ORIG_DIR)
 
-.PHONY: all clean showvars text_tables data_analyze data_reports raw copy
+fast:	$(SCRIPTSPATH)
+	for i in $(SCRIPTSPATH); do bn=`basename $$i`; remove_check_args $$i > $$bn; chmod +x $$bn; done
+	@echo "Ensure \".\" is first on your path, and rehash now!"
+
+.PHONY: all clean showvars text_tables data_analyze data_reports raw copy fast
