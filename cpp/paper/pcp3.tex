@@ -5,7 +5,7 @@
 %-------------------------------------------------------------------------
 
 
-\documentclass[11pt]{article}
+\documentclass{article}
 \usepackage{fullpage}
 %\usepackage{fancybox}
 \usepackage{graphicx}
@@ -13,6 +13,11 @@
 \usepackage{lscape}
 
 \newcommand{\pcp}{\mbox{\textsf{PCP}$^3$}}
+\newcommand{\pcppp}{\mbox{\textsf{PCppP}}}
+\newcommand{\Cpp}{\mbox{\textsf{cpp}}}
+\newcommand{\CPP}{\mbox{\textsf{C++}}}
+\newcommand{\Perl}{\mbox{\textsf{Perl}}}
+\newcommand{\C}{\mbox{\textsf{C}}}
 
 \newcommand{\backcall}[3]{\item \texttt{#2} (\texttt{#3})
   \textbf{returns} \texttt{#1} \\ }
@@ -24,13 +29,22 @@
 \newcommand{\backcallobsoleted}[3]{}
 
 \newcommand{\hook}[2]{\item \texttt{#1} (\texttt{#2}) \\ }
+
+\newcommand{\hookobsoleted}[2]{}
+
+\newcommand{\ppd}[1]{\texttt{\##1}}
+
 \newcommand{\file}[1]{{\small \texttt{#1}}}
 \newcommand{\email}[1]{{\small \texttt{#1}}}
 \newcommand{\program}[1]{{\small \texttt{#1}}}
 \newcommand{\syscall}[1]{{\textsf{#1}}}
 \newcommand{\sectionref}[1]{section \ref{#1}, on page \pageref{#1}}
+\newcommand{\ie}{i.e.,}
+\newcommand{\eg}{e.g.,}
+\newcommand{\etc}{etc\.}
+\newcommand{\figref}[1]{Figure~\ref{#1}}
 
-\title{\pcp{}: A C Front End for \\ Preprocessor Analysis and Transformation}
+\title{\pcp{}: A \C{} Front End for \\ Preprocessor Analysis and Transformation}
 \author{Greg J. Badros%
   \thanks{Supported by a National Science Foundation
     Graduate Fellowship. Any opinions, findings, conclusions, or
@@ -43,21 +57,301 @@
 \maketitle
 
 \begin{abstract}
-\end{abstract}
+\label{sec:abstract}
+  Though the \C{} preprocessor provides necessary language features, it
+  does so in a completely unstructured way.  The lexical nature of
+  \Cpp{} creates numerous problems for software engineers and their
+  tools, all stemming from the chasm between the engineer's view of the
+  source code and the compiler's view.  The simplest way to reduce this
+  problem is to minimize use of the preprocessor.  In light of the data
+  collected in a prior empirical analysis, this study considers some
+  simple transformations on preprocessor use in \C{} code to \CPP{}
+  language features which could substantially reduce use of \Cpp{} in
+  legacy code. Existing tools for analyzing \C{} source including its
+  preprocessor directives are unsuitable for such transformations, so
+  this work introduces a new approach: tightly integrating the
+  preprocessor with a \C{} language parser, permitting the code to be
+  analyzed at both the preprocessor and syntactic levels simultaneously.
+  The front-end framework, called \pcp{}, couples arbitrary \Perl{}
+  ``hooks'' upon various preprocessor and parser events and is thus
+  general and flexible. \pcp{}'s strengths and weaknesses are discussed
+  in the context of several program understanding and transformation
+  tools, including a conservative analysis to support replacing \Cpp{}'s
+  \ppd{define} directives with \CPP{} language features.
 
+\end{abstract}
 \bigskip
 
 % Introduction, including problem statement, goals, etc
 \section{Introduction}
 \label{sec:intro}
+More than twenty years ago, Dennis Ritchie designed the \C{} language to
+include a textual macro preprocessor called
+\Cpp{}~\cite[Ch.~3]{Harbison91}.  Given the simplicity of the language
+and the state of the art in compiler technology in the mid-1970s, his
+decision to provide some language features in this extra-linguistic tool
+may have been justified.  For the last couple of decades, \C{} programs
+have exploited \Cpp{}'s capabilities for everything from manifest
+constants and type-less pseudo-inline functions, through modularization
+and symbol generation.  Bjarne Stroustrup, the designer and original
+implementor of \CPP{}, notes that ``without the \C{} preprocessor, \C{}
+itself . . . would have been stillborn''~\cite[p.~119]{Stroustrup94}.
+Most certainly \Cpp{} contributes greatly to \C{}'s expressiveness and
+portability, but perhaps at too large a cost.  Stroustrup recognizes
+this tradeoff:
 
+\begin{quotation}
+Occasionally, even the most extreme uses of \Cpp{} are useful, but its
+facilities are so unstructured and intrusive that they are a constant
+problem to programmers, maintainers, people porting code, and tool
+builders~\cite[p.~424]{Stroustrup94}.
+\end{quotation}
+
+%% FIXGJB: is \ldots too cute?
+\subsection{Why \Cpp{} is good \ldots and bad}
+
+The intrinsic problem with \Cpp{} is also its fundamental strength: the
+conceptually distinct first pass of textual processing over \C{} source
+code.  This introduces a giant chasm between the code that the
+programmer sees and what the compiler-proper (\ie{} the \C{} compiler
+separate from the preprocessor) ultimately compiles.\footnote{To avoid
+  ambiguity, we will use \emph{preprocessed} to refer to the view of a
+  translation unit after running \Cpp{} on it, and \emph{unprocessed} to
+  refer to the original source code.} Consider the program in
+\figref{fig:badmain}\footnote{Adapted from an example given by
+  Stroustrup~\cite[p.~423]{Stroustrup94}.}  Though a legal ANSI \C{}
+program, its semantics are undefined in light of \Cpp{}.  When compiled
+using \texttt{cc -Dprintf(x)=}, the program no longer outputs the
+desired ``Hello world'' message.
+
+\begin{figure}[hbt]
+\begin{center}
+\begin{minipage}[t]{4.5in}
+\label{fig:badmain}
+\begin{verbatim}
+#include <stdio.h>
+
+int main(int argc, char *argv[]) {
+  printf("Hello world");
+  return 0;
+}
+\end{verbatim}
+\caption{\texttt{main.c}: An example highlighting incomplete semantics of
+  \C{} source code due to \Cpp{}}
+\end{minipage}
+\end{center}
+\end{figure}
+
+Experienced and novice \C{} programmers alike have been frustrated by
+similar misunderstandings of source code due to the arbitrary
+transformations \Cpp{} performs before the language compiler ever is
+invoked.\footnote{Some more modern \C{} compilers integrate the
+  preprocessor with the lexical scanning phase, but, by necessity, it is
+  still a separate first phase conceptually.}  Such confusions are
+easily eliminated by allowing the software engineer to see the code
+exactly as the compiler does.  Unfortunately, that view of the program
+is a level of abstraction lower than the un-preprocessed source
+provides.  Well understood identifiers such as \texttt{stderr} appear as
+the far less readable
+\texttt{(\_IO\_FILE*)(\&\_IO\_stderr\_)}\footnote{This is the output
+  generated when preprocessed using the \texttt{gcc} compiler's standard
+  include files.}, and useful encapsulations such as \texttt{assert}
+degenerate into nonsense sequences of symbols.  Worsening matters,
+preprocessing code eliminates conditional compilation artifacts that are
+essential to the portability and versatility of the source code
+(see~\cite{Krone94}), and multiplies the length of translation units by
+in-line inclusion of thousands of lines of standard header files.
+
+\subsection{What this means for software tools}
+
+Though software engineers are rarely encouraged to work directly with
+preprocessed code, the majority of software engineering tools operate on
+exactly that view of the source.  Debuggers, call graph extractors, data
+flow analyzers, ASTLog [[FIXGJB: REF?]], and countless other tools
+either run \Cpp{} as the first stage in their analysis, or use
+representations derived from a compiler operating on the preprocessed
+code.  Though the parser or abstract-syntax-tree based approach these
+tools apply results in information that is precise for the input they
+consider, their usefulness for human-targeted program understanding is
+diminished due to the textual transformations from
+preprocessing.\footnote{In contrast, this approach is exactly right for
+  the compiler which has little need of preserving high level
+  abstractions in generating object code.}  Additionally, parsing
+requires a syntactically correct program and all header files to
+exist---these constraints are not realistic during many software
+maintenance activities (\eg{} porting, switching compilers, \etc{}).
+
+Some tools choose a different tradeoff and operate instead on the
+un-preprocessed source code exactly as the programmer sees it.  These
+tools cannot use a straightforward parser or construct an accurate
+abstract syntax tree because the source is not syntactically-correct
+\C{} code.  Lexical tools (\eg{} etags, LLSME~\cite{Murphy95}, and
+font-lock-mode for emacs) and approximate parsers (\eg{} \texttt{a*} and
+\texttt{Genoa}~\cite{Griswold96}, \texttt{LCLint} [[FIXGJB:
+True?]]~cite{LCLint}, \etc{}) use this approach.  In general, this leads
+to greater speed (especially for the lexical approach) and improved
+robustness to syntax errors and language variants (approximate parsers
+generally lose at worst the current top level construct, and often can
+do better). Additionally, because the input is un-preprocessed, the
+extracted information is presented to the human software engineer at the
+same level of abstraction as the source with which she is working.
+Unfortunately, by disregarding (or only partially honoring) the \Cpp{}
+directives, the extracted model of the source code can only be an
+approximation of the program's semantics to a full compiler.  Macros, an
+especially flexible ``feature'' of \Cpp{}, can wreak havoc on this
+approach by hiding function calls in pseudo-inline functions or
+customizing syntax of declarations or scoping structure.  Griswold and
+Atkinson studied mistakes in call graph extraction using various tools
+and found that macro expansion was a major cause of both false positives
+and false negatives~\cite{Griswold96}.  Such tools, though, are
+inappropriate for software tools that require exact or conservative
+information.
+
+An obvious solution to the problems \Cpp{} presents is to just avoid it
+(and therefore, \C{}, as we have already seen how strong \C{} relies on
+it) entirely.  By using another language which directly provides
+language features such as modules, constants, inline functions, generic
+functions, and other higher level abstractions that \C{} emulates via
+its preprocessor, most of the above issues are avoided.  Casting away
+\C{} in favor of most modern languages would necessitate discarding
+billions of lines of useful legacy code.  The one notable exception is
+\CPP{}~\cite{CD2DraftStandard}. For compatibility with \C{}, \CPP{}
+remains encumbered by \Cpp{}, yet \CPP{} does provide language-level
+support for many higher level constructs, thus making numerous \Cpp{}
+constructs redundant\footnote{In fact, this was an explicit design goal
+  for Stroustrup~\cite[p.~424]{Stroustrup94}.}  Thus, migrating \C{}
+code to \CPP{} potentially provides a path to reduce usage of the
+preprocessor, and thus make tools' and programmers' jobs easier.
+
+\subsection{Outline}
+
+The next section highlights significant findings from a prior empirical
+study of \Cpp{} use~\cite{EmpCpp-TR} with an eye toward understanding
+what fraction of preprocessor use in existing software artifacts can be
+replaced by \CPP{} language features.  Section~\ref{sec:pcp3} describes
+the tool the author developed to support accurate analysis of
+un-preprocessed code without losing the high level abstractions
+utilizing the preprocessor. Section~\ref{sec:results} illustrates some
+of the analyses that \pcp{} does well, and discusses its support for
+automating safe conversion of some simple \Cpp{} uses into \CPP{} language
+features. Section~\ref{sec:related} describes some related work, and
+section~\ref{sec:summary} discusses the contribution of this work, some
+of its shortcomings, and some areas for possible future work.
+
+
+%% Is C++ expressive enough?
 % Background
-\section{Background}
-\label{sec:background}
+\section{Feasibility of Transformation}
+\label{sec:feasibility}
+Many \Cpp{} constructs clearly have analogues in newer language
+features.  For example, \ppd{define}s of simple numeric and string
+constants can often be replaced with enumeration declarations or static
+constant variable declarations (both newer features of ANSI
+\C{}, not just of \CPP{}).
+%FIXGJB: interesting that this language construct is used so little
+Some function-like \ppd{define}s of pseudo-inline functions can
+correspond to \CPP{}'s real \texttt{inline} functions (perhaps made
+generic through use of a template).  An optimizing compiler performing
+trivial dead code elimination can effect the same result as a
+conditional compilation directive guarding debug-only code (e.g.,
+replacing a syntactically correct \texttt{\ppd{ifndef} NDEBUG} and
+\ppd{endif} pair with a simple \texttt{if (!fDebug) \{} and
+\texttt{\}}).
+
+%% Types of questions the analysis must support answering
+
 
 % PCP^3
 \section{The \pcp{} Infrastructure}
 \label{sec:pcp3}
+\pcp{} is built from three software components: a \texttt{P}arser, a \texttt{C}
+\texttt{P}re\texttt{p}rocessor, and a \texttt{P}erl action
+language.\footnote{Hence its name, \pcppp{}, shortened to \pcp{}.}
+
+\subsection{Parser}
+
+The first major component of \pcp{} is an ANSI \C{} compatible parser.
+Choosing a parser was more difficult than selecting a preprocessor. Not
+only are there many more freely available parsers, they also tend to be
+more tightly coupled to their back-end, thus complicating reuse.
+Ultimately, the parser from \texttt{CTree}, a freely available \C{}
+front end which creates an abstract syntax tree from a preprocessed
+input file, was embedded in \pcp{}.  This parser has the advantage of
+doing little more than parsing and creating an AST.  Its lexer and
+parser both are mechanically generated from \texttt{flex}~\cite{Flex}
+(freely available implementation of \texttt{lex}) and
+\texttt{bison}~\cite{Bison} specifications, respectively.
+\texttt{CTree} also implements a simply, but fully scoped symbol table,
+relieving \pcp{} of another essential duty.
+
+\subsection{Preprocessor}
+
+As a software tool targeting \C{} code, the design of \pcp{} faced the
+same difficulties as other tools as outlined in section~\ref{sec:intro}.
+Disregarding the preprocessor is clearly not an option since analyzing
+the preprocessor is integral to \pcp{}.  But approximating \Cpp{} is not
+good enough either, as it is essential that the tool mimic \Cpp{}
+exactly. Thus, the \C{} preprocessing library from the GNU \C{}
+compiler's (\texttt{gcc}) well-tested (and slightly extended)
+\Cpp{}~\cite{GCC} is embedded in \pcp{}.  By using \texttt{gcc}'s
+\texttt{cpplib}, \pcp{} is able to ``see'' both the un-preprocessed and
+the preprocessed views of source code.  Though \Cpp{} itself inserts
+\ppd{line} directives in its output to provide a rudimentary mapping
+between the two views, \pcp{} keeps a much finer mapping, tracking
+what tokens came from source code directly, from expansions of macro
+bodies, arguments of macros, \etc.\footnote{The tight mapping is similar
+  to the approach the intentional programming group at Microsoft
+  Research is using trying to recover preprocessor ``intentions'' from
+  fully preprocessed code annotated with this mapping
+  information~cite{MSIPPersonal}.}  By connecting the annotated tokens
+and exposing the state of the preprocessor to the parser and vice-versa,
+the communication between \Cpp{} and the \C{} language parser is widened
+from the thin straw of tokens passed via a Unix pipe that plagues other
+tools choosing to operate on preprocessed code.
+
+\subsection{Perl action language}
+
+Griswold and Atkinson note that using a special-purpose interpreted
+action language helped the scalability of various software tools in
+extracting a call graph~\cite{Griswold96}.  Interpreted languages can
+speed development time, especially when prototyping analyses.  For
+\pcp{}, \Perl{}~\cite{Perl} was chosen because it interfaces
+easily with \C{}, it is in widespread use, and the author is comfortable
+with it.\footnote{Additionally, the tools used in the empirical study of
+  \Cpp{}~\cite{EmpCpp-TR} use are written in \Perl{}, thus
+  presenting yet another opportunity for reuse.}
+
+The \Perl{} interface of \pcp{} is split into two parts:
+
+%%FIXGJB: did the numbers of hooks/backcalls change?
+\begin{itemize}
+\item Action ``hooks'' written in \Perl{} that \C{} code in \pcp{}
+      invoke on various occurrences. Each hook is directly passed (via
+      normal \Perl{} passing conventions) a set of parameters relevant
+      to the current action.  Example actions include the scanning of
+      preprocessor directives, the creation of a macro definition, the
+      expansion (\ie{} use) of a macro name, and the parsing of a
+      variable declaration.  There are forty-one hooks presently
+      specified in \pcp{}. See \sectionref{sec:hooks} for details.
+\item Subroutine ``backcalls'' written in \C{} (actually,
+      \texttt{PerlXS} the dialect of \C{} used for \Perl{} extensions)
+      that the \Perl{} hooks are free to call to access pre-specified
+      \C{} data structures or actively interact with the Parser or
+      \Cpp{} components of \pcp{}.  Example subroutines include getting
+      the name of the currently-processed file, inserting arbitrary code
+      for the preprocessor to parse, and instructing the parser to enter
+      a new scope.  There are twenty-six backcalls presently permitted
+      by \pcp{}.  See \sectionref{sec:backcalls} for details.
+\end{itemize}
+
+\noindent The \Perl{} code is free to manage its local data structures
+      arbitrarily, and may import modules as an ordinary \Perl{} program
+      would.  The \C{} data structures are protected behind the hooks
+      and backcalls interfaces.
+
+\subsection{A simple example}
+
+
 
 % Benchmarks, results, etc.
 \section{Results}
@@ -72,20 +366,27 @@
 \label{sec:summary}
 
 \appendix
-{\small 
-\section{Hooks called by \pcp}
+\newpage
+\section{Action hooks called by \pcp}
+\begin{footnotesize}
 \label{sec:hooks}
 \begin{itemize}
+\sloppy
 \input{pcp3-hooks.tex}
+\fussy
 \end{itemize}
+\end{footnotesize}
 
-
+\newpage
 \section{Subroutines provided by \pcp}
 \label{sec:backcalls}
+\begin{footnotesize}
 \begin{itemize}
+\sloppy
 \input{backcalls.tex}
+\fussy
 \end{itemize}
-}
+\end{footnotesize}
 
 % References
 \newpage
