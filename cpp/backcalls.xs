@@ -201,19 +201,12 @@ InFname()
 ###% unique location in the package.  "@NONE@" returned if no current file.
 char *
 Fname()
-	cpp_buffer *buffer = parse_in.buffer;
+	cpp_buffer *buffer = cpp_file_buffer(&parse_in);
 	CODE:
-	if (buffer == 0) {
-	    RETVAL = "@NONE@";
+	if (buffer && buffer->nominal_fname) {
+	    RETVAL = buffer->nominal_fname;
 	} else {
-	    while (buffer != CPP_NULL_BUFFER(&parse_in)) {
-		if (buffer->nominal_fname) {
-		    RETVAL = buffer->nominal_fname;
-		    break;
-		} else {
-		    buffer = CPP_PREV_BUFFER(buffer);
-		}
-	    }
+	    RETVAL = "@NONE@";
 	}
 	OUTPUT:
 	RETVAL
