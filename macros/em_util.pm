@@ -4,7 +4,8 @@ require 5.003;			# uses prototypes
 require Exporter;
 @ISA = qw(Exporter);
 @EXPORT = qw( is_number type_name count_macro_args formals_array actuals_array
-	      percent2 sum_array make_cum_array sum_parallel_hashes add_newline
+	      percent2 two_significant_digits
+	      sum_array make_cum_array sum_parallel_hashes add_newline
 	      simplify_path_name print_lint_summary);
 
 use checkargs;
@@ -110,6 +111,17 @@ sub percent2 ( $$ ) {
   return (100*$x/$w);
 }
 
+
+# Not currently appropriate for values above 100.
+sub two_significant_digits ( $ )
+{ my ($x) = check_args(1, @_);
+  my $result = sprintf "%6.02g", $x;
+  $result =~ s/^\s+//;
+  # If only one significant digit, fix.
+  $result =~ s/^(\d)$/$1.0/;
+  $result =~ s/^(0\.0*\d)$/${1}0/;
+  return $result;
+}
 
 # sum_array sums all its inputs, typically the elements of an array.
 # Pass in a slice of the array in order to sum that part.

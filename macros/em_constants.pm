@@ -27,7 +27,7 @@ use checkargs;
 
  @mcat_NULL @mcat_CONSTANT @mcat_NONCONSTANT_EXPRESSION
  @mcat_STATEMENT @mcat_SYNTAX @mcat_TYPE
- @mcat_NON_C_CODE @mcat_OTHER @mcat_SYMBOL_UNKNOWN @mcat_FAILURE
+ @mcat_NON_C_CODE @mcat_SYMBOL @mcat_SYMBOL_UNKNOWN @mcat_FAILURE
 
  $propNONE $propASSIGN $propFREE_VAR $propINVOKES_MACRO
  $propPASSES_TYPE_AS_ARG $propUSES_MACRO_AS_TYPE $propUSES_ARG_AS_TYPE
@@ -214,7 +214,7 @@ if ((not defined($categoryname[$catLast]))
 @mcat_SYNTAX = qw( catUNBALANCED catPUNCTUATION );
 @mcat_NON_C_CODE = qw( catCOMMAND_LINE catASSEMBLY_CODE );
 @mcat_SYMBOL_UNKNOWN = qw( catSYMBOL_UNKNOWN );
-@mcat_OTHER = qw( catRESERVED_WORD catFUNCTION_NAME catSYMBOLS);
+@mcat_SYMBOL = qw( catRESERVED_WORD catFUNCTION_NAME catSYMBOLS);
 
 
 

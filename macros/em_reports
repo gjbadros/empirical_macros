@@ -448,7 +448,7 @@ sub output_properties ( )
   while ($i < $cMacrosInTables) {
     ($i++ and next) if ($file_inclusion_method[$mdef_fileno[$i]] ne "FromStdin");
     push @mdef_properties_in_package, $mdef_properties[$i];
-#DBG	print STDERR "Adding $mdef_properties[$i]\n";
+#DBG    print STDERR "Adding $mdef_properties[$i]\n";
     $i++;
   }
   $cMacrosInPackage = $#mdef_properties_in_package + 1;
@@ -469,6 +469,7 @@ sub output_properties ( )
   my $cASSEMBLY_CODE = 0;
   my $cPASTING = 0;
   my $cSTRINGIZE = 0;
+  my $cSELF_REFERENTIAL = 0;
   while ($i < $cMacrosInTables) {
 #	next if MacroNotDefinedInsidePackage($name);  This is wrong -- it would check if
 #        any of the macro name's defs occur outside the package and would end up
@@ -484,6 +485,7 @@ sub output_properties ( )
     $cASSEMBLY_CODE++ if ($mdef_properties[$i] & $propASSEMBLY_CODE);
     $cPASTING++ if ($mdef_properties[$i] & $propPASTING);
     $cSTRINGIZE++ if ($mdef_properties[$i] & $propSTRINGIZE);
+    $cSELF_REFERENTIAL++ if ($mdef_properties[$i] & $propSELF_REFERENTIAL);
     $i++;
   }
   prop_line_for('assign',$cASSIGN,$cMacrosInTables);
@@ -495,6 +497,7 @@ sub output_properties ( )
   prop_line_for('assembly_code',$cASSEMBLY_CODE,$cMacrosInTables);
   prop_line_for('pasting',$cPASTING,$cMacrosInTables);
   prop_line_for('stringize',$cSTRINGIZE,$cMacrosInTables);
+  prop_line_for('self_referential',$cSELF_REFERENTIAL,$cMacrosInTables);
 }
 
 
@@ -503,12 +506,12 @@ sub output_dependences ( )
   if ($opt_v) { print STDOUT "depend..."; }
   select DEPEND;
   # print "===========================================================================\n";
-  print "Macro dependence info\n";
+  print "Macro dependence info (for macros defined in package)\n";
   print "depon is a list of macros this one depends on\n";
   print "depees is a list of macros that depend on this one\n\n";
 
   for my $macro_name (sort keys %macros)
-    { 
+    {
       next if MacroNotDefinedInsidePackage($macro_name);
       print "$macro_name\n";
       if (scalar(@{$macros{$macro_name}}) > 0)
@@ -582,7 +585,7 @@ sub output_dependences ( )
 				 || ($a cmp $b) }
 			     (grep {defined($defs_lines{$_})} keys %macros))
       # At this point we are at the end, not beginning, of an output line
-      { 
+      {
 	next if MacroNotDefinedInsidePackage($macro_name);
 	my $this_product = $defs_lines{$macro_name};
 	## Print one line per product
@@ -1088,10 +1091,22 @@ sub MacroNotDefinedInsidePackage ( $ ) { # returns bool
     my $filename = $files[$fileno];
     if ($file_inclusion_method[$fileno] eq "FromStdin") {
       # it is defined inside the package
+      # print "MacroNotDefinedInsidePackage ($name) => false [due to $files[$fileno]]\n";
       return $false;
     }
   }
   # it isn't defined inside the package
+  if (0)  # This output is for debugging only
+    { my $num_defs = scalar(@{$macros{$name}});
+      print "MacroNotDefinedInsidePackage ($name) => true";
+      if ($num_defs == 0)
+	{ print " [no defs]\n"; }
+      elsif ($num_defs == 1)
+	{ my $mdef_index = $macros{$name}[0];
+	  my $fileno = $mdef_fileno[$mdef_index];
+	  print " [1 def, in file #$fileno = $files[$fileno] $file_inclusion_method[$fileno]]\n"; }
+	    else
+	      { print " [$num_defs defs]\n"; } }
   return $true;
 }
 
@@ -1230,9 +1245,9 @@ $fDebugCmdProcessing && print "@ARGV";
 $dependence_statename = depend_state_file_name($statename);
 if (! -f $dependence_statename)
   { undef $dependence_statename; }
-else { 
+else {
   print STDERR "Reading variables from extra state file...\n" if $opt_v;
-  read_variables($dependence_statename); 
+  read_variables($dependence_statename);
   print STDERR "Done.\n" if $opt_v;
 }
 print STDERR "Reading variables from .state file...\n" if $opt_v;
