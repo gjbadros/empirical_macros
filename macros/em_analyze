@@ -1446,8 +1446,13 @@ sub transitive_closure_dependences ( )
   if ($debug_dependences)
     { check_dependence_invariants(); }
 
+  my $worklist_shifts = 0;
+
   while (scalar(@local_dependence_worklist))
     { my $elt = shift(@local_dependence_worklist);
+      $worklist_shifts++;
+      if ($worklist_shifts % 100 == 0)
+	{ print STDERR "Removed $worklist_shifts worklist elements (last $elt), ", scalar(@local_dependence_worklist), " remaining.\n"; }
       if (!defined($local_dependence_worklist_members{$elt}))
 	{ print "@local_dependence_worklist\n";
 	  print (sort keys %local_dependence_worklist_members); print "\n";

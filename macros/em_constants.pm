@@ -608,6 +608,20 @@ $cpp_include_arg_re = '(?:<(.*)>|\"(.*)\")';
 # we undefine them as they are printed out (the second occurrence
 # that is output will be empty, and that will be the one that
 # em_reports will try to use)
+
+# The following are not used in em_reports.  (To generate this list, pass
+# @state_file_vars's contents to perl-unused-vars in ~mernst/emacs/one-off.el.)
+#   typedefs file_included_by file_inclusion_dependent_macros
+#   file_direct_inclusion_dependent_macros
+#   file_direct_inclusion_dependentons file_includees file_includers
+#   rg_cpp_cmds mncategory mntype mdef_evilness
+#   mdef_direct_inclusion_dependenton mdef_freefuns
+
+# macro_inclusion_dependenton is very large and should perhaps be avoided,
+# along with the following variables -- do the work in em_analyze instead
+# of in em_reports.
+
+
 @state_file_vars = qw(
     %macros %macros_c_undefs %macros_uses
     @mdef_name @mdef_formals @mdef_body
