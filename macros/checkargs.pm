@@ -60,8 +60,7 @@ sub check_args ($@)
       ", got $num_actuals",
       (($num_actuals == 0) ? "" : ": @args"),
       "\n"; }
-  my $index;
-  for $index (0..$#args)
+  for my $index (0..$#args)
     { if (!defined($args[$index]))
 	{ die "$file_arg:$line_arg: function $subname undefined argument ", $index+1, ": @args[0..$index-1]\n"; } }
   return @args;
@@ -79,8 +78,7 @@ sub check_args_range ($$@)
   if (($num_actuals < $min_formals) || ($num_actuals > $max_formals))
     { die "$file_arg:$line_arg: function $subname expected $min_formals-$max_formals arguments, got $num_actuals",
       ($num_actuals == 0) ? "" : ": @args", "\n"; }
-  my $index;
-  for $index (0..$#args)
+  for my $index (0..$#args)
     { if (!defined($args[$index]))
 	{ die "$file_arg:$line_arg: function $subname undefined argument ", $index+1, ": @args[0..$index-1]\n"; } }
   return @args;
@@ -104,8 +102,7 @@ sub check_args_at_least ($@)
       ($min_formals == 1) ? "" : "s",
       ", got $num_actuals",
       ($num_actuals == 0) ? "" : ": @args", "\n"; }
-  my $index;
-  for $index (0..$#args)
+  for my $index (0..$#args)
     { if (!defined($args[$index]))
 	{ warn "$file_arg:$line_arg: function $subname undefined argument ", $index+1, ": @args[0..$index-1]\n"; last; } }
   return @args;
