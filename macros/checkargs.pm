@@ -3,7 +3,7 @@
 package checkargs;
 require 5.000;
 require Exporter;
-@ISA = (Exporter);
+@ISA = qw(Exporter);
 @EXPORT = qw(check_args check_args_range check_args_at_least);
 use strict;
 use Carp;
