@@ -202,17 +202,23 @@ sub simplify_path_name ( $ ) {
 # Not the right place for this, but I want to share it between em_reports
 # and lint-summarize.
 
-sub print_lint_summary ( $$$$$$$$$$$$$;$ )
+sub print_lint_summary ( $$$$$$$$$$$$$$;$ )
 {
   my ($different_arity, $null_body, $newline_body, $unparen_body,
       $swallow_semi, $free_var, $formal_name, $formal_mult_use,
       $formal_adjacent_use, $formal_unparen_use, $formal_modified,
-      $macros, $defs, $packages)
-    = check_args_range(13, 14, @_);
+      $macros, $defs, $names_any_warning, $defs_any_warning, $packages)
+    = check_args_range(15, 16, @_);
 
   print "\n\n";
   print "Excluding libraries, $macros macros defined $defs times"
     , (defined($packages) ? " in $packages packages" : ""), "\n";
+  print "$names_any_warning\t("
+    . sprintf("%2.4f",percent2($names_any_warning,$macros))
+      . "%) any warning by name\n";
+  print "$defs_any_warning\t("
+    . sprintf("%2.4f",percent2($defs_any_warning,$defs))
+      . "%) any warning by def\n";
   print "$different_arity\t("
     . sprintf("%2.4f",percent2($different_arity,$macros))
       . "%) inconsistent arity\n";

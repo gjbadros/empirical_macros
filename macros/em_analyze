@@ -5237,7 +5237,7 @@ sub get_macro_properties ( $ )
   # Not clearly the right place for this...  In fact, certainly wrong.  FIX.
   # This list from GNU C preprocessor manual
   # It's not complete, since #assert introduces new preprocessor commands.
-  if ($body =~ /(^|\n)\#\s*(assert|cpu|define|elif|else|error|ident|if|ifdef|ifndef|import|include|include_next|line|machine|pragma|system|unassert|warning)\b/)
+  if ($body =~ /(^|\n)\s*\#\s*(assert|cpu|define|elif|else|error|ident|if|ifdef|ifndef|import|include|include_next|line|machine|pragma|system|unassert|warning)\b/)
     { evilprint("illegal: preprocessor directive \#$MATCH in macro body:\n    $mdef_body[$index]\n"); }
   if ($body =~ /[^\#]\#[^\#]/)
     { $result |= $propSTRINGIZE; }
@@ -5806,12 +5806,12 @@ sub analyze_for_macro_use ( $ ) {
 
   my $macro_uses_index = $i_usage_code;
   my $cpp_defining_macro_name;
-  # FIXGJB: this might be better to do:
-  # if ( $line =~ s/^\s*\#\s*// ) {
-  # (and drop the following substitution)
-  # because some cpp-s permit leading whitespace
-  if (substr($line,0,1) eq "#") {
-    $line =~ s/^\#\s*//;
+
+  # Old version (but some CPPs permit whitespace before "#"):
+  # if (substr($line,0,1) eq "#") {
+  #   $line =~ s/^\#\s*//;
+
+  if ($line =~ s/^\s*\#\s*//) {
     $macro_uses_index = $i_usage_cond;
     if ($line =~ /^define\s+($identifier_re)/o)
       { $cpp_defining_macro_name = $1;
@@ -5824,12 +5824,12 @@ sub analyze_for_macro_use ( $ ) {
       { return; }
     elsif ($line =~ /^(if(n?def)?|elif)?\b/)
       { my $restofline = $POSTMATCH;
-	print STDERR "Got $line\n";
+	# print STDERR "Got $line\n";
 	if ($line =~ /^ifndef\s+($identifier_re)\s*$/ ||
 	    $line =~ /^if\s+!\s*defined\s*\(\s*($identifier_re)\s*\)\s*$/) {
 	  my $macro_not_defined = $1;
 	  my $simplified_line = peek_fulltoken_line(1);
-	  print STDERR "Got $simplified_line\n";
+	  # print STDERR "Got $simplified_line\n";
 	  if ($simplified_line =~ m/^\s*\#\s*define\s+\Q$macro_not_defined\E[\s\(\n]/) {
 	    my $better_be_endif = peek_fulltoken_line(2);
 	    if ($better_be_endif =~ m/^\s*\#\s*endif\s*$/) {

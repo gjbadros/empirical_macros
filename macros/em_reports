@@ -658,8 +658,10 @@ sub output_lint ( )
   my $old_ofs = $OFS;
   $OFS = "\n    ";
 
-  my $num_macro_defs = 0;
   my $num_macros = 0;
+  my $num_macros_warned = 0;
+  my $num_macro_defs = 0;
+  my $num_macro_defs_warned = 0;
   # The different possible warnings:
   # Per macro name
   my $warn_different_arity = 0;
@@ -680,14 +682,16 @@ sub output_lint ( )
   my $warn_formal_use_side_effect = 0;
 
   for my $macro_name (sort keys %macros)
-    { next if (scalar(@{$macros{$macro_name}}) == 1);
+    { next if MacroNotDefinedInsidePackage($macro_name);
       $num_macros++;
+      my $this_warn_macro_name = $false;
       if (scalar(@{$macros{$macro_name}}) > 1)
 	{ my @args_lengths = map { my $args = $mdef_formals[$_];
 				   $args ? scalar(formals_array($args)) : 0 }
 	                         @{$macros{$macro_name}};
 	  if (scalar(grep { $_ != $args_lengths[0] } @args_lengths) != 0)
 	    { $warn_different_arity++;
+	      $this_warn_macro_name = $true;
 	      print LINT "macro $macro_name: inconsistent arity @args_lengths\n";
 	    } }
       for my $i (@{$macros{$macro_name}})
@@ -886,10 +890,15 @@ sub output_lint ( )
 		  $warn_free_var++; }
 
 	      if (scalar(@complaints) > 0)
-		{ print LINT "$files[$mdef_fileno[$i]]:$mdef_line[$i]:\n        #define $macro_name$args $mdef_body[$i]", @complaints;
-		    # Separate print statement so we don't get $OFS before it
-		    print LINT "\n"; }
-	    } } }
+		{ print LINT "$files[$mdef_fileno[$i]]:$mdef_line[$i]:\n        \#define $macro_name$args $mdef_body[$i]", @complaints;
+		  # Separate print statement so we don't get $OFS before it
+		  print LINT "\n";
+		  $num_macro_defs_warned++;
+		  $this_warn_macro_name = $true; }
+	    } }
+    if ($this_warn_macro_name)
+      { $num_macros_warned++; }
+    }
 
   # Note that $num_macro_defs != $cMacrosInTables because we omit FromInclude<>
   if ($num_macro_defs > 0)
@@ -900,7 +909,8 @@ sub output_lint ( )
 			 $warn_formal_use_adjacent,
 			 $warn_formal_use_unparen,
 			 $warn_formal_use_side_effect,
-			 $num_macros, $num_macro_defs); }
+			 $num_macros, $num_macro_defs,
+			 $num_macros_warned, $num_macro_defs_warned); }
 
   $OFS = $old_ofs;
 }
