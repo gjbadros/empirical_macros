@@ -27,6 +27,10 @@ my $macro_nestings_deep = 0;
 sub handle_directive {
   my ($directive) = @_;
 #  print STDERR "In handle_directive for $directive\n";
+  if ($directive =~ m/^line/) {
+    print STDERR "Ignoring #line directive\n";
+    return 0;
+  }
   return 1;
 }
 
