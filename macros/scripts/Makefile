@@ -70,12 +70,13 @@ TEXT_TABLES :=	tbl-package-sizes \
 		tbl-expansion-dependences-by-line \
 		tbl-any-dependences-by-line \
 		tbl-inclusion-dependences-by-macro \
-		tbl-expansion-dependences-by-macro
+		tbl-expansion-dependences-by-macro \
+		tbl-def-categories \
+		tbl-directives-breakdown
 
-RAW_TABLES := tbl-directives-hist tbl-directives-breakdown \
-		tbl-def-categories tbl-subset-categories
+RAW_TABLES := tbl-directives-hist tbl-subset-categories
 
-LATEX_TABLES :=	tbl-def-categories.tex tbl-subset-categories.tex
+LATEX_TABLES :=	tbl-subset-categories.tex
 
 ALL_TABLES := $(TEXT_TABLES) $(RAW_TABLES) $(LATEX_TABLES)
 
@@ -121,7 +122,7 @@ tbl-package-sizes: $(STAT)
 	macros-make-package-sizes-tbl-from-stat $^ > $@
 
 tbl-package-sizes.tex: tbl-package-sizes package_num_files
-	(echo "Package	Version	Physical lines	NCNB lines	No. Files	Description"; join -t'	' $(COMMON_DIR)/package_versions tbl-package-sizes | join -t'	' - package_num_files | join -t'	' - $(COMMON_DIR)/package_descriptions ) | latexify > $@
+	(echo "Package	Version	Physical lines	NCNB lines	Files	Description"; join -t'	' $(COMMON_DIR)/package_versions tbl-package-sizes | join -t'	' - package_num_files | join -t'	' - $(COMMON_DIR)/package_descriptions ) | latexify > $@
 
 tbl-def-frequency: $(DEFCUM)
 	macros-make-tbl-frequsedef-from-cum $^ > $@
