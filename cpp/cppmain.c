@@ -223,6 +223,8 @@ main (int argc, char **argv, char **env)
   parse_in.data = opts;
 
   init_parse_options (opts);
+
+  /* FIXGJB: the argument handling needs work -- localize, or generalize! */
   argi += cppmain_handle_options (&parse_in, argc - argi, argv + argi);
 
   argi += cpp_handle_options (&parse_in, argc - argi , argv + argi);
