@@ -1,3 +1,5 @@
+o Getting the vars at the current scope, for avoiding name conflicts
+
 o Is macro always expanded into same grammar tokens (e.g., is it always
 used as type identifier? 
 
