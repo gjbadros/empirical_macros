@@ -1,7 +1,7 @@
 \label{desc:properties}
 
 \begin{description}
-\item[Free variables]
+\item[Free variables]\label{page:freevar}
   The macro body uses as a subexpression (that is, applies an operator or
   function to) a symbol which is not a formal argument, a variable defined
   in the macro body, or a function, macro, typedef, or reserved word.  Such
@@ -18,22 +18,19 @@
   functions or macros that might have side effect, nor did we discount side
   effects to variables local to the macro body.  
   
-  Macros containing assignment operators have potentially unexpected
-  results (doubly so for those with no arguments, whose invocations look
-  like variable uses, not function calls).  A macro argument that is
-  assigned to is similar to a pass-by-reference function argument and need
-  only be noted in the macro's documentation.  A macro that assigns a
-  global variable also presents no difficulties in understanding or
-  translation into a C++ inline function.  Assignment to other variables
-  free in the macro body demands that such a variable exist wherever the
-  macro is invoked, and assigns to different variables at different
-  invocations.\footnote{[[To related work?: By contrast, LCLint considers
-    assignment to a macro argument dangerous but does not appear to check
-    for assignments to local variables.~\cite{Evans:LCLint}]]} Such a macro
-  implements a restricted form of dynamic scoping by capturing the instance
-  of a variable visible at the point of macro invocation.
-
-[[IMPORTANT:  Should this even be here?  Assignment isn't extra-linguistic!]]
+  Assignment is not extra-linguistic per se, but macros containing
+  assignment operators have potentially unexpected results (doubly so for
+  those with no arguments, whose invocations look like variable uses, not
+  function calls), some of which lie outside the scope of C\@.  A macro
+  argument that is assigned to is similar to a pass-by-reference function
+  argument and need only be noted in the macro's documentation.  A macro
+  that assigns a global variable also presents no difficulties in
+  understanding or translation into a C++ inline function.  Assignment to
+  other variables free in the macro body demands that such a variable exist
+  wherever the macro is invoked, and assigns to different variables at
+  different invocations.  Such a macro implements a restricted form of
+  dynamic scoping by capturing the instance of a variable visible at the
+  point of macro invocation.
 
 \item[Use macro as type]
   In this macro's body, the result of another macro invocation is used as a

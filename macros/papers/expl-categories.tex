@@ -105,7 +105,7 @@ understand, and cannot be eliminated via straightforward translation
   for \verb|BEGIN_GC_PROTECT| and \verb|END_GC_PROTECT|.
   Macros in this category are inexpressible in the underlying programming
   language, but depend on the preprocessor's manipulation of uninterpreted
-  token streams; see also section~\ref{sec:extralinguistic}.
+  token streams; see also section~\ref{sec:extra-linguistic}.
 
 %%  mcat_SYMBOL: 870
 %%    1.7%  reserved_word (15)
@@ -146,22 +146,23 @@ understand, and cannot be eliminated via straightforward translation
 %%    90%  command_line_arguments (574)
 %%    10%  assembly_code (65)
 % @mcat_NON_C_CODE = qw( catCOMMAND_LINE catASSEMBLY_CODE );
-\item[Not C code]  The predominant use of such macros is for 
-  filenames and operating system command lines (together, 90\% of this
-  category) and assembly code (the remaining 10\%).  The former usually
-  appear in a file which is used by the preprocessor when run over both
-  code and Makefiles.\footnote{Cpp's specification states that its input
-    should be syntactic C code, so it can avoid performing replacements in
-    comments and string constants.  Cpp may not behave as expected when its
-    input is not C, so it is good style to avoid such uses.  In practice,
-    such uses have forced many C preprocessors to make fewer assumptions
-    about their input than they otherwise might be able to.}  Our
-  heuristics misclassify some such macros\,---\,after all, {\tt \#define
-  \verb|SYSDEP_CFLAGS| -43 -w} creates a perfectly valid C expression.
-(See the ``expression plus not C code'' line at 0.14\% in
-figure~\ref{fig:subset-categories}.)  The assembly code component includes
-only macros whose expansion is assembly code, not all expressions and
-statements that contain snippets of assembly code.
+\item[Not C code]\label{page:not-c-code}
+  The predominant use of such macros is for filenames and operating system
+  command lines (together, 90\% of this category) and assembly code (the
+  remaining 10\%).  The former usually appear in a file which is used by
+  the preprocessor when run over both code and Makefiles.\footnote{Cpp's
+    specification states that its input should be syntactic C code, so it
+    can avoid performing replacements in comments and string constants.
+    Cpp may not behave as expected when its input is not C, so it is good
+    style to avoid such uses.  In practice, such uses have forced many C
+    preprocessors to make fewer assumptions about their input than they
+    otherwise might be able to.}  Our heuristics misclassify some such
+  macros\,---\,after all, {\tt \#define \verb|SYSDEP_CFLAGS| -43 -w}
+  creates a perfectly valid C expression.  (See the ``expression plus not C
+  code'' line at 0.14\% in figure~\ref{fig:subset-categories}.)  The
+  assembly code component includes only macros whose expansion is assembly
+  code, not all expressions and statements that contain snippets of
+  assembly code.
 
 %%  mcat_FAILURE: 802
 %%    0.00%  uncategorized (0)

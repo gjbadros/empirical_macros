@@ -2,6 +2,7 @@
 \documentclass[10pt]{article}
 \usepackage{epsfig}
 \usepackage{dcolumn}
+\usepackage{alltt}
 
 \def\numpackages{30}
 \def\numlines{2 million}
@@ -617,19 +618,25 @@ and brevity from the packages studied.
 
 
 \subsection{Extra-linguistic capabilities}
-\label{sec:extralinguistic}
+\label{sec:extra-linguistic}
 
 The C preprocessor has capabilities outside the C programming language;
-indeed, this is a primary motivation for using Cpp.  Such constructs
-can present special challenges to program understanding, and especially to
+indeed, this is a primary motivation for using Cpp.  Such constructs can
+present special challenges to program understanding, and especially to
 elimination of the preprocessor by translation into C or C++.  This section
 presents a list of such features and evaluates their frequency of
-appearance, both individually and in combination,  in our test suite.
+appearance, both individually and in combination, in our test suite.
 
-[[Since types are not first-class in C, they may not be passed to functions
-or returned as results.]]
-
-[[The second paragraph should be a summary, hitting the high points.]]
+We had anticipated problems dealing with macros that use stringization and
+pasting, the two explicit extra-linguistic features of Cpp.  These macros
+appear in less than one tenth of one percent of all macro definitions.  Far
+more prevalent is exploitation of Cpp's lack of structure to effect
+mechanisms not available in C\@.  In particular, the fact that Cpp's inputs
+and outputs are uninterpreted token streams with no constraints on their
+structure permits Cpp to perform arbitrary transformations using
+non-first-class and partial syntactic constructs.  Macros that manipulate
+types or partial types are moderately common and problematic for program
+understanding tools.
 
 \begin{figure}
   {\small\centerline{\input{tbl-subset-properties.tex}}}
@@ -648,97 +655,91 @@ or returned as results.]]
   \label{fig:subset-properties}
 \end{figure}
 
+One in six macros (16.8\%) contains an extra-linguistic construct or a
+construct that can be used by Cpp to achieve an extra-linguistic effect.
+Figure~\ref{fig:subset-properties} breaks down these macros by the
+constructs they contain.  In addition to showing the prevalence of each
+construct, the figure shows which ones occur together.  The following list
+describes in detail the the constructs appearing in
+figure~\ref{fig:subset-properties}.
+
 {\input{expl-properties.tex}}
 
-
-The expected, specifically supported extra-linguistic features
-(stringization, pasting) is neither the most prevalent nor the hardest to
-comprehend:  it's the other uses based on the lack of structure in inputs
-and outputs (both mere token streams), which enables arbitrary
-transformations that programmers exploit in many ways.
-
-  That only [[0.2\%]] of macros exploit
-stringization or pasting, the only truly extra-linguistic capabilities in
-the C preprocessor, is encouraging.
-
-        About one in six macros (16.8\%) falls into at least one category
-
-        We show an exact breakdown by subsets because, if we report by
-          property, the numbers don't add to 100\%: sometimes a macro has
-          multiple properties.
-
-        Not as much use of stringization, pasting as we anticipated -- we
-          had been particularly worried about them.
-
-        The uses of types are going to be problematic.
-
-[[Move this earlier?]]
-[[These numbers aren't right any more -- not 10\%.]]
-One tenth of expression macros in our study use assignment operators, which
-have potentially unexpected results.  A macro argument that is assigned to
-is similar to a pass-by-reference function argument and need only be noted in the
-macro's documentation.  A macro that assigns a global variable also
-presents no difficulties in understanding or translation into a C++
-inline function.
-Assignment to a local variable that is free in the macro body, however,
-demands that such a variable exist wherever the macro is invoked, and
-assigns to different variables at different invocations.\footnote{By
-  contrast, LCLint~\cite{Evans:LCLint} considers assignment to a macro
-  argument dangerous but does not appear to check for assignments to local
-  variables.} Such a macro implements a restricted form
-of dynamic scoping by capturing the instance of a variable visible at
-the point of macro invocation.
 
 
 \subsection{CPP pitfalls:  macro lint}
 \label{sec:lint}
 
-We identified a number of potentially dangerous programming
-constructs\,---\, those which are legal (syntactically valid) and may well
-be intentional, but which also might cause a macro not to behave as
-anticipated (and not to behave like an ordinary function).  Nearly one
-fourth of all definitions triggered at least one such warning; and across
-macro names, almost one fourth contain a definition which triggers a
-warning.
+Cpp gives rise to syntactically valid but potentially dangerous programming
+constructs which might cause a macro not to behave as anticipated (and not
+to behave like an ordinary function).  Unlike the extra-linguistic
+constructs discussed in section~\ref{sec:extra-linguistic}, these are more
+likely to represent bugs than to use Cpp mechanisms to achieve results
+outside the abilities of the C language.  However, some of the potential
+bugs (such as multiple execution of an actual parameter's [[word choice:
+I'm looking for the parallel of ``formal parameter'']] side effects) do
+result from differences between C's standard execution model and the
+macro expansion performed by Cpp.
 
-Because it flags such errors, our tool can be used as a sort of macro
-lint.  A more polished implementation would permit each type of warning to
-be enabled and disabled individually.
+Because it flags such errors, our tool can be used as a sort of macro lint.
+(A more polished implementation would permit each warning message to be
+enabled and disabled individually.)
 
 \begin{figure}
   {\small\centerline{\input{tbl-lint.tex}}}
   
   \caption{Macro lint.  This table indicates the frequency of occurrence of
-    various error-prone constructs in macro bodies.  Except where
-    specifically noted, the percentages are with respect to all macro
-    definitions rather than by name.}
+    error-prone constructs in macro bodies.  Except where specifically
+    noted, the percentages refer to the number of macro definitions.  Macro
+    definitions falling in the ``not C code'' category (see
+    page~\pageref{page:not-c-code}) are omitted.}
   \label{fig:macro-lint}
 \end{figure}
 
+One fourth of all macro definitions triggered at least one such warning,
+and one fourth of macro names have a definition which triggers a warning.
+Figure~\ref{fig:macro-lint} further breaks down the warnings.  Most of
+these represent legitimate problems with the way macros are written and
+represent bugs waiting to happen.  If they are not currently a problem,
+that is because their present uses happen not to trigger the problematic
+conditions, as checks of some of the macros indicated.  Future uses,
+especially by programmers not familiar with the (generally undocumented)
+caveats relating to use of each macro, may well give rise to these dormant
+errors.  We were surprised that more macros did not take simple precautions
+such as preventive parenthesization or wrapping macro bodies in {\tt do
+{\rm \ldots} while (0)}.
+
+The following further describes the errors collected in
+figure~\ref{fig:macro-lint}.
+
 {\input{expl-lint.tex}}
 
+In addition to these errors, our tool discovered a number of additional
+errors.  There were some illegal constructs, such as {\tt \#module} (which
+is not a meaningful Cpp directive) and {\tt \#undef
+\verb|GO_IF_INDEXABLE_BASE|(X, ADDR)} ({\tt \#undef} takes a macro name,
+not the arguments as they appeared in the {\tt \#define} directive).
+  
+Use of {\tt /**/}-style pasting is not uncommon, especially in {\tt CONCAT}
+macros which provide portability across older and newer versions of the
+preprocessor.  Pre-ANSI versions of Cpp merged adjacent symbols, and the
+symbols are juxtaposed by placing a comment, which Cpp removes, between
+them.  This construct does not perform merging in newer implementations,
+so users are warned of its appearance.
 
+A number of files in our test suite begin or end inside a brace scope or an
+{\tt \#if} scope.  Some of these were intentional\,---\,as in files meant
+to be included around other code.  Others are bugs (such as, in one case, a
+failure to close a /* */ style comment) which were apparently not
+discovered because testing did not build the package under all possible
+circumstances.
 
+Our tool also warns about a number of stylistic mistakes, such as
+unexpected indentation of forms (or lack of indentation where it is
+expected).  These warnings are fairly frequent in machine-generated files
+(such as lex and yacc output), but often indicate problems (in readability
+if not in logic) elsewhere.
 
-The lint tables exclude all non-C-code; also all definitions not in the package.
-
-        We didn't examine every use.  Besides, the point isn't just the
-          current uses, but also future uses:  we want these to be easy for
-          programmers to use.
-
-        We also discovered a number of files which begin or end inside a
-          brace scope or an {\tt \#if} scope.  Some of these were intentional, while
-          others are bugs (such as, in one case, a failure to close a /* */
-          style comment) which were apparently not discovered because testing
-          did not build the package under all possible circumstances.
-
-          Use of old /**/-style pasting.
-
-        Also warnings for unexpected indentation and more.
-
-        Also some bad constructs:
-          {\tt \#undef \verb|GO_IF_INDEXABLE_BASE|(X, ADDR)}
-          {\tt \#module}
 
 \subsection{Multiple definitions}
 
@@ -1217,7 +1218,8 @@ Mention some dependence types from notes ``must and may dependences'' section.
 \caption{dep-byline for 28 packages.
 The log scale is shifted by unity in order to place 0 on the scale; that
 is, we added 1 to each of the x axis values, before plotting, then
-relabeled ``1'' as ``0''.}
+relabeled ``1'' as ``0''.
+[[Make this figure smaller; doesn't deserve a full page.]]}
 \label{fig:dep-byline}
 \end{figure}
 
@@ -1391,6 +1393,10 @@ Our effort not only categorizes problems, but it also determines the
 frequency of appearance of those problems and discovers other idiosyncratic
 uses.
 
+The Lint program will warn about empty statements, constants in conditional
+context, and a few other things.  But it's pretty inadequate.  This mostly
+has to do with problems after expansion.
+
 A number of tools check whether specific C programs satisfy particular
 constraints.  The lint program checker [[reference]]
 checks for potentially problematic uses of C\@.  
@@ -1400,6 +1406,12 @@ The implementation of lint
 is complicated by the fact that it tries to replicate significant functions
 of both the C compiler and the preprocessor.
 
+
+Greg:  describe LCLint methodology and results.  Say exactly what you did
+(ie, how hard you tried), and what the results were.  Also, that you tried
+on only 20, not all 30, packages, which doesn't include the biggest ones.
+
+
 LCLint performs many of lint's checks and also
 allows the programmer to add annotations which enable additional
 checks~\cite{Evans-pldi96,Evans-fse94}.
@@ -1407,26 +1419,34 @@ LCLint optionally checks function-like
 macros\,---\,that is, those which take arguments\,---\,for
 macro arguments on the left hand side of assignments, for statements
 playing the role of expressions, and for consistent return types.
-%\begin{quote}
-%$\ldots$ a parameter to a macro may not be used as the left hand side
-%of an assignment expression $\ldots$, a macro definition must be
-%syntactically equivalent to a statement when it is invoked followed by
-%a semicolon $\ldots$, the type of the macro body must match the return
-%type of the corresponding function $\ldots$\footnote{From Section 8 of
-%David Evans's LCLint User's Guide, Version 2.2 (August 1996); larch-www.lcs.mit.edu:8001/\discretionary{}{}{}larch/\discretionary{}{}{}lclint/\discretionary{}{}{}guide/\discretionary{}{}{}guide.html}
-%[FIX: That footnote should really be a reference instead.]
-%\end{quote}
-%[Fix: that quotation is really easy to nitpick:
-% 1) assignment parameters is fine (just turn into a reference argument) but
-%    assignment of non-parameters that aren't at global scope is quite bad.
-% 2) in x=foo(); we do NOT want foo() to be a statement
-% 3) a macro doesn't have a single type, but may have many polymorphic types
-%Should we mention these things?  I don't want to seem nitpicky or petty.]
 LCLint's approach is prescriptive: programmers are encouraged not to use
 constructs that might be dangerous, or to change code that contains such
 constructs.  We are more interested in analyzing, describing, and
 automatically removing such uses so that tools can better process existing
 code without requiring human interaction or producing misleading results.
+
+LCLint
+considers assignment to a macro argument dangerous but does not appear
+to check for assignments to local variables.~\cite[\section 8]{Evans:LCLint}
+[[Should we mention these things?  I don't want to seem nitpicky or petty, so
+if we mention this, mention them as differences, not as things LCLint does
+wrong.
+\begin{quote}
+$\ldots$ a parameter to a macro may not be used as the left hand side
+of an assignment expression $\ldots$, a macro definition must be
+syntactically equivalent to a statement when it is invoked followed by
+%a semicolon $\ldots$, the type of the macro body must match the return
+type of the corresponding function $\ldots$~\cite[\section 8]{Evans:LCLint}
+\end{quote}
+That quotation is really easy to nitpick:
+\begin{enumerate}
+ \item assignment parameters is fine (just turn into a reference argument) but
+    assignment of non-parameters that aren't at global scope is quite bad.
+ \item in x=foo(); we do NOT want foo() to be a statement
+ \item a macro doesn't have a single type, but may have many polymorphic types
+\end{enumerate}
+]]
+
 
 %% FIX: If we could also list the platforms for which each can compile,
 %% that would be great, but I doubt the benefit is worth the effort for now
@@ -1446,14 +1466,6 @@ call {\tt \#define}d functions and editors that support viewing one
 particular configuration of the code.
 
 
-The Lint program will warn about empty statements, constants in conditional
-context, and a few other things.  But it's pretty inadequate.  This mostly
-has to do with problems after expansion.
-
-
-Greg:  describe LCLint methodology and results.  Say exactly what you did
-(ie, how hard you tried), and what the results were.  Also, that you tried
-on only 20, not all 30, packages, which doesn't include the biggest ones.
 
 
 \section{Conclusions}
@@ -1638,6 +1650,9 @@ Variations among packages:
   [[We didn't analyze whether the free variables are globals or locals,
           which could substantially impact understanding/translation.]]
 
+        We didn't examine every use.  Besides, the point isn't just the
+          current uses, but also future uses:  we want these to be easy for
+          programmers to use.
 
 
 % Not really right:  Don't want the ``References'' section head to be small.
