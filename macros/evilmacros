@@ -52,16 +52,31 @@
 #	(What % of interesting macros are such?)
 #  Perhaps extract some of the utility code into a library or separate file.
 #  Check for/recognize template-like macros (that take a type as an argument).
+#  Keep track of the current conditional compilation constraints
+#  Look for __XXX__ in the files
 
 
+###########################################################################
+### Constants
+###
+
+$OBSOLETE = 1;
+$DANGER = 2;
+$EVIL = 3;
+$ILLEGAL = 4;
+
 ###########################################################################
 ### Variables
 ###
 
 ## Integers:
-$lines = 0;		 # count of lines; line continuation doesn't increment
+$lines = 0;			# count of lines; line continuation doesn't increment
 $macrodefs = 0;
-$cpp_cmds = 0;		 # total preprocessor commands, including macro defs
+$cEvil = 0;			# count of number of evil macros
+$cObsoleted = 0;		# count of number of obsoleted macros
+$cDanger = 0;			# count of number of dangerous macros
+$cIllegal = 0;			# count of number of illegal macros
+$cpp_cmds = 0;			# total preprocessor commands, including macro defs
 ## Strings: 
 $currentfile = 0;
 $mname = 0;
@@ -111,6 +126,20 @@ $cWarning = 0;
     "warning" => \$cWarning,
   );
 
+## Categorizations of #define-s
+# Maybe keep a list of these, too, @lNullDefine, etc.
+$cNullDefine = 0;		# e.g. #define DEBUG
+$cSimpleConstantWithDefault = 0; # e.g. #ifndef LEN\n#define LEN 64
+$cSimpleConstant = 0;	        # e.g. #define NULL 0
+$cSimpleStrConstant = 0;        # e.g. #define font "6x13"
+$cSimpleExpression = 0;         # e.g. #define COUNT (1024*256)+5
+$cCastedConstant = 0;         # e.g. #define Meta ((char) 0x83)
+# cPreventMI is just a null DEFINE with #ifndef just prior
+$cPreventMI = 0;		# e.g. #ifndef BLAH, #define BLAH
+$cWithNullArgs=0;               # e.g. #define getch()
+$cWithArgs=0;                   # e.g. #define sqr(x) ((x)*(x))
+$cUncategorized=0;
+
 
 ###########################################################################
 ### Usage
@@ -125,6 +154,8 @@ sub usage {
 -D dump the names of the macros upon conclusion
 -s suppress the summary statistics
 -S show the per directive statistics
+-c Show categorizations
+-e [file] Send evil macros to file instead of stdout
 ";
 }
 
@@ -134,14 +165,17 @@ sub usage {
 ###
 
 use Getopt::Std;
-use vars qw( $opt_i $opt_h $opt_v $opt_D $opt_s $opt_S );
+use vars qw( $opt_i $opt_h $opt_v $opt_D $opt_s $opt_S $opt_c $opt_e);
 $fDebugCmdProcessing = 0;
+$fDebugCommentRemoval = 0;
 
 # use strict;
 # use English;
 
-getopts('ihvDsS');
+getopts('ihvDsSce:');
 usage() if ($opt_h);
+
+$fShowCategorization = $opt_c;
 
 if ($opt_i) {
   while (<STDIN>) {
@@ -149,6 +183,13 @@ if ($opt_i) {
     chop ($_);
     push @ARGV, $_;
   }
+}
+
+if ($opt_e) {
+  open(EVIL,">$opt_e") || die "Failed opening $opt_e";
+}
+else {
+  open(EVIL,">-") || die "Failed opening stdout!";
 }
 
 $fDebugCmdProcessing && print "@ARGV";
@@ -182,30 +223,46 @@ foreach $file (@ARGV)
 	  $macros{$mname}[0] = $margs;
 	  $macros{$mname}[1] = $mdef;
 
+	  categorizeMacro($mname,$margs,$mdef);
+
 	  # Nothing to check if this is just making the macro defined w/o a body.
-	  if (defined($mdef))
-	    { checkmacrobody($mdef); }
+	  if (defined($mdef) && ($flags = checkmacrobody($mdef)) != 0) {
+	    $cEvil++ if $flags & $EVIL;
+	    $cIllegal++ if $flags & $ILLEGAL;
+	    $cObsoleted++ if $flags & $OBSOLETE;
+	    $cDanger++ if $flags & $DANGER;
+	  }
 	}
       elsif ($line =~ m/^\#[ \t]*([^ ]*)\b/) {
 	$ {$macroCommands{$1}}++ if exists $macroCommands{$1}; 
 	$cpp_cmds++;
       }
     }
+  continue {
+    $lastline = $line;
+  }
   close(INPUT);
 }
 if ($lines == 0) {
   # This is useful for testing, I guess.
-  print "No lines read! Perhaps you meant to use the -i option?\n"; 
+  print STDERR "No lines read! Perhaps you meant to use the -i option?\n"; 
 } else {
   if ($opt_S) {
+    # Dump statistics on frequencies of directives
     while ( ($h,$v) = each(%macroCommands) ) {
       printf "$h = $$v (%2.2f%%)\n", (100*$$v/$lines);
     }
   }
 
   if (!$opt_s) {
-    printf "$macrodefs define-s (%2.2f%) , $cpp_cmds other (%2.2f%) , $lines lines (%2.2f%) , %d files\n", 100*$macrodefs/$lines, 100*$cpp_cmds/$lines, 
+    printf "DIRECTIVES: $macrodefs define-s (%2.2f%) , $cpp_cmds other (%2.2f%) , $lines lines (%2.2f%) , %d files\n", 
+    100*$macrodefs/$lines, 100*$cpp_cmds/$lines, 
       100*($macrodefs+$cpp_cmds)/$lines, $#ARGV+1;
+    printf "EVILSTATS: $cObsoleted obsoleted (%2.2f%) , $cDanger dangerous (%2.2f%) , $cEvil evil (%2.2f%) , $cIllegal illegal (%2.2f%)\n",
+    100*$cObsoleted/$macrodefs, 100*$cDanger/$macrodefs, 100*$cEvil/$macrodefs,
+    100*$cIllegal/$macrodefs;
+    print "# NullDefine PreventMI SimpleConstant SimpleConstantWithDefault SimpleStrConstant CastedConstant SimpleExpression WithNullArgs WithArgs Uncategorized:\n";
+    print "CATEGORIZATION: $cNullDefine $cPreventMI $cSimpleConstant $cSimpleConstantWithDefault $cSimpleStrConstant $cCastedConstant $cSimpleExpression $cWithNullArgs $cWithArgs $cUncategorized\n";
   }
 
   # -D = dump the defines
@@ -240,7 +297,7 @@ sub getline
       while ($result =~ m/\\$/)
 	{ # block to localize match data
 	  { if ($result =~ m/\\\Z(?!\n)/)
-	      { print "$currentfile:$.: evil: file ends with backslash (no newline)\n"; } }
+	      { print EVIL "$currentfile:$.: evil: file ends with backslash (no newline)\n"; } }
 	  $result = $`;		# remove backslash and possibly newline
 	  my $nextline;
 	  if ($nextline = <INPUT>)
@@ -249,12 +306,12 @@ sub getline
 	      # The appendlines trims trailing spaces, prettying the message.
 	      if ($nextline =~ m/^[ \t]*$/)
 		{ # No \n at end: $result ends in a newline
-		  print "$currentfile:$.: dangerous: blank line follows continuation character:\n    $result"; }
+		  print EVIL "$currentfile:$.: dangerous: blank line follows continuation character:\n    $result"; }
 	    }
 	  else
 	    # Already removed backslash and newline from result.
 	    # (Should I add them back?)
-	    { print "$currentfile:$.: dangerous: file ends with continuation character:\n    $result\n"; } }
+	    { print EVIL "$currentfile:$.: dangerous: file ends with continuation character:\n    $result\n"; } }
 
       while ($incomment)
 	{ my $nextline;
@@ -263,7 +320,7 @@ sub getline
 	      updateinvars($nextline);
 	      $result = appendlines($result, $nextline); }
 	  else
-	    { print "$currentfile:$.: dangerous: file ends in comment:\n    $result";
+	    { print EVIL "$currentfile:$.: dangerous: file ends in comment:\n    $result";
 	      $incomment = 0; } }
 
       # Not "while ($instring) ..." because processing continuation lines
@@ -275,7 +332,7 @@ sub getline
 	      updateinvars($nextline);
 	      $result = appendlines($result, $nextline); }
 	  else
-	    { print "$currentfile:$.: dangerous: file ends in string:\n    $result\n";
+	    { print EVIL "$currentfile:$.: dangerous: file ends in string:\n    $result\n";
 	      $instring = 0; } }
     }
 
@@ -358,14 +415,108 @@ sub macroparse
   @result;
 }
 
+# FIsNumConst(string)  returns 1 iff string matches a numeric const regexp
+sub FIsNumConst {
+  my $str = $_[0];
+  if ($str =~ /^\(?-?\d+\.?\d*\)?$/ || # decimal 2.
+      $str =~ /^\(?-?\d*\.?\d+\)?$/ || # fraction .2
+      $str =~ /^0x[\d|a-f|A-F]+$/ ||   # hex
+	 $str =~ /^-?\d+L$/) {         # trailing L for long
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
+# Update globals $cXXXX, @lXXXX based on what we can tell about
+# this macro
+# FIX: need to update @l vars
+# Uses $lastline global, too
+sub categorizeMacro
+{ (my $name, my $args, my $fullbody) = @_;
+  if ($fullbody =~ m!^\s*(.*?)\s*(/\*.*\*/\s*)*(//.*)?$!) {
+    # $1 matches non-commented part w/ leading,trailing ws removed
+    $body = $1;
+  } else {
+    $body = $fullbody;
+  }
+  $fDebugCommentRemoval && print STDERR "fullbody = '$fullbody'\nbody = '$body'\n";
+  if (defined($args)) {
+    if ($args =~ /\(\w*\)/) {
+      $cWithNullArgs++;
+      $fShowCategorization && 
+	print "$currentfile:$.: WithNullArgs: $name $args $fullbody\n";
+    } else {
+      $cWithArgs++;
+      $fShowCategorization && 
+	print "$currentfile:$.: WithRealArgs: $name $args $fullbody\n";
+    }
+  }
+  # Must not have had args
+  elsif (!defined($body) || $body eq "") {
+    if ($lastline =~ /^\#[ \t]*ifndef[ \t]* $name$/) {
+      $cPreventMI++;
+      $fShowCategorization && 
+	print "$currentfile:$.: PreventMI: $name\n";
+    }
+    else {
+      $cNullDefine++;
+      $fShowCategorization && 
+	print "$currentfile:$.: NullDefine: $name\n";
+    }
+  }
+  # Must have a body
+  elsif ($body =~ /^\".*\"$/) {
+    $cSimpleStrConstant++;
+    $fShowCategorization && 
+      print "$currentfile:$.: SimpleStrConstant: $name $fullbody\n";
+  }
+  elsif ($body =~ /^\(\s*\(\w+(\s+\**)?\)\s*(.*)\)$/ && FIsNumConst($2)) {
+      $cCastedConstant++;
+      $fShowCategorization && 
+	print "$currentfile:$.: CastedConstant: $name $fullbody\n";
+    }    
+  #FIX: these regexps could be better
+  elsif (FIsNumConst($body) ||
+	 $body =~ /^'.'$/) {	           # single character constant 'g'
+    # is it just a number, possibly like "(4.566)" or "7" or "0x5FaB" or 'g'
+    if ($lastline =~ /^\#[ \t]*ifndef[ \t]* $name$/) {
+      $cSimpleConstantWithDefault++;
+      $fShowCategorization && 
+	print "$currentfile:$.: SimpleConstantWithDefault: $name $fullbody\n";
+    }
+    else {
+      $cSimpleConstant++;
+      $fShowCategorization && 
+	print "$currentfile:$.: SimpleConstant: $name $fullbody\n";
+    }
+  }
+  elsif ($body =~ /^(L|x|\d|\(|\s|\)|\<|\>|\+|\-|\=|\*|\||\&|\%|\!)*$/) {
+    # FIX: this regexp is lame-- L,x needed for 0x80 << 3 or 1L << 25
+    # is it a numeric expression?
+    $cSimpleExpression++;
+    $fShowCategorization && 
+      print "$currentfile:$.: SimpleExpression: $name $fullbody\n";
+  }
+  else {
+    $cUncategorized++;
+    $fShowCategorization && 
+      print "$currentfile:$.: Uncategorized: $name $fullbody\n";
+  }
+}
+
 # arguments are in @_, that is $_[0], $_[1], etc.
 sub checkmacrodef
 { 
 }
  
 # Should also give file, line in error message.
+# returns zero if it was ok
+# otherwise $EVIL $DANGER $OBSOLETE $ILLEGAL
+# (each individual bits)
 sub checkmacrobody
 { my $body = $_[0];
+  my $result = 0;
   if ($#_ != 0) { die "Wrong number of arguments to checkmacrobody."; }
   # print "checkmacrobody: $body\n";
   my $indquote = 0;
@@ -380,13 +531,15 @@ sub checkmacrobody
         { push(@nesting,$match); }
       elsif ($match =~ /[\]\)\}]/)
 	{ if ($#nesting == -1)
-	    { print "$currentfile:$.: dangerous: close $match without open in $mname\n    $_[0]\n"; }
+	    { $result |= $DANGER;
+	      print EVIL "$currentfile:$.: dangerous: close $match without open in $mname\n    $_[0]\n"; }
 	  else
 	    { my $popped = pop(@nesting);
 	      if ((($match eq "\]") && ($popped ne "\["))
 		  || (($match eq "\)") && ($popped ne "\("))
 		  || (($match eq "\}") && ($popped ne "\{")))
-		{ print "$currentfile:$.: dangerous: $popped matched by $match in $mname:\n    $_[0]\n"; } } }
+		{ $result |= $DANGER;
+		  print EVIL "$currentfile:$.: dangerous: $popped matched by $match in $mname:\n    $_[0]\n"; } } }
       elsif ($match eq "\"")
 	# Does this test cope with "foo\\"?
         { if ($body =~ m/(^|[^\\])(\\\\)*\"/)
@@ -394,10 +547,12 @@ sub checkmacrobody
             { if ((1 == 0)	# turn off the test for now
 		  && ((length($`) + length($1) + length($2)) == 0)
 		  && (length($_[0]) > 2))
-                { print "$currentfile:$.: dangerous: empty string in $mname:\n    $_[0]\n"; }
+                { $result |= $DANGER;
+		  print EVIL "$currentfile:$.: dangerous: empty string in $mname:\n    $_[0]\n"; }
               $body = $'; }
           else
-           { print "$currentfile:$.: illegal: unterminated string $& in $mname:\n    $_[0]\n"; } }
+           { $result |= $ILLEGAL;
+	     print EVIL "$currentfile:$.: illegal: unterminated string $& in $mname:\n    $_[0]\n"; } }
       elsif ($match eq "\'")
         { if (($body =~ m/^\\''/) || ($body =~ m/\'/))
 	    { # do this first because we're going to do more matching
@@ -405,20 +560,25 @@ sub checkmacrobody
 	      my $char = $` . $&;
               chop($char);	# remove trailing '
 	      if (! ($char =~ m/.|\\.|\\[0-7][0-7][0-7]/))
-	        { print "$currentfile:$.: illegal: bad character constant $char in $mname:\n    $_[0]\n"; }
+	        { $result |= $ILLEGAL;
+		  print EVIL "$currentfile:$.: illegal: bad character constant $char in $mname:\n    $_[0]\n"; }
     	       }
           else
-            { print "$currentfile:$.: illegal: unterminated character constant $& in $mname:\n    $_[0]\n";
+            { $result |= $ILLEGAL;
+	      print EVIL "$currentfile:$.: illegal: unterminated character constant $& in $mname:\n    $_[0]\n";
               $body = ""; } }
       elsif ($match eq "#")
 	{ if (substr($', 0, 1) eq "#")
-	    { print "$currentfile:$.: dangerous: ## pasting in $mname:\n    $_[0]\n";
+	    { $result |= $DANGER;
+	      print EVIL "$currentfile:$.: dangerous: ## pasting in $mname:\n    $_[0]\n";
 	      $body = substr($body, 1); }
 	  # This list from GNU C preprocessor manual
 	  elsif ($' =~ m/(assert|cpu|define|elif|else|error|ident|if|ifdef|ifndef|import|include|include_next|line|machine|pragma|pragm|system|unassert|warning)\b/)
-	    { print "$currentfile:$.: dangerous: preprocessor directive #$& in $mname:\n    $_[0]\n"; }
+	    { $result |= $DANGER;
+	      print EVIL "$currentfile:$.: dangerous: preprocessor directive #$& in $mname:\n    $_[0]\n"; }
 	  else
-	    { print "$currentfile:$.: dangerous: stringization in $mname:\n    $_[0]\n"; } }
+	    { $result |= $DANGER;
+	      print EVIL "$currentfile:$.: dangerous: stringization in $mname:\n    $_[0]\n"; } }
       elsif ($match eq "/*")
 	# This test probably fails for a/**//**/b.  Oh, well.
         { my $postmatch = $';
@@ -431,7 +591,8 @@ sub checkmacrobody
 		  $postmatch = appendlines($', $nextline);
 		}
 	      else
-		{ print "$currentfile:$.: evil: unterminated comment in $mname:\n    $_[0]\n";
+		{ $result |= $EVIL;
+		  print EVIL "$currentfile:$.: evil: unterminated comment in $mname:\n    $_[0]\n";
 		  $body = "";
 		  $postmatch = ""; } }
 	  # print "Setting $body to $'; $`; $&.\n";
@@ -440,17 +601,21 @@ sub checkmacrobody
 	  $postmatch =~ m/\*\//;
 	  $body = $';
 	  if ($precedingabuts && ($body =~ m/^\w/))
-	    { print "$currentfile:$.: obsoleted: comment pasting in $mname:\n    $_[0]\n"; } }
+	    { $result |= $OBSOLETE; 
+	      print EVIL "$currentfile:$.: obsoleted: comment pasting in $mname:\n    $_[0]\n"; } }
       elsif ($match eq "//")
         { # print "$currentfile:$.: evil: //-style comment in $mname:\n    $_[0]\n";
           $body = ""; }
       elsif ($match eq "*/")
 	# $_[0] doesn't give me the whole thing; why?  ($body only contains
 	#   what follows the match at this point.)
-        { print "$currentfile:$.: evil: comment terminator */ not in comment in $mname:\n    $_[0]\n"; }
+        { $result |= $EVIL;
+	  print EVIL "$currentfile:$.: evil: comment terminator */ not in comment in $mname:\n    $_[0]\n"; }
       else
         { die "$currentfile:$.: ???: match = $match before $body in $mname:\n    $_[0]\n"; }
-       }
+        }
   if ($#nesting != -1)
-    { print "$currentfile:$.: evil: no match for ", @nesting, " in $mname:\n    $_[0]\n"; }
+    { $result |= $EVIL; 
+      print EVIL "$currentfile:$.: evil: no match for ", @nesting, " in $mname:\n    $_[0]\n"; }
+  return $result;
 }
