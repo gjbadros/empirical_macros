@@ -210,7 +210,7 @@ sub print_lint_summary ( $$$$$$$$$$$$$$$$;$ )
       $swallow_semi, $swallow_else, $free_var, $formal_name, $formal_mult_use,
       $formal_adjacent_use, $formal_unparen_use, $formal_modified,
       $macros, $defs, $names_any_warning, $defs_any_warning, $packages)
-    = check_args_range(15, 16, @_);
+    = check_args_range(16, 17, @_);
 
   print "\n\n";
   print "Excluding libraries, $macros macros defined $defs times"

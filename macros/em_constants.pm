@@ -488,16 +488,21 @@ $c_ftype = 2 * 5;
 $ftype_HEADER_Start = $ftype_HEADER_INPUT;
 $ftype_NONHEADER_Start = $ftype_NONHEADER_INPUT;
 
-# make slices for common uses
+# Make slices for common uses.
+# (The MINUSD versions are counted as "included" because "not_included" means
+# "in the package"; any such files contribute to the counts of macros in
+# the package.  They used to be in "not_included", and there was a reason for
+# that, but I can't remember it.  MDE 1/31/99)
 @ftype_CODE = ($ftype_HEADER_INPUT..$ftype_HEADER_MINUSD);
 @ftype_HEAD = ($ftype_NONHEADER_INPUT..$ftype_NONHEADER_MINUSD);
-@ftype_NOT_INCLUDED = ($ftype_HEADER_INPUT,$ftype_HEADER_ARG,$ftype_HEADER_MINUSD,
-		       $ftype_NONHEADER_INPUT,$ftype_NONHEADER_ARG,$ftype_NONHEADER_MINUSD);
-@ftype_INCLUDED = ($ftype_HEADER_INCB,$ftype_HEADER_INCQ,$ftype_NONHEADER_INCB,$ftype_NONHEADER_INCQ);
-@ftype_NONHEADER_NOT_INCLUDED = ($ftype_NONHEADER_INPUT,$ftype_NONHEADER_ARG,$ftype_NONHEADER_MINUSD);
-@ftype_NONHEADER_INCLUDED = ($ftype_NONHEADER_INCB,$ftype_NONHEADER_INCQ);
-@ftype_HEADER_NOT_INCLUDED = ($ftype_HEADER_INPUT,$ftype_HEADER_ARG,$ftype_HEADER_MINUSD);
-@ftype_HEADER_INCLUDED = ($ftype_HEADER_INCB,$ftype_HEADER_INCQ);
+@ftype_NOT_INCLUDED = ($ftype_HEADER_INPUT,$ftype_HEADER_ARG,
+		       $ftype_NONHEADER_INPUT,$ftype_NONHEADER_ARG);
+@ftype_INCLUDED = ($ftype_HEADER_INCB,$ftype_HEADER_INCQ,$ftype_HEADER_MINUSD,
+		   $ftype_NONHEADER_INCB,$ftype_NONHEADER_INCQ,$ftype_NONHEADER_MINUSD);
+@ftype_NONHEADER_NOT_INCLUDED = ($ftype_NONHEADER_INPUT,$ftype_NONHEADER_ARG);
+@ftype_NONHEADER_INCLUDED = ($ftype_NONHEADER_INCB,$ftype_NONHEADER_INCQ,$ftype_NONHEADER_MINUSD);
+@ftype_HEADER_NOT_INCLUDED = ($ftype_HEADER_INPUT,$ftype_HEADER_ARG);
+@ftype_HEADER_INCLUDED = ($ftype_HEADER_INCB,$ftype_HEADER_INCQ,$ftype_HEADER_MINUSD);
 
 $built_in_fake_filename = "%Built In%";
 $command_line_fake_filename = "%Command Line%";

@@ -5293,10 +5293,12 @@ sub categorize_macro_def ( $ )
   { #HACKINDENT
     $mdef_category[$index] = $category;
     $mdef_properties[$index] = get_macro_properties($index);
-
     $mdef_type[$index] = $type;
-    # track our histogram of categories
-    update_categories_for($category,$mdef_fileno[$index]);
+
+    # Don't call update_categories_for, as this function can get called
+    # mulitple times for a single definition, but update_categories_for
+    # should be called just once per definition.
+
     #print STDERR "$mdef_name[$index] in $files[$mdef_fileno[$index]], type ", compute_ftype_index($mdef_fileno[$index]), "\n";
 
     if ($debug_categorize_macro)
@@ -7406,6 +7408,10 @@ print STDERR "Categorizing $cMacrosInTables macros\n";
     { categorize_macro_def_nicely($i); }
   for my $mname (keys %macros)
     { categorize_macro_name($mname); }
+
+  # This side-effects a global variable.  Bad!
+  for (my $i = 0; $i < $cMacrosInTables; $i++)
+    { update_categories_for($mdef_category[$i], $mdef_fileno[$i]); }
 }
 
 ## Old implementation
