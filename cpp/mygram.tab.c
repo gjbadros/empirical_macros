@@ -177,7 +177,7 @@ treenode *parse_include(char *filename);
 /* Cause the `yydebug' variable to be defined.  */
 #define YYDEBUG 1
 
-//  int  yydebug = 1;  
+  int  yydebug = 1;  
 
 /* ###################################################### */
 #line 168 "gram.y"
@@ -1056,6 +1056,11 @@ __yy_memcpy (char *to, char *from, int count)
 
 short *yyss;		/*  refer to the stacks thru separate pointers */
 short *yyssp;
+YYSTYPE *yyvs, *yyvsp;
+#ifdef YYLSP_NEEDED
+YYSTYPE *yyls, *yylsp;
+#endif
+int yystacksize;
 
 int
 yyparse(YYPARSE_PARAM_ARG)
@@ -1063,26 +1068,21 @@ yyparse(YYPARSE_PARAM_ARG)
 {
   register int yystate;
   register int yyn;
-  register YYSTYPE *yyvsp;
   int yyerrstatus;	/*  number of tokens to shift before error messages enabled */
   int yychar1 = 0;		/*  lookahead token as an internal (translated) token number */
 
   short	yyssa[YYINITDEPTH];	/*  the state stack			*/
   YYSTYPE yyvsa[YYINITDEPTH];	/*  the semantic value stack		*/
 
-  YYSTYPE *yyvs = yyvsa;	/*  to allow yyoverflow to reallocate them elsewhere */
 
 #ifdef YYLSP_NEEDED
   YYLTYPE yylsa[YYINITDEPTH];	/*  the location stack			*/
-  YYLTYPE *yyls = yylsa;
-  YYLTYPE *yylsp;
 
 #define YYPOPSTACK   (yyvsp--, yyssp--, yylsp--)
 #else
 #define YYPOPSTACK   (yyvsp--, yyssp--)
 #endif
 
-  int yystacksize = YYINITDEPTH;
 
 #ifdef YYPURE
   int yychar;
@@ -1104,6 +1104,8 @@ yyparse(YYPARSE_PARAM_ARG)
     fprintf(stderr, "Starting parse\n");
 #endif
 
+  yystacksize = YYINITDEPTH;
+  yyvs = yyvsa;	/*  to allow yyoverflow to reallocate them elsewhere */
   yyss = yyssa;
   yystate = 0;
   yyerrstatus = 0;
@@ -1119,6 +1121,7 @@ yyparse(YYPARSE_PARAM_ARG)
   yyvsp = yyvs;
 #ifdef YYLSP_NEEDED
   yylsp = yyls;
+  yyls = yylsa;
 #endif
 
 /* Push a new state, which is found in  yystate  .  */
