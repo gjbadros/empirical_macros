@@ -241,7 +241,7 @@ SD_OBJECTS = scan-decls.o cpplib.o cpphash.o cppalloc.o cpperror.o cppexp.o vers
 
 all: pcp3 paper/backcalls.tex paper/pcp3-hooks.tex
 
-lines:	$(PCP3_SOURCES)
+lines:	$(PCP3_SOURCES) cpphook.pm
 	wc -l $^ > lines
 
 # Making the preprocessor/parser
