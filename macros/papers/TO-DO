@@ -393,6 +393,19 @@ Greg:
 
 Please explain the huge Unknown Symbol entry for perl.
 [Do this.] 
+ -- EXPLANATION FOLLOWS:
+embed.h contains 1058 lines like:
+  #define Sv              Perl_Sv
+  #define Xpv             Perl_Xpv
+to protect global symbols from name conflicts.  It's just a renaming technique,
+but all of the Perl_ symbols aren't used anywhere else in the library, because
+the code uses just Sv, e.g.;  embed.h's job is to prevent that symbol from
+being globally visible in the object file, but instead put Perl_Sv in its place.
+
+Note that embed.h is an automatically-generated file, created by
+embed.pl from global.sym and interp.sym.
+
+
 
 How did you classify the names (symbols) mentioned at the top of page
 23?
