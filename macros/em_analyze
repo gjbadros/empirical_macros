@@ -26,7 +26,7 @@
 
 
 # FIX: I want to use '-$' like cpp does, not '-l'; how to do this?
-my $getopts_option_letters = 'ihvtIAaue1pTlg:d:E:P:n:F:M';
+my $getopts_option_letters = 'ihvtIAaue1pTlL:g:d:E:P:n:F:M';
 
 # Remove the asterisks below when the options are known to the users.
 sub usage ( ) {
@@ -43,6 +43,7 @@ New options marked with *; options with ':', above, take an argument
   -e  suppress macro dependence analysis
   -1  do only the first pass (don't do function parsing, usage)
 	This is a numeral 1, not a lowercase L.
+* -L [num]  print info about all lines depending on more than num macros
 * -l  forbid the use of `\$' in identifiers, per ANSI standard
 	This is a lowercase L, not a numeral 1.
 * -g [num]  set the num'th debugging option to true  {ought to be able to name}
@@ -692,7 +693,7 @@ my $compute_transitive_dependence_info = $true;
 # Are these in any order?
 use vars qw($opt_i $opt_I $opt_h $opt_v $opt_t $opt_d $opt_l
 	    $opt_E $opt_P $opt_p $opt_n $opt_F $opt_M
-	    $opt_u $opt_e $opt_1 $opt_A $opt_a $opt_g $opt_T);
+	    $opt_u $opt_e $opt_1 $opt_A $opt_a $opt_g $opt_L $opt_T);
 my $fIgnoreIncludes = $false;
 
 
@@ -5898,9 +5899,15 @@ sub analyze_for_macro_use ( $ ) {
   foreach my $either_dep (keys %either_deps)
     { $either_dependee_lines{$either_dep}++; }
 
-  $incl_dependence_count[scalar(keys %incl_deps)]++;
-  $exp_dependence_count[scalar(keys %exp_deps)]++;
-  $either_dependence_count[scalar(keys %either_deps)]++;
+  my $num_incl_deps = scalar(keys %incl_deps);
+  my $num_exp_deps = scalar(keys %exp_deps);
+  my $num_either_deps = scalar(keys %either_deps);
+  $incl_dependence_count[$num_incl_deps]++;
+  $exp_dependence_count[$num_exp_deps]++;
+  $either_dependence_count[$num_either_deps]++;
+  if (defined($opt_L) && ($num_either_deps > $opt_L))
+    { print LARGE_DEPEND input_file_and_line(), ": dependences incl=$num_incl_deps; exp=$num_exp_deps; either=$num_either_deps\n";
+      print LARGE_DEPEND add_newline($line); }
 }
 
 # Note that "words" include literal numbers, etc.
@@ -6969,6 +6976,14 @@ if ($opt_d) {
     open(PARSE_ERRS,">$dir/${base_name}perr") || die "Failed opening $dir/${base_name}perr: $!";
   }
 
+  if (defined($opt_L)) {
+    open(LARGE_DEPEND,">$dir/${base_name}ldepend") || die "Failed opening $dir/${base_name}ldepend: $!";
+  }
+
+  if ($debug_ccd_categories) {
+    open(CCD_CATEG,">$dir/${base_name}ccd_debug") || die "Failed opening $dir/${base_name}ccd_debug: $!";
+  };
+
   if ($debug_ccd_categories) {
     open(CCD_CATEG,">$dir/${base_name}ccd_debug") || die "Failed opening $dir/${base_name}ccd_debug: $!";
   };
@@ -7125,6 +7140,7 @@ print STDERR "Categorizing $cMacrosInTables macros\n";
 # (I can no longer reproduce that problem, but just in case...)
 select(EVIL); $| = 1; print EVIL "\n";
 select(PARSE_ERRS); $| = 1; print PARSE_ERRS "\n";
+if (defined($opt_L)) { select(LARGE_DEPEND); $| = 1; print LARGE_DEPEND "\n"; }
 # # close(EVIL);
 # # close(PARSE_ERRS);
 
