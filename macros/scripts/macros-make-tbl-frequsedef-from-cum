@@ -43,15 +43,23 @@ foreach $file (@files) {
   $_ = <IN>;
   chop;
   $total{$pkg} = (split())[1];
+  if (!defined($total{$pkg})) {
+    $total{$pkg} = 0;
+  }
   $grand_total += $total{$pkg};
   print STDERR "pkg_total = $total{$pkg}", "\n" if $fDebug;
 
   my $i = 0;
+  my $fDone = 0;
 #  print STDERR $file, "\n";
   foreach $line (@buckets) {
     my $n = $total{$pkg};
     while (<IN>) {
-      last if /^\#?Category:/;
+      last if $fDone;
+      if (/^\#?Category:/ || /^\s*$/) {
+	$fDone = 1;
+	last;
+      }
       if (defined($_)) {
 	chop;
 	($bucket,$n) = split;
