@@ -482,6 +482,8 @@ sub compute_global_cpp_sums () {
 @freq_use_buckets = (0,1,2,3,4,5,6,8,10,20,40,80);
 @freq_def_buckets = (1,2,3,4,5,6,7,8,10,12,14);
 
+# Return false if any of the definitions of the macro name
+# occur inside the package
 sub MacroNotDefinedInsidePackage ($) { # returns bool
   my ($name) = check_args(1,@_);
   my $iDef;
