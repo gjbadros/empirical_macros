@@ -1129,7 +1129,8 @@ handle_directive (cpp_reader *pfile)
       /* Handle # followed by a line number.  */
       if (CPP_PEDANTIC (pfile))
 	cpp_pedwarn (pfile, "`#' followed by integer");
-      do_line (pfile, NULL);
+      if (gjb_call_hooks_sz(opts,HI_HANDLE_DIRECTIVE,ident))
+        do_line (pfile, NULL);
       goto done_a_directive;
     }
 
@@ -1144,7 +1145,8 @@ handle_directive (cpp_reader *pfile)
       goto done_a_directive;
     }
 
-  gjb_call_hooks_sz(opts,HI_HANDLE_DIRECTIVE,ident);
+  if (!gjb_call_hooks_sz(opts,HI_HANDLE_DIRECTIVE,ident))
+    goto done_a_directive;
 
 #if 0
   if (ident_length == 0 || !is_idstart[*ident]) {
@@ -6851,6 +6853,10 @@ cpp_handle_options (pfile, argc, argv)
       case 'c':
         /* get the filename, but don't increment i */
         strcpy(szCompileFileName,argv[i+1]);
+        break;
+
+      case 'L':
+        /* Just ignore -L option */
         break;
 
       case 'i':
