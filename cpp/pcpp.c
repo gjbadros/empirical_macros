@@ -213,7 +213,7 @@ main (int argc, char **argv, char **env)
       cBytesOutput += CPP_WRITTEN(&parse_in);
       gjb_call_hooks_szl(opts,HI_CPP_OUT,parse_in.token_buffer,CPP_WRITTEN(&parse_in));
       gjb_call_hooks_pcat_szl(opts,HI_TOKEN,pcat,parse_in.token_buffer,
-			    CPP_WRITTEN(&parse_in));
+			      CPP_WRITTEN(&parse_in));
       if (pcat->id == CPP_EOF)
 	break;
       parse_in.limit = parse_in.token_buffer;
@@ -242,11 +242,6 @@ main (int argc, char **argv, char **env)
       fprintf(stderr,"Returned from yyparse()!\n");
     }
 
-  cpp_finish (&parse_in);
-
-  /* Perl shutdown code */
-  perl_destruct(my_perl);
-  perl_free(my_perl);
 
   if (parse_in.errors)
     {
@@ -254,5 +249,12 @@ main (int argc, char **argv, char **env)
     }
 
   gjb_call_hooks_i(opts,HI_EXIT,return_exit_code);
+
+  cpp_finish (&parse_in);
+
+  /* Perl shutdown code */
+  perl_destruct(my_perl);
+  perl_free(my_perl);
+
   exit (return_exit_code);
 }
