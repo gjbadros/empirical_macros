@@ -17,32 +17,33 @@ o I don't know how to solve this.
 
   2) Introduction:
 
-o      a) "understanding and transforming" should perhaps read "understanding
-o      and modifying".  I didn't mark it everywhere, but this version still
-o      feels a bit too heavily weighted towards supporting transformation of
-o      C programs (to C++), and I don't think that works so well.
+       a) "understanding and transforming" should perhaps read "understanding
+       and modifying".  I didn't mark it everywhere, but this version still
+       feels a bit too heavily weighted towards supporting transformation of
+       C programs (to C++), and I don't think that works so well.
 
        b) "but lends itself to arbitrary" => "allowing"
 
-x      c) The period at the end of the p. 424 Stroustrup quotation should, I
-x      think go after the "]".
+       c) The period at the end of the p. 424 Stroustrup quotation should, I
+       think go after the "]".
     [That would work, too, but I (not strongly) prefer the current way.]
 
-o      d) I think we can live without any citations to approximate tools, but
-o      it wouldn't hurt either.
+^      d) I think we can live without any citations to approximate tools, but
+^      it wouldn't hurt either.
+    [David says it's better to have none than some.]
 
        e) "approximate tools (such ... techniques)." => "tools that produce
        approximate information, such as those based on lexical or on
        approximate parsing techniques."
 
-o      f) The segue from the last bullet ("The final option") to the next
-o      paragraph is weak.  I know, I put it there myself.  I'll suggest
-o      something like the following:
+       f) The segue from the last bullet ("The final option") to the next
+       paragraph is weak.  I know, I put it there myself.  I'll suggest
+       something like the following:
 
-o           "Choices among these options are made in the absence of
-o           an understanding of how Cpp is used in practice.  That is,
-o           much has been written about Cpp's potential pitfalls, but no
-o           previous work has examined..."
+            "Choices among these options are made in the absence of
+            an understanding of how Cpp is used in practice.  That is,
+            much has been written about Cpp's potential pitfalls, but no
+            previous work has examined..."
 
        g) "that might, if present in practice, compilcate" => that complicate"
 
@@ -60,7 +61,8 @@ o           perhaps after the bullets.]
 
        i) Make sure that Cpp is consistently capitalized throughout.
 
-o      j) I happen to hate the formatting of {description}, but that's life.
+^      j) I happen to hate the formatting of {description}, but that's life.
+    [No better suggestion arose.]
 
 o      k) I would try to make every item in the pitfalls list include the
 o      word "problematic" (or a synonym), to give the sense about what the
@@ -69,10 +71,10 @@ o      potential pitfall isn't stated.
 
   3) Metholodogy
 
-o      a) Do either of you know the difference between "that" and "which"?
-o      (Restrictive vs. unrestrictive, I believe, is the term.)  If so, fix
-o      them in the paper.  Otherwise, don't waste the time now.  (A quick
-o      look at the on-line Strunk & White can give a quick rundown on this.)
+@      a) Do either of you know the difference between "that" and "which"?
+@      (Restrictive vs. unrestrictive, I believe, is the term.)  If so, fix
+@      them in the paper.  Otherwise, don't waste the time now.  (A quick
+@      look at the on-line Strunk & White can give a quick rundown on this.)
     [Greg will do this.]
 
        b) "while others are not, and some are graphical while" => "while
@@ -109,14 +111,13 @@ o      progress would work; but I don't have a great idea here.
        b) "non-comment, non-blank (NCNB)" => "NCNB", since it was already
        defined and introduced.
 
-@      c) "One in ten" => "Nearly one in ten"
-    [Greg will deal with this.]
+       c) "One in ten" => "Nearly one in ten"
 
        d) "percentage of #define" => "percentage of #defines" (with proper
        typefaces.
 
-@      e) FOR ALL THE FIGURES, make sure that there is only one caption,
-@      not one from Excel and one from Latex.
+       e) FOR ALL THE FIGURES, make sure that there is only one caption,
+       not one from Excel and one from Latex.
     [Those are actually x-axis labels, not captions.  Greg will put them in
     non-bold typeface.]
 
@@ -157,8 +158,8 @@ o      rewritten, I believe.
        i) Omit any text w.r.t. "[[Not all such are...]]", since it's covered
        later.
 
-@      j) Make sure all the package names are visible on the vertical
-@      axis for Figure 3.
+       j) Make sure all the package names are visible on the vertical
+       axis for Figure 3.
     [Greg will do this.]
 
 ^      k) I was surprised to read (I had probably just forgotten) that
@@ -200,7 +201,7 @@ o      related work (lclint, etc.).
        s) "under all possible circumstances" => "under all possible
        configurations", perhaps?
 
-o      t) "less than 2" => "less than two"
+       t) "less than 2" => "less than two"
 
        u) "redefined In" => "redefined.  In"
 
@@ -228,8 +229,8 @@ o      t) "less than 2" => "less than two"
        appropriate, too; it's even reasonably (perhaps best) simply
        to omit the parenthetical.
 
-@      d) I slightly agree with Greg about dropping Figure 7.   I don't
-@      feel strongly here.
+       d) I slightly agree with Greg about dropping Figure 7.   I don't
+       feel strongly here.
     [Yes, we'll drop it and move figure 11 up.]
 
        e) "plus some complete sentences" => "plus some complete
@@ -242,11 +243,11 @@ x      as `failure' due to appearance in conflicting categories"
 
   Section 5:
 
-o      a) In the second sentence it says "one of three things".  A few
-o      sentences down is says "in both ways".  I found this a little
-o      confusing.
+       a) In the second sentence it says "one of three things".  A few
+       sentences down is says "in both ways".  I found this a little
+       confusing.
 
-o      b) "Overall, half" => "Overall, about half"
+       b) "Overall, half" => "Overall, about half"
 
 ^      c) "Interestingly, the four packages" => "Interestingly, but
 ^      perhaps coincidentally, the four packages"
@@ -260,42 +261,45 @@ o      the figure is what we want people to look at, and with
 o      a quick phrase as a forward reference to the categories,
 o      this might work better.
 
-o      e) Section 5.4 (number of arguments) should either go or
-o      use a brief chart to capture the key ideas.  Or the basics
-o      can be present in running text with a few key pieces of
-o      data.  I think that leaving it in makes sense (without the
-o      figure).
+       e) Section 5.4 (number of arguments) should either go or
+       use a brief chart to capture the key ideas.  Or the basics
+       can be present in running text with a few key pieces of
+       data.  I think that leaving it in makes sense (without the
+       figure).
+    [Eliminated.]
 
   Section 6:
 
-o      a) Definitely choose and consistently use a terminology.
-o      It matters far less which terminology you choose.
+       a) Definitely choose and consistently use a terminology.
+       It matters far less which terminology you choose.
 
 o      b) As for the algorithm description, it's barely adequate.
 o      I slightly lean towards a pseudo-code figure of the
 o      algorithm, although it doesn't fully deserve that either.
 
-o      c) I assume 6.2.1 and 6.2.2 have been rewritten, so I'm
-o      not providing comments.  I'm happy to take another pass
-o      at these (or all of Section 6).
+       c) I assume 6.2.1 and 6.2.2 have been rewritten, so I'm
+       not providing comments.  I'm happy to take another pass
+       at these (or all of Section 6).
 
   Section 7 (Related Work):
 
-o      a) Fix nits in the initial "Carroll and Ellis" statement.
+       a) Fix nits in the initial "Carroll and Ellis" statement.
 
-o      b) "our analysis tool identifies" => "our analysis tool
-o      identifies.  However, it appears that GNU's hints are
-o      based on experience; we provide additional empirical
-o      data that might help refine a set of hints."
+^      b) "our analysis tool identifies" => "our analysis tool
+^      identifies.  However, it appears that GNU's hints are
+^      based on experience; we provide additional empirical
+^      data that might help refine a set of hints."
+    [I used slightly different wording, and put this at the end of the
+    paragraph.]
 
-o      c) The "lint" paragraph is too informal.  And it is followed
-o      by a paragraph that thinks lint hasn't just been mentioned.
+       c) The "lint" paragraph is too informal.  And it is followed
+       by a paragraph that thinks lint hasn't just been mentioned.
 
-o      d) Don't nitpick the LCLint stuff.  Simple observe that their
-o      decisions and our decisions (about macro lint) differ; if
-o      we really produced a macro lint tool, users would get
-o      different answers.  Then you can mention a single specific,
-o      but no more.
+       d) Don't nitpick the LCLint stuff.  Simple observe that their
+       decisions and our decisions (about macro lint) differ; if
+       we really produced a macro lint tool, users would get
+       different answers.  Then you can mention a single specific,
+       but no more.
 
   Section 8 (Conclusions):
 
