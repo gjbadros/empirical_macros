@@ -1,9 +1,3 @@
-* Title:  (PCP^3?) Integrating Parsing with Preprocessor Analysis for
-Improving Abstraction in (Legacy/Existing) C Programs
-* Title:  (PCP^3?) Improving Abstraction in (Legacy/Existing) C Programs
-by Integrating Parsing with Preprocessor Analysis
-
-
 o Is macro always expanded into same grammar tokens (e.g., is it always
 used as type identifier? 
 
