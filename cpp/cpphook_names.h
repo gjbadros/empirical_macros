@@ -5,6 +5,7 @@ char *hook_names[] = {
 "HANDLE_DIRECTIVE",
 "DO_DEFINE",
 "DO_UNDEF",
+"DO_INCLUDE",
 "CREATE_PREDEF",
 "CREATE_DEF",
 "DELETE_DEF",

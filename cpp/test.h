@@ -26,7 +26,7 @@
        
 *************************************************************************/
 
-//#include <stdio.h>
+#include <stdio.h>
 
 typedef enum {PLUS, MINUS} sign;
 
@@ -75,3 +75,7 @@ __FILE__
 char *sz = "A string constant
 
 for all to see \n\n";
+
+
+#include "foo.h"
+

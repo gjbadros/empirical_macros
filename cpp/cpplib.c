@@ -3161,6 +3161,9 @@ get_directive_token (pfile)
    I.e. in input file specification has been popped by handle_directive.
    This is safe. */
 
+/* FIXGJB: all the gjb_call_XXX's here need to be tested better,
+   and perhaps abstracted out */
+
 static int
 do_include (pfile, keyword, unused1, unused2)
      cpp_reader *pfile;
@@ -3293,6 +3296,9 @@ do_include (pfile, keyword, unused1, unused2)
 #endif
   else
     {
+      gjb_call_hooks_sz_sz_3flags(CPP_OPTIONS(pfile),DO_INCLUDE,
+				  fbeg,"@BADNAME@",
+				  angle_brackets,skip_dirs,importing);
       cpp_error (pfile,
 		 "`#%s' expects \"FILENAME\" or <FILENAME>", keyword->name);
       CPP_SET_WRITTEN (pfile, old_written);
@@ -3334,6 +3340,10 @@ do_include (pfile, keyword, unused1, unused2)
 
   if (flen == 0)
     {
+      gjb_call_hooks_sz_sz_3flags(CPP_OPTIONS(pfile),DO_INCLUDE,
+				  fbeg,"@NULLLENGTH@",
+				  angle_brackets,skip_dirs,importing);
+
       cpp_error (pfile, "empty file name in `#%s'", keyword->name);
       return 0;
     }
@@ -3355,8 +3365,12 @@ do_include (pfile, keyword, unused1, unused2)
       f = lookup_import (pfile, fname, NULL_PTR);
     else
       f = open_include_file (pfile, fname, NULL_PTR);
-    if (f == -2)
+    if (f == -2) {
+      gjb_call_hooks_sz_sz_3flags(CPP_OPTIONS(pfile),DO_INCLUDE,
+				  fbeg,"@ALREADY_INCLUDED@",
+				  angle_brackets,skip_dirs,importing);
       return 0;		/* Already included this file */
+    }
   } else {
     /* Search directory path, trying to open the file.
        Copy each filename tried into FNAME.  */
@@ -3395,13 +3409,22 @@ do_include (pfile, keyword, unused1, unused2)
 	 of redundant include files: #import, #pragma once, and
 	 redundant_include_p.  It would be nice if they were unified.  */
       if (redundant_include_p (pfile, fname))
+	{
+	gjb_call_hooks_sz_sz_3flags(CPP_OPTIONS(pfile),DO_INCLUDE,
+				    fbeg,"@REDUNDANT_INCLUDE@",
+				    angle_brackets,skip_dirs,importing);
 	return 0;
+	}
       if (importing)
 	f = lookup_import (pfile, fname, searchptr);
       else
 	f = open_include_file (pfile, fname, searchptr);
-      if (f == -2)
+      if (f == -2){
+	gjb_call_hooks_sz_sz_3flags(CPP_OPTIONS(pfile),DO_INCLUDE,
+				    fbeg,"@ALREADY_INCLUDED@",
+				    angle_brackets,skip_dirs,importing);
 	return 0;			/* Already included this file */
+      }
 #ifdef EACCES
       else if (f == -1 && errno == EACCES)
 	cpp_warning (pfile, "Header file %s exists, but is not readable",
@@ -3469,6 +3492,10 @@ do_include (pfile, keyword, unused1, unused2)
 	cpp_error_from_errno (pfile, fname);
       else
 	cpp_error (pfile, "No include path in which to find %s", fname);
+
+      gjb_call_hooks_sz_sz_3flags(CPP_OPTIONS(pfile),DO_INCLUDE,
+				  fbeg,"@NOTFOUND@",
+				  angle_brackets,skip_dirs,importing);
     }
   else {
     /* Check to see if this include file is a once-only include file.
@@ -3478,6 +3505,9 @@ do_include (pfile, keyword, unused1, unused2)
 
     for (ptr = pfile->dont_repeat_files; ptr; ptr = ptr->next) {
       if (!strcmp (ptr->fname, fname)) {
+	gjb_call_hooks_sz_sz_3flags(CPP_OPTIONS(pfile),DO_INCLUDE,
+				    fbeg,"@ONCED_FILE@",
+				    angle_brackets,skip_dirs,importing);
 	close (f);
         return 0;				/* This file was once'd. */
       }
@@ -3561,7 +3591,10 @@ do_include (pfile, keyword, unused1, unused2)
 	} while (pcf != -1 && !pcfbuf);
       }
 #endif
-    
+    gjb_call_hooks_sz_sz_3flags(CPP_OPTIONS(pfile),DO_INCLUDE,
+				fbeg,fname,
+				angle_brackets,skip_dirs,importing);
+
     /* Actually process the file */
     cpp_push_buffer (pfile, NULL, 0);
     if (finclude (pfile, f, fname, is_system_include (pfile, fname),
@@ -4907,7 +4940,7 @@ cpp_get_token (pfile)
 	       also note that this drops the delimiting double quotes */
 	    gjb_call_hooks_szl_i(CPP_OPTIONS(pfile),STRING_CONSTANT,
 				 pfile->token_buffer + old_written + 1,
-				 CPP_PWRITTEN(pfile)-pfile->token_buffer+old_written-2,
+				 CPP_PWRITTEN(pfile)-(pfile->token_buffer+old_written+1)-1,
 				 c_newlines+1);
 	    }
 	  return c == '\'' ? CPP_CHAR : CPP_STRING;

@@ -28,6 +28,37 @@
 #include "cpphook.h"
 #include "cpphook_names.h"
 
+/* return a single new SV * which is the various arguments
+ * OR-ed in together into one integer, each integer getting a bit
+ * The list should be terminated with a negative number
+ * e.g., newSVbitmap(1,0,1,1,-1) return 1+0+4+8 = 13, the binary
+ * number gotten when reading the arguments in right->left order
+ * Note that stdarg-s requires at least one fixed argument
+ */
+static 
+SV *
+newSVbitmap(int iFirst, ...)  // VERY IMPORTANT: must end in arg == -1
+{
+  va_list ap;
+  int i;
+  int retval = iFirst;
+  int bitvalue = 2;
+
+  va_start(ap,iFirst);
+  
+  while ((i = va_arg(ap, int)) >= 0 )
+    {
+    if (i != 0)
+      retval |= bitvalue;
+    bitvalue *= 2;
+    /* only allow 16 bits for now-- prevent infinite loops */
+    if (bitvalue > 65536)
+      break;
+    }
+  va_end(ap);
+  return newSViv(retval);
+}
+
 static
 SV *
 get_hook_for(HOOK_INDEX ih, bool fWarnMissingHooks)
@@ -134,6 +165,46 @@ gjb_call_hooks_szl_sz_i(struct cpp_options *opts, HOOK_INDEX ih,
 }
 
 void
+gjb_call_hooks_sz_sz_i(struct cpp_options *opts, HOOK_INDEX ih,
+			char *sz1, char *sz2, int i)
+{
+  SV *psvFunc = NULL;
+
+  dSP;
+  
+  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+    return;
+
+  PUSHMARK(sp);
+  XPUSHs(sv_2mortal(newSVpv(sz1, 0)));
+  XPUSHs(sv_2mortal(newSVpv(sz2, 0)));
+  XPUSHs(sv_2mortal(newSViv(i)));
+  PUTBACK ;
+     
+  perl_call_sv(psvFunc, G_DISCARD);
+}
+
+void
+gjb_call_hooks_sz_sz_3flags(struct cpp_options *opts, HOOK_INDEX ih,
+			    char *sz1, char *sz2, int f1, int f2, int f3)
+{
+  SV *psvFunc = NULL;
+
+  dSP;
+  
+  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+    return;
+
+  PUSHMARK(sp);
+  XPUSHs(sv_2mortal(newSVpv(sz1, 0)));
+  XPUSHs(sv_2mortal(newSVpv(sz2, 0)));
+  XPUSHs(sv_2mortal(newSVbitmap(f1,f2,f3,-1)));
+  PUTBACK ;
+     
+  perl_call_sv(psvFunc, G_DISCARD);
+}
+
+void
 gjb_call_hooks_sz_i(struct cpp_options *opts, HOOK_INDEX ih, char *sz, int i)
 {
   SV *psvFunc = NULL;
@@ -169,35 +240,6 @@ gjb_call_hooks_szl_i(struct cpp_options *opts, HOOK_INDEX ih, char *sz, int cch,
   perl_call_sv(psvFunc, G_DISCARD);
 }
 
-/* return a single new SV * which is the various arguments
- * OR-ed in together into one integer, each integer getting a bit
- * The list should be terminated with a negative number
- * e.g., newSVbitmap(1,0,1,1,-1) return 1+0+4+8 = 13, the binary
- * number gotten when reading the arguments in right->left order
- * Note that stdarg-s requires at least one fixed argument
- */
-SV *
-newSVbitmap(int iFirst, ...)
-{
-  va_list ap;
-  int i;
-  int retval = iFirst;
-  int bitvalue = 2;
-
-  va_start(ap,iFirst);
-  
-  while ((i = va_arg(ap, int)) >= 0 )
-    {
-    if (i != 0)
-      retval |= bitvalue;
-    bitvalue *= 2;
-    /* only allow 16 bits for now-- prevent infinite loops */
-    if (bitvalue > 65536)
-      break;
-    }
-  va_end(ap);
-  return newSViv(retval);
-}
 
 void
 gjb_call_hooks_szl_sz_defn(struct cpp_options *opts, HOOK_INDEX ih, 

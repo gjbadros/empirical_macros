@@ -13,6 +13,12 @@ $RAW_AFTER,
 $REST_ARGS,
 ) = @bitmap_masks;
 
+(
+$ANGLE_BRACKETS,
+$SKIP_DIRS,
+$IMPORTING,
+) = @bitmap_masks;
+
 
 sub make_printable {
   my ($str) = @_;

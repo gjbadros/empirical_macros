@@ -6,6 +6,7 @@ use English;
 use hook_index_constants;
 use hook_datatypes;
 use enum_node_type;
+use em_util;
 use vars qw( *CHOUT @Hooks );
 
 sub AddHook {
@@ -41,7 +42,7 @@ sub create_def {
   print "simp_expn = \"", $simp_expn, "\"", "\n";
   @argnames = reverse split (/, /,$backward_argnames_string);
   print "argnames = ", join(', ', @argnames), "\n";
-  print "file = ", $file, "\n";
+  print "file = ", simplify_path_name($file), "\n";
   print "line = ", $line, "\n";
   print "predefined = ", is_set($def_flags,$PREDEFINED), "\n";
   print "restargs = ", is_set($def_flags,$RESTARGS), "\n";
@@ -106,6 +107,10 @@ sub string_constant {
   my ($string,$lines) = @_;
   print "String_constant ($lines lines): \"$string\"\n";
 }
+sub do_include {
+  my ($keyword, $file, $flags) = @_;
+  print "do_include $keyword -> ", simplify_path_name($file),";  $flags\n";
+}
 
 # Add the hooks, now
 AddHook($STARTUP,\&Startup);
@@ -113,14 +118,16 @@ AddHook($DO_DEFINE,\&do_define);
 AddHook($HANDLE_DIRECTIVE,\&handle_directive);
 AddHook($CREATE_PREDEF,\&create_predef);
 AddHook($CREATE_DEF,\&create_def);
-AddHook($DELETE_DEF,\&delete_def);
 AddHook($DO_UNDEF,\&do_undef);
+AddHook($DELETE_DEF,\&delete_def);
 AddHook($CPP_ERROR,\&cpp_error);
 AddHook($EXPAND_MACRO,\&expand_macro);
 AddHook($SPECIAL_SYMBOL,\&special_symbol);
 AddHook($COMMENT,\&comment);
 AddHook($STRING_CONSTANT,\&string_constant);
+AddHook($DO_INCLUDE,\&do_include);
 
+print simplify_path_name("/usr/////include/foo"), "\n";
 
 1;
 __END__
