@@ -390,8 +390,9 @@ void gjb_call_hooks_pcat_szl(struct cpp_options *opts, HOOK_INDEX ih,
 
 void
 gjb_call_hooks_expansion(struct cpp_reader *pfile, HOOK_INDEX ih,
+			 int ichSourceStart, int ichSourceEnd,
 			 char *sz1, char *sz2, int cch2, int i1, 
-			 char *sz3, int cch3, int ichSourceStart, int ichSourceEnd,
+			 char *sz3, int cch3, 
 			 int has_escapes, int cbuffersDeep,
 			 cpp_expand_info *pcei,
 			 int nargs, struct argdata *args)
@@ -408,12 +409,12 @@ gjb_call_hooks_expansion(struct cpp_reader *pfile, HOOK_INDEX ih,
     return;
 
   PUSHMARK(sp);
+  XPUSHs(sv_2mortal(newSViv(ichSourceStart)));
+  XPUSHs(sv_2mortal(newSViv(ichSourceEnd)));
   XPUSHs(sv_2mortal(newSVpv(sz1, 0)));
   XPUSHs(sv_2mortal(newSVpvlen(sz2, cch2)));
   XPUSHs(sv_2mortal(newSViv(i1)));
   XPUSHs(sv_2mortal(newSVpvlen(sz3, cch3)));
-  XPUSHs(sv_2mortal(newSViv(ichSourceStart)));
-  XPUSHs(sv_2mortal(newSViv(ichSourceEnd)));
   XPUSHs(sv_2mortal(newSViv(has_escapes)));
   XPUSHs(sv_2mortal(newSViv(cbuffersDeep)));
   XPUSHs(sv_2mortal(newSViv(cNestedArgExpansions)));
@@ -458,7 +459,7 @@ gjb_call_hooks_expansion(struct cpp_reader *pfile, HOOK_INDEX ih,
 
 void
 gjb_call_hooks_macro_cleanup(struct cpp_options *opts, HOOK_INDEX ih,
-			     char *sz1, int i1, int i2, cpp_expand_info *pcei)
+			     int i1, int i2, char *sz1, cpp_expand_info *pcei)
 {
   SV *psvFunc = NULL;
   int cNestedArgExpansions = CNestedArgExpansions(pcei);
@@ -648,6 +649,28 @@ gjb_call_hooks_i_i_szl_szl_i(struct cpp_options *opts, HOOK_INDEX ih, int s, int
   XPUSHs(sv_2mortal(newSViv(e)));
   XPUSHs(sv_2mortal(newSVpvlen(sz1, cch1)));
   XPUSHs(sv_2mortal(newSVpvlen(sz2, cch2)));
+  XPUSHs(sv_2mortal(newSViv(i)));
+  PUTBACK ;
+     
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
+}
+
+void
+gjb_call_hooks_i_i_szl_sz_i(struct cpp_options *opts, HOOK_INDEX ih, int s, int e,
+			    char *sz1, int cch1, char *sz2, int i)
+{
+  SV *psvFunc = NULL;
+
+  dSP;
+  
+  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+    return;
+
+  PUSHMARK(sp);
+  XPUSHs(sv_2mortal(newSViv(s)));
+  XPUSHs(sv_2mortal(newSViv(e)));
+  XPUSHs(sv_2mortal(newSVpvlen(sz1, cch1)));
+  XPUSHs(sv_2mortal(newSVpvlen(sz2, 0)));
   XPUSHs(sv_2mortal(newSViv(i)));
   PUTBACK ;
      
@@ -994,6 +1017,42 @@ gjb_call_hooks_i_i_szl_sz_defn(struct cpp_options *opts, HOOK_INDEX ih,
      
   perl_call_sv_hooks(psvFunc, G_DISCARD);
 }
+
+void
+gjb_call_hooks_szl_sz_defn(struct cpp_options *opts, HOOK_INDEX ih, 
+			   char *sz, int cch, char *expn, DEFINITION *defn)
+{
+  SV *psvFunc = NULL;
+  struct reflist *prlCurr = NULL;
+  dSP;
+  
+  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+    return;
+
+  PUSHMARK(sp);
+  XPUSHs(sv_2mortal(newSVpvlen(sz, cch)));
+  XPUSHs(sv_2mortal(newSVpv(expn, 0)));
+  XPUSHs(sv_2mortal(newSViv(defn->nargs)));
+  XPUSHs(sv_2mortal(newSVpv(defn->expansion, 0)));
+  XPUSHs(sv_2mortal(newSVpv_safe(defn->file, 0)));
+  XPUSHs(sv_2mortal(newSViv(defn->line)));
+  XPUSHs(sv_2mortal(newSVpv(defn->args.argnames,0 )));
+  XPUSHs(sv_2mortal(newSVbitmap(defn->predefined, defn->rest_args, -1)));
+  prlCurr = defn->pattern;
+  while (prlCurr != NULL)
+    {
+    XPUSHs(sv_2mortal(newSViv(prlCurr->argno)));
+    XPUSHs(sv_2mortal(newSViv(prlCurr->nchars)));
+    XPUSHs(sv_2mortal(newSVbitmap(prlCurr->stringify,
+				  prlCurr->raw_before,prlCurr->raw_after,
+				  prlCurr->rest_args, -1)));
+    prlCurr = prlCurr->next;
+    }
+  PUTBACK ;
+     
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
+}
+
   
 void
 gjb_call_hooks_szx4(struct cpp_options *opts, HOOK_INDEX ih, 

@@ -239,7 +239,8 @@ FnameNominal()
 
 ###%\backcall{$encoded_expansion}{ExpansionLookup}{$macro_name}
 ###% Returns the internally-encoded (cpplib-specific) expansion of
-###% the macro with name \texttt{$macro_name}.
+###% the macro with name \texttt{$macro_name}.  Note that this the string
+###% returned is delimited on either end by "@ " and omits argument occurrences.
 ###% "@NOTFOUND@" is return if there is no current macro of the given name.
 char *
 ExpansionLookup(sz)

@@ -251,7 +251,7 @@ sub pop_buffer {
 
 
 sub macro_cleanup {
-  my ($mname, $s_start, $s_end, $cnexted, @nests) = @_;
+  my ($s_start, $s_end, $mname, $cnested, @nests) = @_;
   my $offset  = cpp::CchOffset();
   my $cbb = cpp::CbuffersBack();
   my $cbytesOutput = cpp::CchOutput();
@@ -271,9 +271,10 @@ sub macro_cleanup {
   select $old;
 }
 
+# FIXGJB: Obsoleted, methinks --10/08/97 gjb
 sub macro_arg_exp  {
   my ($mname,$raw,$number) = @_;
-  print "macro_arg_exp $mname of $raw (arg $number)\n";
+  print STDERR "macro_arg_exp $mname of $raw (arg $number)\n";
 }
 
 sub annotate_definition_message {
@@ -306,7 +307,7 @@ sub annotate_definition_with_undef {
 }
 
 sub expand_macro {
-  my ($mname,$expansion,$length,$raw_call,$s_start,$s_end,$has_escapes,$cbuffersDeep,@rest) 
+  my ($s_start,$s_end,$mname,$expansion,$length,$raw_call,$has_escapes,$cbuffersDeep,@rest) 
     = @_;
   my $cnested = shift @rest;
   my @nests = splice(@rest,0,$cnested);
@@ -352,7 +353,7 @@ sub expand_macro {
 }
 
 sub ifdef_macro {
-  my ($mname,$expansion,$length,$raw_call,$cargs) = @_;
+  my ($s_start,$s_end,$mname,$expansion,$length,$raw_call,$has_escapes,$cbuffersDeep,@rest) = @_;
   my $start = cpp::CchOutput()+1;
   my $end = $start + $length - 3; # Subtract off for the @ @, and it's an inclusive range
   print CPP "ifdef_macro $mname => $expansion (offset $start - $end)\n";
@@ -365,9 +366,9 @@ sub special_symbol {
 
 # FIX: this lines wrong is wrong
 sub comment {
-  my ($comment,$how_term,$lines) = @_;
+  my ($s_start, $s_end, $comment,$how_term,$lines) = @_;
   print "\n-----------------\n";
-  print "COMMENT ($lines lines in @{[cpp::Fname()]}) ending w/ $how_term: $comment\n";
+  print "COMMENT ($lines lines in @{[cpp::Fname()]} [$s_start:$s_end) ending w/ $how_term: $comment\n";
   print "-----------------\n";
 }
 

@@ -118,34 +118,122 @@ typedef enum hook_index_constants {
 ///% included iff !$conditional and $value, in which case $skipped will be empty.
 
   HI_DO_ENDIF,
-///% {}
+///% {$s_start, $s_end, $orig_conditional, $trailer}
+///% Called exactly once for each #endif directive seen by the preprocessor. In particular,
+///% note that if the directive is skipped due to another outer conditional, this
+///% hook does not get called.
+///% Arguments give the source code character
+///% offsets of the directive; $orig_conditional is the guard of the matching
+///% #ifXX directive; $trailer is the text following the #endif (often empty);
 
   HI_CREATE_PREDEF,
-///% {}
+///% {$mname, $expansion, $num_args, $internal_expansion, $file, $line, $r_argnames, $flags,
+///% $internal_expansion_args_uses... }
+///% Called once for each predefined macro CPP installs.
+///% $mname is the name of the macro, $expansion is its expansion [as literal text], 
+///% $num_args is the number of arguments it takes, $internal_expansion is an
+///% internal representation of the expansion (which is interpreted in the 
+///% context of $internal_expansion_args_uses, see cpplib.c), $file and $line
+///% can safely be ignored, $r_argnames is a comma separated list of the
+///% argument names in reversed order, and $flags is a bitmask of two flags
+///% $flags & $PREDEFINED is true if this is a predefined macro (always for this hook)
+///% and $flags & $RESTARGS is true if this macro's last argument swallows 
+///% remaining arguments (special gcc cpp feature).
 
   HI_CREATE_DEF,
-///% {}
+///% {$s_start, $s_end, $mname, $expansion, $num_args, $internal_expansion,
+///%  $file, $line, $r_argnames, $flags, $internal_expansion_args_uses... }
+///% Called once for each macro definition read by  CPP.
+///% $s_start and $s_end are the source code character offsets of the definition,
+///% $mname is the name of the macro, $expansion is its expansion [as literal text], 
+///% $num_args is the number of arguments it takes, $internal_expansion is an
+///% internal representation of the expansion (which is interpreted in the 
+///% context of $internal_expansion_args_uses, see cpplib.c), $file and $line
+///% give the filename and line number where the definition occurs, 
+///% $r_argnames is a comma separated list of the
+///% argument names in reversed order, and $flags is a bitmask of two flags
+///% $flags & $PREDEFINED is true if this is a predefined macro (never for this hook)
+///% and $flags & $RESTARGS is true if this macro's last argument swallows 
+///% remaining arguments (special gcc cpp feature).
 
   HI_DELETE_DEF,
-///% {}
+///% {$mname, $fExists}
+///% Called once for each macro name that is undefined for any reason (this is
+///% a low level hook called when you attempt to remove a macro name from the 
+///% table of macros,
+///% also HI_DO_UNDEF for the high level hook).  $mname is the name of the
+///% macro, and $fExists is 1 iff that macro name used to be defined.
 
   HI_SPECIAL_SYMBOL,
-///% {}
+///% {$symbol,$enum_node_type}
+///% Called once for each special symbol (e.g., __FILE__) that gets expanded.
+///% $symbol is the literal text of the symbol, $enum_node_type is an index
+///% into @enum_node_type giving the C constant corresponding to that symbol
+///% (usually better to just use $symbol instead).
 
   HI_EXPAND_MACRO,
-///% {}
+///% {$s_start,$s_end,$mname,$expansion,$length,$raw_call,$has_escapes,$cbuffersDeep,
+///% $cnested,@nests,$cargs,@args}
+///% Called once for each macro expansion in C source (i.e., not for expansions
+///% in #ifXX guards). $s_start and $s_end are the source code character offsets
+///% of the macro invocation; $mname is name of the macro, $expansion is what
+///% replaces $mname in the text (subject to further expansion, of course); $length
+///% is the number of characters in that expansion, $raw_call is how the call
+///% appeared in the source (includes the macro name), $has_escapes is 0 if the
+///% source buffer is actual source text (i.e., if this is a top level expansion),
+///% otherwise it is a 1 (escapes has marked with @- preceding the macro name)
+///% FIXGJB: is that right?; $cbuffersDeep is how many levels of expansion the text
+///% has undergone beyond the source text (0 means the macro occurrence appeared
+///% directly in the source code); $cnested tells how many elements are in @nests
+///% (so you can separate its arguments from @args); @nests is obsoleted FIXGJB:;
+///% $cargs tells how many arguments $mname takes; and @args contains argument
+///% expansion and use information.  Each argument contributes 7 elements to @args
+///% plus a pair of elements for each use;  e.g., if the first argument was used 3 times
+///% it would have 7 + 3*2 = 13 elements in @args describing its expansion.  The
+///% first 6 arguments are $raw,$r_offset,$expanded,$e_offset,$stringified,$s_offset
+///% which correspond to the raw, expanded, and stringified representations of the
+///% argument.  The $X_offset elements are internal offsets into a token buffer
+///% and can usually be ignored.  $stringified may be empty if the argument was
+///% never stringified during the macro expansion.  The seventh element for each
+///% argument tells how many times that argument was used in the expansion, and
+///% successive pairs of elements give character offsets to the appearance of those
+///% arguments in the expansion.  For example if argument 1 is used 3 times, there could
+///% be (3, 5,6, 9,11,  14,18) as the final elements of the @args list.  Note that
+///% because the third expansion is longer than the first two (4 characters instead of
+///% just two), it must have been stringified. FIXGJB is this true?
 
   HI_MACARG_EXP,
-///% {}
+///% {$mname,$raw,$number}
 
   HI_MACRO_CLEANUP,
-///% {}
+///% {$s_start, $s_end, $mname, $c_nested, @nests}
+///% Called once for each macro expansion buffer as it is removed 
+///% from the stack of text buffers.  $s_start and $s_end give the source
+///% code character position offset of the text which expanded into the text
+///% that is in the buffer currently being cleaned and pop-ped;  $mname is the
+///% name of the macro that resulted in that expansion; $c_nested and @nests
+///% are obsoleted.  Note that to get the full text of the expansion, you must
+///% track successive strings passed to the CPP_OUT hook, and reset the
+///% string used to accumulate the expansion when the CbuffersBack backcall
+///% is 1 in this hook (meaning you are cleaning up a top level macro expansion).
+///% See cpphook.pm for an example.
 
   HI_IFDEF_MACRO,
-///% {}
+///% {$s_start,$s_end,$mname,$expansion,$length,$raw_call,$has_escapes,$cbuffersDeep,
+///% $cnested,@nests,$cargs,@args}
+///% Called once for each macro expansion in #ifXX directives.  The arguments
+///% passed to the hook are the same as those for the EXPAND_MACRO hook, see its
+///% documentation for details.
 
   HI_COMMENT,
-///% {}
+///% {$s_start, $s_end, $comment_text, $how_terminated, $c_lines}
+///% Called once for each comment in the source code seen by preprocessor (i.e.,
+///% comments conditionally-compiiled out will not normally invoke this hook).
+///% $comment_text is the text of the comment, $how_term is "*/" for C-style
+///% comments, "nl" for a C++ style comment, or "eof" if the comment
+///% was ended by the end of file.
+///% $c_lines is the number of lines that the comment spans, including partial lines.
+
 
   HI_STRING_CONSTANT,
 ///% {}
@@ -220,14 +308,15 @@ void gjb_call_hooks_pcat_szl(struct cpp_options *, HOOK_INDEX, cpp_annotated_tok
 			     char *, int);
 
 void gjb_call_hooks_expansion(struct cpp_reader *pfile, HOOK_INDEX ih,
+			      int ichSourceStart, int ichSourceEnd,
 			      char *sz1, char *sz2, int cch2, int i1, 
-			      char *sz3, int cch3, int ichSourceStart, int ichSourceEnd,
+			      char *sz3, int cch3, 
 			      int has_escapes, int cbuffersDeep,
 			      cpp_expand_info *pcei,
 			      int nargs, struct argdata *args);
 
 void gjb_call_hooks_macro_cleanup(struct cpp_options *opts, HOOK_INDEX ih,
-				  char *sz1, int i1, int i2, cpp_expand_info *pcei);
+				  int i1, int i2, char *sz1, cpp_expand_info *pcei);
 
 void gjb_call_hooks_sz_szl_szl(struct cpp_options *, HOOK_INDEX, 
 			       char *, char *, int, char *, int);
@@ -248,6 +337,10 @@ void gjb_call_hooks_szl_szl_i(struct cpp_options *, HOOK_INDEX, char *, int,
 
 void gjb_call_hooks_i_i_szl_szl_i(struct cpp_options *, HOOK_INDEX, int, int,
 				  char *, int, char *, int, int);
+
+void gjb_call_hooks_i_i_szl_sz_i(struct cpp_options *, HOOK_INDEX, int, int,
+				  char *, int, char *, int );
+
 
 void gjb_call_hooks_i_i_i_szl_szl_i(struct cpp_options *, HOOK_INDEX, int, int, int,
 				    char *, int, char *, int, int);
@@ -277,6 +370,9 @@ void gjb_call_hooks_sz_i_sz_i_i(struct cpp_options *, HOOK_INDEX, char *, int,
 
 void gjb_call_hooks_i_i_szl_sz_defn(struct cpp_options *, HOOK_INDEX, int, int,
 				    char *, int, char *, DEFINITION *);
+
+void gjb_call_hooks_szl_sz_defn(struct cpp_options *, HOOK_INDEX,
+				char *, int, char *, DEFINITION *);
 
 void gjb_call_hooks_i_i_szl_i(struct cpp_options *opts, HOOK_INDEX ih, int s, int e,
 			      char *sz, int cch, int i);

@@ -865,7 +865,7 @@ macro_cleanup (cpp_buffer *pbuf, cpp_reader *pfile, cpp_expand_info *pcei)
   /*  if (macro->type != T_SPEC_DEFINED) { */
   if (macro->type == T_MACRO) {
     gjb_call_hooks_macro_cleanup(CPP_OPTIONS(pfile),HI_MACRO_CLEANUP,
-				 macro->name,ichSourceStart,ichSourceEnd,pcei);
+				 ichSourceStart,ichSourceEnd,macro->name,pcei);
   }
   
   //  free(pbuf->args);
@@ -934,6 +934,7 @@ skip_comment (pfile, linep)
   unsigned char *pchStart = CPP_BUFFER(pfile)->cur+1;
   long lineStart = linep? *linep:0; // CPP_BUFFER(pfile)->lineno;
   long linep_dummy = 0;
+  int cchOffsetStart = CchOffset_internal(pfile);
   if (linep == NULL)
     linep = &linep_dummy;
 
@@ -959,9 +960,10 @@ skip_comment (pfile, linep)
 	  if (prev_c == '*' && c == '/') 
 	    {
 	    /* drop the closing delimiter when computing the length */
-	    gjb_call_hooks_szl_sz_i(CPP_OPTIONS(pfile),HI_COMMENT,
-				    pchStart,CPP_BUFFER(pfile)->cur-2-pchStart,
-				    "*/",(*linep)-lineStart+1);
+	    gjb_call_hooks_i_i_szl_sz_i(CPP_OPTIONS(pfile),HI_COMMENT,
+					cchOffsetStart,CchOffset_internal(pfile)+1,
+					pchStart,CPP_BUFFER(pfile)->cur-2-pchStart,
+					"*/",(*linep)-lineStart+1);
 	    return ' ';
 	    }
 	  if (c == '\n')
@@ -977,9 +979,10 @@ skip_comment (pfile, linep)
 	  if (c == EOF)
 	    {
 	    /* note that you need to use -lang-c++ for these to be recognized */
-	    gjb_call_hooks_szl_sz_i(CPP_OPTIONS(pfile),HI_COMMENT,
-				  pchStart,CPP_BUFFER(pfile)->cur-pchStart,
-				  "EOF",(*linep)-lineStart+1);
+	    gjb_call_hooks_i_i_szl_sz_i(CPP_OPTIONS(pfile),HI_COMMENT,
+					cchOffsetStart,CchOffset_internal(pfile)+1,
+					pchStart,CPP_BUFFER(pfile)->cur-pchStart,
+					"EOF",(*linep)-lineStart+1);
 	    return ' '; /* Allow // to be terminated by EOF. */
 	    }
 	  while (c == '\\' && PEEKC() == '\n')
@@ -993,9 +996,10 @@ skip_comment (pfile, linep)
 	      /* note that you need to use -lang-c++ for these to be recognized */
 	      /* Don't consider final '\n' to be part of comment. */
 	      FORWARD(-1);
-	      gjb_call_hooks_szl_sz_i(CPP_OPTIONS(pfile),HI_COMMENT,
-				      pchStart,CPP_BUFFER(pfile)->cur-pchStart,
-				      "nl",(*linep)-lineStart+1);
+	      gjb_call_hooks_i_i_szl_sz_i(CPP_OPTIONS(pfile),HI_COMMENT,
+					  cchOffsetStart,CchOffset_internal(pfile)+1,
+					  pchStart,CPP_BUFFER(pfile)->cur-pchStart,
+					  "nl",(*linep)-lineStart+1);
 	      return ' ';
 	    }
 	}
@@ -1727,8 +1731,7 @@ create_definition (U_CHAR *buf, U_CHAR *limit, cpp_reader *pfile, int predefinit
   mdef.symlen = sym_length;
 
   if (predefinition)
-    gjb_call_hooks_i_i_szl_sz_defn(opts,HI_CREATE_PREDEF,cchOffsetStart,cchOffsetEnd,
-				   mdef.symnam,mdef.symlen,bp,defn);
+    gjb_call_hooks_szl_sz_defn(opts,HI_CREATE_PREDEF,mdef.symnam,mdef.symlen,bp,defn);
   else
     gjb_call_hooks_i_i_szl_sz_defn(opts,HI_CREATE_DEF,cchOffsetStart,cchOffsetEnd,
 				   mdef.symnam,mdef.symlen,bp,defn);
@@ -3207,9 +3210,9 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
     if (pfile->fGettingDirective) 
       {
       gjb_call_hooks_expansion(pfile,HI_IFDEF_MACRO,
+			       ichSourceStart, ichSourceEnd,
 			       hp->name,xbuf+2,xbuf_len-4,xbuf_len-4,
 			       pchAfterMacroName,cchRawCall,
-			       ichSourceStart, ichSourceEnd,
 			       CPP_BUFFER(pfile)->has_escapes,cbuffersDeep,
 			       pcei, nargs<0?0:nargs,
 			       args);
@@ -3217,9 +3220,9 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
     else
       {
       gjb_call_hooks_expansion(pfile,HI_EXPAND_MACRO,
+			       ichSourceStart,ichSourceEnd,
 			       hp->name,xbuf+2,xbuf_len-4,xbuf_len-4,
 			       pchAfterMacroName,cchRawCall,
-			       ichSourceStart,ichSourceEnd,
 			       CPP_BUFFER(pfile)->has_escapes,cbuffersDeep,
 			       pcei, nargs<0?0:nargs,
 			       args);

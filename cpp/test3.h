@@ -1,6 +1,8 @@
 #define FOO BAR
 #define BAR hello
 /* both of the below lines expand to hello */
+
+// another comment
 FOO
 BAR
 

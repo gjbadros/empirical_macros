@@ -15,3 +15,8 @@ BAR defined
 #else
 Neither defined
 #endif
+
+
+#define foo(x,y)  x y x x y testing
+
+#undef foo

@@ -17,7 +17,7 @@ main(char **argv,
      int argc)
 {
   int foo = FOO;
-  fprintf(stderr,"Hello World! FOO = %d",FOO);
+  fprintf(stderr,"Hello World! FOO = %d",FOO,notme);
   return 0;
 }
 

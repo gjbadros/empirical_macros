@@ -715,6 +715,8 @@ void skip_rest_of_line (cpp_reader *pfile);
 void cpp_message (cpp_reader *pfile, int is_error, char *msg, 
 		  char *arg1, char *arg2, char *arg3);
 
+int CchOffset_internal(cpp_reader *pfile);
+
 
 #ifdef __cplusplus
 }
