@@ -11,7 +11,7 @@ use Getopt::Std;
 use File::Basename;
 use English;
 #use strict;
-#use Carp;
+use Carp;
 
 #require Exporter;
 #@ISA = qw(Exporter);
@@ -43,11 +43,80 @@ my $fOpened = $false;
 
 my @def_files;
 my @use_files;
-my @categories;
+
+@CAT_null = 
+  qw( 
+     null_define
+    );
+
+@CAT_literal = 
+  qw(
+     constant 
+     literal
+     some_constant
+    );
+
+@CAT_expressions = 
+  qw( 
+     expression
+     expression_with_assignment
+     expression_with_free_variables
+     macro_as_function
+    );
+
+@CAT_statement = 
+  qw(
+     statement
+     assembly_code
+    );
+
+@CAT_syntax =
+  qw(
+     syntax_tokens
+     expands_to_reserved_word
+     mismatched_entities
+    );
+
+@CAT_stringization_and_pasting = 
+  qw(
+     stringization
+     token_pasting
+    );
+
+@CAT_fail =
+  qw(
+     uncategorized
+     being_categorized
+     failed_categorization
+     multiply_categorized
+    );
+
+@CAT_type =
+  # "type" is not really a category, but we want to use this as the
+  # name
+  qw(
+     type
+     expands_to_type
+     has_type_argument
+     macro_as_type
+     uses_type_argument
+    );
+
+@CAT_recursive =
+  qw(
+     recursive
+    );
+
+my @categories = \(
+  @CAT_recursive, @CAT_type, @CAT_fail,
+  @CAT_stringization_and_pasting, @CAT_syntax, @CAT_statement, @CAT_expressions,
+  @CAT_literal, @CAT_null );
 
 # Main routine
 while (<>) {
   if ($ARGV ne $current_file) {
+    close(OUT);
+    $fOpened = $false;
     $current_file = $ARGV;
     $prefix = basename($ARGV,qw(.frequse_cum .freqdef_cum));
 #    print STDERR "On file: $current_file\n";
@@ -59,7 +128,6 @@ while (<>) {
   }
   if (/^\#?Category: (.*)$/) {
     my $category = $1;
-    close(OUT);
     my $filename = "$prefix.$type-$category";
 #    print STDERR "Appending to $filename...\n";
     open(OUT,">> $filename");
@@ -69,58 +137,66 @@ while (<>) {
     } else {
       push @def_files, $filename;
     }
-    if (!grep($_ eq $category,@categories)) {
-      push @categories, $category;
-    }
   } else {
     print OUT if $fOpened;
   }
 }
 close(OUT);
 
-# print STDERR "Categories: ", join(", ",@categories), "\n";
 my $use_limit = 8000;  # emacs max uses is 4636
-my $def_limit = 1000;
+my $def_limit = 3000;
 
-foreach my $category (@categories) {
-  print STDERR "Handling $category...\n";
-  my @sum_of_line = (0) x 10000;
-  my $length = 0;
-  foreach my $filename (@use_files) {
-    next if $filename !~ /-$category$/;
-#    print STDERR "Reading $filename...\n";
-    close(IN);
-    open(IN,"<$filename");
-    my $total = 0;
-    my $i = 0;
-    my $num = 0;
-    if (<IN> !~ /Total\t(\d*)/) {
-      warn "Expecting total line";
-    } else {
-      $total = $1 || 0;
-#      print STDERR "Using $total\n";
-    }
-    while (<IN>) {
-      $num = (split(/\t/,$_))[1];
-      if (defined($num) && $num ne "") {
-	$sum_of_line[$i++] += $num;
+print STDERR "USES:\n";
+do_categories("use",$use_limit,@use_files);
+print STDERR "DEFINITIONS:\n";
+do_categories("def",$def_limit,@def_files);
+
+sub do_categories($$@) {
+  my $type = shift;
+  my $limit = shift;
+  my @files = @_;
+  
+  foreach my $category_list_ref (@categories) {
+    my $category = @{$category_list_ref}[0];
+    print STDERR "Handling $category...\n";
+    my @sum_of_line = (0) x 10000;
+    my $length = 0;
+    foreach my $filename (@files) {
+      next if ! grep {$filename =~ /-$_$/} @$category_list_ref;
+#      print STDERR "  Reading $filename...\n";
+      close(IN);
+      open(IN,"<$filename");
+      my $total = 0;
+      my $i = 0;
+      my $num = 0;
+      if (<IN> !~ /Total\t(\d*)/) {
+	warn "Expecting total line";
+      } else {
+	$total = $1 || 0;
+	#      print STDERR "Using $total\n";
+      }
+      while (<IN>) {
+	$num = (split(/\t/,$_))[1];
+	if (defined($num) && $num ne "") {
+	  $sum_of_line[$i++] += $num;
+	}
+      }
+      $length = $i-1 if $i-1 > $length;
+      if ($i > $limit) {
+	croak "Too big!";
+      }
+      while ($i < $limit) {
+	$sum_of_line[$i++] += $total;
       }
     }
-    $length = $i if $i > $length;
-    if ($i >= $use_limit) {
-      die "Too big!";
+    close(OUT);
+    open(OUT,">cat-${category}.freq${type}_cum");
+    select OUT;
+    $OFS="\t";
+    print "Total", "$sum_of_line[$length]\n";
+    foreach my $i (0..$length) {
+      print $i, $sum_of_line[$i], "\n";
     }
-    while ($i < $use_limit) {
-      $sum_of_line[$i++] += $total;
-    }
-  }
-  close(OUT);
-  open(OUT,">cat-$category.frequse_cum");
-  select OUT;
-  $OFS="\t";
-  print "Total", "$sum_of_line[$length-1]\n";
-  foreach my $i (0..$length) {
-    print $i, $sum_of_line[$i], "\n";
   }
 }
 
@@ -134,17 +210,13 @@ from a freq{def,use} file into files based on names of the categories
 
 =head1 SYNOPSIS 
 
+Takes *.freq{use,def}_cum files from em_reports and creates a table of
+the frequencies of uses and definitions per category 
+(as opposed to the former version which was per use)
+
 =head1 DESCRIPTION
 
 I<Disclaimer: You choose to use this script at your own risk!>
-
-=over 4
-
-=item
-
-=item
-
-=back
 
 =head1 BUGS
 
