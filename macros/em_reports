@@ -164,7 +164,7 @@ use vars qw($getopts_option_letters $c_reserved_type_word_alternatives
     %file_inclusion_method @files_included $outOFS %macros
     %macros_c_undefs %macros_uses %macros_file_line_uses
     %macros_used_in_functions @mdef_name @mdef_args @mdef_body
-    @mdef_body_noc @mdef_file @mdef_line @mdef_physical_lines
+    @mdef_body_noc @mdef_body_simple @mdef_file @mdef_line @mdef_physical_lines
     @mdef_physical_ncnb_lines %mdef_freevars @mdef_freefuns
     @mdef_dependenton @mdef_direct_expansion_uses @mdef_type @mdef_category
     @mdef_evilness %mntype %mncategory %fun_decl_arg_macros
@@ -486,7 +486,7 @@ sub output_stats ()
 	    else
 	      { my %def_hash;
 		for my $i (@{$macros{$macro_name}})
-		  { my $body = $mdef_body_noc[$i];
+		  { my $body = $mdef_body_simple[$i];
 		    my $args = $mdef_args[$i];
 		    # Canonicalize formal names to avoid gratuitous differences
 		    if ($args)
@@ -531,7 +531,7 @@ sub output_stats ()
 	{
 	  for my $i (@{$macros{$macro_name}})
 	    { my @complaints = ();
-	      my $body = $mdef_body_noc[$i];
+	      my $body = $mdef_body_simple[$i];
 	      my $args = $mdef_args[$i];
 
 	      # Check for formals but no body -- "#define foo(bar)" might
