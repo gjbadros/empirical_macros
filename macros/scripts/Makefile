@@ -10,7 +10,8 @@ USER_PREFIX = /homes/gws/gjb/macros
 
 # Directories
 PKG_DIR := /tmp/gjb/packages
-PKG_PREFIX :=   # Use only packages that start with these chars 
+# Use only packages that start with these chars 
+PKG_PREFIX :=   
 # DO NOT USE "" for a null var, since that becomes a space
 ANALYZE_OUTPUT_DIR := /tmp/gjb/data
 COMMON_DIR := $(shell dirname `ls -l Makefile | awk '{print $$NF}'`)
@@ -22,14 +23,15 @@ PAPER_DIR := $(USER_PREFIX)/papers
 PAPER_CPPP_DIR := $(USER_PREFIX)/papers/cppp
 PAPER_ORIG_DIR := $(USER_PREFIX)/papers/orig
 
-EXTRA_ANALYZE_FLAGS := -v -g14 -F$(FAST_DIR)
+EXTRA_ANALYZE_FLAGS := -v
 EXTRA_REPORTS_FLAGS := -v
-#EXTRA_ANALYZE_FLAGS := -g14
+#EXTRA_ANALYZE_FLAGS := -g14 -F$(FAST_DIR)
 
 include Makefile.user
 
 SCRIPTS := em_analyze em_reports em_constants.pm em_util.pm cline.pm
 SCRIPTSPATH := $(addprefix $(USER_PREFIX)/,$(SCRIPTS))
+SCRIPTSFAST := $(addprefix $(FAST_DIR)/,$(SCRIPTS))
 
 PKGS := $(shell zsh -c "setopt extendedglob; echo $(PKG_DIR)/$(PKG_PREFIX)*(/:t) | sed -e 's/-[^ ]*//g'")
 
