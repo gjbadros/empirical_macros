@@ -519,7 +519,7 @@ int  print_recur(treenode *root, int level, FILE *fp)
         case TN_JUMP:
             FPUTS("[TN_JUMP]", fp);
             fputs(toksym(root->tok,1), fp);
-            if (root->tok == RETURN){
+            if (root->tok == CRETURN){
                 /*  fputs("(",fp);  */
                 print_recur(root->lnode, level, fp);
                 /*  fputs(")",fp);  */

@@ -158,7 +158,7 @@ char *toksym(int tok, int white)
         else
           return("register");
 
-    case RETURN:
+    case CRETURN:
         if (white)
           return("return ");
         else

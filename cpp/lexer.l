@@ -57,9 +57,9 @@ cpp_yy_input(char *buf,int max_size)
 {
     int result;
     enum cpp_token kind = cpp_get_token (&parse_in);
-    gjb_call_hooks_szl(CPP_OPTIONS(&parse_in),CPP_OUT,
+    gjb_call_hooks_szl(CPP_OPTIONS(&parse_in),HI_CPP_OUT,
 		       parse_in.token_buffer,CPP_WRITTEN(&parse_in));
-    gjb_call_hooks_sz_szl(CPP_OPTIONS(&parse_in),TOKEN,SzFromToken(kind),
+    gjb_call_hooks_sz_szl(CPP_OPTIONS(&parse_in),HI_TOKEN,SzFromToken(kind),
 			  parse_in.token_buffer,
 			  CPP_WRITTEN(&parse_in));
     if (kind == CPP_EOF) {
@@ -227,7 +227,7 @@ pp_line         ^{whitespace}*"#"{whitespace}*[0-9]
 <INITIAL>"int"      { SETPOS_LEAF(INT,TN_TYPE); return(INT); }
 <INITIAL>"long"     { SETPOS_LEAF(LONG,TN_TYPE); return(LONG); }
 <INITIAL>"register" { SETPOS_LEAF(REGISTR,TN_TYPE); return(REGISTR); }
-<INITIAL>"return"   { SETPOS_NDE(RETURN); return(RETURN); }
+<INITIAL>"return"   { SETPOS_NDE(CRETURN); return(CRETURN); }
 <INITIAL>"short"    { SETPOS_LEAF(SHORT,TN_TYPE); return(SHORT); }
 <INITIAL>"signed"   { SETPOS_LEAF(SGNED,TN_TYPE); return(SGNED); }
 <INITIAL>"sizeof"   { SETPOS_NDE(SIZEOF); return(SIZEOF); }

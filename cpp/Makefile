@@ -254,7 +254,7 @@ tags:
 	etags cppmain.[ch] cpplib.[ch] cpphash.[ch] cppalloc.[ch] cpperror.[ch] cppexp.[ch] version.c pcp.h tm.h 
 
 clean:
-	rm -f *.o cppmain pcpp pcppct
+	rm -f *.o cppmain pcpp pcppct cpphook_names.h hook_index_constants.pm
 
 cpp: $(CCCP)
 	-rm -f cpp$(exeext)

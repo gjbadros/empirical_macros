@@ -10,8 +10,11 @@ use em_util;
 use vars qw( *CHOUT @Hooks );
 
 sub AddHook {
-  my ($index,$fnref) = @_;
-  $Hooks[$index] = $fnref;
+  my ($indexname,$fnref) = @_;
+  if (!defined($$indexname)) {
+    die "Cannot find hook named $indexname";
+  }
+  $Hooks[$$indexname] = $fnref;
 }
 
 sub PrintUID { 
@@ -19,6 +22,7 @@ sub PrintUID {
 }
 
 sub Startup {
+  print "STARTUP...\n";
   open(CHOUT,">chout.listing") || die "Could not open output file: $!";
   open(TOKEN,">token.listing") || die "Could not open output file: $!";
 #  select CHOUT;
@@ -190,32 +194,32 @@ sub Got_token {
 
 # Add the hooks, now
 
-AddHook($STARTUP,\&Startup);
-AddHook($DO_DEFINE,\&do_define);
-AddHook($HANDLE_DIRECTIVE,\&handle_directive);
-AddHook($CREATE_PREDEF,\&create_predef);
-AddHook($CREATE_DEF,\&create_def);
-AddHook($DO_UNDEF,\&do_undef);
-AddHook($DELETE_DEF,\&delete_def);
-AddHook($CPP_ERROR,\&cpp_error);
-AddHook($CPP_OUT,\&cpp_out);
-AddHook($EXPAND_MACRO,\&expand_macro);
-AddHook($SPECIAL_SYMBOL,\&special_symbol);
-AddHook($HI_COMMENT,\&comment);
-AddHook($STRING_CONSTANT,\&string_constant);
-AddHook($DO_INCLUDE,\&do_include);
-AddHook($DO_IF,\&do_if);
-AddHook($DO_ELIF,\&do_elif);
-AddHook($DO_XIFDEF,\&do_xifdef);
-AddHook($DO_IFDEF,\&do_ifdef);
-AddHook($DO_IFNDEF,\&do_ifndef);
-AddHook($DO_ELSE,\&do_else);
-AddHook($DO_ENDIF,\&do_endif);
-AddHook($ADD_IMPORT,\&add_import);
-AddHook($INCLUDE_FILE,\&include_file);
-AddHook($DONE_INCLUDE_FILE,\&done_include_file);
-AddHook($EXIT,\&Exit);
-AddHook($TOKEN,\&Got_token);
+AddHook("STARTUP",\&Startup);
+AddHook("DO_DEFINE",\&do_define);
+AddHook("HANDLE_DIRECTIVE",\&handle_directive);
+AddHook("CREATE_PREDEF",\&create_predef);
+AddHook("CREATE_DEF",\&create_def);
+AddHook("DO_UNDEF",\&do_undef);
+AddHook("DELETE_DEF",\&delete_def);
+AddHook("CPP_ERROR",\&cpp_error);
+AddHook("CPP_OUT",\&cpp_out);
+AddHook("EXPAND_MACRO",\&expand_macro);
+AddHook("SPECIAL_SYMBOL",\&special_symbol);
+AddHook("COMMENT",\&comment);
+AddHook("STRING_CONSTANT",\&string_constant);
+AddHook("DO_INCLUDE",\&do_include);
+AddHook("DO_IF",\&do_if);
+AddHook("DO_ELIF",\&do_elif);
+AddHook("DO_XIFDEF",\&do_xifdef);
+AddHook("DO_IFDEF",\&do_ifdef);
+AddHook("DO_IFNDEF",\&do_ifndef);
+AddHook("DO_ELSE",\&do_else);
+AddHook("DO_ENDIF",\&do_endif);
+AddHook("ADD_IMPORT",\&add_import);
+AddHook("INCLUDE_FILE",\&include_file);
+AddHook("DONE_INCLUDE_FILE",\&done_include_file);
+AddHook("EXIT",\&Exit);
+AddHook("TOKEN",\&Got_token);
 
 
 1;
