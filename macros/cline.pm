@@ -62,17 +62,6 @@ Michael D. Ernst <F<mernst@cs.washington.edu>>
 # separate version for simplification; but when should simplification ever
 # be necessary?
 
-# Copied from em_analyze --gjb
-# This only adds input_file_and_line; is it now gratuitous?
-sub mdie ($@) {
-  my (@msg) = check_args_at_least(1, @_);
-  # Could use croak instead.
-  my ($file,$line) = (caller)[1,2];
-  print STDERR "$file:$line ",
-      # (defined($current_function) ? "function $current_function " : ""),
-      "on ", input_file_and_line(), ": ", @msg, "\n";
-  exit -1;
-}
 
 ###########################################################################
 ### Variables
@@ -133,8 +122,7 @@ sub cline_ungot_size ()
 sub cline_ungot_phys_lines ()
 { check_args(0, @_);
   my $result = 0;
-  { my $phys;
-    foreach $phys (@cline_ungot_phys_lines)
+  { foreach my $phys (@cline_ungot_phys_lines)
       { $result += $phys; } }
   return $result;
 }
@@ -146,6 +134,7 @@ sub cline_ungot_phys_lines ()
 use vars qw($cline_simplify_strings $debug_cline);
 
 $debug_cline = $false;
+# $debug_cline = $true;
 # If $cline_simplify_strings is set, then character and string literals are
 #   replaced by 'a' and "" respectively.  That lets us do a simple
 #   syntactic check for parens, braces, commas, etc.
@@ -250,7 +239,7 @@ sub cline_updateinvars ($)
 		{ $seen_ncnb = 1; }
 	      $cline_incomment = $true; }
 	  else
-	    { mdie("cline_updateinvars: what match?  $match in $_[0]"); } }
+	    { croak("cline_updateinvars: what match?  $match in $_[0]"); } }
       else
 	{ if ($remaining !~ /^\s*$/)
 	    { $seen_ncnb = 1; }
@@ -294,6 +283,8 @@ sub append_lines ($$)
   my ($arg1, $arg2) = check_args(2, @_);
   # "+" instead of "*" wouldn't introduce spaces where there were none before;
   # but we want to make sure the two lines don't just run together.
+  # Exception to the above: if splicing, then running together may be OK.
+  # At present, callers take care of that themselves.
   $arg1 =~ s/[ \t\n]*$/ /;
   $arg2 =~ s/^[ \t\n]*/ /;
   return ($arg1 . $arg2);
@@ -354,15 +345,21 @@ sub get_spliced_cline ($;$)
       else
 	{ if (substr($raw_line, -2) ne "\\\n")
 	    { die "Didn't find backslash-newline where there must be one: '$raw_line'\n"; }
-	  # What is the point of this test?  I added $true to front.
-	  if ($true || !($cline_incomment || ($cline_instring && $cline_simplify_strings)))
+	  if ($cline_instring && $cline_simplify_strings && !($simple_line =~ /(^|\")$/))
+	    { croak "In string and simplifying, so simple should be empty or end in double quote: <<$simple_line>>\n"; }
+	  # If in a comment, or in a string and simplifying, then the
+	  # trailing backslash has already been stripped from simple_line;
+	  # don't remove even more characters!
+	  if (!($cline_incomment || ($cline_instring && $cline_simplify_strings)))
 	    {
-	      # FIX: this gives Greg some kind of error.  What's going on?
-	      # if (substr($simple_line, -2) ne "\\\n")
-	      #  { die "Didn't find backslash-nonewline where there must be one: '$simple_line'\n"; }
+	      if (substr($simple_line, -2) ne "\\\n")
+		{ die "Didn't find backslash-nonewline where there must be one: '$simple_line'\n"; }
 	      $simple_line = substr($simple_line, 0, length($simple_line)-2); }
 	  elsif ((length($simple_line) >= 2) && (substr($simple_line, -1) eq "\\\n"))
-	    { die "Found backslash-nonewline where there mustn't be one: '$simple_line'\n"; } }
+	    { # The backslash-newline should already have been removed from $simple_line.
+	      die "Found backslash-nonewline where there mustn't be one: '$simple_line'\n"; } }
+      if ($debug_cline)
+	{ print "simple_line less backslash = `$simple_line'\n"; }
       if ($simple_line =~ /\\\n/)
 	{ die "Found backslashes that should have just been removed."; }
       my $next_raw_line = <$filehandle>;
@@ -371,13 +368,17 @@ sub get_spliced_cline ($;$)
 	{ push(@{$warnings}, "dangerous: file ends with continuation character:\n    $raw_line\n"); }
       else
 	{ $num_physical_lines++;
+	  my $old_instring = $cline_instring;
 	  my ($next_simple_line, $next_ncnb_lines) =
 	    ($cpp_comment ? ($next_raw_line, 0, []) : cline_updateinvars($next_raw_line));
 	  $num_ncnb_lines += $next_ncnb_lines;
 	  $raw_line = $raw_line . $next_raw_line;
 	  if ($debug_cline)
-	    { print "appending '$simple_line' '$next_simple_line'\n"; }
-	  $simple_line = append_lines($simple_line, $next_simple_line);
+	    { print "splicing '$simple_line' '$next_simple_line'\n"; }
+	  if ($old_instring && $cline_simplify_strings)
+	    { $simple_line .= $next_simple_line; }
+	  else
+	    { $simple_line = append_lines($simple_line, $next_simple_line); }
 	  if ($next_raw_line =~ m/^\s*$/)
 	    { # $next_raw_line is blank.  $raw_line has no newline.
 	      push(@{$warnings}, "dangerous: blank line follows continuation character:\n    $raw_line\n"); }
@@ -441,7 +442,7 @@ sub get_fulltoken_cline ($;$)
     { $peeking = $false; }
 
   if ($cline_instring || $cline_incomment)
-    { mdie("Bad instring $cline_instring or incomment $cline_incomment"); }
+    { croak("Bad instring $cline_instring or incomment $cline_incomment"); }
 
   # print "Called get_fulltoken_line ($cline_simplify_strings)\n";
 
@@ -471,15 +472,16 @@ sub get_fulltoken_cline ($;$)
       # perhaps check for $mdef_name and mention it in message if it's set
       while ($cline_incomment || $cline_instring)
 	{
+	  my $old_instring = $cline_instring;
 	  my ($next_raw, $next_simple, $next_phys, $next_ncnb, $next_warnings) = get_spliced_cline($filehandle);
 	  if ($next_raw)
 	    # Strict ANSI C does not permit newlines in string constants;
 	    # perhaps warn.  On the other hand, most compilers permit it.
-	    # Don't bother avoiding append_lines if in string,
-	    # because get_spliced_cline doesn't bother either.
-	    # (Actually, I should bother, if in a string.)
 	    { $raw_result = $raw_result . $next_raw;
-	      $simple_result = append_lines($simple_result, $next_simple);
+	      if ($old_instring && $cline_simplify_strings)
+		{ $simple_result .= $next_simple; }
+	      else
+		{ $simple_result = append_lines($simple_result, $next_simple); }
 	      $physical_lines += $next_phys;
 	      $physical_ncnb_lines += $next_ncnb;
 	      push(@{$warnings}, @{$next_warnings}); }
@@ -498,7 +500,7 @@ sub get_fulltoken_cline ($;$)
       if (!defined($simple_result))
 	{ $simple_result = " "; }
       elsif ($simple_result eq "")
-	{ mdie("empty get_fulltoken_line result"); }
+	{ croak("empty get_fulltoken_line result"); }
       # print "get_fulltoken_line returning <<$simple_result>>\n";
       return ($raw_result, $simple_result, $physical_lines, $physical_ncnb_lines, $warnings);
     }
@@ -514,11 +516,13 @@ sub get_fulltoken_cline ($;$)
 #  * The simple result contains no comments, and its strings and character
 #    constants have been simplified if $cline_simplify_strings (which see) is true.
 #  * The string results end in newline.
+# The second argument is the number of lines ahead of the current one to peek:
+# 1 gives the next line, 2 the line after that, etc.
 sub peek_fulltoken_cline ($$)
 {
   my ($filehandle, $arg) = check_args(2, @_);
   if ($arg < 1)
-    { mdie ("bad argument $arg to peek_fulltoken_cline", caller); }
+    { croak ("bad argument $arg to peek_fulltoken_cline", caller); }
   if ($debug_cline)
     { print "called peek_fulltoken_line($arg)\n";
       print "ungot raw: ", join("  >>", @cline_ungot_raw_lines);
@@ -540,7 +544,7 @@ sub peek_fulltoken_cline ($$)
 	{
 	  # This should never happen:  why would one look two
 	  # lines ahead before checking the next line?
-	  mdie("Why look far ahead when you haven't looked near?  $arg " . scalar(@cline_ungot_raw_lines));
+	  croak("Why look far ahead when you haven't looked near?  $arg " . scalar(@cline_ungot_raw_lines));
 	  # Old implementation.
 	  # # Recursively fill up the arrays
 	  # peek_fulltoken_line($arg-1);
