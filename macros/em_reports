@@ -477,7 +477,7 @@ sub output_properties ( )
   while ($i < $cMacrosInTables) {
     ($i++ and next) if ($file_inclusion_method[$mdef_fileno[$i]] ne "FromStdin");
     push @mdef_properties_in_package, $mdef_properties[$i];
-#DBG    print STDERR "Adding $mdef_properties[$i]\n";
+#DBG    print STDERR "Adding i=$i, $mdef_properties[$i], $mdef_name[$i]\n";
     $i++;
   }
   $cMacrosInPackage = $#mdef_properties_in_package + 1;
@@ -992,6 +992,7 @@ sub output_freqdef ( )
   if ($opt_v) { print STDOUT "freqdef..."; }
   compute_freq_def_info();
   select(FREQDEF);
+#DBG  print STDERR "\@macros_c_number_defs (size-1 = $#macros_c_number_defs): ", join(", ",@macros_c_number_defs), "\n";
   OutputCountsHistogramCum(1,$macros_c_most_defs,
 			   make_cum_array(@macros_c_number_defs));
   foreach my $cat (0..$catLast) {
