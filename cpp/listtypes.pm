@@ -6,7 +6,7 @@ AddHook("EXIT",\&Exit);
 sub Typedef {
   my ($name) = @_;
   push @typedefs, $name;
-  $num_typedefs{cpp::Fname()}++;
+  $num_typedefs{pcp3::Fname()}++;
 }
 
 sub Exit {

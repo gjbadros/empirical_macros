@@ -31,7 +31,7 @@ extern "C" {
 
 extern TreeStack *ParseStack;
 
-MODULE = backcalls		PACKAGE = cpp
+MODULE = backcalls		PACKAGE = pcp3
 
 PROTOTYPES: disable
 

@@ -40,11 +40,11 @@ extern "C" {
 
 extern TreeStack *ParseStack;
 
-XS(XS_cpp_SzToken)
+XS(XS_pcp3_SzToken)
 {
     dXSARGS;
     if (items != 1)
-	croak("Usage: cpp::SzToken(i)");
+	croak("Usage: pcp3::SzToken(i)");
     {
 	int	i = (int)SvIV(ST(0));
 #line 44 "backcalls.xs"
@@ -61,11 +61,11 @@ XS(XS_cpp_SzToken)
     XSRETURN(1);
 }
 
-XS(XS_cpp_SumCchExpansionOffset)
+XS(XS_pcp3_SumCchExpansionOffset)
 {
     dXSARGS;
     if (items != 0)
-	croak("Usage: cpp::SumCchExpansionOffset()");
+	croak("Usage: pcp3::SumCchExpansionOffset()");
     SP -= items;
     {
 	cpp_buffer * buffer = parse_in.buffer;
@@ -95,11 +95,11 @@ XS(XS_cpp_SumCchExpansionOffset)
     }
 }
 
-XS(XS_cpp_CbuffersBack)
+XS(XS_pcp3_CbuffersBack)
 {
     dXSARGS;
     if (items != 0)
-	croak("Usage: cpp::CbuffersBack()");
+	croak("Usage: pcp3::CbuffersBack()");
     {
 #line 90 "backcalls.xs"
 	int	RETVAL;
@@ -115,11 +115,11 @@ XS(XS_cpp_CbuffersBack)
     XSRETURN(1);
 }
 
-XS(XS_cpp_MacroExpansionHistory)
+XS(XS_pcp3_MacroExpansionHistory)
 {
     dXSARGS;
     if (items != 0)
-	croak("Usage: cpp::MacroExpansionHistory()");
+	croak("Usage: pcp3::MacroExpansionHistory()");
     SP -= items;
     {
 	cpp_buffer * buffer = parse_in.buffer;
@@ -157,11 +157,11 @@ XS(XS_cpp_MacroExpansionHistory)
     }
 }
 
-XS(XS_cpp_ArgOf)
+XS(XS_pcp3_ArgOf)
 {
     dXSARGS;
     if (items != 0)
-	croak("Usage: cpp::ArgOf()");
+	croak("Usage: pcp3::ArgOf()");
     {
 	HASHNODE * macro = (HASHNODE*)(parse_in.buffer->data);
 	int offset = parse_in.buffer->cur - parse_in.buffer->buf - 1;
@@ -184,11 +184,11 @@ XS(XS_cpp_ArgOf)
     XSRETURN(1);
 }
 
-XS(XS_cpp_CchOffset)
+XS(XS_pcp3_CchOffset)
 {
     dXSARGS;
     if (items != 0)
-	croak("Usage: cpp::CchOffset()");
+	croak("Usage: pcp3::CchOffset()");
     {
 	cpp_buffer * buffer = parse_in.buffer;
 	int cbuffersBack = 0;
@@ -218,11 +218,11 @@ XS(XS_cpp_CchOffset)
     XSRETURN(1);
 }
 
-XS(XS_cpp_InFname)
+XS(XS_pcp3_InFname)
 {
     dXSARGS;
     if (items != 0)
-	croak("Usage: cpp::InFname()");
+	croak("Usage: pcp3::InFname()");
     {
 #line 193 "backcalls.xs"
 	char *	RETVAL;
@@ -238,11 +238,11 @@ XS(XS_cpp_InFname)
     XSRETURN(1);
 }
 
-XS(XS_cpp_Fname)
+XS(XS_pcp3_Fname)
 {
     dXSARGS;
     if (items != 0)
-	croak("Usage: cpp::Fname()");
+	croak("Usage: pcp3::Fname()");
     {
 	cpp_buffer * buffer = cpp_file_buffer(&parse_in);
 #line 205 "backcalls.xs"
@@ -263,11 +263,11 @@ XS(XS_cpp_Fname)
     XSRETURN(1);
 }
 
-XS(XS_cpp_FnameNominal)
+XS(XS_pcp3_FnameNominal)
 {
     dXSARGS;
     if (items != 0)
-	croak("Usage: cpp::FnameNominal()");
+	croak("Usage: pcp3::FnameNominal()");
     {
 #line 221 "backcalls.xs"
 	char *	RETVAL;
@@ -286,11 +286,11 @@ XS(XS_cpp_FnameNominal)
     XSRETURN(1);
 }
 
-XS(XS_cpp_ExpansionLookup)
+XS(XS_pcp3_ExpansionLookup)
 {
     dXSARGS;
     if (items != 1)
-	croak("Usage: cpp::ExpansionLookup(sz)");
+	croak("Usage: pcp3::ExpansionLookup(sz)");
     {
 	char *	sz = (char *)SvPV(ST(0),na);
 #line 237 "backcalls.xs"
@@ -310,11 +310,11 @@ XS(XS_cpp_ExpansionLookup)
     XSRETURN(1);
 }
 
-XS(XS_cpp_CchOutput)
+XS(XS_pcp3_CchOutput)
 {
     dXSARGS;
     if (items != 0)
-	croak("Usage: cpp::CchOutput()");
+	croak("Usage: pcp3::CchOutput()");
     {
 #line 251 "backcalls.xs"
 	int	RETVAL;
@@ -330,11 +330,11 @@ XS(XS_cpp_CchOutput)
     XSRETURN(1);
 }
 
-XS(XS_cpp_CchCppRead)
+XS(XS_pcp3_CchCppRead)
 {
     dXSARGS;
     if (items != 0)
-	croak("Usage: cpp::CchCppRead()");
+	croak("Usage: pcp3::CchCppRead()");
     {
 #line 261 "backcalls.xs"
 	int	RETVAL;
@@ -350,11 +350,11 @@ XS(XS_cpp_CchCppRead)
     XSRETURN(1);
 }
 
-XS(XS_cpp_FExpandingMacros)
+XS(XS_pcp3_FExpandingMacros)
 {
     dXSARGS;
     if (items != 0)
-	croak("Usage: cpp::FExpandingMacros()");
+	croak("Usage: pcp3::FExpandingMacros()");
     {
 #line 272 "backcalls.xs"
 	int	RETVAL;
@@ -370,11 +370,11 @@ XS(XS_cpp_FExpandingMacros)
     XSRETURN(1);
 }
 
-XS(XS_cpp_ParseStateStack)
+XS(XS_pcp3_ParseStateStack)
 {
     dXSARGS;
     if (items != 0)
-	croak("Usage: cpp::ParseStateStack()");
+	croak("Usage: pcp3::ParseStateStack()");
     SP -= items;
     {
 #line 284 "backcalls.xs"
@@ -397,11 +397,11 @@ XS(XS_cpp_ParseStateStack)
     }
 }
 
-XS(XS_cpp_SetParseStateStack)
+XS(XS_pcp3_SetParseStateStack)
 {
     dXSARGS;
     if (items != 0)
-	croak("Usage: cpp::SetParseStateStack()");
+	croak("Usage: pcp3::SetParseStateStack()");
     SP -= items;
     {
 #line 300 "backcalls.xs"
@@ -421,11 +421,11 @@ XS(XS_cpp_SetParseStateStack)
     }
 }
 
-XS(XS_cpp_PushBuffer)
+XS(XS_pcp3_PushBuffer)
 {
     dXSARGS;
     if (items != 2)
-	croak("Usage: cpp::PushBuffer($buffer_to_push, $s_start)");
+	croak("Usage: pcp3::PushBuffer($buffer_to_push, $s_start)");
     SP -= items;
     {
 #line 317 "backcalls.xs"
@@ -451,11 +451,11 @@ XS(XS_cpp_PushBuffer)
     }
 }
 
-XS(XS_cpp_EnterScope)
+XS(XS_pcp3_EnterScope)
 {
     dXSARGS;
     if (items != 0)
-	croak("Usage: cpp::EnterScope()");
+	croak("Usage: pcp3::EnterScope()");
     SP -= items;
     {
 #line 338 "backcalls.xs"
@@ -472,11 +472,11 @@ XS(XS_cpp_EnterScope)
     }
 }
 
-XS(XS_cpp_ExitScope)
+XS(XS_pcp3_ExitScope)
 {
     dXSARGS;
     if (items != 0)
-	croak("Usage: cpp::ExitScope()");
+	croak("Usage: pcp3::ExitScope()");
     SP -= items;
     {
 #line 350 "backcalls.xs"
@@ -493,11 +493,11 @@ XS(XS_cpp_ExitScope)
     }
 }
 
-XS(XS_cpp_PushHashTab)
+XS(XS_pcp3_PushHashTab)
 {
     dXSARGS;
     if (items != 0)
-	croak("Usage: cpp::PushHashTab()");
+	croak("Usage: pcp3::PushHashTab()");
     SP -= items;
     {
 #line 360 "backcalls.xs"
@@ -512,11 +512,11 @@ XS(XS_cpp_PushHashTab)
     }
 }
 
-XS(XS_cpp_PopHashTab)
+XS(XS_pcp3_PopHashTab)
 {
     dXSARGS;
     if (items != 0)
-	croak("Usage: cpp::PopHashTab()");
+	croak("Usage: pcp3::PopHashTab()");
     {
 #line 368 "backcalls.xs"
 #line 368 "backcalls.xs"
@@ -529,11 +529,11 @@ XS(XS_cpp_PopHashTab)
     XSRETURN_EMPTY;
 }
 
-XS(XS_cpp_SetParseDebugging)
+XS(XS_pcp3_SetParseDebugging)
 {
     dXSARGS;
     if (items != 0)
-	croak("Usage: cpp::SetParseDebugging()");
+	croak("Usage: pcp3::SetParseDebugging()");
     {
 #line 377 "backcalls.xs"
 #line 377 "backcalls.xs"
@@ -546,11 +546,11 @@ XS(XS_cpp_SetParseDebugging)
     XSRETURN_EMPTY;
 }
 
-XS(XS_cpp_ResetParseDebugging)
+XS(XS_pcp3_ResetParseDebugging)
 {
     dXSARGS;
     if (items != 0)
-	croak("Usage: cpp::ResetParseDebugging()");
+	croak("Usage: pcp3::ResetParseDebugging()");
     {
 #line 387 "backcalls.xs"
 #line 387 "backcalls.xs"
@@ -563,11 +563,11 @@ XS(XS_cpp_ResetParseDebugging)
     XSRETURN_EMPTY;
 }
 
-XS(XS_cpp_YYPushStackState)
+XS(XS_pcp3_YYPushStackState)
 {
     dXSARGS;
     if (items != 0)
-	croak("Usage: cpp::YYPushStackState()");
+	croak("Usage: pcp3::YYPushStackState()");
     {
 #line 395 "backcalls.xs"
 #line 395 "backcalls.xs"
@@ -582,11 +582,11 @@ XS(XS_cpp_YYPushStackState)
     XSRETURN_EMPTY;
 }
 
-XS(XS_cpp_YYPopAndRestoreStackState)
+XS(XS_pcp3_YYPopAndRestoreStackState)
 {
     dXSARGS;
     if (items != 0)
-	croak("Usage: cpp::YYPopAndRestoreStackState()");
+	croak("Usage: pcp3::YYPopAndRestoreStackState()");
     {
 #line 404 "backcalls.xs"
 #line 404 "backcalls.xs"
@@ -601,11 +601,11 @@ XS(XS_cpp_YYPopAndRestoreStackState)
     XSRETURN_EMPTY;
 }
 
-XS(XS_cpp_YYPopAndDiscardStackState)
+XS(XS_pcp3_YYPopAndDiscardStackState)
 {
     dXSARGS;
     if (items != 0)
-	croak("Usage: cpp::YYPopAndDiscardStackState()");
+	croak("Usage: pcp3::YYPopAndDiscardStackState()");
     {
 #line 413 "backcalls.xs"
 #line 413 "backcalls.xs"
@@ -620,11 +620,11 @@ XS(XS_cpp_YYPopAndDiscardStackState)
     XSRETURN_EMPTY;
 }
 
-XS(XS_cpp_YYSwapStackState)
+XS(XS_pcp3_YYSwapStackState)
 {
     dXSARGS;
     if (items != 0)
-	croak("Usage: cpp::YYSwapStackState()");
+	croak("Usage: pcp3::YYSwapStackState()");
     {
 #line 423 "backcalls.xs"
 #line 423 "backcalls.xs"
@@ -639,11 +639,11 @@ XS(XS_cpp_YYSwapStackState)
     XSRETURN_EMPTY;
 }
 
-XS(XS_cpp_YYPushDupTopStackState)
+XS(XS_pcp3_YYPushDupTopStackState)
 {
     dXSARGS;
     if (items != 0)
-	croak("Usage: cpp::YYPushDupTopStackState()");
+	croak("Usage: pcp3::YYPushDupTopStackState()");
     {
 #line 433 "backcalls.xs"
 #line 433 "backcalls.xs"
@@ -658,11 +658,11 @@ XS(XS_cpp_YYPushDupTopStackState)
     XSRETURN_EMPTY;
 }
 
-XS(XS_cpp_YYFCompareTopStackState)
+XS(XS_pcp3_YYFCompareTopStackState)
 {
     dXSARGS;
     if (items != 0)
-	croak("Usage: cpp::YYFCompareTopStackState()");
+	croak("Usage: pcp3::YYFCompareTopStackState()");
     {
 #line 443 "backcalls.xs"
 	bool	RETVAL;
@@ -681,11 +681,11 @@ XS(XS_cpp_YYFCompareTopStackState)
     XSRETURN(1);
 }
 
-XS(XS_cpp_FLookupSymbol)
+XS(XS_pcp3_FLookupSymbol)
 {
     dXSARGS;
     if (items != 1)
-	croak("Usage: cpp::FLookupSymbol(szSymbol)");
+	croak("Usage: pcp3::FLookupSymbol(szSymbol)");
     {
 	char *	szSymbol = (char *)SvPV(ST(0),na);
 #line 458 "backcalls.xs"
@@ -725,35 +725,35 @@ XS(boot_backcalls)
 
     XS_VERSION_BOOTCHECK ;
 
-        newXS("cpp::SzToken", XS_cpp_SzToken, file);
-        newXS("cpp::SumCchExpansionOffset", XS_cpp_SumCchExpansionOffset, file);
-        newXS("cpp::CbuffersBack", XS_cpp_CbuffersBack, file);
-        newXS("cpp::MacroExpansionHistory", XS_cpp_MacroExpansionHistory, file);
-        newXS("cpp::ArgOf", XS_cpp_ArgOf, file);
-        newXS("cpp::CchOffset", XS_cpp_CchOffset, file);
-        newXS("cpp::InFname", XS_cpp_InFname, file);
-        newXS("cpp::Fname", XS_cpp_Fname, file);
-        newXS("cpp::FnameNominal", XS_cpp_FnameNominal, file);
-        newXS("cpp::ExpansionLookup", XS_cpp_ExpansionLookup, file);
-        newXS("cpp::CchOutput", XS_cpp_CchOutput, file);
-        newXS("cpp::CchCppRead", XS_cpp_CchCppRead, file);
-        newXS("cpp::FExpandingMacros", XS_cpp_FExpandingMacros, file);
-        newXS("cpp::ParseStateStack", XS_cpp_ParseStateStack, file);
-        newXS("cpp::SetParseStateStack", XS_cpp_SetParseStateStack, file);
-        newXS("cpp::PushBuffer", XS_cpp_PushBuffer, file);
-        newXS("cpp::EnterScope", XS_cpp_EnterScope, file);
-        newXS("cpp::ExitScope", XS_cpp_ExitScope, file);
-        newXS("cpp::PushHashTab", XS_cpp_PushHashTab, file);
-        newXS("cpp::PopHashTab", XS_cpp_PopHashTab, file);
-        newXS("cpp::SetParseDebugging", XS_cpp_SetParseDebugging, file);
-        newXS("cpp::ResetParseDebugging", XS_cpp_ResetParseDebugging, file);
-        newXS("cpp::YYPushStackState", XS_cpp_YYPushStackState, file);
-        newXS("cpp::YYPopAndRestoreStackState", XS_cpp_YYPopAndRestoreStackState, file);
-        newXS("cpp::YYPopAndDiscardStackState", XS_cpp_YYPopAndDiscardStackState, file);
-        newXS("cpp::YYSwapStackState", XS_cpp_YYSwapStackState, file);
-        newXS("cpp::YYPushDupTopStackState", XS_cpp_YYPushDupTopStackState, file);
-        newXS("cpp::YYFCompareTopStackState", XS_cpp_YYFCompareTopStackState, file);
-        newXS("cpp::FLookupSymbol", XS_cpp_FLookupSymbol, file);
+        newXS("pcp3::SzToken", XS_pcp3_SzToken, file);
+        newXS("pcp3::SumCchExpansionOffset", XS_pcp3_SumCchExpansionOffset, file);
+        newXS("pcp3::CbuffersBack", XS_pcp3_CbuffersBack, file);
+        newXS("pcp3::MacroExpansionHistory", XS_pcp3_MacroExpansionHistory, file);
+        newXS("pcp3::ArgOf", XS_pcp3_ArgOf, file);
+        newXS("pcp3::CchOffset", XS_pcp3_CchOffset, file);
+        newXS("pcp3::InFname", XS_pcp3_InFname, file);
+        newXS("pcp3::Fname", XS_pcp3_Fname, file);
+        newXS("pcp3::FnameNominal", XS_pcp3_FnameNominal, file);
+        newXS("pcp3::ExpansionLookup", XS_pcp3_ExpansionLookup, file);
+        newXS("pcp3::CchOutput", XS_pcp3_CchOutput, file);
+        newXS("pcp3::CchCppRead", XS_pcp3_CchCppRead, file);
+        newXS("pcp3::FExpandingMacros", XS_pcp3_FExpandingMacros, file);
+        newXS("pcp3::ParseStateStack", XS_pcp3_ParseStateStack, file);
+        newXS("pcp3::SetParseStateStack", XS_pcp3_SetParseStateStack, file);
+        newXS("pcp3::PushBuffer", XS_pcp3_PushBuffer, file);
+        newXS("pcp3::EnterScope", XS_pcp3_EnterScope, file);
+        newXS("pcp3::ExitScope", XS_pcp3_ExitScope, file);
+        newXS("pcp3::PushHashTab", XS_pcp3_PushHashTab, file);
+        newXS("pcp3::PopHashTab", XS_pcp3_PopHashTab, file);
+        newXS("pcp3::SetParseDebugging", XS_pcp3_SetParseDebugging, file);
+        newXS("pcp3::ResetParseDebugging", XS_pcp3_ResetParseDebugging, file);
+        newXS("pcp3::YYPushStackState", XS_pcp3_YYPushStackState, file);
+        newXS("pcp3::YYPopAndRestoreStackState", XS_pcp3_YYPopAndRestoreStackState, file);
+        newXS("pcp3::YYPopAndDiscardStackState", XS_pcp3_YYPopAndDiscardStackState, file);
+        newXS("pcp3::YYSwapStackState", XS_pcp3_YYSwapStackState, file);
+        newXS("pcp3::YYPushDupTopStackState", XS_pcp3_YYPushDupTopStackState, file);
+        newXS("pcp3::YYFCompareTopStackState", XS_pcp3_YYFCompareTopStackState, file);
+        newXS("pcp3::FLookupSymbol", XS_pcp3_FLookupSymbol, file);
     ST(0) = &sv_yes;
     XSRETURN(1);
 }

@@ -136,7 +136,7 @@ sub FIsDeclAllowable {
   if (@_) {
     @state_stack = @_;
   } else {
-    @state_stack = cpp::ParseStateStack();
+    @state_stack = pcp3::ParseStateStack();
   }
   foreach my $stackref (@state_stacks_decl_allowable) {
     # String interpolation of an array works for comparing them

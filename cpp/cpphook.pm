@@ -22,7 +22,7 @@ sub Startup2 {
 sub Startup {
   # Parse debugging (bison's yydebug variable) is on by default,
   # so turn it off
-  cpp::ResetParseDebugging();
+  pcp3::ResetParseDebugging();
   print STDERR "STARTUP...\n";
   open(CPP,">cpp.listing") || die "Could not open output file: $!";
   open(CHOUT,">chout.listing") || die "Could not open output file: $!";
@@ -54,10 +54,10 @@ sub Exit {
 
 sub do_define {
   my ($s_start,$s_end,$name_args_body) = @_;
-  my $fname = cpp::Fname();
+  my $fname = pcp3::Fname();
   print CPP "In do_define w/ body = $name_args_body\n";
   print CPP ": $fname [$s_start,$s_end]\n";
-  print TRACE ": ParseStateStack: ", join(",",cpp::ParseStateStack()), "\n";
+  print TRACE ": ParseStateStack: ", join(",",pcp3::ParseStateStack()), "\n";
   PutFaceProperty($fname,$s_start,$s_end,"font-lock-type-face");
 }
 
@@ -90,10 +90,10 @@ sub dump_uses {
     # and removing the undef-s
     if ($all_same_expansions == FALSE) {
       annotate_definition('xform',"Expansions vary, not a constant",$mname,
-			  cpp::InFname(),undef,undef);
+			  pcp3::InFname(),undef,undef);
     } elsif ($cUses > 0) {
       annotate_definition('expsumm',"Expansions all go to $expansion",$mname,
-			  cpp::InFname(),undef,undef);
+			  pcp3::InFname(),undef,undef);
       if (scalar(@$macro_name{$mname}) > 1) {
 	annotate_definition_message('text','xform',"Multiple definitions!",$mname);
       } elsif ($expansion =~ m/^(0x)?\d+$/) {
@@ -120,7 +120,7 @@ sub dump_uses {
       }
     } else {
       annotate_definition('expsumm',"No uses",$mname,
-			  cpp::InFname(),undef,undef);
+			  pcp3::InFname(),undef,undef);
     }
   }
 
@@ -138,7 +138,7 @@ sub create_def {
       $backward_argnames_string, $def_flags,
       @currpat) = @_;
   my $old = select;
-  my $fname = cpp::Fname();
+  my $fname = pcp3::Fname();
   select CPP;
   print "Create def for \"$mname\": \"$expn\" [$s_start,$s_end]\n";
   print "nargs = ", $nargs, "\n";
@@ -157,7 +157,7 @@ sub create_def {
   push @{$macro_name{$mname}{defs}}, [ $fname, $s_start,$s_end ];
   @{$macro_name{$mname}{currdef}} = ( $fname, $s_start,$s_end );
   if (!FIsDeclAllowable()) {
-    @state_stack = cpp::ParseStateStack();
+    @state_stack = pcp3::ParseStateStack();
     annotate_definition('xform',"Parse stack may not be appropriate for a declaration: @state_stack",$mname,$fname,$s_start,$s_end);
     print TRACE ":**BETTER NOT CHANGE THIS TO A DECL!\n";
   }
@@ -188,8 +188,8 @@ sub create_predef {
 
 sub cpp_out {
   my ($sz) = @_;
-  my $cch_output = cpp::CchOutput();
-  my $cch_offset = cpp::CchOffset();
+  my $cch_output = pcp3::CchOutput();
+  my $cch_offset = pcp3::CchOffset();
   print MAPPING "'($cch_offset . $cch_output)\n";
   if ($top_level_mname ne "") {
     $top_level_full_expansion .= $sz;
@@ -211,7 +211,7 @@ sub do_undef {
 
 sub pre_do_undef {
   my ($s_start,$s_end,$mname) = @_;
-  my $fname = cpp::Fname();
+  my $fname = pcp3::Fname();
   print CPP "pre_do_undef of $mname [$s_start,$s_end]\n";
   annotate_definition_with_undef($mname,$fname,$s_start,$s_end);
 }
@@ -229,16 +229,16 @@ sub pop_buffer {
 
 sub macro_cleanup {
   my ($s_start, $s_end, $mname, $cnested, @nests) = @_;
-  my $offset  = cpp::CchOffset();
-  my $cbb = cpp::CbuffersBack();
-  my $cbytesOutput = cpp::CchOutput();
-  my $fname = cpp::Fname();
+  my $offset  = pcp3::CchOffset();
+  my $cbb = pcp3::CbuffersBack();
+  my $cbytesOutput = pcp3::CchOutput();
+  my $fname = pcp3::Fname();
   my $old = select;
   select CPP;
-  my $state_stack = join(",",cpp::ParseStateStack());
+  my $state_stack = join(",",pcp3::ParseStateStack());
   print "macro_cleanup $mname; [$s_start - $s_end] source $offset, $cbb; output $cbytesOutput\n";
   print " : nests = ", join("->",@nests), "\n";
-  print " : MEH = ", join("<-",cpp::MacroExpansionHistory()),"\n";
+  print " : MEH = ", join("<-",pcp3::MacroExpansionHistory()),"\n";
   if ($cbb == 1) {
     $top_level_full_expansion =~ s%\n%\\n\\%g;
     print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'final-exp \"$mname -> $top_level_full_expansion\")\n";
@@ -305,29 +305,29 @@ sub expand_macro {
   my $cnested = shift @rest;
   my @nests = splice(@rest,0,$cnested);
   my ($cargs,@args) = @rest;
-  my $cBytesOutput = cpp::CchOutput();
+  my $cBytesOutput = pcp3::CchOutput();
   my $start = $cBytesOutput + 1 + $exp_offset - ($cbb > 0? $length - 1:0);
   my $end = $start + $length;
   my $call_length = length("$mname$raw_call");
-  my $fname = cpp::Fname();
+  my $fname = pcp3::Fname();
   my $old = select;
-  my @MEH = cpp::MacroExpansionHistory();
+  my @MEH = pcp3::MacroExpansionHistory();
   if (scalar (@MEH) == 0) {
     annotate_definition_with_use($mname,$fname,$expansion,$s_start,$s_end,$cbuffersDeep);
     add_use($mname,$fname,$expansion,$s_start,$s_end,$cbuffersDeep);
   }
   select CPP;
 
-  print "\nexpand_macro $mname = ", cpp::ExpansionLookup($mname), ", source offset: $s_start - $s_end, $cbuffersDeep [$has_escapes]; ", 
-      cpp::FExpandingMacros(), " in $fname\n";
+  print "\nexpand_macro $mname = ", pcp3::ExpansionLookup($mname), ", source offset: $s_start - $s_end, $cbuffersDeep [$has_escapes]; ", 
+      pcp3::FExpandingMacros(), " in $fname\n";
   print " : expansion of $mname => $expansion (length $length:offset $start - $end [$cBytesOutput + $exp_offset + 1])\n";
-#  print " : argof = ", cpp::ArgOf(), "\n"; FIXGJB obsoleted
+#  print " : argof = ", pcp3::ArgOf(), "\n"; FIXGJB obsoleted
   print " : nests = ", join("->",@nests), "\n";
   print " : MEH = ", join("<-",@MEH),"\n";
   chomp $raw_call;
   print " : was \"$mname$raw_call\" with $cargs args, length = ", $call_length, "\n";
-  print ": ParseStateStack: ", join(",",cpp::ParseStateStack()), "\n";
-  my $state_stack = join(",",cpp::ParseStateStack());
+  print ": ParseStateStack: ", join(",",pcp3::ParseStateStack()), "\n";
+  my $state_stack = join(",",pcp3::ParseStateStack());
   print MACEXP_STACKS "$mname: $state_stack\n";
   my $iarg = 0;
 # Return values here that look like "@-BAZ" are escape macros (they've been expanded)
@@ -351,10 +351,10 @@ sub expand_macro {
 
 sub ifdef_macro {
   my ($s_start,$s_end,$mname,$expansion,$length,$raw_call,$has_escapes,$cbuffersDeep,@rest) = @_;
-  my $start = cpp::CchOutput()+1;
+  my $start = pcp3::CchOutput()+1;
   my $end = $start + $length - 3; # Subtract off for the @ @, and it's an inclusive range
   print CPP "ifdef_macro $mname => $expansion [$s_start:$s_end] (offset $start - $end)\n";
-  my $fname = cpp::Fname();
+  my $fname = pcp3::Fname();
   annotate_definition_with_ifdef_use($mname,$fname,$expansion,$s_start,$s_end,$cbuffersDeep);
 }
 
@@ -362,9 +362,9 @@ sub ifdef_macro {
 sub ifdef_lookup_macro {
   my ($mname,$fDefined) = @_;
   print TRACE "ifdef_lookup_macro $mname is ", $fDefined?"":"not ", "defined\n";
-  my $fname = cpp::Fname();
+  my $fname = pcp3::Fname();
   annotate_definition_with_ifdef_use($mname,$fname,$fDefined?"\@DEFINED\@":"\@NOT_DEFINED\@",
-				    cpp::CchOffset()-length($mname),cpp::CchOffset);
+				    pcp3::CchOffset()-length($mname),pcp3::CchOffset);
 }
 
 sub special_symbol {
@@ -376,7 +376,7 @@ sub special_symbol {
 sub comment {
   my ($s_start, $s_end, $comment,$how_term,$lines) = @_;
   print "\n-----------------\n";
-  print "COMMENT ($lines lines in @{[cpp::Fname()]} [$s_start:$s_end) ending w/ $how_term: $comment\n";
+  print "COMMENT ($lines lines in @{[pcp3::Fname()]} [$s_start:$s_end) ending w/ $how_term: $comment\n";
   print "-----------------\n";
 }
 
@@ -388,7 +388,7 @@ sub string_constant {
 sub do_include {
   my ($s_start,$s_end,$file_as_given, $file_as_resolved, $flags) = @_;
   print CPP "do_include $file_as_given [$s_start:$s_end] -> ", simplify_path_name($file_as_resolved),";  $flags\n";
-#  print "Was working on: ", cpp::Fname(), "\n";
+#  print "Was working on: ", pcp3::Fname(), "\n";
 }
 
 sub do_if {
@@ -396,8 +396,8 @@ sub do_if {
   print CPP "do_if on $conditional evals to $value ";
   print CPP ", skipping $skipped" if $skipped ne "";
   print CPP "\n";
-  cpp::YYPushStackState();
-  @state_stack = cpp::ParseStateStack();
+  pcp3::YYPushStackState();
+  @state_stack = pcp3::ParseStateStack();
   print CPP ": Stack: @state_stack\n";
   if ($value == 0 && $conditional ne "0") {
     handle_unincluded_block($s_branch_start,$s_branch_end,$skipped,"If",$conditional);
@@ -416,7 +416,7 @@ sub do_elif {
 sub handle_unincluded_block {
  # return; # FIXGJB: do not handle these for now
   my ($s_branch_start,$s_branch_end,$skipped,$kind,$conditional) = @_;
-  my $fname = cpp::Fname();
+  my $fname = pcp3::Fname();
   print TPSOURCE "#$fname:(put-face-property-if-none $s_branch_start $s_branch_end \'font-lock-reference-face)\n";
   print TPSOURCE "#$fname:(add-text-property $s_branch_start $s_branch_end \'doc \"Skipped due to $kind $conditional\")\n";
   # FIXGJB: probably better to keep a #include list in perl, and only remove
@@ -429,22 +429,22 @@ sub handle_unincluded_block {
     print TRACE "Removed some #include-s from speculative branch\n";
   }
   print TRACE "Pushing skipped branch : [[ $skipped ]]\n";
-  print TRACE ": ParseStateStack: ", join(",",cpp::ParseStateStack()), "\n";
-  cpp::YYPushStackState();
-  cpp::EnterScope();
-  cpp::PushHashTab();
-  cpp::PushBuffer($skipped,$s_branch_start);
+  print TRACE ": ParseStateStack: ", join(",",pcp3::ParseStateStack()), "\n";
+  pcp3::YYPushStackState();
+  pcp3::EnterScope();
+  pcp3::PushHashTab();
+  pcp3::PushBuffer($skipped,$s_branch_start);
 }
 
 sub do_xifdef {
   my ($s_start,$s_end,$kind,$conditional,$trailing_garbage,$skipped,$fSkipping,$s_branch_start) = @_;
-  my $fname = cpp::Fname();
-  my $s_branch_end = cpp::CchOffset() + 1;
+  my $fname = pcp3::Fname();
+  my $s_branch_end = pcp3::CchOffset() + 1;
   print CPP "do_xifdef ($kind) on $conditional [$trailing_garbage] ($skipped), ",
   !$fSkipping?"Not ":"", "skipped\n";
   print CPP ": @[$s_start - $s_end]\n";
   # This copy is for seeing if parse state changes at endif
-  cpp::YYPushStackState();
+  pcp3::YYPushStackState();
   if ($fSkipping) {
     handle_unincluded_block($s_branch_start,$s_branch_end,$skipped,$kind,$conditional);
   }
@@ -466,26 +466,26 @@ sub do_ifndef {
 sub pop_perl_buffer {
   my ($cbb) = @_;
   print CPP "POP_PERL_BUFFER, $cbb buffers back\n";
-  print TRACE ": ParseStateStack: ", join(",",cpp::ParseStateStack()), "\n";
-  if (!cpp::YYFCompareTopStackState()) {
+  print TRACE ": ParseStateStack: ", join(",",pcp3::ParseStateStack()), "\n";
+  if (!pcp3::YYFCompareTopStackState()) {
     print TRACE ": NOT Identical!\n";
   }
-  cpp::ExitScope();
-  cpp::PopHashTab();
-  cpp::YYPopAndRestoreStackState();
-  print TRACE ": After ParseStateStack: ", join(",",cpp::ParseStateStack()), "\n";
+  pcp3::ExitScope();
+  pcp3::PopHashTab();
+  pcp3::YYPopAndRestoreStackState();
+  print TRACE ": After ParseStateStack: ", join(",",pcp3::ParseStateStack()), "\n";
 }
 
 
 sub do_else {
   my ($s_start,$s_end, 
       $orig_conditional, $trailing_garbage, $skipped, $fSkipping, $s_start_branch) = @_;
-  my $s_end_branch = cpp::CchOffset() + 1;
+  my $s_end_branch = pcp3::CchOffset() + 1;
   print CPP "do_else (orig conditional was $orig_conditional) [$trailing_garbage] ($skipped), ",
   !$fSkipping?"Not ":"", "skipped\n";
-  @state_stack = cpp::ParseStateStack();
+  @state_stack = pcp3::ParseStateStack();
   print CPP ": Stack: @state_stack\n";
-  my $fname = cpp::Fname();
+  my $fname = pcp3::Fname();
   if ($fSkipping) {
     print TPSOURCE "#$fname:(put-face-property-if-none $s_start_branch $s_end \'font-lock-reference-face)\n";
     print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'doc \"Skipped due to else of $orig_conditional\")\n";
@@ -496,18 +496,18 @@ sub do_endif {
   my ($s_start,$s_end,$orig_conditional, $trailing_garbage) = @_;
   chomp($trailing_garbage);
   print CPP "do_endif (orig conditional was $orig_conditional) [$trailing_garbage]\n";
-  @state_stack = cpp::ParseStateStack();
+  @state_stack = pcp3::ParseStateStack();
   print CPP ": Stack: @state_stack\n";
-  my $fEqual = cpp::YYFCompareTopStackState();
+  my $fEqual = pcp3::YYFCompareTopStackState();
   if (!$fEqual) {
     # probably no big deal, but it does mean that the #ifdef does control
     # inclusion of C code (though it could control seeing C code w/o
     # altering the state stack
     print CPP ": STATE_STACK altered by #ifdef/#endif block\n";
   }
-  cpp::YYPopAndDiscardStackState();
+  pcp3::YYPopAndDiscardStackState();
   my $controlled_c_source = pop @got_c_token;
-  my $fname = cpp::Fname();
+  my $fname = pcp3::Fname();
   if ($controlled_c_source) {
     print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'doc \"Controls C source inclusion\")\n";
   }
@@ -521,14 +521,14 @@ sub add_import {
 sub include_file {
   my ($filename, $fSystemInclude) = @_;
   print "include_file $filename, $fSystemInclude\n";
-#  cpp::YYPushStackState();
+#  pcp3::YYPushStackState();
 }
 
 sub done_include_file {
   my ($filename, $fSystemInclude) = @_;
   # NOTE: $fSystemInclude is always undef due to a bug
   print "done_include_file $filename, $fSystemInclude\n";
-#  cpp::YYPopAndRestoreStackState();
+#  pcp3::YYPopAndRestoreStackState();
 }
 
 sub Got_token2 {
@@ -539,26 +539,26 @@ sub Got_token2 {
 # Token's come a lot, so redirect this output somewhere else
 sub Got_token {
   my ($token,$raw,$mname,$argno,@history) = @_;
-  my @nests = cpp::MacroExpansionHistory();
-  my $fname = cpp::Fname();
+  my @nests = pcp3::MacroExpansionHistory();
+  my $fname = pcp3::Fname();
 
-#  $argof = cpp::ArgOf(); FIXGJB: obsoleted, use $argno instead
-  print  TOKEN "TOKEN: $raw;", substr($token,4),", FExpandingMacros = ",cpp::FExpandingMacros(),
-   ", CchOffset = $fname:", cpp::CchOffset(), "; CchOutput = ", cpp::CchOutput(),"\n";
+#  $argof = pcp3::ArgOf(); FIXGJB: obsoleted, use $argno instead
+  print  TOKEN "TOKEN: $raw;", substr($token,4),", FExpandingMacros = ",pcp3::FExpandingMacros(),
+   ", CchOffset = $fname:", pcp3::CchOffset(), "; CchOutput = ", pcp3::CchOutput(),"\n";
   print TOKEN ": Nests: ",join("<-",@nests),"\n";
   print TOKEN ": History: ",join("<-",@history),"\n";
   print TOKEN ": From $mname\n";
   print TOKEN ": Argno = $argno\n";
-  print TOKEN ": ParseStateStack: ", join(",",cpp::ParseStateStack()), "\n";
+  print TOKEN ": ParseStateStack: ", join(",",pcp3::ParseStateStack()), "\n";
   if ($raw =~ m/^[\w\$]+$/) {
-    print TOKEN ": lookup: ", cpp::FLookupSymbol($raw)? "Found symbol" : "Not found", "\n";
+    print TOKEN ": lookup: ", pcp3::FLookupSymbol($raw)? "Found symbol" : "Not found", "\n";
   }
   if (!exists $non_c_tokens{$token}) {
     map { $_++}  @got_c_token;
     print TOKEN ": C Token: $raw ($token)\n";
   }
 
-  my $end = cpp::CchOutput()+1;
+  my $end = pcp3::CchOutput()+1;
   my $start = $end-length($raw);
 #  @history = @nests;  FIXGJB: this is a hack, since stuff not getting passed
   if ($#history >= 0) {
