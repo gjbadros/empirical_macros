@@ -243,6 +243,9 @@ all: pcp3 paper/backcalls.tex paper/pcp3-hooks.tex
 
 lines:	$(PCP3_SOURCES) cpphook.pm
 	wc -l $^ > lines
+	(echo "Backcalls:"; grep '\\backcall{' backcalls.xs | wc -l ) >> lines
+	(echo "Hooks:"; grep '\\hook{' paper/pcp3-hooks.tex | wc -l ) >> lines
+
 
 # Making the preprocessor/parser
 # PCP^3 == Perl-enhanced C PreProcessor and Parser
@@ -268,7 +271,7 @@ scandecls: $(SD_OBJECTS)
 	$(CC) $(ALL_CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS) $(PERLLIBS)
 
 tags:
-	etags $(SOURCES)
+	etags $(PCP3_SOURCES)
 
 clean:
 	rm -f *.o cppmain pcpp pcppct cpphook_names.h hook_index_constants.pm gram.tab.[ch] lexer.c
