@@ -1,0 +1,4 @@
+#!/uns/bin/perl -wp
+s/^\s*\bcheck_args(|_at_least|_range)\s*\(.*;//;
+s/=\s*\bcheck_args(|_at_least|_range)\s*\(.*;/= \@_;/;
+
