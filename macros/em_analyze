@@ -14,11 +14,21 @@
 #   _ni = non-include; for a file, means it was on command line (?)
 #   mi = method of inclusion; why this file is being processed
 
+# Used below to debug the ccd categorization
+#while (<>) {
+#  m/^.*: (\S+) in $/;
+#  my $curr_ccdCategory = ccd_lexical_category($1);
+#  print STDERR "CCD_LEXICAL_CATEGORY: $1 in ",
+#  $cond_category_name[$curr_ccdCategory], "\n";
+#}
+#exit 0;
+
+
+
 # FIX: I want to use '-$' like cpp does, not '-l'; how to do this?
 my $getopts_option_letters = 'ihvtIAau1pTlg:d:E:P:n:';
 
 # Remove the asterisks below when the options are known to the users.
-
 sub usage () {
   die "@_\nUsage: $0 [-$getopts_option_letters] <files>
 New options marked with *; options with ':', above, take an argument
@@ -1524,7 +1534,7 @@ sub ccd_lexical_category ($) {
   my ($mname) = check_args(1, @_);
 
   my $orig_mname = $mname;
-  $mname =~ s/^_*(.*?)_*$/$1/;
+  $mname =~ s/^_*(.*?)_*$/$1/;  # Remove leading/trailing underscores
 
 #  print STDERR "Trying '$mname'\n";
 
@@ -1533,20 +1543,69 @@ sub ccd_lexical_category ($) {
   }
 
   if (# Language implementation
-      ($mname =~ /^(__GNU[CG]__|BORLANDC|BUGGY_MSC|DECC|DECCXX|DJGPP|GNUC|GNU_LIBRARY|HAVE_GCC|MSC|MSC_VER|MWERKS|PUREC|SC|THINK_C|TURBOC|Think_C|VAXC|WATCOMC|ZTC|applec)$/)
+      ($mname =~ /^(
+__GNU[CG]__|BORLANDC|BUGGY_MSC|DECC|DECCXX|DJGPP|GNUC|GNU_LIBRARY|HAVE_GCC|
+MSC|MSC_VER|MWERKS|PUREC|SC|THINK_C|TURBOC|Think_C|VAXC|WATCOMC|ZTC|applec
+)$/x)
       # Language version (and bool)
       || ($mname =~ /^(lint|LINT|c_plusplus|cplusplus|LIBC|STDC|STANDARD_C|HAS_BOOL)$/)
       # Headers/prototypes
-      || ($mname =~ /^(STDC_HEADERS|KR_headers|(I_)?(STD|VAR)ARGS?|(NeedFunctionP|has_p)rototypes|HaveProtos|PROTOTYPE|FUNCPROTO|(NO_)?PROTO|(HAVE|USE)_PROTO(TYPE)?S)$/)) {
+      || ($mname =~ /^(
+STDC_HEADERS|KR_headers|(I_)?(STD|VAR)ARGS?|(NeedFunctionP|has_p)rototypes|
+HaveProtos|PROTOTYPE|FUNCPROTO|(NO_)?PROTO|(HAVE|USE)_PROTO(TYPE)?S?
+)$/x)) {
     return $ccatPORT_LANLIB;
   }
   if ($mname =~ /^(const|static|inline|volatile|signed|unsigned)$/) {
     return $ccatPORT_LANMACRO;
   }
-  if ($mname =~ /^(STACK_DIRECTION|STACK_GROWS_DOWNWARD|STACK_GROWTH_DOWN|arch_is_big_endian|arch_is_little_endian|arch_ints_are_short|X1[01](R[23456])?|arch_arith_rshift|BYTEORDER|HAVE_.+|SEVEN_?BIT|NOSTDHDRS|NON_UNIX_STDIO|NO_?(STDLIB|UNISTD|LIMITS)|.+_MISSING|BROKEN_.+|NO_FCNTL|_POSIX_VERSION|READLINE_LIBRARY|BSD_SIGNALS|(SYSV|BSD)_SIGNALS|POSIX_(SOURCE|SIGNALS|VERSION)|ELF|COFF|.+_BUG|(I_)?(MEMORY|STRING|UNISTD|NET_ERRNO|STDLIB|UTIME|NON_BLOCKING_IO|FCNTL|SYS_FILE|SYS_TIME(S|_KERNEL))|HAS_[_A-Z0-9]+)|has_[_a-z0-9]+|bad_(create0|unlink|fchmod)|__CHAR_UNSIGNED__$/) {
+  if ($mname =~ /^(STACK_DIRECTION|STACK_GROWS_DOWNWARD|STACK_GROWTH_DOWN|
+arch_.*|
+X1[01](R[23456])?|
+X(t|lib)SpecificationRelease|
+BYTEORDER|
+SIZEOF_.*|
+BSD_(TYPES|TERMIOS|SETPGRP|PGRPS|GETPGRP)|
+HAVE_.+|
+SEVEN_?BIT|
+NOSTDHDRS|SV_BSDSIG|
+NON_UNIX_STDIO|NO_?(STDLIB|UNISTD|LIMITS)|
+.+_MISSING|BROKEN_.+|NO_FCNTL|_POSIX_VERSION|READLINE_LIBRARY|
+BSD_SIGNALS|(SYSV|BSD)_SIGNALS|POSIX_(SOURCE|SIGNALS|VERSION)|
+ELF|COFF|.+_BUG|
+(I_)?(MEMORY|STRING|UNISTD|NET_ERRNO|STDLIB|UTIME|NON_BLOCKING_IO|FCNTL|SYS_FILE|SYS_TIME(S|_KERNEL))|
+HAS_[_A-Z0-9]+|has_[_a-z0-9]+|bad_(create0|unlink|fchmod)|__CHAR_UNSIGNED__)
+$/x) {
     return $ccatPORT_FEATURE;
   }
-  if ($mname =~ /^(strr?chr|errno|SIG_?[0-9A-Z]{2,8}|S_I(READ|WRITE|EXEC)|S_I([RWX](USR|GRP|OTH(ER)?))|S_I([RWX]UGO|READ|RWXU(SR)?|RWXG(RP)?|RWXO(T[HR])?|O_(CREAT|BINARY|(SH|EX)LOCK|EXCL|RDONLY|APPEND|WRONLY|NONBLOCK|NDELAY)|[ug]id_t|[FS](MPB|NWK|MPC|MT|SOCK|LNK|REG|BLK|DIR|CHR|F?IFO|[UG]ID|VTX|))|TIOC[0-9A-Z]{1,9}|r?index|(b|mem)(cmp|copy|zero)|is(alnum|alpha|cntrl|digit|lower|upper|space|punct|print|xdigit|blank|graph|ascii)|to(upper|lower|ascii)|(U?CHAR|LONG|INT|DOUBLE|FLOAT|SHORT)_(MAX|MIN)|(MIN|MAX)(SHORT|INT|LONG|FLOAT|DOUBLE)|(CHAR|SHORT|INT|LONG|PTR|DOUBLE|FLOAT)BITS|E(PERM|NOENT|SRCH|INTR|IO|NXIO|2BIG|NOEXEC|BADE|BADF|BADMSG|BADR|CHILD|AGAIN|NOMEM|ACCES|FAULT|NOTBLK|CONN(ABORTED|REFUSED|RESET)|BUSY|EXIST|XDEV|NODEV|NOTDIR|ISDIR|ALIGN|ALREADY|INVAL|NFILE|NOTTY|TXTBSY|FBIG|NOSPC|SPIPE|ROFS|MLINK|PIPE|DOM|DUPPKG|(NET|HOST)(DOWN|UNREACH)|RANGE|DEADLK|NAMETOOLONG|NOLCK|NOSYS|NOTEMPTY|LOOP|WOULDBLOCK|DESTADDRREQ|NOMSG|IDRM|CHRNG|BFONT|NOSTR|NOLINK|REMOTE|NOTSOCK)|FD?_((SET|GET)FD|CLOEXEC)|XK_.*)$/) {
+  if ($mname =~ /^(
+strr?chr|
+errno|
+SIG_?[0-9A-Z]{2,8}|
+S_I(READ|WRITE|EXEC)|
+S_I([RWX](USR|GRP|OTH(ER)?))|
+S_I([RWX]UGO|READ|RWXU(SR)?|RWXG(RP)?|RWXO(T[HR])?)|
+O_(CREAT|BINARY|(SH|EX)LOCK|EXCL|RDONLY|RDWR|APPEND|WRONLY|NONBLOCK|NDELAY)|
+F_(TLOCK|TEST|SETOWN.*|SETFL|OK|LOCK|GETOWN|FREESP|DUPFD|CHSIZE)|
+[ug]id_t|[FS](MPB|NWK|MPC|MT|SOCK|LNK|REG|BLK|DIR|CHR|F?IFO|[UG]ID|VTX|)|
+TIOC[0-9A-Z]{1,9}|
+r?index|(b|mem)(cmp|copy|zero|set|move)|
+open2?|close|chdir|creat|NULL|malloc|
+str(error|n?cpy|n?move)|
+is(alnum|alpha|cntrl|digit|lower|letter|upper|space|punct|print|xdigit|blank|graph|ascii)|
+to(upper|lower|ascii)|
+Xt.*|Xm.*|Xlib.*|
+(U?CHAR|LONG|INT|DOUBLE|FLOAT|SHORT)_(MAX|MIN)|
+(MIN|MAX)(SHO?RT|INT|LONG|FLOAT|DOUBLE)|
+(CHAR|SHO?RT|INT|LONG|PTR|DOUBLE|FLOAT)BITS|
+E(PERM|NOENT|SRCH|INTR|IO|NXIO|2BIG|NOEXEC|BADE|BADF|BADMSG|BADR|CHILD|AGAIN|NOMEM|ACCES|FAULT|
+  NOTBLK|CONN(ABORTED|REFUSED|RESET)|BUSY|EXIST|XDEV|NODEV|NOTDIR|ISDIR|ALIGN|ALREADY|INVAL|NFILE|
+  NOTTY|TXTBSY|FBIG|NOSPC|SPIPE|ROFS|MLINK|PIPE|DOM|DUPPKG|(NET|HOST)(DOWN|UNREACH)|RANGE|DEADLK|
+  NAMETOOLONG|NOLCK|NOSYS|NOTEMPTY|LOOP|WOULDBLOCK|DESTADDRREQ|NOMSG|IDRM|CHRNG|BFONT|NOSTR|NOLINK|
+  REMOTE|NOTSOCK)|
+FD?_(SET|GET|CLOSE|EXEC)|
+XK_.*
+)$/x) {
     return $ccatPORT_SYSMACRO;
   }
 
@@ -1557,7 +1616,26 @@ sub ccd_lexical_category ($) {
 
   $mname =~ tr/[A-Z]/[a-z]/;
 
-  if ($mname =~ /^(systype_)?(hpux[4-9]|.*sun_fpa.*|32bit|386bsd|bsd[34][123456]|solaris2?(_[1234567])?|usl|sony|newsos[123456]m_xenix|(ibm)?aix(4|rt|370|3_2|_13|esa|pc)?|alliant(_2800|_1)?|alpha|i(80)?[234567]86|amiga(dos|_ac_5|_sc_6_1)?|apollo|atari(st)?|att(386|3b)|bfly1|bsd(i|4_[1234])?|butterfly|cadmus|clipper|convex|luna|utek|cray([12]|[xy]mp|_stack)?|systype_sysv|systype_bsd|cx_ux|dgux|dos_nt|drs6000|gmicro|hp(2648|26|76|gl|300|9000(s[23456789]00)?|_?osf1?|pa|ux(_[156789])?)?|i370|i386|i860|i960|ibm(032|esa|r2|rt)?|interdata|iri[sx]_?[234567]d?|is68k|linux|luna88k|lynx|.*kbcs_target|m68(k|000)?|m88(k|000)|m_unix|mac_tcl|macintosh|macos|mach|v3x|maxport|mc[3576]000?|mc680[01234]0|mc68k32|minix|mips(2|_sysv|eb|el|_bsd)?|motorola|msdos|ms_?win(16|32|95|nt|3|3_?1)?|dos386|(dosx|(m_)?i|iapx)286|microport|multimax|netbsd|bsd386|newsos5|next|os2|osf(1|_alpha|_os)|pa_risc1_1|concurrent|ardent|titan|eunice|ps2|dmert|gcos|gcx|gould|hbullx20|hcx|paragon|pdp11|celerity|powerpc|pyr|qnx|risc6000|ksr1|n16|scs|sequent|sgi|sparc(v9)?|sun([234])?|u3b([25]|20d|15)|sun386i?|sunos_?[45]|svr4(_[123])?|sysv3|sysv((3?86|68|88)|_ext)?|tandem|tek(4132|4300)|tops20|tower32|u370|ultrix([1-6][1-9])?|umaxv|unix(pc)?|usg?r?([345](_[234])?)?|vax(_vms)|vms([1-9](_[1-9])?)?|vms_posix|win(dows(nt|95)?|32|16)?|xenix(_2[23]|286)?|z8000|isc386)$/) {
+  if ($mname =~ /^(systype_|M_)?
+(hpux[4-9]|.*sun_fpa.*|32bit|386bsd|bsd[34][123456]|solaris2?(_[1234567])?|
+ usl|sony|newsos[123456]|m_xenix|(ibm)?aix(v3|4|rt|370|3_2|_13|esa|pc)?|
+ alliant(_2800|_1)?|alpha|i(80)?[234567]86|amiga(dos|_ac_5|_sc_6_1)?|
+ apollo|atari(st)?|att(386|3b(1_perf)?|6300)|bfly1|bsd(i|4_[1234])?|butterfly|cadmus|
+ clipper|convex|luna|utek|cray([12]|[xy]mp|_stack)?|systype_sysv|systype_bsd|orion|
+ cx_ux|dgux|dosish|dos_nt|drs6000|gmicro|hp(2648|26|76|gl|300|9000(s[23456789]00)?|
+ _?osf1?|pa|ux(_[156789])?)?|i370|i386|i860|i960|ibm(032|esa|r2|rt)?|interdata|
+ iri[sx]_?[234567]d?(_[0-9])?(_LIBRARY)?|
+ is68k|linux|luna88k|lynx|.*kbcs_target|m68(k|000)?|m88(k|000)|m_unix|
+ mac_tcl|macintosh|macos|mach|v3x|maxport|mc[3576]000?|mc680[01234]0|mc68k(32)?|
+ minix|mips(2|_sysv|eb|el|_bsd)?|motorola|ms_?dos|ms_?win(16|32|95|nt|3|3_?1)?|
+ dos386|(dosx|(m_)?i|iapx)286|microport|multimax|netbsd|bsd386|newsos5|next|
+ os2|osf(1|_alpha|_os)|pa_risc1_1|concurrent|ardent|titan|eunice|ps2|dmert|gcos|gcx|gould|
+ hbullx20|hcx|paragon|pdp11|celerity|powerpc|pyr|qnx|risc6000|ksr1|n16|scs|sequent|sgi|
+ sparc(v9)?|sun([234]|os(_ext)?)?|u3b([25]|20d|15)|sun386i?|sunos_?[45]|svr4(_[123])?|sysv3|
+ sysv((3?86|68|88)|_ext)?|tandem|tek(4132|4300)|tops20|tower32|u370|
+ ultrix([1-6][1-9])?|umaxv|unix(pc)?|usg?r?([345](_[234])?)?|vax(_vms)?|vms([1-9](_[1-9])?)?|
+ vms_posix|(ms_?)?win(dows(nt|95)?|32|16)?|xenix(_2[23]|286)?|z8000|isc386
+)(_SOURCE|_ARCH)?$/x) {
     return $ccatPORT_MACHINE;
   }
 
@@ -1569,7 +1647,7 @@ sub ccd_lexical_category ($) {
   # but these are not strictly based on name
 
   #give MI_PREVENTION a rough go, see also above
-  if ($mname =~ /_h$/) {
+  if ($mname =~ /_h$/ || $orig_mname =~ m/(_H_|_?INCLUDED_?)/) {
     return $ccatMI_PREVENTION;
   }
 
