@@ -215,7 +215,7 @@ sub expand_macro {
   if (scalar (@MEH) == 0) {
     add_use($mname,$fname,$expansion,$s_start,$s_end,$cbuffersDeep);
   } else {
-    print CPP "EXPANSION HERE of $mname\n";
+    print CPP "EXPANSION HERE of $mname; ", pcp3::SumCchExpansionOffset(), "\n";
   }
   select CPP;
 
