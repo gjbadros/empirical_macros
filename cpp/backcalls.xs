@@ -21,15 +21,23 @@ extern "C" {
 #include "cpplib.h"
 #include "cpphash.h"
 #include "bison-stack.h"
+// #include "globals.h"
+#include "tree_stk.h"
+#include "nmetab.h"
+
 #ifdef __cplusplus
 }
 #endif
 
+extern TreeStack *ParseStack;
 
 MODULE = backcalls		PACKAGE = cpp
 
 PROTOTYPES: disable
 
+
+###%\backcall{$token_type}{SzToken}{$id}
+###%Returns a string identifying what kind of token \textit{id} (an integer) represents.
 char *
 SzToken(i)
 	int i
@@ -48,6 +56,10 @@ SzToken(i)
  # (Uses PPCODE directive, below)
  # This does *not* add the offset into the file,
  # only the offsets of the macro expansion buffers
+
+###%\backcallobsoleted{($cchOffset,$cbuffersback)}{SumCchExpansionOffset}{}
+###% Gives the source code character position offset and the number of expansions
+###% deep that we currently are.
 void
 SumCchExpansionOffset()
 	cpp_buffer *buffer = parse_in.buffer;
@@ -68,7 +80,9 @@ SumCchExpansionOffset()
 	XPUSHs(sv_2mortal(newSViv(sum)));
 	XPUSHs(sv_2mortal(newSViv(cbuffersBack)));
 
-
+###%\backcall{$cbuffersback}{CbuffersBack}{}
+###% Return the number of macro expansions deep that we currently are in
+###% the current expansion.  This returns 0 if we are not expanding a macro.
 int
 CbuffersBack()
 	cpp_buffer *buffer = parse_in.buffer;
@@ -87,6 +101,18 @@ CbuffersBack()
 	RETVAL
 
 
+###%\backcall{@expanded_macros_list}{MacroExpansionHistory}{}
+###% Returns a list of strings of the form 
+###% \textit{macro_name}#\textit{arg_num}[\textit{cchOffsetEnd}]. 
+###% Each string explains the contents of a current expansion buffer,
+###% and the first string is the top of the expansion stack.
+###% For example, if there is a single item in the returned list
+###% which is the string "MAX#1[3]", this means that the current
+###% token came from the expansion of macro MAX and was the first argument
+###% to that macro, ending at character offset 3.  Multiple items
+###% in the returned list mean that a macro expanded to some other
+###% macro which was subsequently expanded.  Argument number 0 signifies
+###% that the token came from the literal body of the macro.
 void
 MacroExpansionHistory()
 	cpp_buffer *buffer = parse_in.buffer;
@@ -99,11 +125,13 @@ MacroExpansionHistory()
 		HASHNODE *macro = buffer->data;
 		if (macro) {
 		    int offset = buffer->cur - buffer->buf;
-		    int from_what = 1 + 
-			IargWithOffset(offset,
-				       macro->type==T_MACRO?macro->value.defn->nargs:
-				       -macro->type,
-				       buffer->args);
+		    int cargs_or_negative = -1;
+		    int from_what = 0;
+		    if (macro->type == T_MACRO || macro->type == T_DISABLED)
+			cargs_or_negative = macro->value.defn->nargs;
+		    from_what = 1 + IargWithOffset(offset,
+						   cargs_or_negative,
+						   buffer->args);
 		    XPUSHs(sv_2mortal(newSVpvf("%s#%d[%d]",macro->name,from_what,
 					       offset)));
 		} else
@@ -113,15 +141,16 @@ MacroExpansionHistory()
 	    }
 	}
 
- # FIXGJB: This returns use_count as a test, instead of computing
- # which argument is being expanded
+###%\backcallobsoleted{$index_of_argument}{ArgOf}{}
+###% Returns the number of the argument from which the current token came.
+###% Prefer using the $argno parameter passed to the TOKEN hook.
 int
 ArgOf()
 	HASHNODE *macro = (HASHNODE*)(parse_in.buffer->data);
 	int offset = parse_in.buffer->cur - parse_in.buffer->buf - 1;
 	struct argdata *args = parse_in.buffer->args;
 	CODE:
-	RETVAL = -1;
+	RETVAL = -2; /* FIXNOWGJB */
 	if (args)
 	  RETVAL = IargWithOffset(offset, 
 				  macro->type==T_MACRO?macro->value.defn->nargs:
@@ -130,7 +159,9 @@ ArgOf()
 	RETVAL
 
 
-	
+###%\backcall{$cch_source_offset}{CchOffset}{}
+###% Returns the character position offset into the current source file.
+###% Use Fname() to get the source file name.
 int
 CchOffset()
 	cpp_buffer *buffer = parse_in.buffer;
@@ -157,6 +188,9 @@ CchOffset()
  # --09/17/97 gjb
 
 
+###%\backcall{$filename}{InFname}{}
+###% Returns a string giving the name of the main input file (the one
+###% that appeared on the command line.
 char *
 InFname()
 	struct cpp_options *opts = parse_in.data;
@@ -165,6 +199,10 @@ InFname()
 	OUTPUT:
 	RETVAL
 
+###%\backcall{$filename}{Fname}{}
+###% Returns a string giving the name of the current input file.  This
+###% tracks include-d files and, combined with CchOffset, gives a
+###% unique location in the package.  "@NONE@" returned if no current file.
 char *
 Fname()
 	cpp_buffer *buffer = parse_in.buffer;
@@ -184,27 +222,25 @@ Fname()
 	OUTPUT:
 	RETVAL
 
-# FIXGJB: obsoleted
-char *
-fname_obsoleted()
-	CODE:
-	if (parse_in.buffer)
-	  RETVAL = parse_in.buffer->fname;
-	else
-	  RETVAL = "@NOBUFFER@";
-	OUTPUT:
-	RETVAL
-
+###%\backcall{$filename}{FnameNominal}{}
+###% Returns a string giving the filename corresponding to the current
+###% buffer.  This will be "@NOFILE@" if there is no such file (as is
+###% the case when reading tokens from a macro expansion).
+###% Otherwise it will correspond to Fname().
 char *
 FnameNominal()
 	CODE:
 	if (parse_in.buffer)
 	  RETVAL = parse_in.buffer->nominal_fname;
 	else
-	  RETVAL = "@NOBUFFER@";
+	  RETVAL = "@NOFILE@";
 	OUTPUT:
 	RETVAL
 
+###%\backcall{$encoded_expansion}{ExpansionLookup}{$macro_name}
+###% Returns the internally-encoded (cpplib-specific) expansion of
+###% the macro with name \texttt{$macro_name}.
+###% "@NOTFOUND@" is return if there is no current macro of the given name.
 char *
 ExpansionLookup(sz)
 	char *sz
@@ -216,29 +252,31 @@ ExpansionLookup(sz)
 	OUTPUT:
 	RETVAL
 
+
+###%\backcall{$cchOutput}{CchOutput}{}
+###% Returns the number of characters already output.  Only non-zero when 
+###% --noparse option is given.
 int
-CbytesOutput()
+CchOutput()
 	CODE:
 	RETVAL = cBytesOutput;
 	OUTPUT:
 	RETVAL
 
-
- # FIXGJB: This is obsolete
+###%\backcallobsoleted{$cchCppRead}{CchCppRead}{}
+###% Returns the number of characters that have been read from the
+###% input files.  Prefer using the offsets passed in the various hooks.
 int
-CbytesOutputAndBuffer_obsolete()
-	CODE:
-	RETVAL = cBytesOutput + CPP_WRITTEN(&parse_in);
-	OUTPUT:
-	RETVAL
-
-int
-CbytesCppRead()
+CchCppRead()
 	CODE:
 	RETVAL = cBytesCppRead;
 	OUTPUT:
 	RETVAL
 
+###%\backcall{$fExpandingMacros}{FExpandingMacros}{}
+###% Returns TRUE iff macros are currently being expanded.
+###% Returns FALSE otherwise.  As arguments are read, macros are not expanded,
+###% and this will return FALSE.
 int
 FExpandingMacros()
 	CODE:
@@ -246,7 +284,10 @@ FExpandingMacros()
 	OUTPUT:
 	RETVAL
 
-
+###%\backcall{@parse_state_list}{ParseStateStack}{}
+###% Returns the current stack of parse state numbers.  The first element is
+###% the top state on the stack.  See the gram.output
+###% file for a listing of what the numbers correspond to.
 void
 ParseStateStack()
 	PREINIT:
@@ -260,6 +301,10 @@ ParseStateStack()
 	while (ssp1+1 != NULL && ssp1 != yyssp)
 	    XPUSHs(sv_2mortal(newSViv(*++ssp1)));
 
+###%\backcall{}{SetParseStateStack}{@parse_state_list}
+###% Resets the current stack of parse states so that it is @parse_state_list.
+###% This has the potential to break the parse, and often will outside
+###% of the trivial case of setting the stack of states to what it already is.
 void
 SetParseStateStack()
 	PPCODE:
@@ -271,6 +316,10 @@ SetParseStateStack()
 	}
 
 
+###%\backcall{}{PushBuffer}{$source_code_string}
+###% Adds $source_code_string to the being-processed text 
+###% as if it existed in the input at the
+###% current location in the current file.
 void
 PushBuffer($buffer_to_push)
 	PPCODE:
@@ -283,52 +332,99 @@ PushBuffer($buffer_to_push)
 	cpp_push_buffer(&parse_in,szBuf,len);
 
 
+###%\backcall{}{SetParseDebugging}{}
+###% Set the yydebug flag to TRUE for the underlying parser.
+###% This results in extra state change information being sent to stderr.
+###% It has no affect if --noparse is used.  Initially, parser debugging is off.
 void
 SetParseDebugging()
 	CODE:
 	ct_yydebug = 1;
 
 
+###%\backcall{}{ResetParseDebugging}{}
+###% Reset the yydebug flag to FALSE for the underlying parser.  
+###% This terminates sending extra state change information to stderr.
+###% It has no affect if --noparse is used.
 void
 ResetParseDebugging()
 	CODE:
 	ct_yydebug = 0;
 
+
+###%\backcall{}{YYPushStackState}{}
+###% Save the entire current state of the parse stack onto a meta stack.
 void
 YYPushStackState()
 	CODE:
 	if (!fShouldParse) return;
 	PushStackState();
 
+###%\backcall{}{YYPopAndRestoreStackState}{}
+###% Restore the entire current state of the parse stack from the meta stack.
 void
 YYPopAndRestoreStackState()
 	CODE:
 	if (!fShouldParse) return;
 	PopAndRestoreStackState();
 
+###%\backcall{}{YYPopAndRestoreStackState}{}
+###% Throws out the top state stack from the meta stack.
 void
 YYPopAndDiscardStackState()
 	CODE:
 	if (!fShouldParse) return;
 	PopAndDiscardStackState();
 
+
+###%\backcall{}{YYSwapStackState}{}
+###% Switch the current stack state and the one on the top of the meta stack.
 void
 YYSwapStackState()
 	CODE:
 	if (!fShouldParse) return;
 	SwapStackState();
 
+###%\backcall{}{YYPushDupTopStackState}{}
+###% Push another copy of the top element of the meta stack of stack states onto
+###% the meta stack.
 void
 YYPushDupTopStackState()
 	CODE:
 	if (!fShouldParse) return;
 	PushDupTopStackState();
 
+###%\backcall{$fStacksEqual}{YYFCompareTopStackState}{}
+###% Return TRUE iff the top of the meta stack of state stacks is
+###% identical to the current state stack. Return FALSE otherwise.
 bool
 YYFCompareTopStackState()
 	CODE:
+	RETVAL = TRUE;
 	if (!fShouldParse) return;
 	RETVAL = FCompareTopStackState();
 	OUTPUT:
 	RETVAL
 
+###%\backcall{$fDefined}{FLookupSymbol}{$symbol_id}
+###% Return TRUE iff $symbol_id is found in the current scope.
+###% Return FALSE otherwise.
+bool
+FLookupSymbol(szSymbol)
+        char *szSymbol;
+	PREINIT:
+	str_t *pstr;
+	symentry_t *se;
+	CODE:
+	RETVAL = FALSE;
+	if (!fShouldParse) return;
+	pstr = nmelook(szSymbol,strlen(szSymbol));
+	if (!ParseStack || !ParseStack->contxt) {
+	   RETVAL = FALSE;
+           return;
+	}
+	se = symtab_lookup(ParseStack->contxt->syms,
+			   pstr);
+        RETVAL = (se != NULL);
+	OUTPUT:
+	RETVAL
