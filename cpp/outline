@@ -68,7 +68,7 @@ this project; their insights proved invaluable to this work.
 ** reuse of existing tested components
 *** confidence that cpp level and parse level are doing the right thing
 *** approach extends to applying directly to a compiler, possible by gcc guru but not me
-** hooks infrastructure (37 hooks, 25 backcalls)
+** hooks infrastructure (40 hooks, 26 backcalls)
 *** think about how to handle various constructs, don't worry about main loop
 ** Annotate code at character level + provide viewer in Emacs
 *** leverage existing editing tool
