@@ -355,9 +355,9 @@ sub category_lub ( $$ )
   elsif (($c1 == $catNOT_YET) || ($c2 == $catNOT_YET))
     { mdie("Shouldn't see catNOT_YET: $c1, $c2"); }
   # If one is $catIN_PROCESS, $catNULL_DEFINE, or $catNO_DEF, return the other
-  elsif (($c1 = $catIN_PROCESS) || ($c1 = $catNULL_DEFINE) || ($c1 == $catNO_DEF))
+  elsif (($c1 == $catIN_PROCESS) || ($c1 == $catNULL_DEFINE) || ($c1 == $catNO_DEF))
     { return $c2; }
-  elsif (($c2 = $catIN_PROCESS) || ($c2 = $catNULL_DEFINE) || ($c2 == $catNO_DEF))
+  elsif (($c2 == $catIN_PROCESS) || ($c2 == $catNULL_DEFINE) || ($c2 == $catNO_DEF))
     { return $c1; }
   # If both are literal, constant, or someconstant, return someconstant
   elsif ((($c1 == $catLITERAL) || ($c1 == $catCONSTANT)
@@ -367,9 +367,9 @@ sub category_lub ( $$ )
      { return $catSOME_CONSTANT; }
   # If both are constants or expressions, return expression
   elsif ((($c1 == $catLITERAL) || ($c1 == $catCONSTANT)
-	  || ($c1 <= $catSOME_CONSTANT) || ($c1 == $catEXP))
+	  || ($c1 == $catSOME_CONSTANT) || ($c1 == $catEXP))
 	 && (($c2 == $catLITERAL) || ($c2 == $catCONSTANT)
-	     || ($c2 <= $catSOME_CONSTANT) || ($c2 == $catEXP)))
+	     || ($c2 == $catSOME_CONSTANT) || ($c2 == $catEXP)))
     { return $catEXP; }
   # if one is symbolunknown, chose the other if it's a symbol, type, or expression
   elsif (($c1 == $catSYMBOL_UNKNOWN)
