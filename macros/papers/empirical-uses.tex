@@ -44,7 +44,7 @@ Seattle, WA  98195-2350\\
   both the tools (compilers, debuggers, call graph extractors, etc.)
   built to engineer C programs and also the ease of translating to other
   languages such as C++.  In this paper we analyze over 20 packages
-  comprising 1.5 million lines of publicly available C code, determining
+  comprising almost one million lines of publicly available C code, determining
   the ways in which the preprocessor is used in practice.  We developed
   a framework for analyzing preprocessor usage, using it to extract
   information about the percentage of preprocessor directives in C
@@ -116,7 +116,7 @@ belongs~\cite[p.~426]{Stroustrup-DesignEvolution}.
 
 As a step in this direction, we performed an empirical analysis of the
 ways in which the preprocessor is used in a large collection of C
-programs; we analyzed nearly 30 packages that comprise well over one
+programs; we analyzed 23 packages that comprise nearly one
 million lines of code.  Section~\ref{sec:gathering} lists the packages
 and their sizes.  The intent of the analysis is to build a better
 understanding of how the preprocessor is used.  In turn, this will
@@ -189,7 +189,7 @@ guidance on how to use C macros effectively, provide tools for
 checking macro usage for given programs, etc.
 
 Carroll and Ellis state that ``almost all uses of macros can be
-eliminated from C++ libraries.''~\cite{Carroll95} As evidence of this,
+eliminated from C++ libraries.''~\cite[p.146]{Carroll95} As evidence of this,
 they list eight categories of macro usage, and explain how to convert
 these types of constructs into C++ mechanisms.  They do not, however,
 discuss automatic conversion, and focus only on instructing the
@@ -230,8 +230,7 @@ David Evan's LCLint User's Guide, Version 2.2 (August 1996); larch-www.lcs.mit.e
 
 \section{The Data}\label{sec:gathering}
 
-We analyzed 29 freely-available C packages, many taken from the GNU
-distribution.  Figure~\ref{fig:packages} shows the packages along with
+Figure~\ref{fig:packages} shows the packages we analyzed, along with
 their sizes.  The size of each package is given in terms of both the
 physical line count---the actual numbers of lines in the file (in Unix
 terms, this is the number of newline characters plus one)---and also
@@ -246,13 +245,12 @@ source text of a package.
 \caption{Analyzed Packages and Sizes\label{fig:packages}}
 \end{figure}
 
-[FIX: If we could also list the platforms for which each can compile,
-that would be great, but I doubt the benefit is worth the effort right
-now.]
+%% FIX: If we could also list the platforms for which each can compile,
+%% that would be great, but I doubt the benefit is worth the effort for now
 
 \section{Occurrence of Preprocessor Directives}\label{sec:directives}
 
-The first question we asked was a simple one: how often do
+The first question we asked was simple: how often do
 preprocessor directives appear in C programs?
 Figure~\ref{fig:directives} shows the data for the packages we
 analyzed.  There are five rows in the figure, each of which has a
@@ -268,8 +266,7 @@ row down, (d) the conditional compilation directives (\verb+#ifdef+,
 and (e) any other directives in the bottom row. 
 
 \begin{figure}
-goes here
-
+goes here [FIX: blank page for insertion?]
 \caption{Percentages of Directives\label{fig:directives}}
 \end{figure}
 
@@ -313,8 +310,7 @@ single bin.  For example, looking at the \verb+bc+ package, 98.72\% of
 the identifiers were \verb+#define+d between one and six times.
 
 \begin{figure}
-goes here
-
+\input{freq_of_def-tbl.tex}
 \caption{Frequency of Definition\label{fig:define_count}}
 \end{figure}
 
@@ -322,13 +318,12 @@ The \verb+#undef+ counts are generally extremely low; the maximum
 number of undefines seen in any package was [FIX: fill in here].
 
 Figure~\ref{fig:use_count} is structured as the last figure, but it
-represents the number of times that a defined name is used in either C
-code or preprocessor code.
+represents the number of times that a defined name is expanded (in
+either C code or preprocessor directives).
 
 \begin{figure}
-goes here
-
-\caption{Frequency of Use\label{fig:use_count}}
+\input{freq_of_use-tbl.tex}
+\caption{Frequency of Macro Expansions\label{fig:use_count}}
 \end{figure}
 
 Figure~\ref{fig:define_usage} shows the percentage of defined macros
@@ -336,9 +331,8 @@ that are used in C code, in Cpp code, in both, or in neither (i.e. no
 uses).
 
 \begin{figure}
-goes here
-
-\caption{Use of Defined Macros\label{fig:define_usage}}
+\input{where_uses-tbl.tex}
+\caption{Where Macro Uses Occur\label{fig:define_usage}}
 \end{figure}
 
 
@@ -399,6 +393,9 @@ and O'Callahan and Jackson~\cite{OCallahan-icse97}.  Our use of the
 type information is in the early stages, however, and we do not report
 on the preliminary results in this paper.
 
+[FIX: Benefits even from simple literal constant conversion -- exposes
+symbolic information to the debugger]
+
 %[FIX: Should this also include Mike's manual breakdown into categories
 %for gzip.  --not tonight!]
 
@@ -418,10 +415,13 @@ macro.  We are also close to being able to infer the types of the bodies
 of defined macros, one of several steps necessary before we can attempt
 to build a converter from C to C++.
 
+[FIX: We catch errors that you miss when you look at post-processed code
+since we look at all branches.]
+
+[FIX: Harsh macro examples?]
+
 \section{Conclusion}\label{sec:conclusion}
 
 \small \bibliography{evil}
 
-
 \end{document}
-
