@@ -11,16 +11,17 @@ gawk	GAWK interpreter
 gcc	C/C++ compiler
 genscript	Text-to-PostScript converter 
 ghostview	PostScript previewer 
-glibc	C library 
 gnuchess	Chess player 
 gnuplot	Graph Plotter 
 groff	Text formatter 
 gs	PostScript interpreter 
 gzip	File compressor 
 m4	Macro expander 
+mosaic	WWW Browser
 perl	Perl interpreter 
 plan	Schedule planner 
 python	Python interpreter 
+rasmol	Molecular visualization tool
 rcs	Revision control system 
 remind	Schedule reminder 
 workman	Audio CD player 
