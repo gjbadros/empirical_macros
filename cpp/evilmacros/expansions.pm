@@ -14,7 +14,7 @@ my %functions;
 sub Startup {
   # Parse debugging (bison's yydebug variable) is on by default,
   # so turn it off
-  pcp3::ResetParseDebugging();
+  # pcp3::SetParseDebugging();
   open(VARS,">vars.listing") || die "Cannot open vars.listing: $!";
   open(TYPES,">types.listing") || die "Cannot open types.listing: $!";
   open(EXPAND,">expansions.listing") || die "Cannot open expansions.listing: $!";
@@ -31,8 +31,12 @@ sub add_use {
   my ($mname,$fname, $expansion, $s_start, $s_end, $cbb) = @_;
   if ($cbb == 0) {
     print EXPAND "$fname: $mname, $s_start, $s_end\n";
-    if (scalar(@{$macro_name_to_freevars{$mname}}) > 0) {
-      print EXPAND "#EXPN_FREE_VARS $mname: ", join(", ",@{$macro_name_to_freevars{$mname}}), "\n";
+    my @freevars = @{$macro_name_to_freevars{$mname}};
+#    print STDERR "Checking against ", join(", ",@freevars), "\n";
+    @freevars = grep { ! FMacroDefined($_)
+		       && ! exists $typedefs{$_} } @freevars;
+    if (scalar(@freevars) > 0) {
+      print EXPAND "#EXPN_FREE_VARS $mname: ", join(", ",@freevars), "\n";
     }
   }
 }
@@ -57,6 +61,24 @@ sub underscores_stripped ( $ )
   }
 }
 
+sub HistogramNumericFromList ( @ ) {
+  my %histogram = ();
+  foreach my $item (@_) {
+    local $WARNING = 0;
+    $histogram{$item}++;
+  }
+  return %histogram;
+}
+
+
+sub uniquify_array ( @ )
+{
+  return () if (scalar(@_) == 0);
+  my %histogram = HistogramNumericFromList(@_);
+  return keys %histogram;
+}
+
+
 #from em_analyze
 # NOTE: I added the check against reserved words here! --04/01/98 gjb
 sub identifiers_in ( $ )
@@ -69,11 +91,21 @@ sub identifiers_in ( $ )
 }
 
 
+sub FMacroDefined {
+  my ($mname) = @_;
+  return exists $macro_name_to_freevars{$mname};
+}
+
 sub FreeVarsFromSimplifiedExpn {
   my ($simp_expn) = @_;
-  my @a = grep { ! exists $typedefs{$_} && 
-		 ! exists $functions{$_} &&
-		 ! exists $macro_name_to_freevars{$_} } identifiers_in($simp_expn);
+#  my @a = grep { ! exists $typedefs{$_} && 
+#		  ! exists $functions{$_} &&
+#		  ! exists $macro_name_to_freevars{$_} } identifiers_in($simp_expn);
+  my @a = grep { ! FMacroDefined($_) && ! exists $typedefs{$_} &&
+		 ! exists $functions{$_} } identifiers_in($simp_expn);
+  
+  @a = uniquify_array(@a);
+
   return [ @a ];
 }
 
@@ -84,9 +116,19 @@ sub create_def {
       @currpat) = @_;
   my $fname = pcp3::Fname();
 
-  $macro_name_to_freevars{$mname} = FreeVarsFromSimplifiedExpn($simp_expn);
+  if ($simp_expn =~ /__attribute__/) {
+    print STDERR "removing\n";
+    $simp_expn =~ s/__attribute__\s+\(\(.*?\)\)//g;
+  }
 
+  $macro_name_to_freevars{$mname} = FreeVarsFromSimplifiedExpn($simp_expn);
 }
+
+sub do_undef {
+  my ($s_start,$s_end,$mname, $cDeletes) = @_;
+  delete $macro_name_to_freevars{$mname};
+}
+
 
 # pre definitions never have free variables
 sub create_predef {
@@ -94,7 +136,7 @@ sub create_predef {
       $backward_argnames_string, $def_flags,
       @currpat) = @_;
 
-  $macronames{$mname} = $true;
+  $macro_name_to_freevars{$mname} = [];
 }
 
 sub cpp_out {
@@ -113,11 +155,6 @@ sub cpp_out {
 sub cpp_error {
   my ($file,$line,$col,$msg) = @_;
   print CPP "cpp_error: $file:$line:$col, $msg\n";
-}
-
-sub do_undef {
-  my ($s_start,$s_end,$mname, $cDeletes) = @_;
-  print CPP "do_undef of $mname [$s_start,$s_end] ($cDeletes deleted)\n";
 }
 
 sub pre_do_undef {
@@ -384,12 +421,27 @@ sub done_include_file {
 #  pcp3::YYPopAndRestoreStackState();
 }
 
-
+# This only gets called for functions actually defined, not those
+# just declared with a prototype
 sub do_function {
   my ($szName,$fStatic) = @_;
 #  print "Function: $szName", $fStatic?" (static)":"", "\n";
   $functions{$szName} = $true;
 }
+
+sub do_func_proto {
+  my ($szName,$fStatic) = @_;
+#  print "FuncProto: $szName", $fStatic?" (static)":"", "\n";
+  $functions{$szName} = $true;
+}
+
+sub macro_body_declares_var {
+  my ($body,$var) = @_;
+  return (($body =~ /(\.|->|\bstruct|\bunion)\s*$var\b/) ||
+	  ($body =~ /\b\Q$var\E\s*(\*\s*)+\)/) ||
+	  ($body =~ /\b\Q$var\E\s*\(/));
+}
+
 
 sub do_func_call {
   my ($szName) = @_;
@@ -421,7 +473,7 @@ AddHook("STARTUP",\&Startup);
 #AddHook("HANDLE_DIRECTIVE",\&handle_directive);
 #AddHook("CREATE_PREDEF",\&create_predef);
 AddHook("CREATE_DEF",\&create_def);
-#AddHook("DO_UNDEF",\&do_undef);
+AddHook("DO_UNDEF",\&do_undef);
 #AddHook("PRE_DO_UNDEF",\&pre_do_undef);
 #AddHook("DELETE_DEF",\&delete_def);
 #AddHook("CPP_ERROR",\&cpp_error);
@@ -449,6 +501,7 @@ AddHook("EXIT",\&Exit);
 #AddHook("TOKEN",\&Got_token);
 #AddHook("TOKEN",\&Got_token2);
 AddHook("FUNCTION",\&do_function);
+AddHook("FUNC_PROTO",\&do_func_proto);
 #AddHook("FUNC_CALL",\&do_func_call);
 #AddHook("ANNOTATE",\&annotate);
 #AddHook("POP_BUFFER",\&pop_buffer);
