@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 # cppp -- Partial CPP (expands specified C preprocessor macros)
 # Michael Ernst <mernst@cs.washington.edu>
-# Time-stamp: <2003-01-21 23:29:51 mernst>
+# Time-stamp: <2003-09-28 11:53:22 mernst>
 
 # cppp simplifies the conditional compilation structure (#if, #ifdef, etc.)
 # of a C file by eliminating CPP conditional directives, based on the
@@ -95,6 +95,9 @@
 #   Implement -h command-line option.
 #   Could use -i.nocppp flag to Perl, but I'm not comfortable with it.
 #   Simplifying postpass (eg, #else #endif => #endif) might be nice.
+#   Some users would like to have an option to use the program as a filter:
+#     read from standard input and write to standard output.
+#   Add an option to expand macros inside comments?
 
 ## Bugs:
 #  * only copes with conditional compilation; occurrences in code, macro
@@ -152,8 +155,8 @@ sub process_file ( $ );
 ###
 
 ### Boolean
-my $true = (1 == 1);
-my $false = (1 == 0);
+my $true = 1;
+my $false = 0;
 my $unknown = 'unknown';	# maybe use undef instead?  Problem: undef
 				# is a bad arg some places.
 
@@ -186,7 +189,11 @@ my %cpp_macros = ();
 # Returns one of $true, $false, or $unknown
 sub cpp_macro_definedness ( $ )
 { my ($symbol) = check_args(1, @_);
-  return (!exists($cpp_macros{$symbol})) ? $unknown : defined($cpp_macros{$symbol});
+  if (!exists($cpp_macros{$symbol})) {
+    return $unknown;
+  }
+  # Use 0 instead of empty string for false values, to ease debugging.
+  return defined($cpp_macros{$symbol}) ? 1 : 0;
 }
 
 sub is_unknown ( $ )
@@ -699,7 +706,7 @@ sub process_file ( $ )
 				# each is $true, $false, or $unknown
   my @condition_value_stack = ($true); # the AND of @condition_stack
   my $current_condition_value = $true; # the top of @condition_value_stack
-  my @elif_needs_endif = ();	# set when if unknown elif known endif
+  my @elif_needs_endif = ();	# set when "if unknown elif known endif"
   # Invariants:
   #  @condition_stack and @elif_needs_endif have the same size
   #  @condition_value_stack is one element larger than those
@@ -735,7 +742,8 @@ sub process_file ( $ )
 	      my $needs_endif = pop(@elif_needs_endif);
 	      pop(@condition_value_stack);
 	      $current_condition_value = $condition_value_stack[$#condition_value_stack];
-	      if (($needs_endif || is_unknown($thisvalue)) && is_nonfalse($current_condition_value))
+	      if (($needs_endif || is_unknown($thisvalue))
+                  && is_nonfalse($current_condition_value))
 		{ print OUTPUT $raw; }
 	    }
 	  elsif ($simple =~ /^else\b/)
@@ -745,8 +753,9 @@ sub process_file ( $ )
 	      if ($debug_cppp) {
 		print "Considering else: thisvalue=`$thisvalue', current_condition_value=`$current_condition_value'\n";
 	      }
-	      if ($elif_needs_endif[$#elif_needs_endif]
-		  || (is_unknown($thisvalue) && is_nonfalse($current_condition_value)))
+              my $needs_endif = $elif_needs_endif[$#elif_needs_endif];
+	      if (($needs_endif || is_unknown($thisvalue))
+                  && is_nonfalse($current_condition_value))
 		{ print OUTPUT $raw; }
 	      if (!is_unknown($thisvalue))
 		{ $thisvalue = !$thisvalue;
@@ -792,7 +801,7 @@ sub process_file ( $ )
 	      if ($debug_cppp)
 		{ my $simple_nonewline = $simple;
 		  chomp($simple_nonewline);
-		  print "After $simple_nonewline:\n";
+		  print "After simple $simple_nonewline:\n";
 		  print "  condition_stack = @condition_stack\n";
 		  print "  condition_value_stack = @condition_value_stack\n"; }
 
@@ -855,7 +864,7 @@ sub process_file ( $ )
 	      push(@elif_needs_endif, $false);
 
 	      if ($debug_cppp)
-		{ print "After $ifarg:\n";
+		{ print "After ifarg $ifarg:\n";
 		  print "  condition_stack = @condition_stack\n";
 		  print "  condition_value_stack = @condition_value_stack\n"; }
 
