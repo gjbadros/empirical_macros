@@ -49,28 +49,27 @@ Methodology
 	files; so we concentrate on what the programmer can control.)  Most
 	figures report only on package-defined macros; most numbers increase
 	dramatically if all macros are included.
-  Collection of scripts, approximately 11,000 lines of Perl
+  Collection of scripts, approximately 11,000 lines of Perl (7,000 NCNB lines)
   The raw data, and the programs used to generate and manipulate them, are
 	available from the authors.
 
 Total usage
  high total use: 9.6% cpp use is very high
    one in ten noncomment, nonblank lines is a preprocessor directive
-	(this doesn't count lines which use the preprocessor, say by 
-	containing a macro or by being controlled by #if)
-   one in seven source lines is a preprocessor directive
+	(this doesn't count the 28% of lines which expand a macro or the
+	38% of lines whose inclusion is controlled by #if)
  for gzip, remind, and bash, the numbers are 22, 21, and 16%
 	say a few words about these
  about 1/3 of directives are definitions
  about 1/2 of directives are conditionals
  The remainder are mostly inclusion
  "line" comes only from post-processed source included for users who don't
-	have lex, yacc, etc.  We have folded all other directives into this
-	category as well; they account for .017%, or one in six thousand,
-	directives.
+	have lex, yacc, etc.  
+ All other directives account for .017%, or one in six thousand, directives.
  Notice the lack of uniformity; if every package relied equally on
 	definitions vs. conditionals, then each group of bars would look
-	just like the "total" group.
+	just like the "total" group.  In particular, use of #include is
+	independent of overall use.
 
 Definitions
  * Complicated bodies
@@ -80,26 +79,28 @@ Definitions
 	  Say what they are.
 	For each package, we report how many definitions create an
 	  expansion which falls in each category
-	There's no patern, again.
+	There's no patern, again.  (Nor is there a pattern by package size
+	  or by type of application.)
     * Tricky cpp uses: things slightly out of the ordinary (ie, outside the
 	  scope of C, which is why the preprocessor was used), hard to translate
-	About one in six macros (18.6%) falls into at least one category
-	We show an exact breakdown by subsets because these numbers don't add
-	  to 100% and sometimes a macro has multiple categories -- we show
-	  how they interact.
+	About one in six macros (16.8%) falls into at least one category
+	We show an exact breakdown by subsets because, if we report by
+	  property, the numbers don't add to 100%: sometimes a macro has
+	  multiple properties.
 	Not as much use of stringization, pasting as we anticipated -- we
 	  had been particularly worried about them.
 	We didn't analyze whether the free variables are globals or locals,
 	  which could substantially impact understanding/translation.
 	The uses of types are going to be problematic.
-	Not sure what else to say about this table.
     * CPP errors (or poential errors): lint output
-	We identified a number of potentially harmful programming
+	We identified a number of potentially dangerous programming
 	  constructs -- those which may well be intentional, but which also
 	  might cause a macro not to behave as anticipated (and not to
 	  behave like an ordinary function).  One fourth of all definitions
-          triggered at least one such warning; across macro names, about
+          triggered at least one such warning; and across macro names,
 	  one fourth contain a definition which triggers a warning.
+	In some, but not all, C dialects there ways to declare a local
+	  variable so that each formal only need be used once.
 	We didn't examine every use.  Besides, the point isn't just the
 	  current uses, but also future uses:  we want these to be easy for
 	  programmers to use.
@@ -120,9 +121,17 @@ Definitions
 	  categories".  (We could also get that even if a single
 	  definition, earlier, if it expands to just such a macro.)
 	  Explain how we combine two different categories into a single one.
-	Not C code tends to be for Makefiles; compilation lines, library
-	  filenames, and such tend to differ for each operating system.
-	Syntactic is parentheses, commas, semicolons, etc:  frequently-used,
+	Not C code tends to be for the benefit of Makefiles; compilation
+	  lines, library filenames, and such tend to differ for each
+	  operating system.  (We see those macros because: 1. we process
+	  all the .h files, and 2. some files are used for preprocessing
+	  both code and Makefiles, etc.  This latter use is problematic in
+	  itself, because by definition CPP is supposed to get a syntactic
+	  C program; it should err if what's between single quotes isn't a
+	  legal character constant, etc.  But many implementations don't
+	  perform any such checks.)
+	Syntactic is parentheses, commas, semicolons, critical section
+	  delimiters, etc:  frequently-used.
 	It stands to reason that "failed classification" has multiple
 	  definitions, because when determining the category for a macro
 	  name, we categorize each definition, and if any of them are
@@ -142,6 +151,9 @@ Definitions
 		1 macro, CPP_PREDEFINES, is defined 181 times (and undefined
 		  198 times)
 
+	(Talk about the new table which summarizes def, ddf, and use
+	  frequency.  Not sure what to say about it yet.)
+
     * Multiple distinct definitions
 	This uses a less strict rule than that used by CPP when determining
 	  whether to issue a warning about redefinition.  We eliminate all
@@ -159,9 +171,10 @@ Definitions
 	The arrows indicate macros for which the names would be classified
 	  as "failure".
 	Two anomalies are due to the fact that "statement" category should
-	  really be called "statement-related":  it includes full statements,
-	  statements missing a final semicolon, partial statements,
-	  multiple statements, multiple statements plus a partial one.
+	  really be called "statement-related":  it includes full
+	  statements (which comprise the majority, I think), statements
+	  missing a final semicolon, partial statements, multiple
+	  statements, multiple statements plus a partial one.
 	  * no arrow on one "expression + statement", at 1.1%, because that
 		was actually "expression + semicolonless_statement" -- and
 		an expression plus a semicolon also makes a statement.
@@ -179,18 +192,18 @@ Definitions
 
 Uses
  * high usage
-	Give average uses per defined macro name
+	Give average uses per defined macro name (see new summary table).
 	In the chart, a higher line indicates less use.
-	Half of all macros are used two or fewer times
+	Half of all macros are used two or fewer times (!).  12% not used
+	  at all (!).
 	Syntactic macros tend to be used far more often; also type-related
 	  ones.  These make sense, as they are frequently-used constructs
 	  that permeate code (appear at every definition, for instance).
-	Likewise for type-related.
 	Non-C-code, null defines (ie, every definition of the name is a
 	  null define), and constants are used least.  The latter is a bit
 	  surprising, but shows that macros are being used as a
 	  configuration mechanism rather than a linguistic mechanism.  (Do
-	  I buy that?  Maybe not.)
+	  I buy that?  Maybe not. ??)
 	All packages follow approximately the same curve; the outlier is
 	  gnuplot.  Gnuplot uses macros less, on average, than other packages
 	  do.  Over 40% of the macros it defines are never used at all --
