@@ -1,5 +1,5 @@
 #!/uns/bin/zsh
-echo "Package	code	code, macro	macro	code, cond	code, macro, cond	macro, cond	cond	no uses"
+echo "Package	Code	Code, macro	Macro	Code, cond	Code, cond, macro	Cond, macro	Cond	No uses"
 # Input to awk is a file with 8 lines, each representing one of the
 # 8 categorizations, alphabetized:
 #    Code CodeCond CodeMacro CodeMacroCond Cond Macro MacroCond NoUses
