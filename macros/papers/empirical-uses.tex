@@ -691,12 +691,12 @@ translation (though C++ templates may provide some hope).
   \verb|DO_OP|(OP,a,b) (a OP b)}\,---\,caused many failures of our
   classification heuristics.  Of the 1025 classification failures in the
   {\numpackages} packages, 496 were caused by a single definition in
-  \pkg{gnuplot}, {\tt \#define CUR \verb|cur_term->type.|} (the period is part of
-  the expansion), and uses of that macro, as in {\tt \#define \verb|acs_plus|
-  CUR Strings[408]}.  Four packages\,---\,\pkg{bison}, \pkg{gnuchess},
-  \pkg{remind}, and \pkg{workman}\,---\,had no macro classification failures.
-  These packages contain 93, 297, 932, and 58 macro definitions,
-  respectively.
+  \pkg{gnuplot}, {\tt \#define CUR \verb|cur_term->type.|} (the period is
+  part of the expansion), and uses of that macro, as in {\tt \#define
+  \verb|acs_plus| CUR Strings[408]}.  Four packages\,---\,\pkg{bison},
+  \pkg{gnuchess}, \pkg{remind}, and \pkg{workman}\,---\,had no macro
+  classification failures.  These packages contain 93, 297, 932, and 58 macro
+  definitions, respectively.
 
 % and illegal identifier
 %   names ({\tt \#define \verb|FAT$C_VFC| 3} for VMS compilation), tokens %$HACK
