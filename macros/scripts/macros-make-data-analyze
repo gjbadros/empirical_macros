@@ -13,7 +13,9 @@ cd $PKG
 for i in *(/); do 
   echo $i
   pushd $i
+    NM=${i%%-*}
     ( cat c-files-listing || find-c ) \
-     | em_analyze -i -t -d $TM:${i%%-*} > $TM/${i%%-*}.out 2> $TM/${i%%-*}.err
+     | em_analyze -i -t -d $TM:$NM > $TM/$NM.out 2> $TM/$NM.err || \
+         (cd ..; echo $i >> failures)
   popd
 done
