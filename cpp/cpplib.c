@@ -4442,6 +4442,7 @@ do_if (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *limit)
   int cchOffsetEnd = pfile->buffer->cur - pfile->buffer->buf + 1;
   char *szConditionalClause;
   int cchConditionalClause;
+  int cchOffsetBranchStart = 0;
   U_CHAR *pchStartExpr = CPP_BUFFER(pfile)->cur+1;
   U_CHAR *pchEndExpr = NULL;
   pfile->fGettingDirective++; // FIXGJB: better flag?
@@ -4452,11 +4453,12 @@ do_if (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *limit)
   szConditionalClause = (char *) xmalloc(cchConditionalClause + 2);
   strncpy(szConditionalClause,pchStartExpr,cchConditionalClause);
   szConditionalClause[cchConditionalClause] = '\0';
+  cchOffsetBranchStart = CchOffset_internal(pfile) + 2;
   conditional_skip (pfile, value == 0, T_IF, NULL_PTR,szConditionalClause);
-  gjb_call_hooks_i_i_szl_szl_i(CPP_OPTIONS(pfile),HI_DO_IF,cchOffsetStart,cchOffsetEnd,
-			       pchStartExpr,pchEndExpr-pchStartExpr-1,
-			       pchEndExpr,CPP_BUFFER(pfile)->cur-pchEndExpr-1,
-			       value);
+  gjb_call_hooks_i_i_szl_szl_i_i(CPP_OPTIONS(pfile),HI_DO_IF,cchOffsetStart,cchOffsetEnd,
+                                 pchStartExpr,pchEndExpr-pchStartExpr-1,
+                                 pchEndExpr,CPP_BUFFER(pfile)->cur-pchEndExpr-1,
+                                 value,cchOffsetBranchStart);
   return 0;
 }
 
@@ -4473,6 +4475,7 @@ do_elif (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *limi
   int fSkip_IfWasTrue = 0;
   int cchOffsetStart = pfile->buffer->prev - pfile->buffer->buf + 1;
   int cchOffsetEnd = pfile->buffer->cur - pfile->buffer->buf + 1;
+  int cchOffsetBranchStart = 0;
   HOST_WIDE_INT value;
 
   if (pfile->if_stack == CPP_BUFFER (pfile)->if_stack) {
@@ -4506,6 +4509,7 @@ do_elif (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *limi
   else {
     value = eval_if_expression (pfile, buf, limit - buf);
     pchEndExpr = CPP_BUFFER(pfile)->cur;
+    cchOffsetBranchStart = CchOffset_internal(pfile) + 2;
     if (value == 0)
       skip_if_group (pfile, 0);
     else {
@@ -4513,10 +4517,10 @@ do_elif (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *limi
       output_line_command (pfile, 1, same_file);
     }
   }
-  gjb_call_hooks_i_i_i_szl_szl_i(CPP_OPTIONS(pfile),HI_DO_ELIF,cchOffsetStart,cchOffsetEnd,
-				 fSkip_IfWasTrue,pchStartExpr,pchEndExpr-pchStartExpr-1,
-				 pchEndExpr,CPP_BUFFER(pfile)->cur-pchEndExpr-1,
-				 value);
+  gjb_call_hooks_i_i_i_szl_szl_i_i(CPP_OPTIONS(pfile),HI_DO_ELIF,cchOffsetStart,cchOffsetEnd,
+                                   fSkip_IfWasTrue,pchStartExpr,pchEndExpr-pchStartExpr-1,
+                                   pchEndExpr,CPP_BUFFER(pfile)->cur-pchEndExpr-1,
+                                   value,cchOffsetBranchStart);
   return 0;
 }
 
