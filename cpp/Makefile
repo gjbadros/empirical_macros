@@ -18,6 +18,7 @@ ALL_CFLAGS = $(INTERNAL_CFLAGS) $(X_CFLAGS) $(T_CFLAGS) $(CFLAGS) $(XCFLAGS) -g 
 # Use yyparse()!
 ALL_CFLAGS += -DGJB_PARSE -DCTGRAMMAR
 ALL_CFLAGS += -DUSE_CPP -DSHOW_TYPES -DCT_DEBUG
+# ALL_CFLAGS += -DUSE_DMALLOC
 
 # Directory where sources are, from where we are.
 srcdir = .
