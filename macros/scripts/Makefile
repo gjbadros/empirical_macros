@@ -13,7 +13,7 @@ PKG_DIR := /tmp/gjb/packages
 # Use only packages that start with these chars 
 PKG_PREFIX :=   
 # DO NOT USE "" for a null var, since that becomes a space
-ANALYZE_OUTPUT_DIR := /tmp/gjb/data
+ANALYZE_OUTPUT_DIR := $(shell pwd)
 COMMON_DIR := $(shell dirname `ls -l Makefile | awk '{print $$NF}'`)
 #COMMON_DIR := /homes/gws/mernst/research/notkin/macros/scripts
 #COMMON_DIR := /homes/gws/gjb/macros/scripts
@@ -25,7 +25,7 @@ PAPER_ORIG_DIR := $(USER_PREFIX)/papers/orig
 
 EXTRA_ANALYZE_FLAGS := -v
 EXTRA_REPORTS_FLAGS := -v
-#EXTRA_ANALYZE_FLAGS := -g14 -F$(FAST_DIR)
+#EXTRA_ANALYZE_FLAGS := -v -g14 -F$(FAST_DIR)
 
 include Makefile.user
 
