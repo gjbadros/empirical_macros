@@ -1,0 +1,36 @@
+Options:
+
+o -P<filename.pl>
+  Use perl in filename.pl and turn execution of hooks on
+o -e <expression>
+  Eval <expression>, too. (multiple should be allowed)
+o -o <output-filename> [this already exists]
+  Use this to separate the perl hook output and debug stuff from
+    the actual cpp transformed-file output.
+
+
+Hooks per:
+
+o physical line
+
+o logical line (pass unexpanded, stripped, and expanded versions; also
+  probably want the number of physical lines)
+
+o NCNB line
+
+o cpp directive
+  * macro define
+  * #include
+  * cond comp
+  * arbitrary
+
+o macro expansion (i.e., use)
+
+o comment
+
+o fn decl'n
+
+o fn def'n
+
+o type decl'n
+
