@@ -40,6 +40,10 @@ exec_prefix = $(prefix)
 bindir = $(exec_prefix)/bin
 # Directory in which to put the directories used by the compiler.
 libdir = $(exec_prefix)/lib
+
+target=i386-linux
+version=2.7.2.1
+
 # Directory in which the compiler finds executables, libraries, etc.
 libsubdir = $(libdir)/gcc-lib/$(target)/$(version)
 # Directory in which the compiler finds g++ includes.
