@@ -80,12 +80,14 @@ Box 352350, Seattle, WA  98195-2350  USA \\
 
 \begin{abstract}
   The C programming language is intimately connected to its macro
-  preprocessor, Cpp.  This relationship hinders tools built to
-  engineer C programs, such as compilers, debuggers, call graph
-  extractors, and translators.  Most tools make no attempt to analyze
-  macro usage, but simply preprocess their input, which results in a
-  number of negative consequences; an analysis that takes Cpp into
-  account is preferable.  To determine how the preprocessor is used in
+  preprocessor, Cpp.  
+%  This relationship hinders tools built to
+%  engineer C programs, such as compilers, debuggers, call graph
+%  extractors, and translators.  Most tools make no attempt to analyze
+%  macro usage, but simply preprocess their input, which results in a
+%  number of negative consequences; an analysis that takes Cpp into
+%  account is preferable.  
+  To determine how the preprocessor is used in
   practice, this paper analyzes {\numpackages} packages comprising
   {\numlinesalmost} lines of publicly available C code.  We determine
   the incidence of C preprocessor usage\,---\,whether in macro
@@ -101,14 +103,14 @@ Box 352350, Seattle, WA  98195-2350  USA \\
   software engineers.
 \end{abstract}
 
-\noindent
-Keywords: C preprocessor, Cpp, C, C++, program understanding, file
-inclusion, macro, macro substitution, conditional compilation, empirical study
+%\noindent
+%Keywords: C preprocessor, Cpp, C, C++, program understanding, file
+%inclusion, macro, macro substitution, conditional compilation, empirical study
 
 
 \bigskip
 
-\section{Introduction}
+\section{Coping with the Preprocessor}
 
 The C programming language~\cite{KernighanR88,Harbison91} is
 incomplete without its macro preprocessor, Cpp.  Cpp can be used to
@@ -341,7 +343,8 @@ software engineers and tool builders:
   function-like macros that fail to swallow a following semicolon and
   macros that modify, or fail to parenthesize, uses of their arguments.
 \item[multiple definitions {\rm (Sections~\ref{sec:mult-def}--\ref{sec:inconsistent}):}]
-  Uncertainty about the expansion of a macro prevents knowledge of the
+  Uncertainty about the expansion of a macro makes it harder to confidently
+  understand the
   actual program text.  Even more problematically, two definitions of a
   macro may be incompatible, for instance if one expands to a statement and the
   other to an expression or type.
@@ -2966,7 +2969,7 @@ for 4\% of non-header-file uses.
 \section{Making C programs easier to understand}
 \label{sec:easier-to-understand}
 
-The combination of C and Cpp makes a source text unnecessarily difficult
+The combination of C and Cpp often makes a source text unnecessarily difficult
 to understand.  A good first step is to eliminate Cpp uses where an
 equivalent C or C++ construct exists, then to apply tools to explicate
 the remaining uses.  Here we discuss a few approaches to reducing the
