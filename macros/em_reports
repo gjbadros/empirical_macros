@@ -116,10 +116,57 @@ my $fIgnoreIncludes = $false;
 ### Print output statistics
 ###
 
-use vars qw($getopts_option_letters $c_reserved_type_word_alternatives $c_reserved_nontype_word_alternatives $c_plus_plus_reserved_type_word_alternatives $c_plus_plus_reserved_nontype_word_alternatives $reserved_type_word_re $reserved_nontype_word_re $reserved_word_re $constant_exp_re $constant_or_upcase_exp_re $float_literal_whole_re $float_literal_frac_re $float_literal_exp_re $float_literal_noexp_re $hex_literal_re $dec_oct_literal_re $number_literal_re $char_literal_contents_re $char_literal_re $non_escaped_double_quote_re $string_literal_re $identifier_no_dollar_re $identifier_re $type_specifier_re $type_special $type_re_special_1 $type_re_special_2 $type_re_special $type_suffix_re $type_re $type_qualifier_re $pointer_declarator_prefix_re $pointer_declarator_prefixes_re $array_declarator_suffix_re $array_declarator_suffixes_re $declarator_unparenthesized_re $declarator_parenthesized_re $declarator_re $type_declarator_re $simple_arglist_re $type_declarator_arglist_re $numeric_type_word_re $numeric_type_re $non_numeric_type_re $builtin_type_base_re $builtin_type_re $numeric_binop_regexp $bool_binop_regexp $arb_type_binop_regexp $binop_regexp @rg_physical_lines @rg_ncnb_lines @rg_cpp_phys_lines @rg_cpp_phys_ncnb_lines @rg_cpp_cmds @rg_category_counts %category_counts_ni %category_counts_c_ni %category_counts_hdr_ni @rg_cppcmdcounts $ncnb_physical_lines_ni $cpp_cmds $cpp_cmds_ni $cpp_cmds_hdr $cpp_cmds_hdr_ni $cpp_cmds_c $cpp_cmds_c_ni %cppcmdcount %cppcmdcount_ni %cppcmdcount_hdr_ni %cppcmdcount_c_ni $symtab_scopes $line $cBuiltinMacros $cMacrosInTables %files_function_lines %function_to_locs %function_name_to_macros_it_uses $current_file $current_ftype_index $current_function $current_function_start_line $current_macro_line_number @files %file_inclusion_method @files_included $outOFS %macros %macros_c_undefs %macros_uses %macros_file_line_uses %macros_used_in_functions @mdef_name @mdef_args @mdef_body @mdef_body_noc @mdef_file @mdef_line @mdef_physical_lines @mdef_physical_ncnb_lines %mdef_freevars @mdef_freefuns @mdef_dependenton @mdef_expansion_uses @mdef_type @mdef_category @mdef_evilness %mntype %mncategory %fun_decl_arg_macros %semi_fun_decl_arg_macros %void_macros $fDebugCmdProcessing $fDebugCommentRemoval $debug_scopes $debug_type_match $debug_parse_function $debug_parse_expression $debug_merge_branches $debug_parse_array_init $debug_peek $debug_getline $debug_categorize_macro $debug_cpp_if_comments $fIgnoreIncludes @getline_ungot_raw_lines @getline_ungot_simple_lines @dependenton $incomment $instring %parsevars %parsefuns %parsetypes $parse_exp_saw_equals @symtab_identifiers @symtab_types $scopemarker $wf_last_filename $wf_last_line_no $wf_last_index
-    %inclusion_dependenton %inclusion_dependees %inclusion_dependee_lines
-    %expansion_dependenton %expansion_dependees %expansion_dependee_lines
- );
+use vars qw($getopts_option_letters $c_reserved_type_word_alternatives
+    $c_reserved_nontype_word_alternatives
+    $c_plus_plus_reserved_type_word_alternatives
+    $c_plus_plus_reserved_nontype_word_alternatives
+    $reserved_type_word_re $reserved_nontype_word_re $reserved_word_re
+    $constant_exp_re $constant_or_upcase_exp_re
+    $float_literal_whole_re $float_literal_frac_re
+    $float_literal_exp_re $float_literal_noexp_re $hex_literal_re
+    $dec_oct_literal_re $number_literal_re $char_literal_contents_re
+    $char_literal_re $non_escaped_double_quote_re $string_literal_re
+    $identifier_no_dollar_re $identifier_re $type_specifier_re
+    $type_special $type_re_special_1 $type_re_special_2
+    $type_re_special $type_suffix_re $type_re $type_qualifier_re
+    $pointer_declarator_prefix_re $pointer_declarator_prefixes_re
+    $array_declarator_suffix_re $array_declarator_suffixes_re
+    $declarator_unparenthesized_re $declarator_parenthesized_re
+    $declarator_re $type_declarator_re $simple_arglist_re
+    $type_declarator_arglist_re $numeric_type_word_re $numeric_type_re
+    $non_numeric_type_re $builtin_type_base_re $builtin_type_re
+    $numeric_binop_regexp $bool_binop_regexp $arb_type_binop_regexp
+    $binop_regexp @rg_physical_lines @rg_ncnb_lines @rg_cpp_phys_lines
+    @rg_cpp_phys_ncnb_lines @rg_cpp_cmds @rg_category_counts
+    %category_counts_ni %category_counts_c_ni %category_counts_hdr_ni
+    @rg_cppcmdcounts $ncnb_physical_lines_ni $cpp_cmds $cpp_cmds_ni
+    $cpp_cmds_hdr $cpp_cmds_hdr_ni $cpp_cmds_c $cpp_cmds_c_ni
+    %cppcmdcount %cppcmdcount_ni %cppcmdcount_hdr_ni %cppcmdcount_c_ni
+    $symtab_scopes $line $cBuiltinMacros $cMacrosInTables
+    %files_function_lines %function_to_locs
+    %function_name_to_macros_it_uses $current_file
+    $current_ftype_index $current_function
+    $current_function_start_line $current_macro_line_number @files
+    %file_inclusion_method @files_included $outOFS %macros
+    %macros_c_undefs %macros_uses %macros_file_line_uses
+    %macros_used_in_functions @mdef_name @mdef_args @mdef_body
+    @mdef_body_noc @mdef_file @mdef_line @mdef_physical_lines
+    @mdef_physical_ncnb_lines %mdef_freevars @mdef_freefuns
+    @mdef_dependenton @mdef_expansion_uses @mdef_type @mdef_category
+    @mdef_evilness %mntype %mncategory %fun_decl_arg_macros
+    %semi_fun_decl_arg_macros %void_macros $fDebugCmdProcessing
+    $fDebugCommentRemoval $debug_scopes $debug_type_match
+    $debug_parse_function $debug_parse_expression
+    $debug_merge_branches $debug_parse_array_init $debug_peek
+    $debug_getline $debug_categorize_macro $debug_cpp_if_comments
+    $fIgnoreIncludes @getline_ungot_raw_lines
+    @getline_ungot_simple_lines @dependenton $incomment $instring
+    %parsevars %parsefuns %parsetypes $parse_exp_saw_equals
+    @symtab_identifiers @symtab_types $scopemarker $wf_last_filename
+    $wf_last_line_no $wf_last_index %inclusion_dependenton
+    %inclusion_dependees %inclusion_dependee_lines
+    %expansion_dependenton %expansion_dependees
+    %expansion_dependee_lines );
 
 
 use vars qw(%macros_c_all_uses @freq_use_buckets @freq_def_buckets
