@@ -24,6 +24,13 @@ my $fDebugParse = $false;
 
 my $macro_nestings_deep = 0;
 
+sub handle_directive {
+  my ($directive) = @_;
+#  print STDERR "In handle_directive for $directive\n";
+  return 1;
+}
+
+
 sub Startup {
   my ($source_file) = @_;
 
@@ -488,7 +495,7 @@ sub do_func_call {
 AddHook("STARTUP",\&Startup);
 #AddHook("STARTUP",\&Startup2);
 #AddHook("DO_DEFINE",\&do_define);
-#AddHook("HANDLE_DIRECTIVE",\&handle_directive);
+AddHook("HANDLE_DIRECTIVE",\&handle_directive);
 #AddHook("CREATE_PREDEF",\&create_predef);
 AddHook("CREATE_DEF",\&create_def);
 AddHook("DO_UNDEF",\&do_undef);
