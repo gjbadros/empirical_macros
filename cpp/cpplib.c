@@ -2885,6 +2885,11 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
   pbuf = CPP_BUFFER(pfile);
   pchRawCall = pbuf->cur;
   cchRawCall = pbuf->cur - pchAfterMacroName;
+
+  /* test15.c tickles this case */
+  if (cchRawCall < 0)
+    cchRawCall = -1;
+
   cchOffsetInternal = CchOffset_internal(pfile);
   if (pcei) {
     ichSourceStart = CchBufferOffset(pfile) + CchSumPceiOffsets(pcei) + pbuf->cur - pbuf->buf - strlen(hp->name) + 1;
@@ -3291,13 +3296,15 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
       }
     else
       {
-      gjb_call_hooks_expansion(pfile,HI_EXPAND_MACRO,
-			       ichSourceStart,ichSourceEnd,
-			       hp->name,xbuf+2,xbuf_len-4,xbuf_len-4,
-			       pchAfterMacroName,cchRawCall,
-			       CPP_BUFFER(pfile)->has_escapes,cbuffersDeep,
-			       pcei, nargs<0?0:nargs,
-			       args);
+        if (cchRawCall >= 0) {
+          gjb_call_hooks_expansion(pfile,HI_EXPAND_MACRO,
+                                   ichSourceStart,ichSourceEnd,
+                                   hp->name,xbuf+2,xbuf_len-4,xbuf_len-4,
+                                   pchAfterMacroName,cchRawCall,
+                                   CPP_BUFFER(pfile)->has_escapes,cbuffersDeep,
+                                   pcei, nargs<0?0:nargs,
+                                   args);
+        }
       }
     }
   
