@@ -11,7 +11,7 @@ USER_PREFIX = /homes/gws/gjb/macros
 # Directories
 PKG_DIR := /tmp/gjb/packages
 PKG_PREFIX :=   # Use only packages that start with these chars 
-		# DO NOT USE "" for a null var, since that becomes a space
+# DO NOT USE "" for a null var, since that becomes a space
 ANALYZE_OUTPUT_DIR := /tmp/gjb/data
 COMMON_DIR := $(shell dirname `ls -l Makefile | awk '{print $$NF}'`)
 #COMMON_DIR := /homes/gws/mernst/research/notkin/macros/scripts
