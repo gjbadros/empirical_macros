@@ -22,6 +22,9 @@ Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  You are forbidden to forbid anyone else to use, share and improve
  what you give them.   Help stamp out software-hoarding!  */
 
+#include <string.h>
+#include <unistd.h>
+
 #ifdef EMACS
 #define NO_SHORTNAMES
 #include "../src/config.h"
@@ -607,7 +610,7 @@ make_assertion (pfile, option, str)
      U_CHAR *str;
 {
   cpp_buffer *ip;
-  struct directive *kt;
+  /*  struct directive *kt; */
   U_CHAR *buf, *p, *q;
 
   /* Copy the entire option so we can modify it.  */
@@ -1983,7 +1986,9 @@ cpp_expand_to_buffer (pfile, buf, length)
      int length;
 {
   register cpp_buffer *ip;
+#if 0
   cpp_buffer obuf;
+#endif
   U_CHAR *limit = buf + length;
   U_CHAR *buf1;
 #if 0
@@ -2122,8 +2127,8 @@ output_line_command (pfile, conditional, file_change)
      int conditional;
      enum file_change_code file_change;
 {
-  int len;
-  char *line_cmd_buf, *line_end;
+  //  int len;
+  //  char *line_cmd_buf, *line_end;
   long line, col;
   cpp_buffer *ip = CPP_BUFFER (pfile);
 
@@ -2174,7 +2179,7 @@ output_line_command (pfile, conditional, file_change)
     CPP_PUTS_Q (pfile, sharp_line, sizeof(sharp_line)-1);
   }
 
-  sprintf (CPP_PWRITTEN (pfile), "%d ", line);
+  sprintf (CPP_PWRITTEN (pfile), "%ld ", line);
   CPP_ADJUST_WRITTEN (pfile, strlen (CPP_PWRITTEN (pfile)));
 
   quote_string (pfile, ip->nominal_fname); 
@@ -2211,7 +2216,7 @@ macarg (pfile, rest_args)
 {
   int paren = 0;
   enum cpp_token token;
-  long arg_start = CPP_WRITTEN (pfile);
+  //  long arg_start = CPP_WRITTEN (pfile);
   char save_put_out_comments = CPP_OPTIONS (pfile)->put_out_comments;
   CPP_OPTIONS (pfile)->put_out_comments = 0;
 
@@ -2329,7 +2334,7 @@ special_symbol (hp, pfile)
      cpp_reader *pfile;
 {
   char *buf;
-  int i, len;
+  int len;
   int true_indepth;
   cpp_buffer *ip = NULL;
   struct tm *timebuf;
@@ -2431,7 +2436,7 @@ special_symbol (hp, pfile)
 	adjust_position (CPP_LINE_BASE (ip), ip->cur, &line, &col);
 
 	buf = (char *) alloca (10);
-	sprintf (buf, "%d", line);
+	sprintf (buf, "%ld", line);
       }
       break;
 
@@ -2460,7 +2465,7 @@ special_symbol (hp, pfile)
 
       if (!is_idstart[*ip->cur])
 	goto oops;
-      if (hp = cpp_lookup (pfile, ip->cur, -1, -1))
+      if ((hp = cpp_lookup (pfile, ip->cur, -1, -1)))
 	{
 #if 0
 	  if (pcp_outfile && pcp_inside_if
@@ -7330,7 +7335,7 @@ cpp_print_file_and_line (pfile)
 }
 
 void
-cpp_error (pfile, msg, arg1, arg2, arg3)
+cpp_error_nohook (pfile, msg, arg1, arg2, arg3)
      cpp_reader *pfile;
      char *msg;
      char *arg1, *arg2, *arg3;
@@ -7340,10 +7345,23 @@ cpp_error (pfile, msg, arg1, arg2, arg3)
   cpp_message (pfile, 1, msg, arg1, arg2, arg3);
 }
 
-/* Print error message but don't count it.  */
-
 void
-cpp_warning (pfile, msg, arg1, arg2, arg3)
+cpp_error (pfile, msg, arg1, arg2, arg3)
+     cpp_reader *pfile;
+     char *msg;
+     char *arg1, *arg2, *arg3;
+{
+  cpp_buffer *ip = cpp_file_buffer (pfile);
+  gjb_call_hooks_sz_i_i_sprintf(CPP_OPTIONS(pfile),CPP_ERROR,
+				ip?ip->nominal_fname:"[NONE]",
+				ip?ip->lineno:-1,-1,
+				msg, arg1, arg2, arg3);
+  cpp_error_nohook(pfile,msg,arg1,arg2,arg3);
+}
+
+/* Print error message but don't count it.  */
+void
+cpp_warning_nohook (pfile, msg, arg1, arg2, arg3)
      cpp_reader *pfile;
      char *msg;
      char *arg1, *arg2, *arg3;
@@ -7359,6 +7377,20 @@ cpp_warning (pfile, msg, arg1, arg2, arg3)
   cpp_message (pfile, 0, msg, arg1, arg2, arg3);
 }
 
+void
+cpp_warning (pfile, msg, arg1, arg2, arg3)
+     cpp_reader *pfile;
+     char *msg;
+     char *arg1, *arg2, *arg3;
+{
+  cpp_buffer *ip = cpp_file_buffer (pfile);
+  gjb_call_hooks_sz_i_i_sprintf(CPP_OPTIONS(pfile),CPP_WARN,
+				ip?ip->nominal_fname:"[NONE]",
+				ip?ip->lineno:-1,-1,
+				msg, arg1, arg2, arg3);
+  cpp_warning_nohook(pfile,msg,arg1,arg2,arg3);
+}
+
 /* Print an error message and maybe count it.  */
 
 void
@@ -7367,14 +7399,19 @@ cpp_pedwarn (pfile, msg, arg1, arg2, arg3)
      char *msg;
      char *arg1, *arg2, *arg3;
 {
+  cpp_buffer *ip = cpp_file_buffer (pfile);
+  gjb_call_hooks_sz_i_i_sprintf(CPP_OPTIONS(pfile),CPP_PEDWARN,
+				ip?ip->nominal_fname:"[NONE]",
+				ip?ip->lineno:-1,-1,
+				msg, arg1, arg2, arg3);
   if (CPP_OPTIONS (pfile)->pedantic_errors)
-    cpp_error (pfile, msg, arg1, arg2, arg3);
+    cpp_error_nohook (pfile, msg, arg1, arg2, arg3);
   else
-    cpp_warning (pfile, msg, arg1, arg2, arg3);
+    cpp_warning_nohook (pfile, msg, arg1, arg2, arg3);
 }
 
 void
-cpp_error_with_line (pfile, line, column, msg, arg1, arg2, arg3)
+cpp_error_with_line_nohook (pfile, line, column, msg, arg1, arg2, arg3)
      cpp_reader *pfile;
      int line, column;
      char *msg;
@@ -7391,8 +7428,23 @@ cpp_error_with_line (pfile, line, column, msg, arg1, arg2, arg3)
   cpp_message (pfile, 1, msg, arg1, arg2, arg3);
 }
 
+void
+cpp_error_with_line (pfile, line, column, msg, arg1, arg2, arg3)
+     cpp_reader *pfile;
+     int line, column;
+     char *msg;
+     char *arg1, *arg2, *arg3;
+{
+  cpp_buffer *ip = cpp_file_buffer (pfile);
+  gjb_call_hooks_sz_i_i_sprintf(CPP_OPTIONS(pfile),CPP_ERROR,
+				ip?ip->nominal_fname:"[NONE]",
+				line,column,
+				msg, arg1, arg2, arg3);
+  cpp_error_with_line_nohook(pfile,line,column,msg,arg1,arg2,arg3);
+}
+
 static void
-cpp_warning_with_line (pfile, line, column, msg, arg1, arg2, arg3)
+cpp_warning_with_line_nohook (pfile, line, column, msg, arg1, arg2, arg3)
      cpp_reader *pfile;
      int line, column;
      char *msg;
@@ -7417,6 +7469,20 @@ cpp_warning_with_line (pfile, line, column, msg, arg1, arg2, arg3)
   cpp_message (pfile, 0, msg, arg1, arg2, arg3);
 }
 
+cpp_warning_with_line (pfile, line, column, msg, arg1, arg2, arg3)
+     cpp_reader *pfile;
+     int line, column;
+     char *msg;
+     char *arg1, *arg2, *arg3;
+{
+  cpp_buffer *ip = cpp_file_buffer (pfile);
+  gjb_call_hooks_sz_i_i_sprintf(CPP_OPTIONS(pfile),CPP_WARN,
+				ip?ip->nominal_fname:"[NONE]",
+				line,column,
+				msg, arg1, arg2, arg3);
+  cpp_warning_with_line_nohook(pfile,line,column,msg,arg1,arg2,arg3);
+}
+
 void
 cpp_pedwarn_with_line (pfile, line, column, msg, arg1, arg2, arg3)
      cpp_reader *pfile;
@@ -7424,6 +7490,11 @@ cpp_pedwarn_with_line (pfile, line, column, msg, arg1, arg2, arg3)
      char *msg;
      char *arg1, *arg2, *arg3;
 {
+  cpp_buffer *ip = cpp_file_buffer (pfile);
+  gjb_call_hooks_sz_i_i_sprintf(CPP_OPTIONS(pfile),CPP_PEDWARN,
+				ip?ip->nominal_fname:"[NONE]",
+				line,column,
+				msg, arg1, arg2, arg3);
   if (CPP_OPTIONS (pfile)->pedantic_errors)
     cpp_error_with_line (pfile, column, line, msg, arg1, arg2, arg3);
   else
@@ -7441,6 +7512,10 @@ cpp_pedwarn_with_file_and_line (pfile, file, line, msg, arg1, arg2, arg3)
      char *msg;
      char *arg1, *arg2, *arg3;
 {
+  gjb_call_hooks_sz_i_i_sprintf(CPP_OPTIONS(pfile),CPP_PEDWARN,
+				file,
+				line,-1,
+				msg, arg1, arg2, arg3);
   if (!CPP_OPTIONS (pfile)->pedantic_errors
       && CPP_OPTIONS (pfile)->inhibit_warnings)
     return;

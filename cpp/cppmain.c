@@ -54,6 +54,7 @@ fancy_abort ()
 
 
 
+void
 print_token_kind(enum cpp_token kind) {
   char *s = "";
   switch (kind)

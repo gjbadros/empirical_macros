@@ -14,6 +14,9 @@ typedef enum hook_index_constants {
   STARTUP,
   CREATE_PREDEF,
   CREATE_DEF,
+  CPP_ERROR,
+  CPP_WARN,
+  CPP_PEDWARN
 } HOOK_INDEX;
 // end hook_index_constants
 
@@ -24,4 +27,10 @@ void gjb_call_hooks_sz(struct cpp_options *, HOOK_INDEX, char *);
 void gjb_call_hooks_szl_sz_defn(struct cpp_options *, HOOK_INDEX, char *, 
 				int, char *, DEFINITION *);
 
+void gjb_call_hooks_szx4(struct cpp_options *, HOOK_INDEX, char *, char *, char *, char *);
+
+void gjb_call_hooks_sz_i_sprintf(struct cpp_options *, HOOK_INDEX, char *, int, 
+				 char *, char *, char *, char *);
+void gjb_call_hooks_sz_i_i_sprintf(struct cpp_options *, HOOK_INDEX, char *, int, int,
+				   char *, char *, char *, char *);
 #endif

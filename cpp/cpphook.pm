@@ -31,37 +31,58 @@ sub handle_directive {
   print "In handle_directive for $body\n";
 }
 
-sub make_printable {
-  my ($str) = @_;
-  $str =~ s/([\000-\037])/sprintf("\\%03o",ord($1))/ge;
-  return $str;
-}
-
 sub create_def {
-  my ($name, $expn, $nargs, $simp_expn, $file, $line, $argnames, $refargnames, 
-      $f_predef, $f_restargs, @currpat) = @_;
+  my ($name, $expn, $nargs, $simp_expn, $file, $line, 
+      $backward_argnames_string, $def_flags,
+      @currpat) = @_;
   print "Create def for \"$name\": \"$expn\"\n";
   print "nargs = ", $nargs, "\n";
   print "simp_expn = \"", $simp_expn, "\"", "\n";
-#  @argnames = reverse split (/, /,$argnames);
-  @argnames = @$refargnames;
+  @argnames = reverse split (/, /,$backward_argnames_string);
   print "argnames = ", join(', ', @argnames), "\n";
   print "file = ", $file, "\n";
   print "line = ", $line, "\n";
-  print "predefined = ", $f_predef, "\n";
-  print "rest_args = ", $f_restargs, "\n";
-  while ($#currpat >= 5) {
-    print join(', ',@currpat[(0..3)]), ", $argnames[$currpat[4]], $currpat[5]\n";
-    splice(@currpat,0,6);
+  print "predefined = ", is_set($def_flags,$PREDEFINED), "\n";
+  print "restargs = ", is_set($def_flags,$RESTARGS), "\n";
+  while ($#currpat >= 2) {
+    print "$argnames[$currpat[0]], $currpat[1], $currpat[2]\n";
+    splice(@currpat,0,3);
   }
 }
+
+sub create_predef {
+  my ($name, $expn, $nargs, $simp_expn, $file, $line, 
+      $backward_argnames_string, $def_flags,
+      @currpat) = @_;
+  print "PREDEF for \"$name\": \"$expn\"\n";
+  print "nargs = ", $nargs, "\n";
+  print "simp_expn = \"", $simp_expn, "\"", "\n";
+  @argnames = reverse split (/, /,$backward_argnames_string);
+  print "argnames = ", join(', ', @argnames), "\n";
+  print "file = ", $file, "\n";
+  print "line = ", $line, "\n";
+  print "predefined = ", is_set($def_flags,$PREDEFINED), "\n";
+  print "restargs = ", is_set($def_flags,$RESTARGS), "\n";
+  while ($#currpat >= 2) {
+    print "$argnames[$currpat[0]], $currpat[1], $currpat[2]\n";
+    splice(@currpat,0,3);
+  }
+}
+
+sub cpp_error {
+  my ($file,$line,$col,$msg) = @_;
+  print STDERR "cpp_error: $file:$line:$col, $msg\n";
+}
+
 
 
 # Add the hooks, now
 AddHook($STARTUP,\&Startup);
 AddHook($DO_DEFINE,\&do_define);
 AddHook($HANDLE_DIRECTIVE,\&handle_directive);
-AddHook($CREATE_DEF,\&create_def);
+AddHook($CREATE_PREDEF,\&create_predef);
+#AddHook($CREATE_DEF,\&create_def);
+AddHook($CPP_ERROR,\&cpp_error);
 
 
 1;

@@ -11,6 +11,8 @@
 #define bool int
 #include <EXTERN.h>               /* from the Perl distribution     */
 #include <perl.h>                 /* from the Perl distribution     */
+#include <stdarg.h>
+
 /* Avoid some warnings by undef-fing  perl's TRUE and FALSE macros, 
    since cpp redefs them */
 #undef FALSE
@@ -24,6 +26,7 @@
 #endif /* not EMACS */
 
 #include "cpphook.h"
+#include "cpphook_names.h"
 
 static
 SV *
@@ -35,7 +38,7 @@ get_hook_for(HOOK_INDEX ih, bool fWarnMissingHooks)
   if (ppsvFunc == 0)
     {
     if (fWarnMissingHooks)
-      warn("Could not fetch hook index %d\n",ih);
+      warn("Could not fetch hook for %s (index %d)\n",hook_names[ih],ih);
     return NULL;
     }
   return *ppsvFunc;
@@ -48,9 +51,11 @@ gjb_call_hooks_void(struct cpp_options *opts, HOOK_INDEX ih)
   SV *psvFunc = NULL;
   dSP;
   
+  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+    return;
+
   PUSHMARK(sp);
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) != 0)
-    perl_call_sv(psvFunc, G_DISCARD|G_NOARGS);
+  perl_call_sv(psvFunc, G_DISCARD|G_NOARGS);
 }
 
 
@@ -61,46 +66,57 @@ gjb_call_hooks_sz(struct cpp_options *opts, HOOK_INDEX ih, char *sz)
 
   dSP;
   
+  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+    return;
+
   PUSHMARK(sp);
   XPUSHs(sv_2mortal(newSVpv(sz, 0)));
   PUTBACK ;
      
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) != 0)
-    perl_call_sv(psvFunc, G_DISCARD);
+  perl_call_sv(psvFunc, G_DISCARD);
 }
 
-AV *
-newAVfromReverseCommaDelimitedString(char *sz)
+/* return a single new SV * which is the various arguments
+ * OR-ed in together into one integer, each integer getting a bit
+ * The list should be terminated with a negative number
+ * e.g., newSVbitmap(1,0,1,1,-1) return 1+0+4+8 = 13, the binary
+ * number gotten when reading the arguments in right->left order
+ * Note that stdarg-s requires at least one fixed argument
+ */
+SV *
+newSVbitmap(int iFirst, ...)
 {
-  AV *pav = newAV();
-  int cch = 0;
-  char *next = strrchr(sz,',');
-  while (next != NULL)
+  va_list ap;
+  int i;
+  int retval = iFirst;
+  int bitvalue = 2;
+
+  va_start(ap,iFirst);
+  
+  while ((i = va_arg(ap, int)) >= 0 )
     {
-    cch = next-sz;
-    av_unshift(pav,1);
-    fprintf(stderr,"ARG: %s\n",sz);
-    av_store(pav,0,sv_2mortal(newSVpv(sz,cch)));
-    sz = next+1;
-
-    next = strrchr(sz,',');
+    if (i != 0)
+      retval |= bitvalue;
+    bitvalue *= 2;
+    /* only allow 16 bits for now-- prevent infinite loops */
+    if (bitvalue > 65536)
+      break;
     }
-  return pav;
+  va_end(ap);
+  return newSViv(retval);
 }
-  
-  
-
 
 void
 gjb_call_hooks_szl_sz_defn(struct cpp_options *opts, HOOK_INDEX ih, 
-			char *sz, int cch, char *expn, DEFINITION *defn)
+			   char *sz, int cch, char *expn, DEFINITION *defn)
 {
   SV *psvFunc = NULL;
   struct reflist *prlCurr = NULL;
-  AV *pavArgnames = newAVfromReverseCommaDelimitedString(defn->args.argnames);
-
   dSP;
   
+  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+    return;
+
   PUSHMARK(sp);
   XPUSHs(sv_2mortal(newSVpv(sz, cch)));
   XPUSHs(sv_2mortal(newSVpv(expn, 0)));
@@ -109,23 +125,84 @@ gjb_call_hooks_szl_sz_defn(struct cpp_options *opts, HOOK_INDEX ih,
   XPUSHs(sv_2mortal(newSVpv(defn->file, 0)));
   XPUSHs(sv_2mortal(newSViv(defn->line)));
   XPUSHs(sv_2mortal(newSVpv(defn->args.argnames,0 )));
-  XPUSHs(newRV_inc((SV*) pavArgnames));
-  XPUSHs(sv_2mortal(newSViv(defn->predefined)));
-  XPUSHs(sv_2mortal(newSViv(defn->rest_args)));
+  XPUSHs(sv_2mortal(newSVbitmap(defn->predefined, defn->rest_args, -1)));
   prlCurr = defn->pattern;
   while (prlCurr != NULL)
     {
-    XPUSHs(sv_2mortal(newSViv(prlCurr->stringify)));
-    XPUSHs(sv_2mortal(newSViv(prlCurr->raw_before)));
-    XPUSHs(sv_2mortal(newSViv(prlCurr->raw_after)));
-    XPUSHs(sv_2mortal(newSViv(prlCurr->rest_args)));
     XPUSHs(sv_2mortal(newSViv(prlCurr->argno)));
     XPUSHs(sv_2mortal(newSViv(prlCurr->nchars)));
+    XPUSHs(sv_2mortal(newSVbitmap(prlCurr->stringify,
+				  prlCurr->raw_before,prlCurr->raw_after,
+				  prlCurr->rest_args, -1)));
     prlCurr = prlCurr->next;
     }
   PUTBACK ;
      
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) != 0)
-    perl_call_sv(psvFunc, G_DISCARD);
+  perl_call_sv(psvFunc, G_DISCARD);
 }
   
+void
+gjb_call_hooks_szx4(struct cpp_options *opts, HOOK_INDEX ih, 
+		    char *sz1, char *sz2, char *sz3, char *sz4)
+{
+  SV *psvFunc = NULL;
+
+  dSP;
+  
+  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+    return;
+
+  PUSHMARK(sp);
+  XPUSHs(sv_2mortal(newSVpv(sz1, 0)));
+  XPUSHs(sv_2mortal(newSVpv(sz2, 0)));
+  XPUSHs(sv_2mortal(newSVpv(sz3, 0)));
+  XPUSHs(sv_2mortal(newSVpv(sz4, 0)));
+  PUTBACK ;
+     
+  perl_call_sv(psvFunc, G_DISCARD);
+}
+
+void gjb_call_hooks_sz_i_sprintf(struct cpp_options *opts, HOOK_INDEX ih, 
+				 char *file, int line, char *msg, 
+				 char *a1, char *a2, char *a3)
+{
+  SV *psvFunc = NULL;
+  char szMsg[256];
+  int cch = 0;
+  dSP;
+  
+  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+    return;
+
+  PUSHMARK(sp);
+  XPUSHs(sv_2mortal(newSVpv(file, 0)));
+  XPUSHs(sv_2mortal(newSViv(line)));
+  cch = sprintf(szMsg,msg,a1,a2,a3);
+  XPUSHs(sv_2mortal(newSVpv(szMsg, cch)));
+  PUTBACK ;
+
+  perl_call_sv(psvFunc, G_DISCARD);
+}
+
+void gjb_call_hooks_sz_i_i_sprintf(struct cpp_options *opts, HOOK_INDEX ih, 
+				   char *file, int line, int col, char *msg, 
+				   char *a1, char *a2, char *a3)
+{
+  SV *psvFunc = NULL;
+  char szMsg[256];
+  int cch = 0;
+  dSP;
+  
+  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+    return;
+
+  PUSHMARK(sp);
+  XPUSHs(sv_2mortal(newSVpv(file, 0)));
+  XPUSHs(sv_2mortal(newSViv(line)));
+  XPUSHs(sv_2mortal(newSViv(col)));
+  cch = sprintf(szMsg,msg,a1,a2,a3);
+  XPUSHs(sv_2mortal(newSVpv(szMsg, cch)));
+  PUTBACK ;
+
+  perl_call_sv(psvFunc, G_DISCARD);
+}

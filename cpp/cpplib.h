@@ -657,6 +657,12 @@ extern cpp_buffer* cpp_pop_buffer PARAMS ((cpp_reader *));
 extern cpp_hashnode* cpp_lookup PARAMS ((cpp_reader*, const U_CHAR*,
 					 int, int));
 
+void init_parse_file (cpp_reader *pfile);
+void init_parse_options (struct cpp_options *opts);
+int push_parse_file (cpp_reader *pfile, char *fname);
+void cpp_finish (cpp_reader *pfile);
+int parse_name (cpp_reader *pfile, int c);
+
 #ifdef __cplusplus
 }
 #endif

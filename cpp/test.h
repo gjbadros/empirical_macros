@@ -58,3 +58,6 @@ typedef bc_struct *bc_num;
 #define TRUE 1
 #define FALSE 0
 #endif
+
+#define foo(x,y,z...) ## x x x x x x x y y y y z y y y 
+
