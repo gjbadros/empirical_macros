@@ -47,14 +47,15 @@ TEXT_TABLES :=	tbl-package-sizes \
 		tbl-where-used \
 		tbl-ccd-categories
 
-RAW_TABLES := raw-directives-hist tbl-directives-breakdown \
+RAW_TABLES := tbl-directives-hist tbl-directives-breakdown \
 		tbl-def-categories tbl-subset-categories
 
 LATEX_TABLES :=	tbl-def-categories.tex tbl-subset-categories.tex
 
-ALL_TABLES := $(TEXT_TABLES) $(RAW_TABLES) $(LATEX_TABLES) $(CVT_LATEX_TABLES)
+ALL_TABLES := $(TEXT_TABLES) $(RAW_TABLES) $(LATEX_TABLES)
 
 PAPER_TABLES :=  \
+	tbl-package-sizes.tex \
 	tbl-def-frequency \
 	tbl-use-frequency \
 	tbl-cat-def-frequency \
@@ -66,7 +67,7 @@ PAPER_TABLES :=  \
 	tbl-subset-categories.tex
 
 
-all:	$(ALL_TABLES)
+all:	$(PAPER_TABLES)
 
 clean:
 	rm -f $(ALL_TABLES)
@@ -132,10 +133,10 @@ made-catdefuse:	$(DEFCUM) $(USECUM)
 
 raw: $(RAW_TABLES)
 
-raw-directives-hist: $(STAT)
+tbl-directives-hist: $(STAT)
 	macros-make-directives-raw-hist-from-stats $^ > $@
 
-tbl-directives-breakdown: raw-directives-hist
+tbl-directives-breakdown: tbl-directives-hist
 	macros-bake-raw-directives-hist $^ > $@
 
 
