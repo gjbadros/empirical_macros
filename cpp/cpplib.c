@@ -2819,7 +2819,7 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
   int cchRawCall = CPP_BUFFER(pfile)->cur - pchAfterMacroName;
   int ichSourceStart = pcei?(pcei->offset + 1): 
     (CchOffset_internal(pfile) - cchRawCall - strlen(hp->name) + 1);
-  int ichSourceEnd = ichSourceStart + (pcei?pcei->length:(cchRawCall + strlen(hp->name)));
+//  int ichSourceEnd = ichSourceStart + (pcei?pcei->length:(cchRawCall + strlen(hp->name)));
   cpp_buffer *prev_buffer = CPP_PREV_BUFFER(pfile->buffer);
   if (prev_buffer != CPP_NULL_BUFFER(pfile) && prev_buffer->prev != 0 && prev_buffer->ichSourceStart >= 0) {
 //     ichSourceStart += prev_buffer->ichSourceStart;
@@ -4181,6 +4181,12 @@ do_undef (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *lim
 	cpp_warning (pfile, "undefining `%s'", hp->name);
       delete_macro (pfile,hp);
       cDeletes++;
+      break; /* FIXGJB: Why is this in a loop, anyway?
+	       it appears that subsequent redefs of a normal
+	       macro replace that macro in the hash table; they don't
+	       make new entries; so at any given time there is at
+	       most one entry for a given identifier in the hash table
+	       Thus, a single delete is plenty --10/14/97 gjb */
     }
   gjb_call_hooks_i_i_szl_i(CPP_OPTIONS(pfile),HI_DO_UNDEF,cchOffsetStart,cchOffsetEnd,
 			   buf,sym_length,cDeletes);
