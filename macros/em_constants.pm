@@ -6,7 +6,7 @@ require Exporter;
 @ISA = qw(Exporter);
 # Use below line to generate the @EXPORT line
 #perl -ne 'BEGIN {print "\@EXPORT = qw("; } END {print ");\n";} print "$1 " if /([$%@]\w+)\s+/'
-@EXPORT = qw($true $false $OBSOLETE $DANGER $EVIL $ILLEGAL $catNOTYET $catINPROCESS $catMULTIPLE $catNULLDEFINE $catEXP $catEXPASSIGN $catEXPFREE $catLITERAL $catCONSTANT $catSOMECONSTANT $catFAILURE $catHASTYPEARG $catMACROFUN $catMACROTYPE $catUSESTYPEARG $catASM $catSYNTAX $catTYPE $catRESDWORD $catSTATEMENT $catRECURSIVE $catMISMATCH $catPASTING $catSTRINGIZE @categoryname $typeFAIL $typeBOOL $typeCHAR $typeUCHAR $typeSCHAR $typeSHORT $typeUSHORT $typeINT $typeUINT $typeLONG $typeULONG $typeFLOAT $typeDOUBLE $typeLDOUBLE $typeSTRING $typeNUMBER $typeUNKNOWN $typeUNSPECIFIED %type_num @type_name_array $c_ftype @ftype_ALL %InclusionMethod_to_Index $ftype_HEADER_Start $ftype_NONHEADER_Start @ftype_CODE @ftype_HEAD @ftype_NOT_INCLUDED @ftype_INCLUDED @ftype_NONHEADER_NOT_INCLUDED @ftype_NONHEADER_INCLUDED @ftype_HEADER_NOT_INCLUDED @ftype_HEADER_INCLUDED $built_in_fake_file $i_usage_code $i_usage_macro $i_usage_cond);
+@EXPORT = qw($true $false $OBSOLETE $DANGER $EVIL $ILLEGAL $catNOTYET $catINPROCESS $catMULTIPLE $catNULLDEFINE $catEXP $catEXPASSIGN $catEXPFREE $catLITERAL $catCONSTANT $catSOMECONSTANT $catFAILURE $catHASTYPEARG $catMACROFUN $catMACROTYPE $catUSESTYPEARG $catASM $catSYNTAX $catTYPE $catRESDWORD $catSTATEMENT $catRECURSIVE $catMISMATCH $catPASTING $catSTRINGIZE @categoryname $typeFAIL $typeBOOL $typeCHAR $typeUCHAR $typeSCHAR $typeSHORT $typeUSHORT $typeINT $typeUINT $typeLONG $typeULONG $typeFLOAT $typeDOUBLE $typeLDOUBLE $typeSTRING $typeNUMBER $typeUNKNOWN $typeUNSPECIFIED %type_num @type_name_array $c_ftype @ftype_ALL %InclusionMethod_to_Index $ftype_HEADER_Start $ftype_NONHEADER_Start @ftype_CODE @ftype_HEAD @ftype_NOT_INCLUDED @ftype_INCLUDED @ftype_NONHEADER_NOT_INCLUDED @ftype_NONHEADER_INCLUDED @ftype_HEADER_NOT_INCLUDED @ftype_HEADER_INCLUDED $built_in_fake_file $i_usage_code $i_usage_macro $i_usage_cond @i_usage_all);
 
 ###########################################################################
 ### Constants
@@ -194,7 +194,8 @@ $ftype_NONHEADER_Start = $ftype_NONHEADER_INPUT;
 $built_in_fake_file = "%Built In%";
 
 # enumeration for the macros_uses indices
-($i_usage_code, $i_usage_macro, $i_usage_cond) = (0..2);
+@i_usage_all = ($i_usage_code, $i_usage_macro, $i_usage_cond) = (0..2);
+
 
 
 1; #Successful import

@@ -125,6 +125,12 @@ my $fIgnoreIncludes = $false;
 
 use vars qw($getopts_option_letters $c_reserved_type_word_alternatives $c_reserved_nontype_word_alternatives $c_plus_plus_reserved_type_word_alternatives $c_plus_plus_reserved_nontype_word_alternatives $reserved_type_word_re $reserved_nontype_word_re $reserved_word_re $constant_exp_re $constant_or_upcase_exp_re $float_literal_whole_re $float_literal_frac_re $float_literal_exp_re $float_literal_noexp_re $hex_literal_re $dec_oct_literal_re $number_literal_re $char_literal_contents_re $char_literal_re $non_escaped_double_quote_re $string_literal_re $identifier_no_dollar_re $identifier_re $type_specifier_re $type_special $type_re_special_1 $type_re_special_2 $type_re_special $type_suffix_re $type_re $type_qualifier_re $pointer_declarator_prefix_re $pointer_declarator_prefixes_re $array_declarator_suffix_re $array_declarator_suffixes_re $declarator_unparenthesized_re $declarator_parenthesized_re $declarator_re $type_declarator_re $simple_arglist_re $type_declarator_arglist_re $numeric_type_word_re $numeric_type_re $non_numeric_type_re $builtin_type_base_re $builtin_type_re $numeric_binop_regexp $bool_binop_regexp $arb_type_binop_regexp $binop_regexp @rg_physical_lines @rg_ncnb_lines @rg_cpp_phys_lines @rg_cpp_phys_ncnb_lines @rg_cpp_cmds @rg_category_counts %category_counts_ni %category_counts_c_ni %category_counts_hdr_ni @rg_cppcmdcounts $ncnb_physical_lines_ni $cpp_cmds $cpp_cmds_ni $cpp_cmds_hdr $cpp_cmds_hdr_ni $cpp_cmds_c $cpp_cmds_c_ni %cppcmdcount %cppcmdcount_ni %cppcmdcount_hdr_ni %cppcmdcount_c_ni $symtab_scopes $line $cBuiltinMacros $cMacrosInTables %files_lines %function_to_locs %function_name_to_macros_it_uses $current_file $current_ftype_index $current_function $current_function_start_line $current_macro_line_number @files %file_inclusion_method @files_included $outOFS %macros %macros_c_undefs %macros_uses %macros_file_line_uses %macros_used_in_functions @mdef_name @mdef_args @mdef_body @mdef_body_noc @mdef_file @mdef_line @mdef_physical_lines @mdef_physical_ncnb_lines %mdef_freevars @mdef_freefuns @mdef_dependenton @mdef_expansion_uses @mdef_type @mdef_category @mdef_evilness %mntype %mncategory %fun_decl_arg_macros %semi_fun_decl_arg_macros %void_macros $fDebugCmdProcessing $fDebugCommentRemoval $debug_scopes $debug_type_match $debug_parse_function $debug_parse_expression $debug_merge_branches $debug_parse_array_init $debug_peek $debug_getline $debug_categorize_macro $debug_cpp_if_comments $fIgnoreIncludes @getline_ungot_raw_lines @getline_ungot_simple_lines @dependenton $incomment $instring %parsevars %parsefuns %parsetypes $parse_exp_saw_equals @symtab_identifiers @symtab_types $scopemarker $wf_last_filename $wf_last_line_no $wf_last_index );
 
+
+use vars qw(%macros_c_all_uses @freq_use_buckets @freq_def_buckets
+	   @macros_c_number_uses @macros_c_number_defs
+	   $macros_c_most_uses   $macros_c_most_defs);
+
+
 # FIX: these sub-parts might better be broken up into functions
 # FIX: use "select" instead of print FILEHANDLE repeatedly
 sub output_stats ()
@@ -315,6 +321,7 @@ sub output_stats ()
   }
 
   if ($opt_C) {
+    select CATEG;
     my $name;
     foreach $name (sort keys %macros) {
       my $iDef;
@@ -331,18 +338,30 @@ sub output_stats ()
 	if (!defined($categoryname[$category])) {
 	  print STDERR "categoryname[$category] not defined\n";
 	}
-	print CATEG "$mdef_file[$index]:$mdef_line[$index]: "
+	print "$mdef_file[$index]:$mdef_line[$index]: "
 	  . ($mdef_args[$index] ? "function, " : "") . $categoryname[$category];
 	if (($category == $catEXP)
 	    || ($category == $catEXPFREE)
 	    || ($category == $catLITERAL)
 	    || ($category == $catCONSTANT)
 	    || ($category == $catSOMECONSTANT))
-	  { print CATEG "(", type_name($type), ")"; }
-	print CATEG ": $mdef_name[$index]$mdef_args[$index] $mdef_body[$index]\n";
+	  { print "(", type_name($type), ")"; }
+	print ": $mdef_name[$index]$mdef_args[$index] $mdef_body[$index]\n";
       }
     }
   }
+
+  select;
+  compute_freq_use_info();
+  compute_freq_def_info();
+
+  select(FREQUSE);
+  OutputCountsHistogramCum(0,$macros_c_most_uses,
+			   make_cum_array(@macros_c_number_uses));
+
+  select(FREQDEF);
+  OutputCountsHistogramCum(1,$macros_c_most_defs,
+			   make_cum_array(@macros_c_number_defs));
 }
 
 
@@ -351,16 +370,15 @@ sub output_stats ()
 #   Code CodeCond CodeMacro CodeMacroCond Cond Macro MacroCond NoUses
 sub how_used_from_code_cpp_uses ($$$) {
   my ($cCodeUses, $cMacroUses, $cCondUses) = check_args(3,@_);
-  my $result = (($cCodeUses > 0) ? "Code" : "")
-    . (($cMacroUses > 0) ? "Macro" : "")
-      . (($cCondUses > 0) ? "Cond" : "");
-  if ($result eq "")
-    { return "NoUses"; }
-  else
-    { return $result; }
+  my $result = "";
+  $result .= "Code" if ($cCodeUses > 0);
+  $result .= "Macro" if ($cMacroUses > 0);
+  $result .= "Cond" if ($cCondUses > 0);
+  $result = "NoUses" if ($result eq "");
+  return $result;
 }
 
-
+				 
 # Return a sorted version of the list
 # passed in, with duplicates removed
 sub UniquifyAndSortList (@) {
@@ -410,6 +428,8 @@ sub InclusionMethodsForMacroName ($) {
   #print STDERR "IMFMN\n";
   return UniquifyAndSortList(@list);
 }
+				
+				    
 
 sub OutputHistogram ($$$;$) {
   my ($heading,$hashref,$divisor,$fPrintHeading) = check_args_range(3,4,@_);
@@ -459,7 +479,72 @@ sub compute_global_cpp_sums () {
 
 }
 
+@freq_use_buckets = (0,1,2,3,4,5,6,8,10,20,40,80);
+@freq_def_buckets = (1,2,3,4,5,6,7,8,10,12,14);
 
+sub MacroNotDefinedInsidePackage ($) { # returns bool
+  my ($name) = check_args(1,@_);
+  my $iDef;
+  for ($iDef = 0 ; $iDef <= $#{$macros{$name}}; $iDef++ ) {
+    my $index = $macros{$name}[$iDef];
+    my $filename = $mdef_file[$index];
+    if ($file_inclusion_method{$filename} eq "FromStdin") {
+      # it is defined inside the package
+      return $false;
+    }
+  }
+  # it isn't defined inside the package
+  return $true;
+}
+  
+
+sub compute_freq_use_info () {
+  check_args(0, @_);
+  $macros_c_most_uses = 0;
+  # sum of slice @{$macros_uses{$name}}[@i_usage_all] is the total no. uses for macro
+  my $name;
+  foreach $name (keys %macros) {
+    next if MacroNotDefinedInsidePackage($name);
+    my $c = sum_array(@{$macros_uses{$name}}[@i_usage_all]);
+    local $WARNING = 0;# want to exploit scalars being 0 when undefined
+    $macros_c_number_uses[$c]++;
+    $macros_c_most_uses = $c if ($c > $macros_c_most_uses);
+  }
+}
+
+sub compute_freq_def_info () {
+  check_args(0, @_);
+  $macros_c_most_defs = 0;
+  # $#{$macros{$name}} is the number of macro definitions of $name
+  my $name;
+  foreach $name (keys %macros) {
+    next if MacroNotDefinedInsidePackage($name);
+    my $c = $#{$macros{$name}} + 1;
+    local $WARNING = 0; # want to exploit scalars being 0 when undefined
+    $macros_c_number_defs[$c]++;
+    $macros_c_most_defs = $c if ($c > $macros_c_most_defs);
+  }
+}
+
+sub OutputCountsHistogramRaw ($$@) {
+  my ($low,$high,@counts) = @_;
+  my $total = sum_array(@counts);
+  my $i;
+  print "Total", $total, "\n";
+  for ($i = $low; $i <= $high; $i++) {
+    print $i, defined($counts[$i])? $counts[$i] : 0 , "\n";
+  }
+}
+
+sub OutputCountsHistogramCum ($$@) {
+  my ($low,$high,@counts) = @_;
+  my $total = $counts[$#counts];
+  my $i;
+  print "Total", $total, "\n";
+  for ($i = $low; $i <= $high; $i++) {
+    print $i, defined($counts[$i])? $counts[$i] : 0 , "\n";
+  }
+}
 
 ###########################################################################
 ### Utilities
@@ -482,18 +567,34 @@ sub pct2 ($$) {
 # sum_array sums all its inputs, typically the elements of an array.
 # Pass in a slice of the array in order to sum that part.
 sub sum_array (@) {
-  my (@args) = check_args_at_least(0, @_);
+  my (@args) = @_;
   my $sum = 0;
   { my $elt = 0;
     foreach $elt (@args)
-      { $sum += $elt; } }
+      { $sum += $elt if defined $elt; } }
   return $sum;
 }
 
+# make_cum_array returns an array that is the running total of the
+# elements in the array passed in.
+# e.g.     1, 3, 2,  1,  6,  2
+# returns  1, 4, 6,  7, 13, 15
+sub make_cum_array (@) { # returns @cum_array
+  my (@args) = @_;
+  my @cum_array = ();
+  my $sum = 0;
+  my $elt = 0;
+  foreach $elt (@args) {
+    $sum += $elt if defined $elt;
+    push @cum_array, $sum;
+  }
+  return @cum_array;
+}
+  
 
 # Sum corresponding elements of an array (or array slice)
 # into the destination reference provided
-sub sum_parallel_hashes {
+sub sum_parallel_hashes { # returns void; output in $_[0]
   my ($dest_hashref,@array_of_hash_refs) = check_args_at_least(1,@_);
   no strict 'refs';  #FIX: Must I do this?
   my $hashref;
@@ -528,7 +629,7 @@ sub ReadMacroAnalysisState {
   my ($file) = check_args(1,@_);
   local $WARNING = 0;
   no strict;
-  open(INPUTSTATE,"<$file");
+  open(INPUTSTATE,"<$file") or die "Couldn't open $file: $!";
   $INPUT_RECORD_SEPARATOR = ");\n"; #FIX: this separator could blow up
   my $in;
   while ($in = <INPUTSTATE>)
@@ -574,7 +675,7 @@ if ($opt_d) {
     $dir .= "/";
   }
 
-  print STDERR "Output to $dir with prefix '$basename'\n";
+  print STDERR "Outputting to $dir with prefix '$basename'\n";
 
   if (!$opt_S) {
     open(STATS,">$dir/${basename}stat") || die "Failed opening $!";
@@ -599,6 +700,9 @@ if ($opt_d) {
   if (!$opt_C) {
     open(CATEG,">$dir/${basename}catg") || die "Failed opening $!";
   }
+
+  open(FREQDEF,">$dir/${basename}freqdef_cum") || die "Failed opening $!";
+  open(FREQUSE,">$dir/${basename}frequse_cum") || die "Failed opening $!";
 
 }
 
@@ -669,7 +773,7 @@ ReadMacroAnalysisState($statename);
 #require "dumpvar.pl";
 #dumpvar();
 #exit 0;
-print STDERR "Computing various global statistics...\n";
+#print STDERR "Computing various global statistics...\n";
 compute_global_cpp_sums();
 
 output_stats();

@@ -16,6 +16,8 @@ EVIL := $(wildcard *.evil)
 FNLN := $(wildcard *.fnln)
 FUNC := $(wildcard *.func)
 MAC  := $(wildcard *.mac)
+USECUM  := $(wildcard *.frequse_cum)
+DEFCUM  := $(wildcard *.freqdef_cum)
 PERR := $(wildcard *.perr)
 
 TEXT_TABLES :=	tbl-package_sizes \
@@ -54,15 +56,11 @@ text_tables:	$(TEXT_TABLES)
 tbl-package_sizes: $(STAT)
 	macros-make-package-sizes-tbl-from-stat $^ > $@
 
-tbl-def_frequency: $(MAC)
-	macros-make-def-frequency-tbl-from-mac $^
-	# -n12 arg to xargs for latex
-	echo $(patsubst %.mac,%.freqdef,$^) | xargs paste $(COMMON_DIR)/freqdef.buckets >> $@
+tbl-def_frequency: $(DEFCUM)
+	macros-make-tbl-frequsedef-from-cum $^ > $@
 
-tbl-use_frequency: $(MAC)
-	macros-make-use-frequency-tbl-from-mac $^
-	# -n12 arg to xargs for latex
-	echo $(patsubst %.mac,%.frequse,$^) | xargs paste $(COMMON_DIR)/frequse.buckets >> $@
+tbl-use_frequency: $(USECUM)
+	macros-make-tbl-frequsedef-from-cum $^ > $@
 
 tbl-how_used_ni: $(MAC)
 	macros-make-how-used-ni-tbl-from-mac $^ > $@
