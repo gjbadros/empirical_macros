@@ -1,0 +1,47 @@
+
+Total Elapsed Time =  153.79 Seconds
+  User+System Time =  122.85 Seconds
+Exclusive Times
+%Time Seconds     #Calls sec/call Name
+ 23.6   29.05     200880   0.0001 checkargs::check_args
+ 11.1   13.75      33319   0.0004 cline::cline_updateinvars
+ 11.1   13.69      99893   0.0001 checkargs::check_args_range
+ 8.85   10.87       4488   0.0024 main::append_lines
+ 4.70   5.780      27433   0.0002 main::get_fulltoken_line
+ 4.48   5.500      31383   0.0002 cline::get_spliced_cline
+ 3.70   4.540      27708   0.0002 cline::get_fulltoken_cline
+ 3.47   4.260          1   4.2600 main::process_macro_calls
+ 2.78   3.410         45   0.0758 Data::Dumper::Dumpxs
+ 2.18   2.680      29384   0.0001 main::add_inclusion_dependence
+ 2.16   2.650      10153   0.0003 main::simple_macro_substitute
+ 1.89   2.320      10504   0.0002 main::analyze_for_macro_use
+ 1.86   2.290       6401   0.0004 main::parse_exp
+ 1.51   1.860      13214   0.0001 main::macros_appearing_in
+ 1.26   1.550      13465   0.0001 main::words_in
+
+
+AFTER remove_check_args, 40% faster!
+
+(Note: the remaining check_args... calls are from em_util, paren, others?)
+
+Total Elapsed Time =   92.28 Seconds
+  User+System Time =   86.43 Seconds
+Exclusive Times
+%Time Seconds     #Calls sec/call Name
+ 14.8   12.81      33319   0.0004 cline::cline_updateinvars
+ 12.2   10.56       4488   0.0024 main::append_lines
+ 9.02   7.800      59160   0.0001 checkargs::check_args_range
+ 7.61   6.580      47403   0.0001 checkargs::check_args
+ 6.00   5.190      31383   0.0002 cline::get_spliced_cline
+ 5.99   5.180      27433   0.0002 main::get_fulltoken_line
+ 5.06   4.370          1   4.3700 main::process_macro_calls
+ 4.81   4.160      27708   0.0002 cline::get_fulltoken_cline
+ 3.78   3.270         45   0.0727 Data::Dumper::Dumpxs
+ 2.73   2.360      10153   0.0002 main::simple_macro_substitute
+ 2.48   2.140      10504   0.0002 main::analyze_for_macro_use
+ 1.92   1.660      29384   0.0001 main::add_inclusion_dependence
+ 1.86   1.610       6401   0.0003 main::parse_exp
+ 1.74   1.500          1   1.5000 main::compute_transitive_macro_dependence
+                                  s
+ 1.59   1.370      13214   0.0001 main::macros_appearing_in
+dprofpp  126.76s user 1.10s system 97% cpu 2:10.84 total
