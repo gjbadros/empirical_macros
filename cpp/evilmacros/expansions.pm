@@ -6,6 +6,8 @@
 use pcp3;
 use em_constants;
 use checkargs;
+use File::Basename;
+
 my %macro_name;
 my %macro_name_to_def_in_filename;
 my %typedefs;
@@ -23,44 +25,31 @@ my $fDebugParse = $false;
 my $macro_nestings_deep = 0;
 
 sub Startup {
+  my ($source_file) = @_;
+
+  print STDERR "Source file is: $source_file\n";
+
   # Parse debugging (bison's yydebug variable) is on by default,
   # so turn it off
   if ($fDebugParse) {
     pcp3::SetParseDebugging();
   }
-  open(VARS,">vars.listing") || die "Cannot open vars.listing: $!";
-  open(TYPES,">types.listing") || die "Cannot open types.listing: $!";
-  open(EXPAND,">expansions.listing") || die "Cannot open expansions.listing: $!";
-  open(TOKEN,">token.listing") || die "Could not open output file: $!";
-  open(FUNCTIONS,">functions.listing") || die "Cannot open functions.listing: $!";
+  my $prefix = "source";
+  if ($source_file !~ /@/) {
+    $prefix = basename($source_file,".c");
+  }
+
+  open(VARS,">$prefix.vars") || die "Cannot open $prefix.vars: $!";
+  open(TYPES,">$prefix.types") || die "Cannot open $prefix.types: $!";
+  open(EXPAND,">$prefix.exps") || die "Cannot open $prefix.exps: $!";
+  open(TOKEN,">$prefix.tokens") || die "Could not open $prefix.tokens: $!";
+  open(FUNCTIONS,">$prefix.funcs") || die "Cannot open $prefix.funcs: $!";
   print STDERR "STARTUP...\n";
   $| = 1; # Turn on autoflush
 
 }
 
 
-# Token's come a lot, so redirect this output somewhere else
-sub Got_token {
-  my ($token,$raw,$mname,$argno,@history) = @_;
-  my @nests = pcp3::MacroExpansionHistory();
-  my $fname = pcp3::Fname();
-
-#  $argof = pcp3::ArgOf(); FIXGJB: obsoleted, use $argno instead
-  print  TOKEN "TOKEN: $raw;", substr($token,4),", FExpandingMacros = ",pcp3::FExpandingMacros(),
-   ", CchOffset = $fname:", pcp3::CchOffset(), "; CchOutput = ", pcp3::CchOutput(),"\n";
-  print TOKEN ": Nests: ",join("<-",@nests),"\n";
-  print TOKEN ": History: ",join("<-",@history),"\n";
-  print TOKEN ": From $mname\n";
-  print TOKEN ": Argno = $argno\n";
-  print TOKEN ": ParseStateStack: ", join(",",pcp3::ParseStateStack()), "\n";
-  if ($raw =~ m/^[\w\$]+$/) {
-    print TOKEN ": lookup: ", pcp3::FLookupSymbol($raw)? "Found symbol" : "Not found", "\n";
-  }
-  if (!exists $non_c_tokens{$token}) {
-    map { $_++}  @got_c_token;
-    print TOKEN ": C Token: $raw ($token)\n";
-  }
-}
 
 sub Exit {
   my ($retval) = @_;
@@ -156,7 +145,7 @@ sub create_def {
 
 sub do_undef {
   my ($s_start,$s_end,$mname, $cDeletes) = @_;
-  print STDERR "DO UNDEF\n";
+#  print STDERR "DO UNDEF\n";
 }
 
 
@@ -193,7 +182,7 @@ sub pre_do_undef {
   if ($macro_nestings_deep == 0) {
     $retval = 1;
   } else {
-    print STDERR "Ignoring UNDEF\n";
+#    print STDERR "Ignoring UNDEF\n";
   }
   return $retval;
 }
@@ -316,7 +305,7 @@ sub string_constant {
 
 sub do_include {
   my ($s_start,$s_end,$file_as_given, $file_as_resolved, $flags) = @_;
-  print STDERR "do_include $file_as_given [$s_start:$s_end] -> ", simplify_path_name($file_as_resolved),";  $flags\n";
+#  print STDERR "do_include $file_as_given [$s_start:$s_end] -> ", simplify_path_name($file_as_resolved),";  $flags\n";
 #  print "Was working on: ", pcp3::Fname(), "\n";
   my $retval = $true;
   $retval = $false if exists $already_included{$file_as_resolved};
