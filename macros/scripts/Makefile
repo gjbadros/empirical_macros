@@ -331,6 +331,7 @@ tbl-dep-byline: tbl-inclusion-dependences-by-line tbl-expansion-dependences-by-l
 %.numarg: %.catg
 	macros-make-numarg-from-catg $< >$@
 
+# %.sdepend is just the tail of %.depend
 %.sdepend: %.depend
 	awk '/======================================================================/,/^  thislinewontmatchanything  $$/' < $< > $@
 
