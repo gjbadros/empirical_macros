@@ -1,4 +1,5 @@
 ^CVSROOT mail -s "CVS checkin `date`" gjb mernst
 ^macros mail -s "CVS checkin `date`" gjb mernst
+^papers mail -s "CVS checkin `date`" gjb mernst notkin
 #Nothing for ALL or for cpp
 #ALL rsh forbidden zwrite gjb
