@@ -54,8 +54,8 @@ fancy_abort ()
 
 
 
-void
-print_token_kind(enum cpp_token kind) {
+char *
+SzFromToken(enum cpp_token kind) {
   char *s = "";
   switch (kind)
     {
@@ -147,7 +147,7 @@ print_token_kind(enum cpp_token kind) {
       s = "CPP_POP";
       break;
     }
-  gjb_printf(" /#%s#/",s);
+  return s;
 }
 
 static PerlInterpreter *my_perl;
@@ -220,9 +220,7 @@ main (int argc, char **argv, char **env)
 	}
       parse_in.limit = parse_in.token_buffer;
       kind = cpp_get_token (&parse_in);
-#ifdef GJB_PRINT_TOKEN_KIND
-      print_token_kind(kind);
-#endif
+      gjb_call_hooks_sz(opts,TOKEN,SzFromToken(kind));
       if (kind == CPP_EOF)
 	break;
     }

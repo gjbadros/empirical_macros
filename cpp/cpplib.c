@@ -1107,7 +1107,6 @@ handle_directive (pfile)
       goto done_a_directive;
     }
 
-  //  gjb_printf("DIRECTIVE = %s\n",ident);
   gjb_call_hooks_sz(opts,HANDLE_DIRECTIVE,ident);
 
 #if 0
@@ -1841,7 +1840,6 @@ do_define (pfile, keyword, buf, limit)
   if (pcp_outfile && keyword)
     pass_thru_directive (buf, limit, pfile, keyword);
 #endif
-  //  gjb_printf("do_define: %s\n",buf);
   gjb_call_hooks_sz(opts,DO_DEFINE,buf);
 
   mdef = create_definition (buf, limit, pfile, keyword == NULL);
@@ -3651,6 +3649,10 @@ is_system_include (pfile, filename)
 {
   struct file_name_list *searchptr;
 
+  /* gjb added this special case to avoid core dump */
+  if (CPP_OPTIONS(pfile) == 0)
+    return 0;
+
   for (searchptr = CPP_OPTIONS (pfile)->first_system_include; searchptr;
        searchptr = searchptr->next)
     if (searchptr->fname) {
@@ -4799,6 +4801,7 @@ cpp_get_token (pfile)
 	  CPP_BUFFER (pfile)->seen_eof = 1;
 	  if (CPP_BUFFER (pfile)->nominal_fname && next_buf != 0)
 	    {
+	      char *fname = DEF_STR(CPP_BUFFER(pfile)->fname,"@TOP@");
 	      /* We're about to return from an #include file.
 		 Emit #line information now (as part of the CPP_POP) result.
 		 But the #line refers to the file we will pop to. */
@@ -4807,6 +4810,12 @@ cpp_get_token (pfile)
 	      pfile->input_stack_listing_current = 0;
 	      output_line_command (pfile, 0, leave_file);
 	      CPP_BUFFER (pfile) = cur_buffer;
+	      gjb_call_hooks_sz(CPP_OPTIONS(pfile),DONE_INCLUDE_FILE,
+				  fname);
+	      /* FIXGJB: Can't get the above to return 
+				  is_system_include(cur_buffer,fname));
+		 properly
+	       */
 	    }
 	  return CPP_POP;
 	}

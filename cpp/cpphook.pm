@@ -20,6 +20,7 @@ sub PrintUID {
 
 sub Startup {
   open(CHOUT,">chout.listing") || die "Could not open output file: $!";
+  open(TOKEN,">token.listing") || die "Could not open output file: $!";
 #  select CHOUT;
 }
 
@@ -169,7 +170,14 @@ sub include_file {
 
 sub done_include_file {
   my ($filename, $fSystemInclude) = @_;
+  # NOTE: $fSystemInclude is always undef due to a bug
   print "done_include_file $filename, $fSystemInclude\n";
+}
+
+# Token's come a lot, so redirect this output somewhere else
+sub Got_token {
+  my ($token) = @_;
+  print TOKEN substr($token,4),"\n";
 }
 
 # Add the hooks, now
@@ -197,6 +205,7 @@ AddHook($ADD_IMPORT,\&add_import);
 AddHook($INCLUDE_FILE,\&include_file);
 AddHook($DONE_INCLUDE_FILE,\&done_include_file);
 AddHook($EXIT,\&Exit);
+AddHook($TOKEN,\&Got_token);
 
 
 1;

@@ -51,22 +51,23 @@ XS(XS_cpp_hello)
     XSRETURN_EMPTY;
 }
 
-XS(XS_cpp_print_token_kind)
+XS(XS_cpp_SzToken)
 {
     dXSARGS;
     if (items != 1)
-	croak("Usage: cpp::print_token_kind(i)");
+	croak("Usage: cpp::SzToken(i)");
     {
 	int	i = (int)SvIV(ST(0));
 #line 40 "backcalls.xs"
+	char *	RETVAL;
 #line 40 "backcalls.xs"
 #line 41 "backcalls.xs"
-	print_token_kind((enum cpp_token) i);
+	RETVAL = SzFromToken((enum cpp_token) i);
 #line 41 "backcalls.xs"
 #line 41 "backcalls.xs"
 #line 41 "backcalls.xs"
     }
-    XSRETURN_EMPTY;
+    XSRETURN(1);
 }
 
 XS(XS_cpp_fname)
@@ -142,7 +143,7 @@ XS(boot_backcalls)
     XS_VERSION_BOOTCHECK ;
 
         newXS("cpp::hello", XS_cpp_hello, file);
-        newXS("cpp::print_token_kind", XS_cpp_print_token_kind, file);
+        newXS("cpp::SzToken", XS_cpp_SzToken, file);
         newXS("cpp::fname", XS_cpp_fname, file);
         newXS("cpp::nominal_fname", XS_cpp_nominal_fname, file);
         newXS("cpp::lookup", XS_cpp_lookup, file);

@@ -27,5 +27,6 @@ char *hook_names[] = {
 "ADD_IMPORT",
 "INCLUDE_FILE",
 "DONE_INCLUDE_FILE",
+"TOKEN",
 };
 

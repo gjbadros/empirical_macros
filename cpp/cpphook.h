@@ -3,9 +3,9 @@
 
 #include "cpplib.h"
 
-/* Beginnings of additions to cpp stuff by GJB */
-
+#ifdef 0
 #define gjb_printf(s...) do { fflush(stdout); fprintf(stderr,##s); } while (0)
+#endif
 
 // start hook_index_constants
 typedef enum hook_index_constants {
@@ -35,6 +35,7 @@ typedef enum hook_index_constants {
   ADD_IMPORT,
   INCLUDE_FILE,
   DONE_INCLUDE_FILE,
+  TOKEN,
 } HOOK_INDEX;
 // end hook_index_constants
 

@@ -34,11 +34,11 @@ hello()
 	CODE:
 	fprintf(stdout,"Hello world!\n");
 
-void
-print_token_kind(i)
+char *
+SzToken(i)
 	int i
 	CODE:
-	print_token_kind((enum cpp_token) i);
+	RETVAL = SzFromToken((enum cpp_token) i);
 
 char *
 fname()
