@@ -5,3 +5,7 @@ int FnFoo(int a) {
 }
 
 int bar;
+
+int main(int, char **) {
+  int baz = FnFoo(5);
+}
