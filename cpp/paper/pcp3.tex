@@ -5,19 +5,30 @@
 %-------------------------------------------------------------------------
 
 
-\documentclass{article}
+\documentclass[11pt]{article}
 \usepackage{fullpage}
 %\usepackage{fancybox}
 \usepackage{graphicx}
 \usepackage{rotating}
 \usepackage{lscape}
 
+\newcommand{\pcp}{\mbox{\textsf{PCP}$^3$}}
+
+\newcommand{\backcall}[3]{\item \texttt{#2} (\texttt{#3})
+  \textbf{returns} \texttt{#1} \\ }
+
+%\newcommand{\backcallobsoleted}[3]{\item \texttt{#2} (\texttt{#3})
+%  \textbf{returns} \texttt{#1} \textsc{Obsoleted}\\ }
+
+% Don't even print these out for the paper
+\newcommand{\backcallobsoleted}[3]{}
+
+\newcommand{\hook}[2]{\item \texttt{#1} (\texttt{#2}) \\ }
 \newcommand{\file}[1]{{\small \texttt{#1}}}
 \newcommand{\email}[1]{{\small \texttt{#1}}}
 \newcommand{\program}[1]{{\small \texttt{#1}}}
 \newcommand{\syscall}[1]{{\textsf{#1}}}
 \newcommand{\sectionref}[1]{section \ref{#1}, on page \pageref{#1}}
-\newcommand{\pcp}{\mbox{\textsf{PCP}$^3$}}
 
 \title{\pcp{}: A C Front End for \\ Preprocessor Analysis and Transformation}
 \author{Greg J. Badros%
@@ -64,19 +75,34 @@
 
 \section{Hooks called by \pcp}
 \label{sec:hooks}
+\begin{itemize}
+\input{pcp3-hooks.tex}
+\end{itemize}
+
 
 \section{Subroutines provided by \pcp}
 \label{sec:backcalls}
+\begin{itemize}
+\input{backcalls.tex}
+
+\end{itemize}
+
 
 % References
 \newpage
 
 \nocite{ARM}
-\nocite{Stroustrup97}
-\nocite{Stroustrup94}
+\nocite{Dragon}
+\nocite{Glickstein97} % Writing GNU Emacs Ext.
+\nocite{Camel}        % Perl 5
+\nocite{Levine92}     % Lex & Yacc
+\nocite{Harbison91}   % C Ref Man
+\nocite{Stroustrup97} % C++, 3rd
+\nocite{Stroustrup94} % C++, 2nd
+\nocite{Flanagan96}   % Java in a Nutshell
 
 \bibliographystyle{alpha}
-\bibliography{library}
+\bibliography{library,articles}
 
 \end{document}
 
