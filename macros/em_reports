@@ -680,7 +680,8 @@ sub output_lint ( )
   my $warn_formal_use_side_effect = 0;
 
   for my $macro_name (sort keys %macros)
-    { $num_macros++;
+    { next if (scalar(@{$macros{$macro_name}}) == 1);
+      $num_macros++;
       if (scalar(@{$macros{$macro_name}}) > 1)
 	{ my @args_lengths = map { my $args = $mdef_formals[$_];
 				   $args ? scalar(formals_array($args)) : 0 }
@@ -863,7 +864,7 @@ sub output_lint ( )
 			   # If it has args and assignment, maybe it's really a semicolonless statement.
 			   . (($args && ($properties & $propASSIGN)) ? " (if used as expression)" : ""));
 		      $warn_unparen_body++; } }
-	      if ($category_is_statement)
+	      if ($category_is_statement && $args)
 		{ if (($category == $catSTATEMENTS)
 		      || ($category == $catSTATEMENTS_SANS_SEMI))
 		    { push(@complaints,
@@ -872,7 +873,7 @@ sub output_lint ( )
 		  elsif (($category == $catSTATEMENT)
 			 || ($category == $catSTATEMENTS))
 		    { push(@complaints,
-			   "semicolon-swallowing problem: enclose statement in \"do ... while (0)\"");
+			   "failure to swallow semicolon: enclose statement in \"do ... while (0)\"");
 		      $warn_semicolon_swallowing++; } }
 
 	      if ($properties & $propFREE_VAR)
