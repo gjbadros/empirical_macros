@@ -1,4 +1,5 @@
 
+\label{sec:categorization-details}
 
 \begin{description}
   \sloppy
@@ -56,7 +57,8 @@ case for expression macros with arguments).
 %                        catSTATEMENTS catSTATEMENTS_SANS_SEMI catPARTIAL_STATEMENTS );
 % These aren't great examples (not from actual code); but so be it, as the
 % actual examples are *very* long.
-\item[Statement]  The macro body is a complete statement such as
+\item[Statement]\label{item:statement-category}
+  The macro body is a complete statement such as
   ``{\tt plu = ".";}'', ``{\tt if (x) \verb|{|free(x); x=NULL;\verb|}|}'' or
     ``{\tt \verb|{| int c; while ((c = getc(fp)) != '\verb|\|n' \verb|&&| c != EOF);
     \verb|}|}''.  Such a macro is like a function 

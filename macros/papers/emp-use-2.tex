@@ -390,7 +390,7 @@ Before performing our analysis, we ran {\tt configure} or the equivalent on
 each package in order to prepare it for compilation.  This creates various
 header files (such as \file{configure.h}).  Our analysis works in the
 absence of this step, but warns about uses of never-defined macros and
-underreports some values related to those missing definitions.  We did
+under-reports some values related to those missing definitions.  We did
 not, however, compile the packages; our analysis does not require that the
 package be compilable (or even that the preprocessor be able to run on it).
 
@@ -421,7 +421,7 @@ ignore no possible  conditional compilation conditions (though we do skip
 over those which can be statically proven to be false).   As a result, this
 analysis is more thoroughgoing than traditional ``whole-program'' analyses.
 
-[[We merge different cpp branches in the code wherever possible.  Discuss
+[[We merge different Cpp branches in the code wherever possible.  Discuss
 this a bit.]]
 
 We perform approximate parsing because the input is not a valid C program;
@@ -429,7 +429,7 @@ as a result, we miss some constructs, but we can cope with uncompilable C
 and with partial constructs in conditional compilation branches.  Our tool
 includes parsers for expressions, statements, and declarations.
 
-We performed our analysis via a collection of Perl scripts, totaling
+We performed our analysis via a collection of Perk scripts, totaling
 approximately 11,000 lines (7,000 NCNB lines).  The raw data, which
 includes considerable data not reported here, and the programs used to
 generate and manipulate them, are available from the authors.
@@ -526,11 +526,11 @@ conditional compilation directives, since low-level file operations (such
 as setting creation time and access control bits, accessing directories,
 and so forth) are done differently on different systems.
 
-\pkg{remind} supports speakers of ten different languages (and various
-character sets) by using {\tt \#define}d constants for basically all user
-output.  It also contains disproportionately many conditional compilation
-directives; over half of these test the definedness of \verb|HAVE_PROTO|,
-in order to provide both K\&R and ANSI prototypes.
+\pkg{remind} supports speakers of multiple natural languages by using {\tt
+\#define}d constants for basically all user output.  It also contains
+disproportionately many conditional compilation directives; over half of
+these test the definedness of \verb|HAVE_PROTO|, in order to provide both
+K\&R and ANSI prototypes.
 
 Like \pkg{gzip}, \pkg{bash} is portable across a large variety of
 systems, but \pkg{bash} uses even more operating system services.
@@ -641,12 +641,12 @@ understanding tools.
 \begin{figure}
   {\small\centerline{\input{tbl-subset-properties.tex}}}
   
-  \caption{This figure indicates the occurrence, both singly and in
-    combination, of uses of the extra-linguistic capabilities of the C
+  \caption{Usage, both singly and in
+    combination, of the extra-linguistic capabilities of the C
     preprocessor listed in section~\ref{desc:properties}.  The features are
     listed across the top, along with the percentage of macro definitions
     exploiting each.  Each row of the table reports the percentage of all
-    macro definitions that exploit a particular combination of the
+    macro definitions that use a particular combination of the
     capabilities, indicated by black squares.  For instance, 0.093\% of all
     macro definitions perform assignment and use the result of a macro
     invocation as a type, but use none of the other extra-linguistic
@@ -730,7 +730,7 @@ so users are warned of its appearance.
 A number of files in our test suite begin or end inside a brace scope or an
 {\tt \#if} scope.  Some of these were intentional\,---\,as in files meant
 to be included around other code.  Others are bugs (such as, in one case, a
-failure to close a /* */ style comment) which were apparently not
+failure to close a {\tt /* */} style comment) which were apparently not
 discovered because testing did not build the package under all possible
 circumstances.
 
@@ -742,208 +742,245 @@ if not in logic) elsewhere.
 
 
 \subsection{Multiple definitions}
+\label{sec:mult-def}
 
-Refer to figure~\ref{fig:freq-def-cat}.  Explain why the numbers in its
-legend differ from those in figure~\ref{fig:categorization}.
+Because a package may contain multiple definitions of a macro, and a macro
+can even be redefined partway through preprocessing, it is difficult to
+determine exactly which definition of a macro will be used at a particular
+expansion site.
 
-        When classifying a name (as opposed to a definition), "failed
-          classification" includes "two different defs fell into different
-          categories".  (We could also get that even if a single
-          definition, earlier, if it expands to just such a macro.)
-          Explain how we combine two different categories into a single one.
-
-        Not C code tends to be for the benefit of Makefiles; compilation
-          lines, library filenames, and such tend to differ for each
-          operating system.  
-
-        Syntactic is parentheses, commas, semicolons, critical section
-          delimiters, etc:  frequently-used.  [[That's irrelevant:  here I
-          want to know why there are so many {\em definitions}.]]
-
-        It stands to reason that "failed classification" has multiple
-          definitions, because when determining the category for a macro
-          name, we categorize each definition, and if any of them are
-          either failures or have different categories, then the classification
-          for the name is "failure".  (See section~\ref{sec:inconsistent}.)
-
-        Few for unknown symbol, because if any def isn't unknown symbol,
-          then neither is the entire macro.
-
-        By package (not pictured):  most follow the "Mean" curve.
-
-          Half of packages have no macros defined more than 14 times.
-
-          Notable exceptions to the rule:
-            \pkg{bc}:  all macros are defined either one or two times
-
-            \pkg{remind}:  10\% of macros are defined between 11 and 15 times
-                (none defined 16 or more); uses macros for all user output.
-                
-                The \pkg{remind} program uses macro definitions to provide
-                localization support for ten different natural languages
-                (and multiple character sets for some of them), accounting
-                for its surprisingly large number of macros with many
-                definitions.
-
-            \pkg{gcc}: over 4\% of macros are defined more than 20 times.
-                gcc goes 99.5\% at 50 definitions.
-                i.e., 99.5\% of macro names are defined 50 or fewer times.
-                1 macro, \verb|CPP_PREDEFINES|, is defined 181 times (and undefined
-                  198 times).
-                Many of these aren't C code.
-
-        % \section{Frequency of macro definition and usage}
-        \label{sec:usage}
-
-        % The second question we asked was: where and how often are macros
-        % defined and used in practice?  
-
-        % \begin{figure}
-        % {\small
-        %   \setlength{\tabcolsep}{.25em}
-        %   \centerline{\input{freq_of_def-tbl.tex}}%
-        % }
-        % \caption{Number of definitions per Cpp identifier.  The numbers in the
-        %   table represent the percentage of identifiers which are defined a given
-        %   number of times or fewer.  For example, \pkg{bison} contains 4 or fewer
-        %   definitions for 91.51\% of all Cpp macros it defines, and no
-        %   macro is defined 5, 6, 7, 8, or more than 9 times.}
-        % \label{fig:define_count}
-        % \end{figure}
-
-        \begin{figure}
-        \centerline{\epsfig{file=fig/cat-def-frequency.eps,height=7.2in}}
-        \caption{Number of definitions per Cpp identifier, graphed as
-          the percentage of identifiers that are defined a given number of times
-          or fewer.  Overall, 96\% of macros were defined three or
-          fewer times; the other 4\% of macros had four or more distinct
-          definitions ({\tt \#define} directives).}
-        \label{fig:freq-def-cat}
-        \end{figure}
+The average number of definitions is less than 2; 79\% of macros are
+defined just once, and only 5\% of macros have four or more definitions.
+The more complicated macros to handle\,---\,such as types, syntactic
+macros, and those that could not be classified\,---\,are most frequently
+redefined In all but five packages, at least 94\% of all macros are defined
+three or fewer times; a few have have unusual redefinition patterns,
+largely because of portability or dependence on operating system
+characteristics.
 
 
-% \begin{figure}
-% \centerline{\epsfig{file=fig/def-frequency.eps,height=7.2in}}
-% \caption{Number of definitions per Cpp identifier, graphed as
-%   the percentage of identifiers that are defined a given number of times
-%   or fewer.  Overall, 96\% of macros were defined three or
-%   fewer times; the other 4\% of macros had four or more distinct
-%   definitions ({\tt \#define} directives).  The outlier, for which 10\% of
-%   macros are defined more than eight times, is the \pkg{remind}
-%   package, which uses macros for all user output.}
-% \label{fig:freq-def}
-% \end{figure}
+\begin{figure}
+\centerline{\epsfig{file=fig/cat-def-frequency.eps,height=7.2in}}
+\caption{Number of definitions per Cpp identifier, graphed as
+  the percentage of identifiers that are defined a given number of times
+  or fewer.  Overall, 95\% of macros were defined three or
+  fewer times; the other 5\% of macros had four or more distinct
+  definitions ({\tt \#define} directives).}
+\label{fig:freq-def-cat}
+\end{figure}
+
+Figure~\ref{fig:freq-def-cat} graphs the number of definitions for each
+macro name in our test suite, broken down by macro category.  When all
+definitions of a name fall into the same category, the name is assigned to
+that category; otherwise, the definitions are inconsistent and the name is
+assigned to ``failed classification.''  See section~\ref{sec:inconsistent}
+for more details of macro name classification.
+
+Our analysis makes no distinction between sequential redefinitions of a
+macro and multiple definitions that cannot take effect in a single
+configuration.  Independent definitions may result from definitions in in
+different branches of a Cpp conditional, from intervening {\#undef}
+directives, from compilation conventions as when compiling different
+programs in a package or versions of a program.  In general, distinguishing
+the cases is undecidable.
+
+The most frequently redefined macros in figure~\ref{fig:freq-def-cat} are
+unclassified, non C code, and syntactic.  The more definitions a macro has,
+the more likely it is that one of those definitions cannot be classified,
+or is misclassified, by our system, resulting in a failure to classify the
+macro name.
+
+Macro bodies which are not C code tends to be Makefile compilation
+commands, and library filenames.  These definitions differ for each
+operating system, and often a package supports many such systems,
+necessitating many macro definitions.  
+
+Syntactic macros include those expanding only to punctuation.  These are
+frequently used to support variant declaration styles; as such, they
+require a definition for each variety, and they are frequently redefined to
+ensure that their settings are correct.
+
+The least frequently redefined macros are those classified as unknown
+symbol.  If any definition is not so classified, then neither is the
+macro name, and we included enough library header files to include some
+definition of most common macros.
+
+Half of all packages have no macros defined more than 14 times, and the
+overall redefinition behavior of most packages approximates the mean line
+of figure~\ref{fig:freq-def-cat}.  Notable exceptions are \pkg{bc},
+\pkg{remind}, and \pkg{gcc}.  \pkg{bc} is very sparing with multiple
+definitions: every macro is defined either one or two times.  By contrast, 
+\pkg{remind} defines 10\% of its macros more than 10 times (but none more
+than 15).  It supports ten different human languages (and various character
+sets) by using macros for all user output strings.
+The tail of \pkg{gcc}'s graph is longest of all:  over 4\% of macros are
+defined more than 20 times, and 0\.5% are defined at least 50 times.
+Many of these most heavily-defined macros (including the most
+frequently-defined, \verb|CPP_PREDEFINES|, with  181 definitions and 198
+undefinitions), are not C code.
+
+
 
         
-        No distinction is made between sequential redefinitions of a macro
-        and multiple definitions that cannot take effect in a single
-        configuration (say, because they appear in different branches of a
-        Cpp conditional).  This is exactly the right thing!  Also, we merge
-        together different definitions created by different files and
-        either {\tt \#undef}ed or with different scopes.  That is, we have
-        no notion of reaching definitions.
-        
-
-        [[Get new numbers, and repeat this analysis.]]  [[Check whether
-        bash and dejagnu are even worht mentioning:  probably not.  but
-        make the point about portability and libraries.]]
-        In all but four packages, at least [[93\%]] of all macros are
-        defined three or fewer times.  For \pkg{bash} and \pkg{dejagnu},
-        such macros account for [[90\%]], largely because these packages
-        are highly portable and also quite dependent on system libraries.
-
 
 \subsection{Multiple distinct definitions}
 
+Section~\ref{sec:mult-def} counted the number of definitions of a given
+macro name, providing an upper bound of sorts on the difficulty of
+understanding uses the macro.  Multiple definitions are less worrisome if
+their bodies are similar, and present few worries if identical, though it
+is possible that a macro, free variable, or other quantity used in the
+definition has changed its value between the locations.
+
 \begin{figure}
   \centerline{\epsfig{file=fig/cat-ddf-frequency.eps,height=7.2in}}
-  \caption{Number of syntactically distinct definitions per Cpp identifier, graphed as
-    the percentage of identifiers that are defined a given number of times
-    or fewer.  [[Say something to help interpret it.]]  [[Give note
-    about what's in legend, from text or previous figure?  Nah, just
-    refer back, probably.]]}
+  \caption{Number of syntactically distinct definitions per Cpp identifier,
+    laid out as figure~\ref{fig:freq-def-cat}.}
   \label{fig:freq-ddf-cat}
 \end{figure}
         
-This uses a less strict rule than that used by CPP when determining whether
-to issue a warning about redefinition.  We eliminate all comments and
-whitespace, canonically rename all formal arguments, and compare all
-character and string literals to be identical.  Thus, it is a lower bound
-on the number of definitions with distinct abstract syntax trees, much as
-the previous chart was an upper bound.
+Figure~\ref{fig:freq-ddf-cat} repeats figure~\ref{fig:freq-def-cat}, but
+reporting the number of syntactically distinct definitions rather than the
+total number.  The comparison is less strict than that used by CPP when
+determining whether to issue a warning about redefinition.  We eliminate
+all comments and whitespace, canonically rename all formal arguments, and
+consider all character and string literals identical.  Thus, it is a lower
+bound on the number of definitions with distinct abstract syntax trees,
+much as the previous chart was an upper bound.
 
-Even when two distinct definitions are identical, if they appear in
-different locations then it is more likely that something used by that
-definition has changed.  [[From chart not shown: we identify most of
-\pkg{remind}'s definitions as non-distinct.]]
+The number of redefinitions reported in this chart is dramatically lower
+than that of the previous one.  Syntactic macros are an outlier on the
+other side of the mean (most of the multiple definitions are one of just a
+few alternatives).  Most macros in \pkg{remind} are identified as
+syntactically identical\,---\,usually, only string contents differed.  This
+chart revives hope that even multiply-defined macros may be easy to
+understand.
+
 
 \subsection{Inconsistent definitions}
 \label{sec:inconsistent}
 
-Even among macros with multiple definitions, those different definitions
-generally fall into the same, or compatible, categories.
+This section further refines our analysis of multiply-defined macros by
+considering, rather than syntactic structure, the categorization of the
+macro bodies described in section~\ref{sec:categorization-details}.  This
+analysis identifies higher-level commonalities among the macro definitions
+that an analysis may be able to take advantage of in different ways than
+more exact syntactic similarity.  We focus on definitions of a particular
+name which are given different, incompatible categorizations.
 
-\begin{itemize}
+In 93\% of cases, multiple definitions of a macro are compatible (more
+often than not, identical).  Incompatibilities usually indicate bugs or
+inconsistent usage, or failures in our categorization technique.  We
+identified a number of places that code should be changed for robustness
+and to avoid problems related to potentially incomplete constructs.
+
+
+The following rules determine how two categories are merged:
+\begin{itemize}\itemsep 0pt \parskip 0pt
+
 \item If the categories are the same, use that.
 
-\item If one has no definition, is a null define, or is an unknown symbol, use
-  the other.  [[This is fine for statement, type; but a bit iffy for
-  expressions.]]
+\item If one is an unknown symbol (or the name of an undefined macro), use
+  the other on the theory that the unseen definitions are likely to be
+  similar to the present one, which is true for well-behaved macros.
 
-  [[If the macro name has another definition
-  which is not an unknown symbol, then we can safely assume that the
-  inaccessible definition has similar characteristics.]]
+\item If one is a null define, use the other.  For instance, a type
+  modifier may be present or absent.  Macros not uncommonly expand to
+  either a statement or to nothing, in order to either perform an action or
+  do nothing.  (Actually, this is the wrong way to accomplish that: the
+  no-op definitions should contain null statements in order to avoid
+  parsing difficulties with {\tt else} clauses and elsewhere, see
+  page~\pageref{item:swallow-semicolon}.  It would be appropriate to issue
+  a warning message in this situation.)  Additionally, macros used as
+  boolean variables which are checked for definedness may be set via a null
+  define or by being assigned a constant (generally 1).  This practice is
+  an error if the macro is used outside Cpp's {\tt defined} operator, but
+  is also frequent and generally innocuous.
 
-\item If one is a constant and the other is an expression, use expression.
+\item If one is a constant and the other is an expression, use the latter.
 
-\item If one is a symbol and the other is reserved word or type, choose the latter.
+\item If one is an ambiguous list of space-separated symbols and the other
+  is reserved word or type, use the latter.  Sequences of symbols can often
+  not be definitely identified in isolation, but the other definitions of
+  the same name indicate the intended usage.
 
-\item If one is statement-related, choose the other if it's the corresponding plural.
-\item If one is statement-related, sans semicolon, choose the other if it's partial.
+\item If one is an expression or constant and the other is a semicolonless
+  statement, use the latter, for a semicolon can be added to any expression
+  to make a statement.  In particular, function calls are classified as
+  expressions but may be intended to be used for side effect rather than
+  for value.
+
+\item If one is statement-related, use the other if it is the corresponding
+  plural form; if both are partial statements, select the more incomplete
+  statement category.  (See page~\pageref{item:statement-category} for
+  details.)
+
+\item Otherwise, return failure.
 \end{itemize}
+
+A macro name is categorized by merging its definitions pairwise.  The
+legend of figure~\ref{fig:freq-def-cat} and several subsequent figures
+reports the category breakdown by macro name.  It differs from the
+by-definition breakdown of figure~\ref{fig:categorization} in several ways.
+The number of null definitions is lower, as null definitions are often
+found in conjunction with other types of definition rather than being the
+only variety of definition for a particular symbol (which happens for
+macros used only in Cpp conditionals, and only check for definedness
+there).  The number of statements dropped, largely due to participation of
+statements in incompatibly-defined macros which; likewise for non C code,
+which turned into failures due to heuristic misclassifications.  The number
+of unknown symbols rose because such macros tend to have very few
+definitions\,---\,there are almost as many macro names as macro definitions
+classified as unknown symbol\,---\,so are more prominent in a breakdown by
+name than by definition.  The number of failures increased because it
+includes any macro with a failing definition as well as any with
+incompatible definitions.
+
 
 \begin{figure}
   {\small\centerline{\input{tbl-subset-categories.tex}}}
-  \caption{Subset categorization of macros (not macro definitions).   Items
-    less than [[one twentieth of a percent]] are omitted; such items appear
-    fewer than [[ten]] times in the codebase.
-    The arrows indicate macros for which the names would be classified
-    as "failure" (2.4\% of macro names).}
+  
+  \caption{Macro name categorization breakdown.  For each macro with more
+    than one definition, the categorization of its definitions are
+    indicated.  For instance, for 23\% of multiply-defined macro names, all
+    definitions fall into the expression category, and for 7.1\% of macro
+    names, all definitions are either expressions or constants.  Rows less
+    than one twentieth of one percent, representing fewer than ten macro
+    names, are omitted.  The arrows indicate macros for which the names
+    would be classified as ``failure'' (7.1\% of all multiply-defined macro
+    names; overall, 2.4\% of all macro names are so classified).}
+
   \label{fig:subset-categories}
 \end{figure}
 
-Two anomalies in arrows (ie, failing combinations) are due to the fact that
-"statement" category should really be called "statement-related": it
-includes full statements, statements missing a final semicolon, partial
-statements, multiple statements, multiple statements plus a partial one.
-\begin{itemize}
-\item
-  no arrow on one "expression + statement", at 1.1\%, because that was
-  actually "expression + semicolonless statement" -- and an expression plus
-  a semicolon also makes a statement.  For instance, the expressions could
-  have been function calls.  The other, just below it, has slightly fewer
-  occurrences (but both round to 1.1\%; it also contains "statement", which
-  is incompatible with "expression").  Also compare the similar duplication
-  at .26\% and .10\%.
-\item
-  arrow on just "statement" at .35\%: was actually "semicolonless
-  statement, semicolonless statements, statement"
-\end{itemize}
+Figure~\ref{fig:subset-categories} gives more detailed information for the
+21\% of macro names which have multiple definitions.  Macros are grouped by
+whether all of their definitions fall into the same subset of the
+categories, as well as by whether the macro itself is classified as a
+failure.
+
+The arrows in the chart indicate which macro names have failing
+classifications.  Using 10 rather than 28 categories makes this table
+manageable, but does hide some information.  For instance, 
+there are two ``expression + statement'' groups each making up
+1.1\% of multiply defined macros.  The slightly more prevalent one includes
+expressions and semicolonless statements, and those macro names are
+classified as semicolonless statements.  The second group has definitions
+of both these types, plus some complete sentences.  (There is similar
+duplication, along with null define, at 0.26\% and 0.10\%.)
+
+Likewise, the ``statement'' row at 0.35\% is a failure because it includes
+both semicolonless and full statements, which are not interchangeable.  An
+example is
+\begin{verbatim}
+    #define TARGET_VERSION fprintf (stderr, " (i860, BSD)")
+    #define TARGET_VERSION fprintf (stderr, " (i860 OSF/1AD)");
+\end{verbatim}
+where the former definition is a bug (most, but not all, other definitions
+of the macro are full statements).
 
 
 
-
-
-        Figure~\ref{fig:subset-categories} indicates that multiple definitions of a
-        particular macro tend to be compatible.  It classifies macros rather than
-        macro definitions.  Each macro is
-        given a set of categorizations (corresponding to the categorizations of its
-        definitions) and the incidence of each such is displayed.  For over [[97\%]] of
-        macros, all of the macro's definitions are given compatible
-        categorizations [[and for x\%, they're given exactly the same
-        categorization in all cases]].
-
-        [[What's going on with null define plus constant or expression??]]
 
 \section{Uses}
 
@@ -973,7 +1010,7 @@ statements, multiple statements, multiple statements plus a partial one.
           say why.  (Largely due to unsupported terminals like tgif; that
           appears elsewhere in this document, so reference it.)
 
-          Another reasson for unused macros might be uses in Makefiles and
+          Another reason for unused macros might be uses in Makefiles and
           other non-C-code files that we don't examine.
 
 % \section{Macro use}
@@ -1057,7 +1094,7 @@ Macros have two general purposes: they can control the inclusion of lines
 of code (by appearing in a {\tt \#if} condition that controls that line) or
 can change the text of a line (by being expanded on that line).  Each of
 these uses can often be modeled by C++ language features -- conditionals or
-(for certain types of substitution) consts and inlines.  But when a macro
+(for certain types of substitution) {\tt const}s and {\tt inline}s.  But when a macro
 is used in both ways, then there's no one C++ language feature.
 (Additionally, it's harder to understand and to analyze a macro that's used
 in both ways than one that is only used in one way or the other.)
@@ -1408,7 +1445,7 @@ of both the C compiler and the preprocessor.
 
 
 Greg:  describe LCLint methodology and results.  Say exactly what you did
-(ie, how hard you tried), and what the results were.  Also, that you tried
+(i.e., how hard you tried), and what the results were.  Also, that you tried
 on only 20, not all 30, packages, which doesn't include the biggest ones.
 
 
@@ -1427,7 +1464,7 @@ code without requiring human interaction or producing misleading results.
 
 LCLint
 considers assignment to a macro argument dangerous but does not appear
-to check for assignments to local variables.~\cite[\section 8]{Evans:LCLint}
+to check for assignments to local variables.~\cite[\S 8]{Evans:LCLint}
 [[Should we mention these things?  I don't want to seem nitpicky or petty, so
 if we mention this, mention them as differences, not as things LCLint does
 wrong.
@@ -1436,7 +1473,7 @@ $\ldots$ a parameter to a macro may not be used as the left hand side
 of an assignment expression $\ldots$, a macro definition must be
 syntactically equivalent to a statement when it is invoked followed by
 %a semicolon $\ldots$, the type of the macro body must match the return
-type of the corresponding function $\ldots$~\cite[\section 8]{Evans:LCLint}
+type of the corresponding function $\ldots$~\cite[\S 8]{Evans:LCLint}
 \end{quote}
 That quotation is really easy to nitpick:
 \begin{enumerate}
@@ -1577,7 +1614,7 @@ approach is the introduction of a new syntax or new library functions which
 may not simplify the program text and which cannot cover all cases, only a
 few specified ones.
 
-[[Add a hygenic macros reference somewhere.]]
+[[Add a hygienic macros reference somewhere.]]
 
 An alternative approach which avoids the clumsiness of a separate language
 of limited expressiveness is to make the macro language more
@@ -1627,7 +1664,7 @@ enumerated values.
   this line of research.
 
 
-No libraries (eg, \pkg{glibc}), as they're too different than applications.
+No libraries (e.g., \pkg{glibc}), as they're too different than applications.
 No C++.\footnote{Preliminary results indicate that many
   C++ packages rely heavily on Cpp, even when C++ supports a nearly
   identical language construct, probably due to a combination of trivial
@@ -1653,7 +1690,9 @@ Variations among packages:
         We didn't examine every use.  Besides, the point isn't just the
           current uses, but also future uses:  we want these to be easy for
           programmers to use.
-
+          
+Reaching definitions for macros (``flow-sensitive'' due to
+dependences on other macros).
 
 % Not really right:  Don't want the ``References'' section head to be small.
 {\small \bibliography{evil}}
