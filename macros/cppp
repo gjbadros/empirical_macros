@@ -129,8 +129,19 @@ sub is_unknown ( $ )
 
 sub is_nonfalse ( $ )
 { my ($arg) = check_args(1, @_);
-  return (is_unknown($arg) || ($arg ne $false));
+  return (is_unknown($arg) || $arg);
 }
+
+sub is_false ( $ )
+{ my ($arg) = check_args(1, @_);
+  return (!is_unknown($arg)) && !$arg;
+}
+
+sub is_true ( $ )
+{ my ($arg) = check_args(1, @_);
+  return (!is_unknown($arg)) && $arg;
+}
+
 
 # Returns a textual substitution for "defined($symbol)"; result is one of
 # "1", "0", or "defined($symbol)" itself (if the definedness is unknown).
@@ -308,11 +319,9 @@ sub eval_substituted_conditional ( $ )
       my $right = $POSTMATCH;
       my $lval = eval_substituted_conditional($left);
       my $rval = eval_substituted_conditional($right);
-      if (((!is_unknown($lval)) && $lval)
-	  || ((!is_unknown($rval)) && $rval))
+      if (is_true($lval) || (is_true($rval)))
 	{ return $true; }
-      elsif (((!is_unknown($lval)) && !$lval)
-	     && ((!is_unknown($rval)) && !$rval))
+      elsif (is_false($lval) && is_false($rval))
 	{ return $false; }
       else
 	{ return $unknown; } }
@@ -321,11 +330,9 @@ sub eval_substituted_conditional ( $ )
       my $right = $POSTMATCH;
       my $lval = eval_substituted_conditional($left);
       my $rval = eval_substituted_conditional($right);
-      if (((!is_unknown($lval)) && !$lval)
-	  || ((!is_unknown($rval)) && !$rval))
+      if (is_false($lval) || is_false($rval))
 	{ return $false; }
-      elsif (((!is_unknown($lval)) && $lval)
-	     && ((!is_unknown($rval)) && $rval))
+      elsif (is_true($lval) && is_true($rval))
 	{ return $true; }
       else
 	{ return $unknown; } }
@@ -460,7 +467,10 @@ sub eval_substituted_conditional ( $ )
     { print "File: $current_file\n";
       die "Should only find [~!] at beginning of expression: $exp"; }
   elsif ($exp =~ /^[-+]?0[xX]?[0-9A-Fa-f]+$/)
-    { return oct($exp); }
+    { if ($exp =~ /^[-+]?0[xX]?[0-9A-Fa-f]{9}/)
+	{ return $unknown; }
+      else
+	{ return oct($exp); } }
   elsif ($exp =~ /^[-+]?[0-9]+$/)
     { return int($exp); }
   elsif ($exp =~ /^[_A-Za-z][_A-Za-z0-9\$]*$/)
@@ -553,6 +563,8 @@ exit(0);
 sub process_file ( $ )
 { my ($file) = check_args(1, @_);
   $current_file = $file;
+  open(INPUT, $file) or die "Can't read $file: $!";
+  close(INPUT);
   my $backup = $file . ".nocppp";
   if (-e $backup)
     { if ($backup_exists_action eq "overwrite")
@@ -566,8 +578,8 @@ sub process_file ( $ )
   else
     { rename($file, $backup); }
 
-  open(INPUT, $backup);
-  open(OUTPUT, ">$file");
+  open(INPUT, $backup) || die "Can't read $backup: $!";
+  open(OUTPUT, ">$file") or die "Can't write $file: $!";
 
   my $prev_spliced = $false;
   my @condition_stack = ();	# conditions for all #if we are inside
@@ -583,16 +595,13 @@ sub process_file ( $ )
 
       # For debugging.  (Should this code be unconditionally executed?)
       if (!($current_condition_value == $condition_value_stack[$#condition_value_stack]))
-	{ print "File: $current_file\n";
-	  die "bad current_condition_value, condition_value_stack: $current_condition_value; @condition_value_stack"; }
+	{ die "bad current_condition_value, condition_value_stack in $file: $current_condition_value; @condition_value_stack"; }
       if (scalar(@condition_stack) != scalar(@condition_value_stack)-1)
-	{ print "File: $current_file\n";
-	  die "bad sizes for condition_stack (", scalar(@condition_stack),
-	  "), condition_value_stack (", scalar(@condition_value_stack), ")"; }
+	{ die "bad sizes for condition_stack (", scalar(@condition_stack),
+	  "), condition_value_stack (", scalar(@condition_value_stack), ") in $file"; }
       if (scalar(@condition_stack) != scalar(@elif_needs_endif))
-	{ print "File: $current_file\n";
-	  die "bad sizes for condition_stack (", scalar(@condition_stack),
-	      "), elif_needs_endif (", scalar(@elif_needs_endif), ")"; }
+	{ die "bad sizes for condition_stack (", scalar(@condition_stack),
+	      "), elif_needs_endif (", scalar(@elif_needs_endif), ") in $file"; }
 
       if ($simple =~ /^\#\s*(if(n?def)?|el(se|if)|endif)\b/)
 	{ $simple =~ s/^\#\s*//;
@@ -600,7 +609,10 @@ sub process_file ( $ )
 	    { print "simple preprocessor line: $simple"; }    # ends in newline
 	  if ((scalar(@condition_stack) == 0) && ($simple =~ /^(el(se|if)|endif)\b/))
 	    { # This is an extra directive, perhaps an error or a file fragment.
-	      # Just pass it through.
+	      # Just pass it through.  No need to check $current_condition_value
+	      # which must be true.
+	      if (!is_true($current_condition_value))
+		{ die "empty condition_stack but non-true current_condition_value $current_condition_value in file $file"; }
 	      print OUTPUT $raw; }
 	  elsif ($simple =~ /^endif\b/)
 	    { my $thisvalue = pop(@condition_stack);
@@ -643,14 +655,14 @@ sub process_file ( $ )
 	      #   if unknown elif **** => if unknown
 	      # so we need separate conditions for the text and the endif.
 
-		{ $condition_stack[$#condition_stack] =
-		    ((!is_unknown($oldvalue)) && $oldvalue) ? $false : $thisvalue;
-		  $elif_needs_endif[$#elif_needs_endif] |= is_unknown($oldvalue);
-		  pop(@condition_value_stack);
-		  $current_condition_value =
-		    combine_conditional($condition_value_stack[$#condition_value_stack], $condition_stack[$#condition_stack]);
-		  push(@condition_value_stack, $current_condition_value);
-		}
+	      { $condition_stack[$#condition_stack] =
+		  is_true($oldvalue) ? $false : $thisvalue;
+		$elif_needs_endif[$#elif_needs_endif] |= is_unknown($oldvalue);
+		pop(@condition_value_stack);
+		$current_condition_value =
+		  combine_conditional($condition_value_stack[$#condition_value_stack], $condition_stack[$#condition_stack]);
+		push(@condition_value_stack, $current_condition_value);
+	      }
 
 	      # If doing output, use the following instead of the elif line:
 	      #   if true elif **** => no output
@@ -720,8 +732,7 @@ sub process_file ( $ )
 	      die "What cpp conditional directive? $simple"; } }
       else
 	{ # Not a cpp conditional directive
-	  if (is_unknown($current_condition_value)
-	      || $current_condition_value)
+	  if (is_nonfalse($current_condition_value))
 	    { print OUTPUT $raw; } }
     }
   close(INPUT);
