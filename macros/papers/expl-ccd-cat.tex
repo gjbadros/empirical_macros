@@ -7,13 +7,13 @@
 
 \item[Portability, feature] These guards check symbols which
       describe specific capabilities of the target machine or operating
-      system (e.g., \texttt{BYTEORDER}, \texttt{BROKEN_TIOCGWINSZ}).
+      system (e.g., \texttt{BYTEORDER}, \verb|BROKEN_TIOCGWINSZ|).
 
 \item[Portability, language or library] These guards check
       symbols that compilers may predefine, that standard libraries may
       define, or that the package may define as part of the build
       process to indicate existence of compiler, language, or library
-      features (e.g., \texttt{GNUC}, \texttt{STDC}, or \texttt{HAS_BOOL}).
+      features (e.g., \texttt{GNUC}, \texttt{STDC}, or \verb|HAS_BOOL|).
 
 \item[Portability, machine] These guards check symbols which
       name the operating system or machine hardware (e.g.,
@@ -21,8 +21,8 @@
       
 \item[Portability, system macro] These guards check symbols
       which are commonly defined constants or pseudo-inline functions in
-      system or language libraries (e.g., \texttt{O_CREATE},
-      \texttt{isalnum}, or \texttt{S_IRWXUSR}).
+      system or language libraries (e.g., \verb|O_CREATE|,
+      \texttt{isalnum}, or \verb|S_IRWXUSR|).
 
 \item[Miscellaneous system] These guards test reserved symbols
       (i.e., those beginning with two underscores) and which do not
@@ -33,23 +33,28 @@
       substring \texttt{DEBUG} or \texttt{TRACE} (or both).
       
 \item[Commenting] These guards either definitely succeed and
-      have no effect as currently written (e.g., \texttt{#ifdef 1}), or
+      have no effect as currently written (e.g., \texttt{\#ifdef 1}), or
       definitely fail and unconditionally skip a block (e.g.,
-      \texttt{#ifdef 0}).
+      \texttt{\#ifdef 0}).  (Also ands and ors of them.)
       
 \item[MI prevention] These guards encompass an entire file to
       ensure that the enclosed code is seen only once per translation
       unit by the compiler.  Such guards are indicated by a trailing
-      \texttt{_H} or \texttt{_INCLUDED} in the macro name they check.
+      \verb|_H| or \verb|_INCLUDED| in the macro name they check.
 
 \item[Redefinition suppression] These guards are immediately
       followed a definition of the same symbol, thus avoid preprocessor
-      warnings about a redefinition of a name (e.g., \texttt{#ifndef
-      FOO} followed by \texttt{#define FOO ...} and \texttt{#endif} on
-      subsequent lines).
+      warnings about a redefinition of a name (e.g., \texttt{\#ifndef
+      FOO} followed by \texttt{\#define FOO ...} and \texttt{\#endif} on
+      immediately subsequent lines).
 
 \item[Mixed categories] These guards test multiple symbols
       which independently fall into different categories (e.g.,
-      \texttt{#if defined(STDIO_H) || SYSV_SIGNALS}).
+      {\tt \#if defined(\verb|STDIO_H|) || \verb|SYSV_SIGNALS|}).
 
 \end{description}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "emp-use-2"
+%%% End: 

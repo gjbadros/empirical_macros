@@ -1,43 +1,44 @@
-PROPERTIES:
-
-Free variables
+\begin{description}
+\item[Free variables]
   The macro body uses a symbol as a subexpression which is not a formal
   argument, function, macro, typedef, reserved word, or variable defined in
   the macro body.
 
-Assignment
+\item[Assignment]
   The macro body side-effects state via assignment (of the form =, op=, --,
     or ++).
 
-Use macro as type
+\item[Use macro as type]
   In this macro's body, the result of another macro invocation is used as a
   type.  (This doesn't include all invocations of macros which are
   identified as types, only those uses which are certainly in a context
   where a type is required.)
 
-Pass type as argument~(0.24\%)~} &
+\item[Pass type as argument~(0.24\%)~]
   In this macro's body, a literal type (such as "int *") is passed to
   another macro.
 
-Pasting
-  The body uses symbol pasting (##), which ...
+\item[Pasting]
+  The body uses symbol pasting ({\tt \#\#}), which ...
 
-Use argument as type
+\item[Use argument as type]
   This macro uses one of its arguments as a type.  (Not all uses can be
   identified lexically -- the macro 
+\begin{verbatim}
         #define MAKE_DECL(type, name) type name;
+\end{verbatim}
   does not necessarily use its first argument as a type, for it might be
-  invoked as MAKE_DECL(printf, ("hello world\n"))  or as
-  MAKE_DECL(x =, y+z).
+  invoked as {\tt \verb|MAKE_DECL|(printf, ("hello world\verb|\|n"))}  or as
+  {\tt \verb|MAKE_DECL|(x =, y+z)}.
 
-Self-referential
+\item[Self-referential]
   The body refers to its own name.  This feature is used when building a
     wrapper around an existing function [and for other uses?]
 
-Stringization
-  The body uses argument stringization (#), which ...
+\item[Stringization]
+  The body uses argument stringization ({\tt \#}), which ...
 
-===========================================================================
+\item[These next two are for cannibalization]
 
 \item[Stringization and pasting]  The macro body contains {\tt \#} or
   {\tt \#\#}, which treat the macro argument not as a token but as a
@@ -51,22 +52,5 @@ This is a partial lie (I think).
   defined (the preprocessor performs only one level of expansion), as in
   {\tt \#define LBIT vcat(LBIT)}.  This mechanism permits already-defined
   or to-be-defined macros to be extended or modified.
+\end{description}
 
-===========================================================================
-
-These numbers aren't right any more -- not 10%.
-
-One tenth of expression macros in our study use assignment operators, which
-have potentially unexpected results.  A macro argument that is assigned to
-is similar to a pass-by-reference function argument and need only be noted in the
-macro's documentation.  A macro that assigns a global variable also
-presents no difficulties in understanding or translation into a C++
-inline function.
-Assignment to a local variable that is free in the macro body, however,
-demands that such a variable exist wherever the macro is invoked, and
-assigns to different variables at different invocations.\footnote{By
-  contrast, LCLint considers assignment to a macro argument dangerous but
-  does not appear to check for assignments to local
-  variables.~\cite{Evans:LCLint}} Such a macro implements a restricted form
-of dynamic scoping by capturing the instance of a variable visible at
-the point of macro invocation.

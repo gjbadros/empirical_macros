@@ -106,7 +106,8 @@ The latter is really a failure of sorts.
 \item[Unknown symbol]  Single unknown symbol, typically due to something
 defined on some other architecture (for which we don't have header files,
 or else we'd parse 'em:  we parse more than any single invocation of the
-compiler would).
+compiler would).  They can also be variables or functions that we failed to
+parse.
 
 
 % @mcat_NON_C_CODE = qw( catCOMMAND_LINE catASSEMBLY_CODE );

@@ -1,79 +1,76 @@
-LINT:
 
-inconsistent arity
+\begin{description}
+\item[inconsistent arity]
         the macro is defined multiple times with different arity.
         This (and "all warnings by name") is reported as a percentage of
         names; other numbers are reported as a percentage of definitions.
 
-null body with args
+\item[null body with args]
         The macro is of the form
+\begin{verbatim}
                 #define name(e)
+\end{verbatim}
         which might have been intended to be
+\begin{verbatim}
                 #define name (e)
+\end{verbatim}
         This warning is suppressed if a comment appears where the macro
         body would be, as in
+\begin{verbatim}
                 #define name(e)         /* Do nothing in the FOO case */
+\end{verbatim}
 
-unparenthesized body
+\item[unparenthesized body]
         The macro body is an expression which ought to be parenthesized.
         This warning is suppressed if the body is a single token or a
         function call (which has high precedence)
 
-doesn't swallow semicolon
+\item[doesn't swallow semicolon]
         The macro body takes arguments and expands into a statement or
         multiple statments.  Thus, its uses look like function calls, but
         it cannot be legally used where a function call can be, as in
+\begin{verbatim}
              if (*p != 0)
                MACRO_CALL (p, lim);
              else ...
+\end{verbatim}
         because the presence of two statements -- the expansion of the macro and
         a null statement -- between the `if' condition and the `else'
         is unsyntactic.  The solution is to wrap the macro body in
+\begin{verbatim}
              do {...} while (0);
+\end{verbatim}
 
-bad formal name
+\item[bad formal name]
         The formal name is not a valid identifier or is a reserved word in
-        some dialects of C (eg, "new").  CPP will work fine, but a
+        some dialects of C (eg, {\tt new}).  CPP will work fine, but a
         programmer reading the body may become confused.
 
-multiple formal uses
+\item[multiple formal uses]
         Some argument is used as an expression multiple times, so any side
         effects in the expression will occur multiple times.
 
-unparenthesized formal uses
+\item[unparenthesized formal uses]
         Some argument is used as a subexpression (ie, adjacent to an
         operator) without being enclosed in parentheses, so that precedence
         rules could result in an unanticipated computation being performed.
         For instance, in
+\begin{verbatim}
                 #define DOUBLE(i) (2*i)
                 DOUBLE(3+4)
+\end{verbatim}
         the macro body computes the value 10, not 14.
         This warning is suppressed when the argument is the entire body
         or is the last element of a comma-delimited list.
 
-side-effected formal
+\item[side-effected formal]
         A formal argument is side-effected.  This is erroneous if the
         argument is not an lvalue.
+\end{description}
 
-===========================================================================
 
-We don't report on:
 
-multi-line comments/strings.  (Plus option to turn this off, like cpp
-        does.)
-
-===========================================================================
-
-Assignment operators have potentially unexpected results.  A macro argument
-that is assigned to is similar to a pass-by-reference function argument and
-need only be noted in the macro's documentation.  A macro that assigns a
-global variable also presents no difficulties in understanding or
-translation into a C++ inline function.  Assignment to a local variable
-that is free in the macro body, however, demands that such a variable exist
-wherever the macro is invoked, and assigns to different variables at
-different invocations.\footnote{By contrast, LCLint considers assignment to
-  a macro argument dangerous but does not appear to check for assignments
-  to local variables.~\cite{Evans:LCLint}} Such a macro implements a
-restricted form of dynamic scoping by capturing the instance of a variable
-visible at the point of macro invocation.
-
+%%% Local Variables: 
+%%% mode: plain-tex
+%%% TeX-master: "emp-use-2"
+%%% End: 
