@@ -3,7 +3,8 @@
 # (Using the macros-* scripts)
 
 PKG_DIR := /tmp/mernst/packages
-COMMON_DIR := /tmp/mernst
+COMMON_DIR := $(shell dirname $$(which evilmacros))
+
 # FIX: These files should be generated from the directory names under PKG_DIR
 
 # "make data" makes these files.
@@ -111,5 +112,6 @@ showvars:
 	echo $(LATEX_TABLES)
 	echo $(CVT_LATEX_TABLES)
 	echo $(ALL_TABLES)
+	echo $(COMMON_DIR)
 
 .PHONY: all clean showvars text_tables data raw
