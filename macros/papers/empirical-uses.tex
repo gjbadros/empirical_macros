@@ -162,16 +162,16 @@ we can't get?]
 
 \section{The Data}\label{sec:gathering}
 
-We analyzed 30 C packages, primarily (exclusively?) taken from the GNU
+We analyzed 29 freely-available C packages, many taken from the GNU
 distribution.  Figure~\ref{fig:packages} shows the packages along with
 their sizes.  The size of each package is given in terms of both the
 physical line count---the actual numbers of lines in the file (in Unix
-terms, this is the number of newline characters plus one)---and also
-the non-comment/non-blank (NCNB) line count, which eliminates any
-lines that contain only comments or that are blank lines (consisting
-only of whitespace).  Throughout the remainder of the analysis, we use
-only the NCNB length, since that seems to focus more clearly on the
-essential source text of a package.
+terms, this is the number of newline characters plus one)---and also the
+non-comment/non-blank (NCNB) line count, which eliminates any lines that
+contain only comments or that are blank lines (consisting only of
+whitespace).  Throughout the remainder of the analysis, we use only the
+NCNB length, since that focusses more clearly on the essential source
+text of a package.
 
 \begin{figure}
 %\epsfxsize 6in
@@ -187,8 +187,8 @@ Total & big & num\\\hline
 \caption{Analyzed Packages and Sizes\label{fig:packages}}
 \end{figure}
 
-[If we could also list the platforms for which each can compile, that
-would be great, but I doubt the benefit is worth the effort right
+[FIX: If we could also list the platforms for which each can compile,
+that would be great, but I doubt the benefit is worth the effort right
 now.]
 
 \section{Occurrence of Preprocessor Directives}\label{sec:directives}
@@ -245,6 +245,8 @@ determined:
 \item How many times (and where) it was mentioned in other
 preprocessor directives.
 
+[FIX: This is redundant with the same information in paragraph form, above]
+
 \end{itemize}
 
 We display some of these data here, in several different forms.
@@ -263,7 +265,7 @@ goes here
 \end{figure}
 
 The \verb+#undef+ counts are generally extremely low; the maximum
-number of undefines seen in any package was [fill in here].
+number of undefines seen in any package was [FIX: fill in here].
 
 Figure~\ref{fig:use_count} is structured as the last figure, but it
 represents the number of times that a defined name is used in either C
@@ -276,7 +278,7 @@ goes here
 \end{figure}
 
 Figure~\ref{fig:define_usage} shows the percentage of defined macros
-that are used in C code, in cpp code
+that are used in C code, in Cpp code
 
 \begin{figure}
 goes here
