@@ -364,20 +364,20 @@ expansion takes place as follows:\footnote{These list is necessarily
 
 \begin{enumerate}
 \item The macro name is checked to see which arguments it uses.
-\item Those arguments that are used in the expansion are expanded iff
-      they contain macros.  Macros appearing in the expansions of the
-      arguments do not get expanded yet--only one level of expansion is
-      performed. Identical arguments are expanded independently; for
-      example \texttt{FOO(BAR,BAR)} will expand \texttt{BAR} twice if
-      the expasion of \texttt{FOO} uses both of its arguments.  They are
-      expanded in the order that they are used in the body of the
-      expansion, not left to right.
+\item Those arguments that are used in the expansion are expanded if and
+      only if they contain macros.  Macros appearing in the expansions
+      of the arguments do not get expanded yet--only one level of
+      expansion is performed. Identical arguments are expanded
+      independently; for example \texttt{FOO(BAR,BAR)} will expand
+      \texttt{BAR} twice if the expansion of \texttt{FOO} uses both of
+      its arguments.  They are expanded in the order that they are used
+      in the body of the expansion, not left to right.
 \item The body of the top level macro is copied left to right; arguments
       are replaced with the text from their expansions.  Macro names
       previously expanded are ``escaped'' (using a prefix of the
       distinguished symbols ``\texttt{@-}'') in this pseudo input buffer
       to prevent recursion
-\item That entire text is rescanned, and unescaped macros are expanded
+\item That entire text is rescanned, and un-escaped macros are expanded
       further.
 \end{enumerate}
 
