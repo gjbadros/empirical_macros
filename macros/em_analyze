@@ -218,6 +218,7 @@ use Carp;
 use checkargs;
 use cline;
 use Data::Dumper;
+use paren;
 
 use em_constants;
 use em_util;
@@ -1530,158 +1531,40 @@ sub peek_fulltoken_line ($)
 }
 
 
-# Takes a simplified line as its argument; returns a string containing the
-# unbalanced braces (empty string if all braces are balanced).
-sub brace_change ($)
-{ my ($line) = check_args(1, @_);
-  # print "brace_change $line";
-  my $result_num = 0;
-  my $result_chars = "";
-  while ($line =~ /[\{\}]/)
-    { $result_chars .= $MATCH;
-      if ($MATCH eq "\{")
-	{ $result_num++; }
-      elsif ($MATCH eq "\}")
-	{ $result_num--; }
-      else
-	{ mdie("What match? $MATCH"); }
-      $line = $POSTMATCH; }
-  return ($result_num == 0) ? $false : $result_chars;
-}
+## FIX:  throttle these after a certain number of lines have been read.
 
-# Takes a simplified line as its argument; returns a string containing the
-# unbalanced parens (empty string if all parens are balanced).
-# Perhaps this should also check for braces (and complain or err if any are
-# found before parens balance).
-sub paren_change ($)
-{ my ($line) = check_args(1, @_);
-  # print "paren_change $line";
-  my $result_num = 0;
-  my $result_chars = "";
-  while ($line =~ /[\(\)]/)
-    { $result_chars .= $MATCH;
-      if ($MATCH eq "\(")
-	{ $result_num++; }
-      elsif ($MATCH eq "\)")
-	{ $result_num--; }
-      else
-	{ mdie("What match? $MATCH"); }
-      $line = $POSTMATCH; }
-  return ($result_num == 0) ? $false : $result_chars;
-}
+# find_close_{paren,brace}_read is like find_close_{paren,brace}, but:
+#  * return a second result, orginarily the argument string
+#  * optional third argument says whether to read lines to try to balance, in
+#    which case the second return value can differ from the first input value,
+#    and the first result is never $false
+# These were more efficient when integrated with find_close_{paren,brace}, but
+# this version is more modular.
 
-# Return index of first close paren which doesn't match a preceding open paren
-# in the argument string, and the argument string.  Ignores strings, braces, etc.
-# Optional second argument says where to start (right after the open, usually).
-# Optional third argument says whether to read lines to try to balance (in
-# which case the second return value can differ from the first input value).
-sub find_close_paren ($;$$)
-{ my ($exp, $pos, $read) = check_args_range(1, 3, @_);
+sub find_close_paren_read ($;$)
+{ my ($exp, $pos) = check_args_range(1, 2, @_);
   if (!defined($pos))
     { $pos = 0; }
-  if (!defined($read))
-    { $read = $false; }
-  # print "find_close_paren: $exp\n";
-  my $opens = 1;
-  my $brace_pos;			# undefined if no brace found
-  { my $open_pos = index($exp, "\{", $pos);
-    my $close_pos = index($exp, "\}", $pos);
-    $brace_pos = ($open_pos == -1) ? $close_pos
-      : ($close_pos == -1) ? $open_pos
-	# min($open_pos, $close_pos)
-	: ($open_pos < $close_pos) ? $open_pos : $close_pos;
-    if ($brace_pos == -1)
-      { undef($brace_pos); } }
-
-  while ($opens > 0)
-    { my $next_open = index($exp, "\(", $pos);
-      my $next_close = index($exp, "\)", $pos);
-      # print "next_open $next_open next_close $next_close\n";
-      if (($next_close != -1)
-	  && (($next_open == -1) || ($next_close < $next_open)))
-	{ if (defined($brace_pos) && ($next_close > $brace_pos))
-	    { mdie("Found brace before matching paren in $exp"); }
-	  $opens--;
-	  $pos = $next_close+1; }
-      elsif (($next_open != -1)
-	     && (($next_close == -1) || ($next_open < $next_close)))
-	{ if (defined($brace_pos) && ($next_open > $brace_pos))
-	    { mdie("Found brace before matching paren in $exp"); }
-	  $opens++;
-	  $pos = $next_open+1;
-	  # print "open paren at $next_open, opens = $opens, pos = $pos\n";
-	}
-      else
-	# Didn't find an open or close parenthesis.
-	{ if (!(($next_open == -1) && ($next_close == -1)))
-	    { mdie("bad values for next_open $next_open and next_close $next_close"); }
-	  # print "didn't find next paren, opens = $opens\n";
-	  if (!$read)
-	    { mdie("insufficient closing parens in $exp"); }
-	  if (defined($brace_pos))
-	    { mdie("Found brace before matching paren in $exp"); }
-	  my $nextline = get_fulltoken_line($true);
-	  # print "*** read in find_close_paren: $nextline";
-	  if ($nextline =~ /[\{\}]/)
-	    { if (!defined($brace_pos))
-		{ $brace_pos = length($exp); }
-	      $brace_pos += length($PREMATCH);
-	      if (substr($exp . $nextline, $brace_pos, 1) !~ /[\{\}]/)
-		{ die("I just found a brace at position $brace_pos of $exp$nextline"); } }
-	  # print "find_close_paren appending $nextline";
-	  $exp .= $nextline; } }
-  return ($pos - 1, $exp);
+  my $index = find_close_paren($exp, $pos);
+  while ($index eq $false)
+    { my $nextline = get_fulltoken_line($true);
+      $exp .= $nextline;
+      $index = find_close_paren($exp, $pos); }
+  return ($index, $exp);
 }
 
-## FIX:  throttle this after a certain number of lines have been read.
-## Also, I could perhaps better implement this recursively than as a loop.
-# Return index of first close brace which doesn't match a preceding open brace
-# in the argument string, and the argument string.  Ignores strings, parens, etc.
-# Optional second argument says where to start (right after the open, usually).
-# Optional third argument says whether to read lines to try to balance (in
-# which case the second return value can differ from the first input value).
-sub find_close_brace ($;$$)
-{ my ($exp, $pos_init, $read) = check_args_range(1, 3, @_);
-  if (!defined($pos_init))
-    { $pos_init = 0; }
-  if (!defined($read))
-    { $read = $false; }
-  # print "find_close_brace: $exp\n";
-  my $opens = 1;
-  my $pos = $pos_init;
-
-  while ($opens > 0)
-    { my $next_open = index($exp, "\{", $pos);
-      my $next_close = index($exp, "\}", $pos);
-      # print "next_open $next_open next_close $next_close\n";
-      if (($next_close != -1)
-	  && (($next_open == -1) || ($next_close < $next_open)))
-	{ $opens--;
-	  $pos = $next_close+1; }
-      elsif (($next_open != -1)
-	     && (($next_close == -1) || ($next_open < $next_close)))
-	{ $opens++;
-	  $pos = $next_open+1;
-	  # print "open brace at $next_open, opens = $opens, pos = $pos\n";
-	}
-      else
-	{ if (!(($next_open == -1) && ($next_close == -1)))
-	    { mdie("bad values for next_open $next_open and next_close $next_close"); }
-	  # print "didn't find next brace, opens = $opens\n";
-	  if (!$read)
-	    { mdie("insufficient closing braces in $exp"); }
-	  my $nextline = get_fulltoken_line($true);
-	  # This is a fairly serious problem: may have read the remaining file.
-	  if (!defined($nextline))
-	    { parse_error("Never found close brace in $exp");
-	      return ($pos_init, $exp); }
-	  # print "find_close_brace appending $nextline";
-	  $exp .= $nextline; } }
-  return ($pos - 1, $exp);
+sub find_close_brace_read ($;$)
+{ my ($exp, $pos) = check_args_range(1, 2, @_);
+  if (!defined($pos))
+    { $pos = 0; }
+  my $index = find_close_brace($exp, $pos);
+  while ($index eq $false)
+    { my $nextline = get_fulltoken_line($true);
+      $exp .= $nextline;
+      $index = find_close_brace($exp, $pos); }
+  return ($index, $exp);
 }
 
-#print join(":",words_in(cline_simplify("FOO"))), "\n";
-#exit 0;
 
 sub update_for_cond_comp_directive ($$) {
   my ($cpp_cmd,$args) = check_args(2, @_);
@@ -1973,7 +1856,7 @@ sub getline_handle_preprocessor_command ($$$$$)
 	  # FIXGJB: Old hack below.... is this still necessary?
 	  # For now, hack for gnuchess-4.0.pl77/src/binsort.c
 	  if ($cpp_cmd_arg_noc !~ /^(descrip|processes|unixio)$/) {
-	    mdie('#include not followed by file name in "" or <>: ', $cpp_cmd_arg_noc, " == ", $cpp_cmd_arg_noc); 
+	    mdie('#include not followed by file name in "" or <>: ', $cpp_cmd_arg_noc, " == ", $cpp_cmd_arg_noc);
 	  }
 	  # What is this message about? --gjb
 	  parse_error("Ignoring VAX include $cpp_cmd_arg\n");
@@ -3321,7 +3204,7 @@ PROCESSLINE:
 
 		      my $close_paren_pos;
 		      # if parens aren't balanced, read enough text to balance them.
-		      ($close_paren_pos, $remaining) = find_close_paren($remaining, 0, $true);
+		      ($close_paren_pos, $remaining) = find_close_paren_read($remaining);
 		      if (!defined($remaining))
 			{ mdie("Undefined remaining after close-paren $close_paren_pos"); }
 
@@ -3736,7 +3619,7 @@ sub simple_macro_substitute ($)
 	{ my $prematch = $PREMATCH;
 	  my $postmatch = $POSTMATCH;
 	  my $close_paren_pos;
-	  ($close_paren_pos, $postmatch) = find_close_paren($postmatch, 0, $true);
+	  ($close_paren_pos, $postmatch) = find_close_paren_read($postmatch);
 	  # print "close paren at $close_paren_pos in $postmatch\n";
 	  my $result = $prematch . substr($postmatch, 0, $close_paren_pos)
 	    . substr($postmatch, $close_paren_pos+1);
@@ -4045,9 +3928,9 @@ sub skip_expression_nocommaop ($)
       if ($type eq $typeFAIL)
 	{ parse_error("skip_expression_nocommaop: parse_array_initializer failed, remaining = $remaining\n");
 	  # just skip it -- don't use $input, which has an open that
-	  # find_close_paren doesn't expect.
+	  # find_close_paren_read doesn't expect.
 	  $type = $typeUNKNOWN;
-	  my ($close_brace_pos, $expanded_input) = find_close_brace($post_open_brace, 0, $true);
+	  my ($close_brace_pos, $expanded_input) = find_close_brace_read($post_open_brace);
 	  $remaining = substr($expanded_input, $close_brace_pos+1);
 	  if ($debug_parse_array_init)
 	    { print "failed to parse array init, found close brace before $remaining\n"; }
@@ -5877,7 +5760,9 @@ sub SaveMacroAnalysisState
     %inclusion_dependenton %inclusion_dependees %inclusion_dependee_lines
     %expansion_dependenton %expansion_dependees %expansion_dependee_lines
     %either_dependee_lines
+    @mdef_direct_inclusion_dependenton
     @rg_ccd_cat_counts
+    %macros_used_by_cpp
 		     );
 
   foreach my $i (0..$#vars_list) {
