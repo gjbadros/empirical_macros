@@ -17,6 +17,8 @@ ALL_CFLAGS = $(INTERNAL_CFLAGS) $(X_CFLAGS) $(T_CFLAGS) $(CFLAGS) $(XCFLAGS) -g 
 # Use yyparse()!
 ALL_CFLAGS += -DGJB_PARSE
 
+ALL_CFLAGS += -DUSE_CPP -DSHOW_TYPES -DCT_DEBUG
+
 # Directory where sources are, from where we are.
 srcdir = .
 PERLARCHDIR = /uns/lib//perl5.004/arch
@@ -220,10 +222,14 @@ PERL-LINKAGE := $(shell $(PERL) $(PERL-EMBED) -e ldopts)
 STANDARD-LINKAGE += $(PERL-LINKAGE)
 C++-FLAGS := $(STANDARD-INCS) ...
 
-GRAMMAROBJS := ansi-c.tab.o ansi-c-lex.o
+GRAMMAR_OBJECTSS := ansi-c.tab.o ansi-c-lex.o
 
-OBJECTS = cppmain.o cpplib.o cpphook.o cpphash.o cppalloc.o cpperror.o cppexp.o \
-  version.o backcalls.o $(GRAMMAROBJS)
+CT_GRAMMAR_OBJECTS := lexer.o gram.tab.o ct-heap.o ct-ken.o ct-nmetab.o ct-prnttree.o ct-symtab.o ct-token.o ct-tree.o ct-tree_stk.o
+
+NON_GRAMMAR_OBJECTS =cppmain.o cpplib.o cpphook.o cpphash.o cppalloc.o cpperror.o cppexp.o \
+  version.o backcalls.o
+
+OBJECTS = $(NON_GRAMMAR_OBJECTS) $(GRAMMAR_OBJECTSS)
 
 SD_OBJECTS = scan-decls.o cpplib.o cpphash.o cppalloc.o cpperror.o cppexp.o version.o backcalls.o cpphook.o
 
@@ -231,13 +237,18 @@ SD_OBJECTS = scan-decls.o cpplib.o cpphash.o cppalloc.o cpperror.o cppexp.o vers
 pcpp: cppmain hook_index_constants.pm
 	cp $< $@
 
-cppmain: $(OBJECTS) $(LIBDEPS)
+cppmain: $(OBJECTS)
 	rm -f $@
-	$(CC) $(ALL_CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS) $(LIBS) $(PERLLIBS)
+	$(CC) $(ALL_CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS) $(PERLLIBS)
 
-scandecls: $(SD_OBJECTS) $(LIBDEPS)
+pcppct: $(NON_GRAMMAR_OBJECTS) $(CT_GRAMMAR_OBJECTS)
 	rm -f $@
-	$(CC) $(ALL_CFLAGS) $(LDFLAGS) -o $@ $(SD_OBJECTS) $(LIBS) $(PERLLIBS)
+	$(CC) $(ALL_CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS) $(PERLLIBS)
+
+
+scandecls: $(SD_OBJECTS)
+	rm -f $@
+	$(CC) $(ALL_CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS) $(PERLLIBS)
 
 tags:
 	etags cppmain.[ch] cpplib.[ch] cpphash.[ch] cppalloc.[ch] cpperror.[ch] cppexp.[ch] version.c pcp.h tm.h 
@@ -249,7 +260,7 @@ cpp: $(CCCP)
 	-rm -f cpp$(exeext)
 	ln $(CCCP)$(exeext) cpp$(exeext) > /dev/null 2>&1 \
 	 || cp $(CCCP)$(exeext) cpp$(exeext)
-cccp: cccp.o cexp.o version.o $(LIBDEPS)
+cccp: cccp.o cexp.o version.o
 	$(CC) $(ALL_CFLAGS) $(LDFLAGS) -o $@ cccp.o cexp.o \
 	  version.o $(LIBS)
 cexp.o: $(srcdir)/cexp.c $(CONFIG_H) cpphook.h
@@ -318,13 +329,21 @@ END { print "};\n" } \
 /^} HOOK_INDEX;/ { exit } \
 f == 1 { gsub("^ +",""); gsub(",",""); print "\""$$0"\"," }') > $@
 
+## ANSI C grammar included w/ CTree but *not* used by it
 ansi-c-lex.c: ansi-c.l
 	flex -o$@ $^
 
 ansi-c.tab.c ansi-c.tab.h: ansi-c.y
 	bison -d $^
 
-grammar: $(GRAMMAROBJS) grammar.o
+## The C Grammar used by CTree 0.05
+lexer.c: lexer.l
+	flex -o$@ $^
+
+gram.tab.c gram.tab.h: gram.y
+	bison -d $^
+
+grammar: $(GRAMMAR_OBJECTSS) grammar.o
 	gcc -g -o grammar $^ -lfl
 
 .PHONY: tags clean
