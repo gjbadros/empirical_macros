@@ -1056,7 +1056,7 @@ copy_rest_of_line (pfile)
 	  goto end_directive;
 	scan_directive_token:
 	  FORWARD(-1);
-	  cpp_get_token (pfile);
+	  cpp_get_token (pfile,0);
 	  continue;
 	}
       CPP_PUTC (pfile, c);
@@ -1967,13 +1967,12 @@ cpp_pop_buffer (pfile)
    Pop the buffer when done. */
 
 void
-cpp_scan_buffer (pfile)
-     cpp_reader *pfile;
+cpp_scan_buffer (cpp_reader *pfile, cpp_expand_info *pcei)
 {
   cpp_buffer *buffer = CPP_BUFFER (pfile);
   for (;;)
     {
-      enum cpp_token token = cpp_get_token (pfile);
+      enum cpp_token token = cpp_get_token (pfile,pcei);
       if (token == CPP_EOF) /* Should not happen ... */
 	break;
       if (token == CPP_POP && CPP_BUFFER (pfile) == buffer)
@@ -1994,10 +1993,8 @@ cpp_scan_buffer (pfile)
  */
 
 static void
-cpp_expand_to_buffer (pfile, buf, length)
-     cpp_reader *pfile;
-     U_CHAR *buf;
-     int length;
+cpp_expand_to_buffer (cpp_reader *pfile, U_CHAR *buf, int length,
+		      cpp_expand_info *pcei)
 {
   register cpp_buffer *ip;
 #if 0
@@ -2031,7 +2028,7 @@ cpp_expand_to_buffer (pfile, buf, length)
 #endif
 
   /* Scan the input, create the output.  */
-  cpp_scan_buffer (pfile);
+  cpp_scan_buffer (pfile,pcei);
 
 #if 0
   if (indepth != odepth)
@@ -2237,7 +2234,7 @@ macarg (cpp_reader *pfile, int rest_args)
   pfile->no_macro_expand++;
   for (;;)
     {
-      token = cpp_get_token (pfile);
+      token = cpp_get_token (pfile,0);
       switch (token)
 	{
 	case CPP_EOF:
@@ -2715,7 +2712,8 @@ CbuffersDeep(cpp_reader *pfile)
    an argument list follows; arguments come from the input stack.  */
 
 static void
-macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchMacroNameStart)
+macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchMacroNameStart,
+	     cpp_expand_info *pcei)
 {
   int nargs;
   unsigned char *pchRawCall;
@@ -2958,10 +2956,15 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchMacroNameStart)
 		 So compute its expansion, if we have not already.  */
 	      if (args[ap->argno].expand_length < 0)
 		{
+		  cpp_expand_info cei;
+		  cei.argno = ap->argno;
+		  cei.hp  = hp;
+		  cei.pceiPrior = pcei;
 		  args[ap->argno].expanded = CPP_WRITTEN (pfile);
 		  cpp_expand_to_buffer (pfile,
 					ARG_BASE + args[ap->argno].raw,
-					args[ap->argno].raw_length);
+					args[ap->argno].raw_length,
+					&cei);
 
 		  args[ap->argno].expand_length
 		    = CPP_WRITTEN (pfile) - args[ap->argno].expanded;
@@ -3123,7 +3126,7 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchMacroNameStart)
 			       hp->name,xbuf+2,xbuf_len-4,xbuf_len-4,
 			       pchMacroNameStart,cchRawCall,
 			       CPP_BUFFER(pfile)->has_escapes,cbuffersDeep,
-			       nargs<0?0:nargs,
+			       pcei, nargs<0?0:nargs,
 			       args);
       }
     else
@@ -3132,7 +3135,7 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchMacroNameStart)
 			       hp->name,xbuf+2,xbuf_len-4,xbuf_len-4,
 			       pchMacroNameStart,cchRawCall,
 			       CPP_BUFFER(pfile)->has_escapes,cbuffersDeep,
-			       nargs<0?0:nargs,
+			       pcei, nargs<0?0:nargs,
 			       args);
       }
     }
@@ -3206,7 +3209,7 @@ get_directive_token (pfile)
 	  token = CPP_VSPACE;
 	  goto RETURN;
 	  }
-      token = cpp_get_token (pfile);
+      token = cpp_get_token (pfile,0);
       switch (token)
       {
       case CPP_POP:
@@ -4648,7 +4651,7 @@ skip_if_group (pfile, any)
       case '\'':
 	FORWARD(-1);
 	old = CPP_WRITTEN (pfile);
-	cpp_get_token (pfile);
+	cpp_get_token (pfile,0);
 	CPP_SET_WRITTEN (pfile, old);
 	break;
       case '\\':
@@ -4849,7 +4852,7 @@ validate_else (pfile, directive)
   
 
 enum cpp_token
-cpp_get_token (cpp_reader *pfile)
+cpp_get_token (cpp_reader *pfile, cpp_expand_info *pcei)
 {
   register int c, c2, c3;
   long old_written;
@@ -5447,7 +5450,7 @@ cpp_get_token (cpp_reader *pfile)
 	      {
 		/* Expand the macro, reading arguments as needed,
 		   and push the expansion on the input stack.  */
-		macroexpand (pfile, hp, pchMacroNameStart);
+		macroexpand (pfile, hp, pchMacroNameStart, pcei);
 		CPP_SET_WRITTEN (pfile, before_name_written);
 	      }
 
@@ -5519,7 +5522,7 @@ cpp_get_non_space_token (pfile)
   int old_written = CPP_WRITTEN (pfile);
   for (;;)
     {
-      enum cpp_token token = cpp_get_token (pfile);
+      enum cpp_token token = cpp_get_token (pfile,0);
       if (token != CPP_COMMENT && token != CPP_POP
 	  && token != CPP_HSPACE && token != CPP_VSPACE)
 	return token;
@@ -6280,7 +6283,7 @@ push_parse_file (pfile, fname)
 	    }
 	  cpp_push_buffer (pfile, NULL, 0);
 	  finclude (pfile, fd, pend->arg, 0, NULL_PTR);
-	  cpp_scan_buffer (pfile);
+	  cpp_scan_buffer (pfile,0);
 	}
     }
   opts->no_output--; pfile->no_record_file--;
@@ -7390,7 +7393,7 @@ read_token_list (pfile, error_flag)
       else if (c == '"' || c == '\'')
         {
 	  FORWARD(-1);
-	  cpp_get_token (pfile);
+	  cpp_get_token (pfile,0);
         }
       else if (c == '\n')
 	break;

@@ -82,7 +82,7 @@ enum cpp_token {
 #endif
 #endif /* !PARAMS */
 
-typedef enum cpp_token (*parse_underflow_t) PARAMS((cpp_reader*));
+typedef enum cpp_token (*parse_underflow_t) PARAMS((cpp_reader*, cpp_expand_info *));
 typedef int (*parse_cleanup_t) PARAMS((cpp_buffer *, cpp_reader*));
 
 /* A parse_marker indicates a previous position,
@@ -654,6 +654,12 @@ struct argdata {
   long dchUsesEnd[16];    /* ending offset of each successive use */
 };
 
+
+typedef struct cpp_expand_info {
+  int argno;
+  cpp_hashnode *hp;
+  struct cpp_expand_info *pceiPrior;
+} cpp_expand_info;
 
 extern void cpp_buf_line_and_col PARAMS((cpp_buffer*, long*, long*));
 extern cpp_buffer* cpp_file_buffer PARAMS((cpp_reader*));
