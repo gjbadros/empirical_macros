@@ -580,7 +580,7 @@ sub peek_fulltoken_cline ( $$ )
   if ($arg < 1)
     { croak ("bad argument $arg to peek_fulltoken_cline", caller); }
   if ($debug_cline)
-    { print "called peek_fulltoken_line($arg)\n";
+    { print "called peek_fulltoken_cline($arg)\n";
       print "ungot raw: ", join("  >>", @cline_ungot_raw_lines);
       print "ungot simple: ", join("  >>", @cline_ungot_simple_lines); }
 
@@ -603,7 +603,7 @@ sub peek_fulltoken_cline ( $$ )
 	  croak("Why look far ahead when you haven't looked near?  $arg " . scalar(@cline_ungot_raw_lines));
 	  # Old implementation.
 	  # # Recursively fill up the arrays
-	  # peek_fulltoken_line($arg-1);
+	  # peek_fulltoken_cline($arg-1);
 	}
       if ($arg != (@cline_ungot_raw_lines + 1))
 	{ die "arg $arg != cline_ungot_raw_lines+1 ", (@cline_ungot_raw_lines + 1); }
@@ -618,7 +618,7 @@ sub peek_fulltoken_cline ( $$ )
 	push (@cline_ungot_phys_lines, $phys);
 	push (@cline_ungot_ncnb_lines, $ncnb);
 	push (@cline_ungot_warnings, $warnings);
-	if ($debug_cline) { print "peek_fulltoken_line($arg) returning $simple"; }
+	if ($debug_cline) { print "peek_fulltoken_cline($arg) returning '$simple'"; }
 	return($raw, $simple, $phys, $ncnb, $warnings); }
     }
 }
