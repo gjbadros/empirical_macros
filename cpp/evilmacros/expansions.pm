@@ -334,7 +334,7 @@ sub do_if {
 sub do_elif {
   my ($s_start,$s_end,$already_did_clause, $conditional, $skipped, $value, $s_branch_start) = @_;
   my $s_branch_end = pcp3::CchOffset() + 1;
-  print CPP "do_elif on $conditional ($skipped) evals to $value; $already_did_clause\n";
+  print CPP "do_elif on $conditional ($skipped) evals to $value; $already_did_clause\ns_branch_start = $s_branch_start\n";
   if ($value == 0 && $conditional ne "0") {
     handle_unincluded_block($s_branch_start,$s_branch_end,$skipped);
   }
@@ -371,7 +371,7 @@ sub do_xifdef {
   my $s_branch_end = pcp3::CchOffset() + 1;
   print CPP "do_xifdef ($kind) on $conditional [$trailing_garbage] ($skipped), ",
   !$fSkipping?"Not ":"", "skipped\n";
-  print CPP ": @[$s_start - $s_end]\n";
+  print CPP ": @[$s_start - $s_end]\ns_branch_start = $s_branch_start\n";
   # This copy is for seeing if parse state changes at endif
   pcp3::YYPushStackState();
   if ($fSkipping) {
@@ -414,10 +414,19 @@ sub pop_perl_buffer {
 
 sub do_else {
   my ($s_start,$s_end, 
-      $orig_conditional, $trailing_garbage, $skipped, $fSkipping, $s_start_branch) = @_;
-  my $s_end_branch = pcp3::CchOffset() + 1;
+      $orig_conditional, $trailing_garbage, $skipped, $fSkipping, $s_branch_start) = @_;
+  my $s_branch_end = pcp3::CchOffset() + 1;
   print CPP "do_else (orig conditional was $orig_conditional) [$trailing_garbage] ($skipped), ",
   !$fSkipping?"Not ":"", "skipped\n";
+#  my $fTriviallyTrue = cpp_trivially_true_condition($orig_conditional);
+  # $orig_conditional does not get set properly, so don't bother with this --01/13/99 gjb
+  my $fTriviallyTrue = $false; # original condition was not trivial
+  if ($fSkipping && !$fTriviallyTrue) {
+     handle_unincluded_block($s_branch_start,$s_branch_end,$skipped,"If",$conditional);
+  } elsif ($fTriviallyTrue) {
+    print STDERR "Skipped comment-like else conditional because orig_condition ($orig_conditional) was true\n";
+  }
+
   @state_stack = pcp3::ParseStateStack();
   print CPP ": Stack: @state_stack\n";
   my $fname = pcp3::Fname();
