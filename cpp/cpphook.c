@@ -20,6 +20,7 @@
 #undef TRUE
 
 #include "cpplib.h"
+#include "cpphash.h"
 #include <stdio.h>
 
 #ifndef EMACS
@@ -228,10 +229,24 @@ gjb_call_hooks_sz_szl_i_szl_i(struct cpp_options *opts, HOOK_INDEX ih,
   perl_call_sv(psvFunc, G_DISCARD);
 }
 
+
+int CNestedArgExpansions(cpp_expand_info *pcei)
+{
+  int cexpansions = 0;
+  while (pcei != NULL)
+    {
+    cexpansions++;
+    pcei = pcei->pceiPrior;
+    }
+  return cexpansions;
+}
+
+
 void
 gjb_call_hooks_expansion(struct cpp_reader *pfile, HOOK_INDEX ih,
 			 char *sz1, char *sz2, int cch2, int i1, 
 			 char *sz3, int cch3, int has_escapes, int cbuffersDeep,
+			 cpp_expand_info *pcei,
 			 int nargs, struct argdata *args)
 {
   SV *psvFunc = NULL;
@@ -239,6 +254,7 @@ gjb_call_hooks_expansion(struct cpp_reader *pfile, HOOK_INDEX ih,
   int iuse = 0;
   int offset = 0;
   struct cpp_options *opts = CPP_OPTIONS(pfile);
+  int cNestedArgExpansions = CNestedArgExpansions(pcei);
 
   dSP;
   
@@ -252,6 +268,12 @@ gjb_call_hooks_expansion(struct cpp_reader *pfile, HOOK_INDEX ih,
   XPUSHs(sv_2mortal(newSVpvlen(sz3, cch3)));
   XPUSHs(sv_2mortal(newSViv(has_escapes)));
   XPUSHs(sv_2mortal(newSViv(cbuffersDeep)));
+  XPUSHs(sv_2mortal(newSViv(cNestedArgExpansions)));
+  while (pcei != NULL) 
+    {
+    XPUSHs(sv_2mortal(newSVpvf("%s#%d",pcei->hp->name,pcei->argno)));
+    pcei = pcei->pceiPrior;
+    }
   XPUSHs(sv_2mortal(newSViv(nargs)));
   for (iarg = 0; iarg < nargs; iarg++)
     {
