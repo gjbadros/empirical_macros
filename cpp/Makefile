@@ -395,6 +395,7 @@ gram.tab.h: gram.y
 
 gram.tab.c: gram.y
 	$(BISON) -v -pct_yy -d $^
+	cp $@ $@.orig
 	patch <gram.tab.c.patch
 
 gram.h: gram.tab.h
