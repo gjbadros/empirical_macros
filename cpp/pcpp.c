@@ -71,6 +71,12 @@ extern char *getenv ();
 char *progname;
 
 cpp_reader parse_in;
+/* FIXGJB: pcr not used for now, but perhaps it'd be better in 
+   case I need to save all of cpp state by making a deep copy;
+   if so, then most places that referred to &parse_in would instead
+   use pcr, and I'd make a deep copy of the old pcr and point the new
+   pcr to it, with a backpointer */
+cpp_reader *pcr = &parse_in;
 cpp_options options;
 
 /* More 'friendly' abort that prints the line and file.
