@@ -58,7 +58,6 @@ my @categories = \(
   @nm_mcat_TYPE,
 #  @nm_mcat_DECLARATION,
   @nm_mcat_SYNTAX,
-  @nm_mcat_RECURSIVE,
   @nm_mcat_NON_C_CODE,
   @nm_mcat_SYMBOL_UNKNOWN,
   @nm_mcat_OTHER );
@@ -72,7 +71,6 @@ my @categories = \(
   @nm_mcat_TYPE = map {$categoryname[${$_}]} @mcat_TYPE;
 #  @nm_mcat_DECLARATION = map {$categoryname[${$_}]} @mcat_DECLARATION;
   @nm_mcat_SYNTAX = map {$categoryname[${$_}]} @mcat_SYNTAX;
-  @nm_mcat_RECURSIVE = map {$categoryname[${$_}]} @mcat_RECURSIVE;
   @nm_mcat_NON_C_CODE = map {$categoryname[${$_}]} @mcat_NON_C_CODE;
   @nm_mcat_SYMBOL_UNKNOWN = map {$categoryname[${$_}]} @mcat_SYMBOL_UNKNOWN;
   @nm_mcat_OTHER = map {$categoryname[${$_}]} @mcat_OTHER;
