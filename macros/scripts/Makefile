@@ -214,7 +214,7 @@ text_tables:	$(TEXT_TABLES)
 tbl-package-sizes: $(STAT)
 	macros-make-package-sizes-tbl-from-stat $^ > $@
 
-tbl-package-sizes-with-uses: tbl-package-sizes
+tbl-package-sizes-with-uses: tbl-package-sizes made-catdefuse
 	macros-make-tbl-package-sizes-with-uses $^ > $@
 
 # To add commas, do this in Emacs:
