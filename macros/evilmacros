@@ -17,7 +17,7 @@
 #   mi = method of inclusion; why this file is being processed
 
 # FIXMERNST: handle #define /* badly-placed-comment */ MACRONAME  properly
-# FIX: getline should probably always return a simplified and an
+# FIX: get_fulltoken_line should probably always return a simplified and an
 # FIX:   unsimplified version of the line so that if we're not looking
 # FIX:   at simplified lines, we don't have to duplicate the simplification
 # FIX:   in an ad-hoc way
@@ -26,7 +26,7 @@
 BEGIN { if (defined $ENV{"PERLINC"})
 	  { unshift(@INC, split(/[ :]+/, $ENV{"PERLINC"})); } }
 
-my $getopts_option_letters = "ihvtIAau1g:d:D:M:S:F:C:E:P:";
+my $getopts_option_letters = "ihvtIAau1pg:d:D:M:S:F:C:E:P:";
 
 # Remove the asterisks below when the options
 # are known to the users
@@ -54,6 +54,7 @@ New options marked with *; options with ':', above, take an argument
   -C [file]  show categorizations to file
   -E [file]  send evil macros to file instead of stdout
   -P [file]  send parse errors to file instead of stdout
+  -p  send parse errors to stdout even if also sending to file
 
 (Note: -{D,S,F,C,E,P} options take precedence over the -d option)
 
@@ -95,6 +96,13 @@ find-c | evilmacros -iv -d ~/macros/data/stable
 ### To do
 ###
 
+# ***** Categorize essential macros.
+# ***** Don't use "macro as function" -- instead, inherit category from callee.
+# ***** Maybe lobotomize pass 2 not to parse full declaration, only to note
+#	begin and end of function.
+
+# Make sure info about uses of built-in macros like __STDC__ gets output.
+
 # I can't believe that macro_dependenton works at all; fix it.
 
 # fixgjb:
@@ -110,7 +118,7 @@ find-c | evilmacros -iv -d ~/macros/data/stable
 
 # Greg:
 #  cppcmdcount is not getting set any longer
-#  getline():
+#  get_fulltoken_line():
 #    new global variable $current_lineno or some such, like $.
 #    for each PHYSICAL line, accumulate into counts of:
 # 	blank lines, comment lines, and code lines.  (Sum will
@@ -150,7 +158,7 @@ find-c | evilmacros -iv -d ~/macros/data/stable
 #  * Keep track of the current conditional compilation constraints
 #  * Warn about multi-line comments/strings in macro definitions.  (Plus
 # 	option to turn this off.)
-# 	Presently getline() removes the newlines silently; it shouldn't warn
+# 	Presently get_fulltoken_line() removes the newlines silently; it shouldn't warn
 # 	since it is called for every line, not just those in macro defs.
 #  * Try other (non-gcc) preprocessors on the problematic stuff, to see if they
 # 	deal with it identically.
@@ -345,7 +353,7 @@ my @categoryname = (
 ## Needs to be fixed.
 ## Perhaps give actual constant, so it can be determined.
 sub category_lub
-{ my ($c1, $c2) = check_args(2, caller(0), @_);
+{ my ($c1, $c2) = check_args(2, @_);
   return (($c1 == $c2) ? $c1 : $catMULTIPLE);
 }
 
@@ -431,7 +439,12 @@ my $declarator_re = '(' . $declarator_parenthesized_re . '|'
 # Use this in preference to $type_identifier_re
 # 2 groups: $1 = type specifier, $2 = declarator
 # my $type_declarator_unparen_re = '(' . $type_specifier_re . ')\s*' . $declarator_re;
+# For functions, does NOT include teh open paren or any argument info.
 my $type_declarator_re = '(' . $type_specifier_re . ')\s*' . $declarator_re;
+# Should probably use $type_declarator_re and $type_re
+my $simple_arglist_re = '\(\s*(?:' . $identifier_re . '\s*\**\s*(?:,\s*' . $identifier_re . '\s*\**\s*)*)?\s*\)'; # 0 groups
+# 3 groups: $1 = type specifier, $2 = declarator, $3 = arglist
+my $type_declarator_arglist_re = $type_declarator_re . '\s*(' . $simple_arglist_re . ')';
 
 # # This isn't going to work, because of looping.  Break the loop somehow.
 # $simple_declarator_re = $identifier_re;
@@ -503,13 +516,13 @@ my @type_name_array = ('typeFAIL', 'bool',
 # This is incredibly disgusting; do something about it.
 sub is_number
 {
-  my ($arg) = check_args(1, caller(0), @_);
+  my ($arg) = check_args(1, @_);
   $arg =~ /^\d+$/;
 }
 
 sub type_name
 {
-  my ($type) = check_args(1, caller(0), @_);
+  my ($type) = check_args(1, @_);
   if (is_number($type))
     { return $type_name_array[$type]; }
   else
@@ -518,7 +531,7 @@ sub type_name
 
 sub type_to_num
 {
-  my ($type) = check_args(1, caller(0), @_);
+  my ($type) = check_args(1, @_);
   # print "type = $type; type_num{type} = $type_num{$type} \n";
   # Compress multiple spaces to just one, but don't remove all space!
   $type =~ s/\s+/ /og;
@@ -534,7 +547,7 @@ sub type_to_num
 # This doesn't yet do the right thing.
 sub infer_int_type
 {
-  my ($int) = check_args(1, caller(0), @_);
+  my ($int) = check_args(1, @_);
   if ($int =~ /^0[xX]/)
     # Hex
     { # return first of ($typeUINT $typeLONG $typeULONG) in which the number fits
@@ -547,7 +560,7 @@ sub infer_int_type
 }
 
 sub type_integral_p
-{ my ($type) = check_args(1, caller(0), @_);
+{ my ($type) = check_args(1, @_);
   return (($type == $typeBOOL)
 	  || ($type == $typeCHAR) || ($type == $typeUCHAR) || ($type == $typeSCHAR)
 	  || ($type == $typeSHORT) || ($type == $typeUSHORT)
@@ -558,7 +571,7 @@ sub type_integral_p
 ### Type manipulation: arrays, pointers, functions
 
 sub type_dereference
-{ my ($type) = check_args(1, caller(0), @_);
+{ my ($type) = check_args(1, @_);
   if ($type == $typeSTRING)
     { return $typeCHAR; }
   if ($type =~ /(\*|\[\])\s*$/)
@@ -579,7 +592,7 @@ sub type_dereference
 
 sub type_unsigned
 {
-  my ($type) = check_args(1, caller(0), @_);
+  my ($type) = check_args(1, @_);
   if (($type == $typeCHAR) || ($type == $typeSCHAR))
     { return $typeUCHAR; }
   elsif ($type == $typeSHORT)
@@ -594,7 +607,7 @@ sub type_unsigned
 
 sub type_signed
 {
-  my ($type) = check_args(1, caller(0), @_);
+  my ($type) = check_args(1, @_);
   if (($type == $typeCHAR) || ($type == $typeUCHAR))
     { return $typeSCHAR; }
   elsif ($type == $typeUSHORT)
@@ -609,7 +622,7 @@ sub type_signed
 
 sub type_long
 {
-  my ($type) = check_args(1, caller(0), @_);
+  my ($type) = check_args(1, @_);
   if ($type == $typeCHAR)
     { return $typeLONG; }
   elsif ($type == $typeUCHAR)
@@ -636,7 +649,7 @@ sub type_long
 # except that if types are identical, it returns them.
 # Can also return short, ushort.
 sub type_lub
-{ my ($t1, $t2) = check_args(2, caller(0), @_);
+{ my ($t1, $t2) = check_args(2, @_);
   # This test works whether $t1, $t2 are numbers or strings
   if ($t1 eq $t2)
     { return $t1; }
@@ -665,7 +678,7 @@ sub type_lub
 # FIX: GJB
 # Given a basetype and declarator string, return a type and an identifier.
 sub parse_declarator
-{ my ($basetype, $declarator) = check_args(2, caller(0), @_);
+{ my ($basetype, $declarator) = check_args(2, @_);
   if (!($declarator =~ /$identifier_re/o))
     { parse_error("parse_declarator($basetype, $declarator): no word in declarator");
       return ("$basetype $declarator", "no identifier"); }
@@ -689,7 +702,7 @@ sub parse_declarator
 # FIX: GJB
 # Given a type string, return a type
 sub parse_type
-{ my ($type) = check_args(1, caller(0), @_);
+{ my ($type) = check_args(1, @_);
   return $type;
 }
 
@@ -915,7 +928,7 @@ my $debug_getline = $false;	# a LOT of output; use only on small inputs
 ## Command-line processing
 # Are these in any order?
 use vars qw($opt_i $opt_I $opt_h $opt_v $opt_t $opt_d
-	    $opt_D $opt_M $opt_S $opt_F $opt_C $opt_E $opt_P
+	    $opt_D $opt_M $opt_S $opt_F $opt_C $opt_E $opt_P $opt_p
 	    $opt_u $opt_1 $opt_A $opt_a $opt_g);
 my $fIgnoreIncludes = $false;
 
@@ -931,7 +944,7 @@ $finding_macro_defs = $false;
 $finding_macro_uses = $false;
 $merge_cpp_if_branches = $false;
 
-# For getline():
+# For get_fulltoken_line():
 # These can't be declared with "my" because they're dynamically bound
 use vars qw($getline_simplify $getline_nocpp $getline_peeking
 	    $getline_physical_lines $getline_physical_ncnb_lines);
@@ -948,7 +961,7 @@ my @dependenton = ();
 ### Read files, save info about macros
 sub find_macro_definitions
 {
-  check_args(0, caller(0), @_);
+  check_args(0, @_);
   if ($finding_macro_defs)
     { mdie("Called find_macro_definitions, but already finding macrodefs"); }
   local $finding_macro_defs = $true;
@@ -986,7 +999,7 @@ sub find_macro_definitions
 sub process_macro_definition
 {
   my ($def,$def_noc,$macro_physical_lines,$macro_physical_ncnb_lines)
-    = check_args(4, caller(0), @_);
+    = check_args(4, @_);
   # print "process_macro_definition <<$def>>\n";
   my ($name_ignore, $args_ignore, $body) = macroparse($def);
   my ($name, $args, $body_noc) = macroparse($def_noc);
@@ -1057,7 +1070,7 @@ sub process_macro_definition
 
 # process_macro_undefinition handles #undef-s
 sub process_macro_undefinition {
-  my ($cpp_cmd_arg, $cpp_cmd_arg_noc) = check_args(2,caller(0),@_);
+  my ($cpp_cmd_arg, $cpp_cmd_arg_noc) = check_args(2, @_);
 
   # Pull out first word
   if (!($cpp_cmd_arg_noc =~ /^$identifier_re/o))
@@ -1077,7 +1090,7 @@ sub process_macro_undefinition {
 # Hack: optionally takes an additional @dependenton to merge with the macros.
 sub macro_dependenton
 {
-  my ($macro_name, @dependenton) = check_args_at_least(1, caller(0), @_);
+  my ($macro_name, @dependenton) = check_args_at_least(1, @_);
   # ***** FIX:  Is this right at all?  Should it be @{$macros{$macro_name}} ??
   my @indices = @macros{$macro_name};
   shift(@indices);		# eliminate the count of size
@@ -1149,7 +1162,7 @@ MDDONE:
 # If the dependentons are the same for all but the last element, return all
 # but that last element.  Otherwise return $false.
 sub merge_dependenton
-{ my ($index, @do2) = check_args_at_least(1, caller(0), @_);
+{ my ($index, @do2) = check_args_at_least(1, @_);
   if (!dependenton_single_difference($index, @do2))
     { return $false; }
   return @{$mdef_dependenton[$index]};
@@ -1167,7 +1180,7 @@ sub merge_dependenton
 
 
 sub dependenton_single_difference
-{ my($index, @do2) = check_args_at_least(1, caller(0), @_);
+{ my($index, @do2) = check_args_at_least(1, @_);
   my @do1;
   @do1 = @{$mdef_dependenton[$index]};
   # Old way to copy array, replaced by the above
@@ -1198,7 +1211,7 @@ sub dependenton_single_difference
 ## information, perhaps even make it order-independent.
 sub dependenton_identical
 {
-  my ($macro_name, @depend) = check_args_at_least(1, caller(0), @_);
+  my ($macro_name, @depend) = check_args_at_least(1, @_);
   my @macro_depend = macro_dependenton($macro_name);
   if ($#depend != $#macro_depend)
     { return $false; }
@@ -1215,7 +1228,7 @@ sub dependenton_identical
 # potential problem:  if arg == "!(!(...))", then  (nif(nif($arg)) ne $arg)
 sub negate_cpp_if_condition
 {
-  my ($cond) = check_args(1, caller(0), @_);
+  my ($cond) = check_args(1, @_);
   if ($cond =~ /^!\((.*)\)$/)
     { return $MATCH; }
   else
@@ -1231,7 +1244,7 @@ sub negate_cpp_if_condition
 #FIX: Get stats on number of macros only #undef-d, etc.
 sub output_stats
 {
-  check_args(0, caller(0), @_);
+  check_args(0, @_);
 
   local $OFS = (defined($outOFS) ? $outOFS : " ");
   #   if (defined($outOFS)) {
@@ -1492,7 +1505,7 @@ $commaop = $true;		# whether commas should be operators or not
 # Constructing simplified values are a bit wasteful on the first pass, when we
 # only care about macro definitions; special-case that?
 sub get_fulltoken_line
-{ my ($continuation) = check_args_range(0, 1, caller(0), @_);
+{ my ($continuation) = check_args_range(0, 1, @_);
   if (!defined($continuation))
     { $continuation = $false; }
   if ($instring || $incomment)
@@ -1586,7 +1599,7 @@ sub get_fulltoken_line
     }
 
   if ($simple_result eq "")
-    { mdie("empty getline result"); }
+    { mdie("empty get_fulltoken_line result"); }
   # print "get_fulltoken_line returning <<$simple_result>>\n"; # $result ends in newline
   return ($simple_result);
 }
@@ -1597,7 +1610,7 @@ sub get_fulltoken_line
 # values wrong.
 sub peek_line
 {
-  my ($arg) = check_args(1, caller(0), @_);
+  my ($arg) = check_args(1, @_);
   if ($arg < 1)
     { mdie ("bad argument $arg to peekline", caller); }
   if ($debug_peek)
@@ -1634,7 +1647,7 @@ sub peek_line
 	# Perhaps getline_peeking can replace this use of $getline_nocpp??
 	local $getline_nocpp = $true;
 	local $current_raw_fulltoken_line;
-	# print "peeking about to call getline\n";
+	# print "peeking about to call get_fulltoken_line\n";
 	$nextline = get_fulltoken_line();
 	# print "peeking found $nextline";
 	push (@getline_ungot_simple_lines, $nextline);
@@ -1648,7 +1661,7 @@ sub peek_line
 # Takes a simplified line as its argument; returns a string containing the
 # unbalanced braces (empty string if all braces are balanced).
 sub brace_change
-{ my ($line) = check_args(1, caller(0), @_);
+{ my ($line) = check_args(1, @_);
   # print "brace_change $line";
   my $result_num = 0;
   my $result_chars = "";
@@ -1669,7 +1682,7 @@ sub brace_change
 # Perhaps this should also check for braces (and complain or err if any are
 # found before parens balance).
 sub paren_change
-{ my ($line) = check_args(1, caller(0), @_);
+{ my ($line) = check_args(1, @_);
   # print "paren_change $line";
   my $result_num = 0;
   my $result_chars = "";
@@ -1691,7 +1704,7 @@ sub paren_change
 # Optional third argument says whether to read lines to try to balance (in
 # which case the second return value can differ from the first input value).
 sub find_close_paren
-{ my ($exp, $pos, $read) = check_args_range(1, 3, caller(0), @_);
+{ my ($exp, $pos, $read) = check_args_range(1, 3, @_);
   if (!defined($pos))
     { $pos = 0; }
   if (!defined($read))
@@ -1747,19 +1760,22 @@ sub find_close_paren
   return ($pos - 1, $exp);
 }
 
+## FIX:  throttle this after a certain number of lines have been read.
+## Also, I could perhaps better implement this recursively than as a loop.
 # Return index of first close brace which doesn't match a preceding open brace
 # in the argument string, and the argument string.  Ignores strings, parens, etc.
 # Optional second argument says where to start (right after the open, usually).
 # Optional third argument says whether to read lines to try to balance (in
 # which case the second return value can differ from the first input value).
 sub find_close_brace
-{ my ($exp, $pos, $read) = check_args_range(1, 3, caller(0), @_);
-  if (!defined($pos))
-    { $pos = 0; }
+{ my ($exp, $pos_init, $read) = check_args_range(1, 3, @_);
+  if (!defined($pos_init))
+    { $pos_init = 0; }
   if (!defined($read))
     { $read = $false; }
   # print "find_close_brace: $exp\n";
   my $opens = 1;
+  my $pos = $pos_init;
 
   while ($opens > 0)
     { my $next_open = index($exp, "\{", $pos);
@@ -1782,6 +1798,10 @@ sub find_close_brace
 	  if (!$read)
 	    { mdie("insufficient closing braces in $exp"); }
 	  my $nextline = get_fulltoken_line($true);
+	  # This is a fairly serious problem: may have read the remaining file.
+	  if (!defined($nextline))
+	    { parse_error("Never found close brace in $exp");
+	      return ($pos_init, $exp); }
 	  # print "find_close_brace appending $nextline";
 	  $exp .= $nextline; } }
   return ($pos - 1, $exp);
@@ -1790,7 +1810,7 @@ sub find_close_brace
 # Returns (raw_line, simplified_line, num_phys_lines, num_ncnb_lines)
 sub get_spliced_line
 {
-  check_args(0, caller(0), @_);
+  check_args(0, @_);
 
   my $raw_line = <INPUT>;
   if (not ($raw_line))
@@ -1853,20 +1873,20 @@ sub get_spliced_line
 ###########################################################################
 
 
-# updateinvars is called only by getline and remove_comments at present.
+# updateinvars is called only by get_fulltoken_line and remove_comments at present.
 # Maybe declare that it oughtn't be called at all...
 
 # updateinvars is called on a *physical* line;
 #   backslash line continuations have not been processed.
 
-# updateinvars exists for the purposes of getline, but may be called by others,
+# updateinvars exists for the purposes of get_fulltoken_line, but may be called by others,
 #	particularly to remove comments or simplify string/character literals.
-# Obeys global variable $getline_simplify; see documentation at getline.
+# Obeys global variable $getline_simplify; see documentation at get_fulltoken_line.
 # Returns: (simplified string, num_phys_lines, num_ncnb_lines)
 # I hope that always simplifying isn't terribly inefficient...
 sub updateinvars
 {
-  my ($remaining) = check_args(1, caller(0), @_);
+  my ($remaining) = check_args(1, @_);
   my $result = "";
   # my $computeresult = ($getline_nocomment || $getline_simplify);
   my $seen_ncnb = 0;		# not a boolean, but 0 or 1 (like a boolean)
@@ -1940,6 +1960,8 @@ sub updateinvars
 	  elsif ($match eq "//")
 	    { if ($PREMATCH !~ /^\s*$/)
 		{ $seen_ncnb = 1; }
+	      $result .= "\n";	# so we don't return an empty line, which
+				# looks like failure or end of file
 	      goto UIV_RETURN; }
 	  elsif ($match eq "/*")
 	    { $remaining = $POSTMATCH;
@@ -1969,7 +1991,7 @@ sub updateinvars
 # # Result does NOT end in newline
 # sub remove_comments
 # {
-#   my ($input) = check_args(1, caller(0), @_);
+#   my ($input) = check_args(1, @_);
 #   local $getline_simplify = $false;
 #   my $result = updateinvars($input);
 #   if ($instring || $incomment)
@@ -1985,7 +2007,7 @@ sub updateinvars
 # sub has_token
 # {
 #   my ($token, $line) = @_;
-#   check_args(1, caller(0), @_);
+#   check_args(1, @_);
 #   if (!defined($token)) { mdie("undefined token, line $line\n"); }
 #   if (!defined($line)) { mdie("undefined line, token $token\n"); }
 # 
@@ -2018,10 +2040,10 @@ sub updateinvars
 
 
 # Argument is a simplified line.
-# Returns the line that should be the getline result, usually "\n";
+# Returns the line that should be the get_fulltoken_line result, usually "\n";
 sub getline_handle_preprocessor_line
 {
-  my ($line, $line_noc) = check_args(2, caller(0), @_);
+  my ($line, $line_noc) = check_args(2, @_);
   # print "getline_handle_preprocessor_line: $line"; # $line ends with newline
   if ($line_noc =~ /^\#\s*$/)
     { # null preprocessor command; do nothing
@@ -2067,7 +2089,7 @@ sub getline_handle_preprocessor_line
 sub getline_handle_preprocessor_command
 {
   # $cpp_cmd and $cpp_cmd_arg contain no leading or trailing space.
-  my ($cpp_cmd, $cpp_cmd_arg, $cpp_cmd_arg_noc) = check_args(3, caller(0), @_);
+  my ($cpp_cmd, $cpp_cmd_arg, $cpp_cmd_arg_noc) = check_args(3, @_);
 
   if ($finding_macro_defs) {
     # handle @rg_cpp_cmds and @%rg_cppcmdcounts
@@ -2172,7 +2194,7 @@ sub getline_handle_preprocessor_command
 # No return value.
 sub discard_to_endif
 {
-  check_args(0, caller(0), @_);
+  check_args(0, @_);
   my $if0depth = 1;
   my $line;
   while ($if0depth > 0)
@@ -2180,10 +2202,10 @@ sub discard_to_endif
 	{ mdie("File ends in \#ifdef 0"); }
       # I'll trust that no comment or string contains anything that
       # looks like a preprocessor command.  Strictly speaking, I should
-      # use getline and/or updateinvars, because anything in an #ifdef
+      # use get_fulltoken_line and/or updateinvars, because anything in an #ifdef
       # is supposed to be a sequence of valid tokens, but #ifdef 0 often
       # contains non-syntactic constructs.  (Maybe eventually use
-      # getline/updateinvars but permit and ignore errors.)
+      # get_fulltoken_line/updateinvars but permit and ignore errors.)
       # This duplicates part of find_preprocessor_commands.  Oh, well.
       if ($line =~ m/^\#\s*if(n?def)\b/o)
 	{ $if0depth++; }
@@ -2217,7 +2239,7 @@ sub discard_to_endif
 sub cpp_merge_candidates
 {
   # sum of all previous sizes; 0 on initial call.
-  my ($prev_sizes) = check_args(1, caller(0), @_);
+  my ($prev_sizes) = check_args(1, @_);
   if ($debug_merge_branches) { print "cpp_merge_candidates @dependenton\n"; }
 
   my @parts = ();
@@ -2318,7 +2340,7 @@ ELSEPART:
 # the peekahead of the matching command, plus all the text between.
 # Otherwise return the undefined value.
 sub peek_to_cpp_command
-{ my ($cpp_cmd_re, $peekahead, $size_limit) = check_args(3, caller(0), @_);
+{ my ($cpp_cmd_re, $peekahead, $size_limit) = check_args(3, @_);
   if ($debug_peek)
     { print "entering peek_to_cpp_command(peekahead $peekahead, ungot $#getline_ungot_raw_lines): $cpp_cmd_re\n";
       print "ungot raw: ", join("  >>", @getline_ungot_raw_lines);
@@ -2353,7 +2375,7 @@ sub peek_to_cpp_command
 
 sub cpp_merged_branches
 {
-  check_args(0, caller(0), @_);
+  check_args(0, @_);
   if ($debug_merge_branches) { print "cpp_merged_branches @dependenton\n"; }
 
   # $parts_size = sum of sizes of all parts (and preprocessor glue like "#else")
@@ -2447,7 +2469,7 @@ sub cpp_merged_branches
 
 # All of the lines are identically brace-unbalanced
 sub merge_brace_unbalanced_lines
-{ my ($braces, @lines) = check_args_at_least(3, caller(0), @_);
+{ my ($braces, @lines) = check_args_at_least(3, @_);
 
   my $pieces = length($braces)+1;
 
@@ -2484,14 +2506,14 @@ sub merge_brace_unbalanced_lines
 
 
 sub is_cpp_command
-{ my ($line) = check_args(1, caller(0), @_);
+{ my ($line) = check_args(1, @_);
   $line =~ /^\#/;
 }
 
 # Watch out: this removes the trailing newline.
 sub trim_whitespace
 {
-  my ($result) = check_args(1, caller(0), @_);
+  my ($result) = check_args(1, @_);
   $result =~ s/^\s+//;
   $result =~ s/\s+$//;
   # if ($result =~ /^\s+(.*)$/) { $result = $1; }
@@ -2505,7 +2527,7 @@ sub trim_whitespace
 # so don't call it if ARG1 ends inside a string.
 sub append_lines
 {
-  my ($arg1, $arg2) = check_args(2, caller(0), @_);
+  my ($arg1, $arg2) = check_args(2, @_);
   # "+", not "*", so don't introduce spaces where there were none before
   # Do I need \Z instead of $?  It seems I don't...
   $arg1 =~ s/[ \t\n]+$/ /;
@@ -2516,7 +2538,7 @@ sub append_lines
 # Return an array of three elements: name, args, def.
 # None have leading or trailing whitespace
 sub macroparse
-{ my ($line) = check_args(1, caller(0), @_);
+{ my ($line) = check_args(1, @_);
   # print "macroparse $line\n";
   # Match zero or more, not one or more, spaces before definition.
   # (Perhaps warn if zero are matched.)
@@ -2553,7 +2575,7 @@ sub reset_parse_vars
 # Side-effects: %parsevars, %parsefuns, %parsetypes.
 sub parse_expression
 {
-  my ($exp) = check_args(1, caller(0), @_);
+  my ($exp) = check_args(1, @_);
   reset_parse_vars();
   # print "parse_expression $exp\n";
   # Should be no comments when this is called, so no need to do this.
@@ -2564,7 +2586,7 @@ sub parse_expression
 
 sub parse_exp_nocommaop
 {
-  my ($exp, $ignoretypes) = check_args_range(1, 2, caller(0), @_);
+  my ($exp, $ignoretypes) = check_args_range(1, 2, @_);
   if (!defined($ignoretypes))
     { $ignoretypes = $false; }
   local $commaop = $false;
@@ -2573,7 +2595,7 @@ sub parse_exp_nocommaop
 
 sub parse_exp_commaop
 {
-  my ($exp, $ignoretypes) = check_args_range(1, 2, caller(0), @_);
+  my ($exp, $ignoretypes) = check_args_range(1, 2, @_);
   if (!defined($ignoretypes))
     { $ignoretypes = $false; }
   local $commaop = $true;
@@ -2588,7 +2610,7 @@ sub parse_exp_commaop
 # See H&S p. 181.
 sub parse_exp
 {
-  my ($exp, $ignoretypes) = check_args_range(1, 2, caller(0), @_);
+  my ($exp, $ignoretypes) = check_args_range(1, 2, @_);
   if (!defined($ignoretypes))
     { $ignoretypes = $false; }
   if ($debug_parse_expression) { print "parse_exp: '$exp' '$ignoretypes'\n"; }
@@ -2726,7 +2748,7 @@ sub parse_exp
 # $arglist already has leading paren stripped.
 sub parse_arglist
 {
-  my ($ftype, $arglist_orig) = check_args(2, caller(0), @_);
+  my ($ftype, $arglist_orig) = check_args(2, @_);
   if ($debug_parse_expression) { print "parse_arglist: '$ftype' '$arglist_orig'\n"; }
   my $arglist = $arglist_orig;
 
@@ -2751,7 +2773,7 @@ sub parse_arglist
 # $initializer already has leading brace stripped
 sub parse_array_initializer
 {
-  my ($initlist) = check_args(1, caller(0), @_);
+  my ($initlist) = check_args(1, @_);
 
   if ($debug_parse_array_init)
     { print "parse_array_initializer $initlist"; } # $initlist ends in newline
@@ -2795,7 +2817,7 @@ sub parse_array_initializer
 # so don't try to distinguish; just return them literally.
 sub parse_function_decl_args
 {
-  my ($text) = check_args(1, caller(0), @_);
+  my ($text) = check_args(1, @_);
   # print "parsing arg decls in $text\n";
 
   my @arg_decls = ();
@@ -2850,7 +2872,7 @@ my %argnametype;
 # after the open brace.
 sub parse_KandR_function_arg_decls
 {
-  my ($argdecls) = check_args(1, caller(0), @_);
+  my ($argdecls) = check_args(1, @_);
   %argnametype = ();
   while (!($argdecls =~ /^\s*\{/))
     { # print "parsing K&R function arg decls $argdecls\n";
@@ -2901,7 +2923,7 @@ sub parse_KandR_function_arg_decls
 
 sub parse_exp_follower
 {
-  my ($type, $follow) = check_args(2, caller(0), @_);
+  my ($type, $follow) = check_args(2, @_);
   $follow =~ s/^\s+//;		# remove leading space
 
   if ($debug_parse_expression)
@@ -2973,7 +2995,7 @@ sub parse_exp_follower
 
 sub bool_op_p
 {
-  my ($op) = check_args(1, caller(0), @_);
+  my ($op) = check_args(1, @_);
   return ($op =~ /[<=>!]=|&&|\|\||<|>/);
 }
 
@@ -3016,7 +3038,7 @@ sub check_file_boundary
 
 sub get_macro_call_types
 {
-  check_args(0, caller(0), @_);
+  check_args(0, @_);
   local $finding_macro_uses = $true;
   local $getline_simplify = $true;
   local $merge_cpp_if_branches = $true;
@@ -3045,7 +3067,7 @@ sub get_macro_call_types
       }
 
       check_file_boundary();
-      # Perhaps I should use a variant of getline that insists that parens
+      # Perhaps I should use a variant of get_fulltoken_line that insists that parens
       # are balanced, too; that might let me more reasonably cope with
       # breaks across lines.
       # Perhaps make global so check_file_boundary can check it.
@@ -3527,7 +3549,7 @@ ATCOMMA:
 # This should perhaps do more:  substitute for macros with only one definition,
 # or those that expand to either nothing or a keyword like const, etc.
 sub simple_macro_substitute
-{ my ($text) = check_args(1, caller(0), @_);
+{ my ($text) = check_args(1, @_);
 
   my $fdmacro;
   # Using "for" instead of foreach gives me 'Use of "" without parens is ambiguous'!
@@ -3550,7 +3572,7 @@ sub simple_macro_substitute
 #   Remaining line to reprocess, ...
 sub process_function_definition_or_declaration
 {
-  my ($type, $identifier, $remaining) = check_args(3, caller(0), @_);
+  my ($type, $identifier, $remaining) = check_args(3, @_);
   # print "process_fun_def_or_decl $type $identifier (", exists($macros{$identifier}), ") $remaining\n";
 
   # found (start of) function definition or prototype
@@ -3665,6 +3687,15 @@ sub process_function_definition_or_declaration
 		  { my $type_specifier = $1;
 		    my $declarator = $2;
 		    ($arg_types[$i], $arg_names[$i]) = parse_declarator($type_specifier, $declarator); }
+		# A function, with arguments
+		elsif ($decl =~ /^$type_declarator_arglist_re$/)
+		  { my $type_specifier = $1;
+		    my $declarator = $2;
+		    my $arglist = $3;
+		    my ($type, $name) = parse_declarator($type_specifier, $declarator);
+		    $arg_types[$i] = $type . $arglist;
+		    $arg_names[$i] = $name;
+		  }
 		elsif ($decl eq "...")
 		  { if ($i != $#arg_decls)
 		      { parse_error("Should only find '...' as last declarator");
@@ -3756,7 +3787,16 @@ sub process_function_definition_or_declaration
       enter_scope();
       { my $i;
 	for $i (0..$#arg_names)
-	  { symtab_add($arg_names[$i], $arg_types[$i]); } }
+	  { my $name = $arg_names[$i];
+	    my $type = $arg_types[$i];
+	    # FIX: This happens at Python-1.4/Modules/socketmodule.c:228.
+	    # Why isn't it getting caught as a macro masquerading as a function?
+	    if (!defined($name))
+	      { parse_error("Undefined arg $i name in $identifier"); }
+	    if (!defined($type))
+	      { parse_error("Undefined arg $i type in $identifier"); }
+	    if (defined($name) && defined($type))
+	      { symtab_add($arg_names[$i], $arg_types[$i]); } } }
 
       # Done with function definition
     }
@@ -3772,7 +3812,7 @@ sub process_function_definition_or_declaration
 # This is actually for skipping initializers.
 sub skip_expression_nocommaop
 {
-  my ($input) = check_args(1, caller(0), @_);
+  my ($input) = check_args(1, @_);
   my ($type, $remaining);
 
   # print "skipping expression $input\n";
@@ -3812,7 +3852,7 @@ my $scopemarker = "scope marker";	# contains space, as no real variable can
 
 sub show_symtab
 {
-  my ($text) = check_args(1, caller(0), @_);
+  my ($text) = check_args(1, @_);
   if ($#symtab_identifiers != $#symtab_types)
     { mdie("symtab_identifiers and symtab_types arrays have different lengths ($#symtab_identifiers != $#symtab_types)\n"); }
   print "{SYMBOL TABLE $text at line @{[ current_line_no() ]}:\n";
@@ -3828,7 +3868,7 @@ sub show_symtab
 
 sub enter_scope
 {
-  check_args(0, caller(0), @_);
+  check_args(0, @_);
   push(@symtab_identifiers, $scopemarker);
   push(@symtab_types, 0);
   $symtab_scopes++;
@@ -3837,7 +3877,7 @@ sub enter_scope
 
 sub exit_scope
 {
-  check_args(0, caller(0), @_);
+  check_args(0, @_);
   if ($debug_scopes) { show_symtab("exiting scope $symtab_scopes"); }
   if (@symtab_identifiers == 0)
     { mdie("exit_scope: not in scope (empty symtab_identifiers array)"); }
@@ -3857,7 +3897,7 @@ sub exit_scope
 
 # sub symtab_scopes
 # {
-#   check_args(0, caller(0), @_);
+#   check_args(0, @_);
 #   my $result = 1;
 #   my $id;
 #   for $id (@symtab_identifiers)
@@ -3868,14 +3908,14 @@ sub exit_scope
 
 sub symtab_add
 {
-  my ($identifier, $type) = check_args(2, caller(0), @_);
+  my ($identifier, $type) = check_args(2, @_);
   push (@symtab_identifiers, $identifier);
   push (@symtab_types, $type);
 }
 
 sub symtab_lookup
 {
-  my ($var) = check_args(1, caller(0), @_);
+  my ($var) = check_args(1, @_);
   { my $i;
     for ($i = $#symtab_identifiers; $i >= 0; $i--)
       { if ($var eq $symtab_identifiers[$i])
@@ -3895,7 +3935,7 @@ sub symtab_lookup
 # # FIsNumConst(string)  returns 1 iff string matches a numeric const regexp
 # sub FIsNumConst {
 #   my ($str) = @_;
-#   check_args(1, caller(0), @_);
+#   check_args(1, @_);
 #   if ($str =~ /^\(?-?\d+\.?\d*\)?$/ || # decimal 2.
 #       $str =~ /^\(?-?\d*\.?\d+\)?$/ || # fraction .2
 #       $str =~ /^0x[\d|a-f|A-F]+$/ ||   # hex
@@ -3909,7 +3949,7 @@ sub symtab_lookup
 
 # Takes macro name as argument; categorizes each of the macro's definitions
 sub categorize_macro_name
-{ my ($name) = check_args(1, caller(0), @_);
+{ my ($name) = check_args(1, @_);
   # Below line illustrates that the usage further below ends up added
   # $macros{$name} to the hash
   # print STDERR "CMN: $name ", defined($macros{$name})?"T":"F", "\n";
@@ -3952,7 +3992,7 @@ sub categorize_macro_name
 #FIXMERNST: need to fix this code-- I think it's broken (categories are wrong)
 # Takes index into macro arrays as argument
 sub categorize_macro_def
-{ my ($index) = check_args(1, caller(0), @_);
+{ my ($index) = check_args(1, @_);
 
   # print "Categorizing $index $mdef_name[$index]$mdef_args[$index] $mdef_body[$index]\n";
 
@@ -4115,7 +4155,7 @@ sub categorize_macro_def
 # a K&R or ANSI function declaration by passing in a parenthesized list as
 # the argument.
 sub is_fun_decl_arg_macro
-{ my ($identifier) = check_args(1, caller(0), @_);
+{ my ($identifier) = check_args(1, @_);
 
 #  print STDERR "is_fun_decl_arg_macro: $identifier $macros{$identifier}[0] ", join(', ',(map {$mdef_args[$macros{$identifier}[$_]]} (1..$macros{$identifier}[0]))), "\n";
 
@@ -4188,7 +4228,7 @@ sub is_fun_decl_arg_macro
 # Return true for a macro that takes a single arg and either returns it or
 # returns only an open paren.  See bc-1.03/dc.h line 35.
 sub is_semi_fun_decl_arg_macro
-{ my ($identifier) = check_args(1, caller(0), @_);
+{ my ($identifier) = check_args(1, @_);
 
 #  print STDERR "is_fun_decl_arg_macro: $identifier $macros{$identifier}[0] ", join(', ',(map {$mdef_args[$macros{$identifier}[$_]]} (1..$macros{$identifier}[0]))), "\n";
 
@@ -4261,7 +4301,7 @@ sub is_semi_fun_decl_arg_macro
 
 # Return true for a non-function macro that expands to either nothing or "void".
 sub is_void_macro
-{ my ($identifier) = check_args(1, caller(0), @_);
+{ my ($identifier) = check_args(1, @_);
 
   die "is_void_macro: $identifier" if (!exists $macros{$identifier});
 
@@ -4319,7 +4359,7 @@ sub is_void_macro
 # # Uses $lastline global, too
 # sub categorize_macro
 # { my ($name, $args, $fullbody) = @_;
-#   check_args(1, caller(0), @_);
+#   check_args(1, @_);
 #   if ($fullbody =~ m!^(.*?)\s*(/\*.*\*/\s*)*(//.*)?$!) {
 #     # $1 matches non-commented part w/ leading,trailing ws removed
 #     $body = $1;
@@ -4416,7 +4456,7 @@ sub checkmacrodef
 # otherwise $EVIL $DANGER $OBSOLETE $ILLEGAL
 # (each individual bits)
 sub check_macro_body
-{ my ($body) = check_args(1, caller(0), @_);
+{ my ($body) = check_args(1, @_);
   my $result = 0;
   # print "check_macro_body: $body\n";
   # FIX: These variables do not appear to be used
@@ -4460,7 +4500,7 @@ sub check_macro_body
 	      $body = $POSTMATCH;
 	      my $char = $PREMATCH . $MATCH;
               chop($char);	# remove trailing '
-	      # Perhaps don't bother with this test; getline already checked
+	      # Perhaps don't bother with this test; get_fulltoken_line already checked
 	      # for illegal character constants.
 	      if (! ($char =~ m/^$char_literal_contents_re$/o))
 	        { $result |= $ILLEGAL;
@@ -4537,7 +4577,7 @@ sub check_macro_body
 # Gratuitous?
 sub input_file_and_line
 {
-  check_args(0, caller(0), @_);
+  check_args(0, @_);
   return "$current_file:", current_line_no();
 }
 
@@ -4545,7 +4585,7 @@ sub mdie {
   # After a call, $check_args_function_name is mis-set in the caller.
   # # must save $check_args_function_name before calling check_args_at_least.
   # my $current_function = $check_args_function_name;
-  my (@msg) = check_args_at_least(1,caller(0),@_);
+  my (@msg) = check_args_at_least(1, @_);
   my ($file,$line) = (caller)[1,2];
   print STDERR "$file:$line ",
       # (defined($current_function) ? "function $current_function " : ""),
@@ -4556,17 +4596,17 @@ sub mdie {
 # Perhaps make this die/mdie when debugging.
 sub parse_error
 {
-  my (@msg) = check_args_at_least(1, caller(0), @_);
+  my (@msg) = check_args_at_least(1, @_);
   my ($file,$line) = (caller)[1,2];
   my $message = "$file:$line on " . input_file_and_line() . ": " . @msg . "\n";
-  # print STDERR $message;
+  if ($opt_p) { print STDERR $message; }
   print PARSE_ERRS $message;
 }
 
 
 # Print a message to the EVIL stream, with file and line number prefix
 sub evilprint {
-  my ($msg) = check_args_at_least(1,caller(0),@_);
+  my ($msg) = check_args_at_least(1, @_);
   unshift @_, input_file_and_line(), ": ";
   print EVIL @_;
   return undef;
@@ -4577,14 +4617,14 @@ sub evilprint {
 # ***** fix: This isn't right -- each line in getline_ungot_raw_lines can
 # represent multiple physical lines.
 sub current_line_no {
-  check_args(0,caller(0),@_);
+  check_args(0, @_);
   return ($. - $#getline_ungot_raw_lines - 1);
 }
 
 # return the index into the @ftype_ arrays for the current filename
 # consider how it was included, and whether it's a header or code
 sub compute_ftype_index {
-  my ($filename) = check_args(1,caller(0),@_);
+  my ($filename) = check_args(1, @_);
 
   my $offset = file_is_header($filename) ? $ftype_HEADER_Start : $ftype_NONHEADER_Start;
 
@@ -4598,14 +4638,14 @@ sub compute_ftype_index {
 # Tell us if the current file was added by a #include directive
 # (as opposed to passed in to evilmacros on the cmd line or in STDIN w/ -i )
 sub file_was_included {
-  my ($filename) = check_args(1,caller(0),@_);
+  my ($filename) = check_args(1, @_);
   if ($file_inclusion_method{$filename} =~ /^FromInclude/) { return $true; }
   return $false;
 }
 
 # Tell if the current filename looks like a header file
 sub file_is_header {
-  my ($filename) = check_args(1,caller(0),@_);
+  my ($filename) = check_args(1, @_);
   if ($current_file =~ /.[hH].?.?$/) { return $true; }
   return $false;
 }
@@ -4614,7 +4654,7 @@ sub file_is_header {
 # declaration.  Just counts number of commas, and adds 1,
 # or zero if we were passed "".
 sub count_macro_args {
-  my ($arg_decl) = check_args(1,caller(0),@_);
+  my ($arg_decl) = check_args(1, @_);
   my $retval;
 
   if ($arg_decl eq "") {
@@ -4635,7 +4675,7 @@ sub count_macro_args {
 # uni,p1:~/macros% strings /usr/lib/gcc-lib/i486-linux/2.7.2/cpp | more
 # and looked for "__"
 sub initialize_builtin_macros {
-  check_args(0,caller(0),@_);
+  check_args(0, @_);
   my @empty_def_macros = (
     qw(__LINE__ __DATE__ __FILE__ __BASE_FILE__ __INCLUDE_LEVEL__ __VERSION__
      __SIZE_TYPE__ __PTRDIFF_TYPE__  __WCHAR_TYPE__ __USER_LABEL_PREFIX__
@@ -4710,7 +4750,7 @@ sub initialize_builtin_macros {
 # Note: another possible way to do this is with gjb's
 # make-inclkude-for-defs-file -- see that in ~gjb/bin/share for eg.
 sub analyze_for_macro_use {
-  my ($line) = check_args(1,caller(0),@_);
+  my ($line) = check_args(1, @_);
 
   die "Shouldn't be analyzing for macro use when finding defs!"
     if $finding_macro_defs;
@@ -4729,7 +4769,7 @@ sub analyze_for_macro_use {
   my $cpp_defining_macro_name;
 
   # FIX: does this handle #define /* */ TEST properly?
-  # ie. have comments been removed for us already by getline?
+  # i.e., have comments been removed for us already by get_fulltoken_line?
   if ($line =~ /^\# *define\s+($identifier_re)/o) {
     $cpp_defining_macro_name = $1;
     #print STDERR "Defining $cpp_defining_macro_name\n";
@@ -4773,7 +4813,7 @@ my $wf_last_index = -1;
 # use the $files_lines{$filename} list to find what function we're in,
 # if any
 sub which_function {
-  my ($filename, $line_no) = check_args(2,caller(0),@_);
+  my ($filename, $line_no) = check_args(2, @_);
 
   my $i = 0;
 
@@ -4851,7 +4891,7 @@ $i $#{$listref}\n";
 
 #FIX: write this
 sub compute_macros_used_in_functions {
-  check_args(0,caller(0),@_);
+  check_args(0, @_);
 
   my ($macro,$uses_ref);
 
@@ -4877,7 +4917,7 @@ sub compute_macros_used_in_functions {
 
 # return the index into the @mdef_XXX arrays for the macro definition described
 sub mindex_from_name_file_line {
-  my ($name,$file,$line) = check_args(3,caller(0),@_);
+  my ($name,$file,$line) = check_args(3, @_);
 
   my $cDefs = $macros{$name}[0];
   my $i = 1;
@@ -4911,7 +4951,7 @@ sub mindex_from_name_file_line {
 ###
 
 sub update_cpp_directives_for {
-  my ($cpp_cmd) = check_args(1,caller(0),@_);
+  my ($cpp_cmd) = check_args(1, @_);
 
   #FIXPERL: emacs cperl mode requires the space between $ and { below
   #to correctly not parse the { as an open block
@@ -4930,7 +4970,7 @@ sub update_cpp_directives_for {
 # compute $cpp_cmds, $cpp_cmds_ni
 # %cppcmpdcount, %cppcmdcount_ni
 sub compute_global_cpp_sums {
-  check_args(0,caller(0),@_);
+  check_args(0, @_);
 
   $cpp_cmds = sum_array(@rg_cpp_cmds[@ftype_ALL]);
   $cpp_cmds_ni = sum_array(@rg_cpp_cmds[@ftype_NOT_INCLUDED]);
@@ -4998,7 +5038,7 @@ sub compute_global_cpp_sums {
 # With gcc, this means compiling a minimal program with gcc -v -c
 # and parsing the output.
 sub get_include_path {
-  check_args(0,caller(0),@_);
+  check_args(0, @_);
   @include_path = (
 		   "/usr/local/include",
 		   "/usr/local/.contrib/gcc-2.7.2/i586-unknown-linux/include",
@@ -5016,7 +5056,7 @@ sub get_include_path {
 # Search through @include_path's directories and find the first
 # directory that has $file in it
 sub complete_include_pathname {
-  my ($file) = check_args(1,caller(0),@_);
+  my ($file) = check_args(1, @_);
   my $complete_file_try;
   my $complete_file = undef;
   foreach (@include_path) {
@@ -5038,7 +5078,7 @@ sub complete_include_pathname {
 
 # pct2(x) returns a percentage (not a fraction) which corresponds to arg1/arg2.
 sub pct2 {
-  my ($x,$w) = check_args(2, caller(0), @_);
+  my ($x,$w) = check_args(2, @_);
   if ($w <= 0) {
     mdie("pct2: Bad divisor: $x / $w\n");
     return 0;
@@ -5053,7 +5093,7 @@ sub pct2 {
 # sum_array sums all its inputs, typically the elements of an array.
 # Pass in a slice of the array in order to sum that part.
 sub sum_array {
-  my (@args) = check_args_at_least(0, caller(0), @_);
+  my (@args) = check_args_at_least(0, @_);
   my $sum = 0;
   { my $elt = 0;
     foreach $elt (@args)
@@ -5063,7 +5103,7 @@ sub sum_array {
 
 # Add newline to end of string; return string unchanged if it already has one.
 sub add_newline
-{ my ($string) = check_args(1, caller(0), @_);
+{ my ($string) = check_args(1, @_);
   if ($string =~ m/\n$/)
     { return $string; }
   else
@@ -5072,7 +5112,7 @@ sub add_newline
 
 # Remove newline from end of string; return string unchanged if it has none.
 sub remove_newline
-{ my ($string) = check_args(1, caller(0), @_);
+{ my ($string) = check_args(1, @_);
   $string =~ s/\n$//;
   return $string;
 }
@@ -5084,7 +5124,7 @@ sub remove_newline
 ###
 
 sub test_categorize_macro_def
-{ my ($body) = check_args(1, caller(0), @_);
+{ my ($body) = check_args(1, @_);
   $mdef_body[1000] = $body;
   $mdef_body_noc[1000] = $body;
   $mdef_name[1000] = "dummy";
@@ -5097,7 +5137,7 @@ sub test_categorize_macro_def
 # Print all lines that look like declarations.
 sub test_typedecl_regexp
 {
-  check_args(0, caller(0), @_);
+  check_args(0, @_);
   my $ifiles = 0;
 #  foreach $this_file (@files)
   for (; $ifiles <= $#files; $ifiles++)
@@ -5152,7 +5192,7 @@ sub test_typedecl_regexp
 
 sub test_parse_type
 {
-  my ($type, $exp) = check_args(2, caller(0), @_);
+  my ($type, $exp) = check_args(2, @_);
   my ($parsed_type) = type_name(parse_expression($exp));
   if ($type ne $parsed_type)
     { print STDERR "Type $parsed_type should have been $type for $exp\n"; }
@@ -5207,25 +5247,52 @@ sub test_parse_types
 
 sub test_regexp
 {
-  my ($string, $regexp, $regexp_pretty) = check_args_range(2, 3, caller(0), @_);
+  my ($string, $regexp, $regexp_pretty) = check_args_range(2, 3, @_);
   if (!($string =~ /$regexp/))
-    { print "String '$string' should have matched "
+    { print "'$string' should have matched "
 	. (defined($regexp_pretty) ? $regexp_pretty : "regexp '$regexp'") . "\n"; }
+}
+
+sub test_declarator_re
+{
+  my ($string) = check_args(1, @_);
+  test_regexp($string, '^' . $declarator_re . '$', "declarator_re");
 }
 
 sub test_type_declarator_re
 {
-  my ($string) = check_args(1, caller(0), @_);
-  test_regexp($string, '^\s*' . $type_declarator_re . '\s*([,=;\(])', "type_declarator_re");
+  my ($string) = check_args(1, @_);
+  test_regexp($string, '^' . $type_declarator_re . '$', "type_declarator_re");
+}
+
+sub test_type_declarator_re_plus
+{
+  my ($string) = check_args(1, @_);
+  test_regexp($string, '^\s*' . $type_declarator_re . '\s*([,=;\(])$', "type_declarator_re plus");
+}
+
+sub test_type_declarator_arglist_re
+{
+  my ($string) = check_args(1, @_);
+  test_regexp($string, '^' . $type_declarator_arglist_re . '$', "type_declarator_arglist_re");
 }
 
 sub test_typedecl_regexps
 {
-  test_type_declarator_re("int fill_inbuf(eof_ok)");
-  test_type_declarator_re("static char  *license_msg[] =");
-  test_type_declarator_re("static char *license_msg[] =");
-  test_type_declarator_re("char z_suffix[MAX_SUFFIX+1];");
-  test_type_declarator_re("void (*out_char)();");
+  test_type_declarator_re_plus("int fill_inbuf(eof_ok);");
+  test_type_declarator_arglist_re("int fill_inbuf(eof_ok)");
+  test_type_declarator_re_plus("static char *license_msg[] =");
+  test_type_declarator_re("static char *license_msg[]");
+  test_type_declarator_re_plus("char z_suffix[MAX_SUFFIX+1];");
+  test_declarator_re("(*out_char)");
+  test_type_declarator_re("void (*out_char)");
+  test_type_declarator_re_plus("void (*out_char)(");
+  test_type_declarator_arglist_re("void (*out_char)()");
+  test_declarator_re("(*close_func)");
+  test_type_declarator_re("int (*close_func)");
+  test_type_declarator_re_plus("int (*close_func)(");
+  test_type_declarator_arglist_re("int (*close_func)(CL_Handle)");
+  test_type_declarator_arglist_re("int (*func)(CL_Handle, int *, int)");
 }
 
 # print defined($type_num["foo"]);
@@ -5275,7 +5342,7 @@ sub test_typedecl_regexps
 
 # test_parse_types();
 # test_typedecl_regexps();
-# exit;
+# exit;				# returns non-zero
 
 
 
@@ -5434,7 +5501,10 @@ find_macro_definitions();	# also counts other preprocessor usage
 #   for $name (sort keys %macros)
 #     { print "$name $macros{$name}[0]\n"; } }
 
-get_macro_call_types() if (!$opt_1);
+if (!$opt_1)
+{ print STDERR "done finding macro definitions; now finding macro uses...\n";
+  get_macro_call_types();
+}
 
 #FIX: should I only print this stuff w/ -v?
 print STDERR "Computing various global statistics...\n";
