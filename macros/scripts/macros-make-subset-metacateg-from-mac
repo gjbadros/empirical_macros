@@ -74,11 +74,11 @@ sub marks_for_categories {
 
 use English;
 next if /^[\#%]/;
-next if /FromInclude<>/;
-next if !defined($F[8]); # the categories are not listed for cond comp directive only macros
+next unless $F[9] =~ /FromStdin/;
+next if !defined($F[8]) || $F[8] eq "NoDefinitions";
+ # the categories are not listed for cond comp directive only macros
 #i.e. macros that are used in ccd-s, but not #define-d anywhere
 my @cat = split(/,/,$F[8]);
-
 my $row = marks_for_categories(\@cat);
 if ($opt_a || $row =~ m/\*/) {
   print $row;
