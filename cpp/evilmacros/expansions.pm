@@ -35,6 +35,12 @@ sub handle_directive {
 }
 
 
+sub Got_token {
+  my ($token,$mname,$argno,$raw,@history) = @_;
+  print CPP "Got TOKEN2, $token\n";
+}
+
+
 sub Startup {
   my ($source_file) = @_;
 
@@ -50,6 +56,7 @@ sub Startup {
     $prefix = basename($source_file,".c");
   }
 
+  open(CPP,">$prefix.cPp") || die "Cannot open $prefix.cpp: $!";
   open(VARS,">$prefix.vars") || die "Cannot open $prefix.vars: $!";
   open(TYPES,">$prefix.types") || die "Cannot open $prefix.types: $!";
   open(EXPAND,">$prefix.exps") || die "Cannot open $prefix.exps: $!";
@@ -69,9 +76,9 @@ sub Exit {
 
 sub add_use {
   my ($mname,$fname, $expansion, $s_start, $s_end, $cbb) = @_;
-  if ($cbb == 0) {
+#  if ($cbb == 0) {
     print EXPAND "$fname: $mname, $s_start, $s_end\n";
-  }
+#  }
 }
 
 sub output_functions_listing {
@@ -167,24 +174,6 @@ sub create_predef {
   $macro_name_to_def_in_filename{$mname} = "__PREDEF__";
 }
 
-sub cpp_out {
-  my ($sz) = @_;
-  my $cch_output = pcp3::CchOutput();
-  my $cch_offset = pcp3::CchOffset();
-  print MAPPING "'($cch_offset . $cch_output)\n";
-  if ($top_level_mname ne "") {
-    $top_level_full_expansion .= $sz;
-  }
-
-  print CPPOUT "$sz\n";
-  print CPPOUT "|"; # just print separator
-}
-
-sub cpp_error {
-  my ($file,$line,$col,$msg) = @_;
-  print CPP "cpp_error: $file:$line:$col, $msg\n";
-}
-
 sub pre_do_undef {
   my ($s_start,$s_end,$mname) = @_;
   my $fname = pcp3::Fname();
@@ -209,29 +198,6 @@ sub pop_buffer {
 }
 
 
-sub macro_cleanup {
-  my ($s_start, $s_end, $mname, $cnested, @nests) = @_;
-  my $offset  = pcp3::CchOffset();
-  my $cbb = pcp3::CbuffersBack();
-  my $cbytesOutput = pcp3::CchOutput();
-  my $fname = pcp3::Fname();
-  my $old = select;
-  select CPP;
-  my $state_stack = join(",",pcp3::ParseStateStack());
-  print "macro_cleanup $mname; [$s_start - $s_end] source $offset, $cbb; output $cbytesOutput\n";
-  print " : nests = ", join("->",@nests), "\n";
-  print " : MEH = ", join("<-",pcp3::MacroExpansionHistory()),"\n";
-  if ($cbb == 1) {
-    $top_level_full_expansion =~ s%\n%\\n\\%g;
-    print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'final-exp \"$mname -> $top_level_full_expansion\")\n";
-    print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'stack \"$state_stack\")\n";
-    $top_level_full_expansion = "";
-    $top_level_mname = "";
-  }
-  select $old;
-}
-
-
 sub expand_macro {
   my ($s_start,$s_end,$mname,$expansion,$length,$raw_call,$has_escapes,$cbuffersDeep,@rest) 
     = @_;
@@ -247,6 +213,8 @@ sub expand_macro {
   my @MEH = pcp3::MacroExpansionHistory();
   if (scalar (@MEH) == 0) {
     add_use($mname,$fname,$expansion,$s_start,$s_end,$cbuffersDeep);
+  } else {
+    print CPP "EXPANSION HERE of $mname\n";
   }
   select CPP;
 
@@ -268,15 +236,6 @@ sub expand_macro {
     my $uses = shift @args;
     print " :$iarg used $uses times: ", join(";",splice(@args,0,2*$uses)), "\n";
     $iarg++;
-  }
-  if ($s_start >= 0) {
-    if ($has_escapes == 0) {
-      # top level expansion
-      $top_level_mname = $mname;
-      print TPSOURCE "#$fname:(put-face-property-if-none $s_start $s_end \'italic)\n";
-      print TPSOURCE "#$fname:(put-mouse-face-property-if-none $s_start $s_end \'highlight)\n";
-    }
-    print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'exp \"$mname => $expansion\")\n";
   }
   select $old;
 }
@@ -332,8 +291,11 @@ sub do_if {
   pcp3::YYPushStackState();
   @state_stack = pcp3::ParseStateStack();
   print CPP ": Stack: @state_stack\n";
+#  print STDERR "Value: $value\n";
   if ($value == 0 && $conditional ne "0") {
-    handle_unincluded_block($s_branch_start,$s_branch_end,$skipped,"If",$conditional);
+     handle_unincluded_block($s_branch_start,$s_branch_end,$skipped,"If",$conditional);
+  } elsif ($conditional eq "0") {
+    print STDERR "Skipped comment-like conditional: $conditional\n";
   }
   push @got_c_token, 0;
 }
@@ -350,8 +312,6 @@ sub handle_unincluded_block {
  # return; # FIXGJB: do not handle these for now
   my ($s_branch_start,$s_branch_end,$skipped,$kind,$conditional) = @_;
   my $fname = pcp3::Fname();
-  print TPSOURCE "#$fname:(put-face-property-if-none $s_branch_start $s_branch_end \'font-lock-reference-face)\n";
-  print TPSOURCE "#$fname:(add-text-property $s_branch_start $s_branch_end \'doc \"Skipped due to $kind $conditional\")\n";
   # FIXGJB: probably better to keep a #include list in perl, and only remove
   # #include-s that we've already done, or something like that;  really
   # need separate symbol tables and hash tables for the different configuration
@@ -359,14 +319,15 @@ sub handle_unincluded_block {
   my $old_skipped = $skipped;
   $skipped =~ s/^\s*\#\s*include .*$//mg;
   if ($skipped ne $old_skipped) {
-    print TRACE "Removed some #include-s from speculative branch\n";
+    print CPP "Removed some #include-s from speculative branch\n";
   }
-  print TRACE "Pushing skipped branch : [[ $skipped ]]\n";
-  print TRACE ": ParseStateStack: ", join(",",pcp3::ParseStateStack()), "\n";
+  print CPP "Pushing skipped branch : [[ $skipped ]]\n";
+  print CPP ": ParseStateStack: ", join(",",pcp3::ParseStateStack()), "\n";
   pcp3::YYPushStackState();
   pcp3::EnterScope();
 #  pcp3::PushHashTab();
   $macro_nestings_deep++;
+#  print STDERR "s_branch_start = $s_branch_start\n";
   pcp3::PushBuffer($skipped,$s_branch_start);
 }
 
@@ -426,10 +387,6 @@ sub do_else {
   @state_stack = pcp3::ParseStateStack();
   print CPP ": Stack: @state_stack\n";
   my $fname = pcp3::Fname();
-  if ($fSkipping) {
-    print TPSOURCE "#$fname:(put-face-property-if-none $s_start_branch $s_end \'font-lock-reference-face)\n";
-    print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'doc \"Skipped due to else of $orig_conditional\")\n";
-  }
 }
 
 sub do_endif {
@@ -448,9 +405,6 @@ sub do_endif {
   pcp3::YYPopAndDiscardStackState();
   my $controlled_c_source = pop @got_c_token;
   my $fname = pcp3::Fname();
-  if ($controlled_c_source) {
-    print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'doc \"Controls C source inclusion\")\n";
-  }
 }
 
 
@@ -500,7 +454,7 @@ AddHook("STARTUP",\&Startup);
 #AddHook("STARTUP",\&Startup2);
 #AddHook("DO_DEFINE",\&do_define);
 AddHook("HANDLE_DIRECTIVE",\&handle_directive);
-#AddHook("CREATE_PREDEF",\&create_predef);
+AddHook("CREATE_PREDEF",\&create_predef);
 AddHook("CREATE_DEF",\&create_def);
 AddHook("DO_UNDEF",\&do_undef);
 AddHook("PRE_DO_UNDEF",\&pre_do_undef);
@@ -527,7 +481,7 @@ AddHook("DO_ENDIF",\&do_endif);
 #AddHook("INCLUDE_FILE",\&include_file);
 #AddHook("DONE_INCLUDE_FILE",\&done_include_file);
 AddHook("EXIT",\&Exit);
-#AddHook("TOKEN",\&Got_token);
+AddHook("TOKEN",\&Got_token);
 #AddHook("TOKEN",\&Got_token2);
 AddHook("FUNCTION",\&do_function);
 AddHook("FUNC_PROTO",\&do_func_proto);
