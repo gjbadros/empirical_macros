@@ -471,3 +471,29 @@ FLookupSymbol(szSymbol)
 	done:
 	OUTPUT:
 	RETVAL
+
+
+###%\backcall{$fDefined}{FLookupSymbolAt}{$symbol_id}{$level}
+###% Return TRUE iff $symbol_id is found in the scope at level $level.
+###% Return FALSE otherwise.
+bool
+FLookupSymbolAt(szSymbol,level)
+        char *szSymbol;
+        int level;
+	PREINIT:
+	str_t *pstr;
+	symentry_t *se;
+	CODE:
+	RETVAL = FALSE;
+	if (!fShouldParse) goto done; 
+	pstr = nmelook(szSymbol,strlen(szSymbol));
+	if (!ParseStack || !ParseStack->contxt) {
+	   RETVAL = FALSE;
+	} else {
+	  se = symtab_lookup_at(ParseStack->contxt->syms,
+                                pstr,level);
+	  RETVAL = (se != NULL);
+	}
+	done:
+	OUTPUT:
+	RETVAL

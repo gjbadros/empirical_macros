@@ -601,6 +601,38 @@ XS(XS_pcp3_FLookupSymbol)
     XSRETURN(1);
 }
 
+XS(XS_pcp3_FLookupSymbolAt)
+{
+    dXSARGS;
+    if (items != 2)
+	croak("Usage: pcp3::FLookupSymbolAt(szSymbol,level)");
+    {
+	char *	szSymbol = (char *)SvPV(ST(0),na);
+	int	level = (int)SvIV(ST(1));
+#line 484 "backcalls.xs"
+	str_t *pstr;
+	symentry_t *se;
+#line 616 "backcalls.c"
+	bool	RETVAL;
+#line 487 "backcalls.xs"
+	RETVAL = FALSE;
+	if (!fShouldParse) goto done; 
+	pstr = nmelook(szSymbol,strlen(szSymbol));
+	if (!ParseStack || !ParseStack->contxt) {
+	   RETVAL = FALSE;
+	} else {
+	  se = symtab_lookup_at(ParseStack->contxt->syms,
+                                pstr,level);
+	  RETVAL = (se != NULL);
+	}
+	done:
+#line 630 "backcalls.c"
+	ST(0) = boolSV(RETVAL);
+	if (SvREFCNT(ST(0))) sv_2mortal(ST(0));
+    }
+    XSRETURN(1);
+}
+
 #ifdef __cplusplus
 extern "C"
 #endif
@@ -640,6 +672,7 @@ XS(boot_backcalls)
         newXS("pcp3::YYPushDupTopStackState", XS_pcp3_YYPushDupTopStackState, file);
         newXS("pcp3::YYFCompareTopStackState", XS_pcp3_YYFCompareTopStackState, file);
         newXS("pcp3::FLookupSymbol", XS_pcp3_FLookupSymbol, file);
+        newXS("pcp3::FLookupSymbolAt", XS_pcp3_FLookupSymbolAt, file);
     ST(0) = &sv_yes;
     XSRETURN(1);
 }
