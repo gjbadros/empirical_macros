@@ -74,6 +74,10 @@ find-c | evilmacros -iv -d ~/macros/data/stable
 #
 # for i in *(/); do echo $i; pushd $i; find-c | evilmacros -i -d $TM:${i%%-*} >$i.out 2> $i.err; popd; done 
 #
+# For a second run for first-run failures:
+# for i in *(/); do if [[ ! -s $TM/${i%%-*}.stat ]]; then echo $i; pushd $i; find-c | evilmacros -i -d $TM2:${i%%-*}1 >$TM2/${i%%-*}.out 2>$TM2/${i%%-*}.err ; popd; fi; done
+#
+#
 # ext=all; p=~/505/data; for i in *(/); do pushd $i; find-c | nice evilmacros -i -D$p/$i.def.$ext -e$p/$i.em.$ext -c$p/$i.cat.$ext -S$p/$i.stat.$ext > $p/$i.out.$ext 2> $p/$i.err.$ext; popd; done
 # alias find-c='find . \( -name UNUSED -o -name CVS -o -name SCCS -o -name RCS \) -prune -o \( -name "*.[chCH]" -o -name "*.[cC][cC]" -o -name "*.[cC][pP][pP]" \) -print'
 # ext=all; p=/tmp/mernst/data; for i in *(/); do pushd $i; find-c | nice /homes/rivers/mernst/research/notkin/macros/evilmacros-961223 -i -D$p/$i.def.$ext -e$p/$i.em.$ext -c$p/$i.cat.$ext -S$p/$i.stat.$ext > $p/$i.out.$ext 2> $p/$i.err.$ext; popd; done
@@ -331,6 +335,16 @@ my $catTYPEARG = 10;		# macro argument has a type
 my $catMACROFUN = 11;
 my $catMACROTYPE = 12;
 
+# New categories -- higher numbers take precedence over lower ones
+# Be sure to keep in sync w/ strings of @categoryname
+my $catEXPASSIGN = 13;
+my $catRESDWORD  = 14;
+my $catSTATEMENT = 15;  # STATEMENT-s likely contain reserved words, but are more specific
+my $catMISMATCH  = 16;
+my $catPASTING   = 17;
+my $catSTRINGIZE = 18;
+
+
 my @categoryname = (
 		    'uncategorized', 'being_categorized',
 		    'multiply_categorized', 'null_define',
@@ -338,22 +352,28 @@ my @categoryname = (
 		    'literal', 'constant', 'some_constant',
 		    'failed_categorization', 'has_type_argument',
 		    'macro_as_function', 'macro_as_type',
+		    'expression_with_assignment',
+		    'expands_to_reserved_word',
+		    'statement',
+		    'mismatched_entities',
+		    'token_pasting',
+		    'stringization',
 		   );
 
-my %failed_categorization_type_count =
-  ( 
-   "unknown" => 0,
-   "close_but_no_open" => 0,
-   "mismatched_entities" => 0,
-   "empty_string" => 0,
-   "unterminated_string" => 0,
-   "bad_char_constant" => 0,
-   "unterminated_char_constant" => 0,
-   "token_pasting" => 0,
-   "preprocessor_directive" => 0,
-   "stringization" => 0,
-   "unterminated_comment" => 0,
-  );
+# my %failed_categorization_type_count =
+#   ( 
+#    "unknown" => 0,
+#    "close_but_no_open" => 0,
+#    "mismatched_entities" => 0,
+#    "empty_string" => 0,
+#    "unterminated_string" => 0,
+#    "bad_char_constant" => 0,
+#    "unterminated_char_constant" => 0,
+#    "token_pasting" => 0,
+#    "preprocessor_directive" => 0,
+#    "stringization" => 0,
+#    "unterminated_comment" => 0,
+#   );
 
 ## Needs to be fixed.
 ## Perhaps give actual constant, so it can be determined.
@@ -864,6 +884,8 @@ my $current_function;		# the current function
 my $current_function_start_line; # the first line of the current function
 				# (sometimes function headers span lines)
 
+my $current_macro_line_number;	# Used by current_line_no when categorizing macros
+
 # @files contains the list of files we want to process
 # %file_inclusion_method, a string like "#include<>", tells where file got added
 my @files;
@@ -969,9 +991,10 @@ my $fIgnoreIncludes = $false;
 
 # These indicate the pass, for getline_handle_preprocessor_command.
 # Since they're dynamically bound with "local", can't declare them with "my".
-use vars qw($finding_macro_defs $finding_macro_uses $merge_cpp_if_branches);
+use vars qw($finding_macro_defs $finding_macro_uses $categorizing_macros $merge_cpp_if_branches);
 $finding_macro_defs = $false;
 $finding_macro_uses = $false;
+$categorizing_macros = $false;
 $merge_cpp_if_branches = $false;
 
 # For get_fulltoken_line():
@@ -1357,8 +1380,8 @@ sub output_stats
 
     print "\n";
 
-    OutputHistogram("FAILED_CATEG",\%failed_categorization_type_count,1,$true);
-    print "\n";
+#    OutputHistogram("FAILED_CATEG",\%failed_categorization_type_count,1,$true);
+#    print "\n";
   }
 
   # -M = dump the macro stats
@@ -4254,12 +4277,9 @@ sub categorize_macro_def
 	# categorization.
 	{ # Not an expression, apparently
 	  $category = $catFAILURE;
-	  my ($evil_flags,$failure_type) = check_macro_body($body);
-#	  $cEvil++ if $evil_flags & $EVIL;
-#	  $cIllegal++ if $evil_flags & $ILLEGAL;
-#	  $cObsoleted++ if $evil_flags & $OBSOLETE;
-#	  $cDanger++ if $evil_flags & $DANGER;
-	  $failed_categorization_type_count{$failure_type}++;
+	  $type = "";
+	  my ($evil_flags,$failure_type,$extended_category) = check_macro_body($body);
+	  $category = harder_category($category,$extended_category);
 	}
     }
 
@@ -4504,10 +4524,11 @@ sub check_macro_body {
   # FIX: should I concatenate failure_type-s so we see multiple failures?
   # this would mean it'd be tricky to keep the table the same across files
   my $failure_type = "unknown";
+  my $category = $catFAILURE;
   my $full_body = $body;
 
   #print "BODY: $body\n";
-  while ($body =~ m%[\]\[(){}\"\'\#]|//|/\*|\*/%) #'HACKCOLOR
+  while ($body =~ m%[\]\[(){}\"\'\#]|//|/\*|\*/|$c_reserved_nontype_word_re|$c_reserved_type_word_re|;%o) #'HACKCOLOR
     # Found paren, quote, cpp directive, or comment
     { my $match = $MATCH;
       $body = $POSTMATCH;
@@ -4516,10 +4537,25 @@ sub check_macro_body {
         { push(@nesting,$match);
 	  # print STDERR "FRONTMATCH\n";
 	}
+      elsif ($match =~ /$c_reserved_nontype_word_re|$c_reserved_type_word_re/o)
+	{
+	  $failure_type = "expands_to_reserved_word";
+	  $category = harder_category($category,$catRESDWORD);
+	  evilprint("expands to reserved word\n    $full_body\n"); 
+	}
+      elsif ($match =~ /;/)
+	{
+	  #FIXMERNST: what about "," operator?
+	  $failure_type = "expands_to_statement";
+	  $category = harder_category($category,$catSTATEMENT);
+	  evilprint("expands to statement\n    $full_body\n"); 
+	}
+	  
       elsif ($match =~ /[\]\)\}]/)
 	{ if ($#nesting == -1)
 	    { $result |= $DANGER;
 	      $failure_type = "close_but_no_open";
+	      $category = harder_category($category,$catMISMATCH);
 	      evilprint("dangerous: close $match without open\n    $full_body\n"); }
 	  else
 	    { my $popped = pop(@nesting);
@@ -4529,6 +4565,7 @@ sub check_macro_body {
 		  || (($match eq "\}") && ($popped ne "\{")))
 		{ $result |= $DANGER;
 		  $failure_type = "mismatched_entities";
+		  $category = harder_category($category,$catMISMATCH);
 		  evilprint("dangerous: $popped matched by $match:\n    $full_body\n"); } } }
       elsif ($match eq "\"")
         { if ($body =~ m/$non_escaped_double_quote_re/o)
@@ -4566,6 +4603,7 @@ sub check_macro_body {
 	{ if (substr($POSTMATCH, 0, 1) eq "#")
 	    { $result |= $DANGER;
 	      $failure_type = "token_pasting";
+	      $category =  harder_category($category,$catPASTING);
 	      evilprint("dangerous: ## pasting:\n    $full_body\n");
 	      $body = substr($body, 1); }
 	  # This list from GNU C preprocessor manual
@@ -4577,6 +4615,7 @@ sub check_macro_body {
 	  else
 	    { $result |= $DANGER;
 	      $failure_type = "stringization";
+	      $category =  harder_category($category,$catSTRINGIZE);
 	      evilprint("dangerous: stringization:\n    $full_body\n"); } }
       elsif ($match eq "/*")
 	# This test probably fails for a/**//**/b.  Oh, well.
@@ -4603,6 +4642,7 @@ sub check_macro_body {
 	  if ($precedingabuts && ($body =~ m/^\w/))
 	    { $result |= $OBSOLETE;
 	      $failure_type = "old_style_token_pasting";
+	      $category =  harder_category($category,$catPASTING);
 	      evilprint("obsoleted: comment pasting:\n    $full_body\n"); } }
       elsif ($match eq "//")
         { # print "$current_file:@{[ current_line_no() ]}: evil: //-style comment:\n    $full_body\n";
@@ -4619,11 +4659,22 @@ sub check_macro_body {
   if ($#nesting != -1)
     { $result |= $EVIL;
       $failure_type = "no_match";
+      $category =  harder_category($category,$catMISMATCH);
       evilprint("evil: no match for ", @nesting, ":\n    $full_body\n"); }
   if ($failure_type eq "unknown") {
     evilprint("unknown failed categorization:\n    $full_body\n");
   }
-  return ($result,$failure_type);
+  return ($result,$failure_type,$category);
+}
+
+# just max of its two arguments
+sub harder_category {
+  my ($cat1, $cat2) = check_args(2,@_);
+  if ($cat1 > $cat2) {
+    return $cat1;
+  } else {
+    return $cat2;
+  }
 }
 
 
@@ -4681,7 +4732,11 @@ sub evilprint {
 # represent multiple physical lines.
 sub current_line_no {
   check_args(0, @_);
-  return ($. - $#getline_ungot_raw_lines - 1);
+  if (!$categorizing_macros) {
+    return ($. - $#getline_ungot_raw_lines - 1);
+  } else {
+    return $current_macro_line_number;
+  }
 }
 
 # return the index into the @ftype_ arrays for the current filename
@@ -5645,6 +5700,7 @@ compute_macros_used_in_functions();
 ### All the files have been read; now process the macros
 print STDERR "Categorizing " . ($cMacrosInTables - $cBuiltinMacros + 1) . " macros\n";
 { my $i;
+  local $categorizing_macros = $true;
   for ($i = $cBuiltinMacros;
        $i < $cMacrosInTables;
        $i++ )
@@ -5654,6 +5710,13 @@ print STDERR "Categorizing " . ($cMacrosInTables - $cBuiltinMacros + 1) . " macr
       #   print "\n  $mdef_name[$i]";
       #   if (defined($mdef_args[$i])) { print $mdef_args[$i]; }
       #   print " $mdef_body[$i]\n";
+      #current_file and current_line_no need to be set for 
+      # while we are categorizing.  Also must always 
+      # set $current_ftype_index when we change the $current_file
+      # (use compute_ftype_index() )
+      $current_file = $mdef_file[$i];
+      $current_ftype_index = compute_ftype_index($current_file);
+      $current_macro_line_number = $mdef_line[$i];
       categorize_macro_def($i);
     } }
 
