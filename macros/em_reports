@@ -453,7 +453,7 @@ sub output_stats ()
     { if ($opt_v) { print STDOUT "properties..."; }
       select PROP;
       my $cMacrosInTables = $#mdef_properties + 1;
-      print "#Macro definition property histogram: total defs = $cMacrosInTables\n";
+      my $cMacrosInPackage = 0;
       my $i = 0;
       my @mdef_properties_in_package = ();
       while ($i < $cMacrosInTables) {
@@ -462,12 +462,14 @@ sub output_stats ()
 #DBG	print STDERR "Adding $mdef_properties[$i]\n";
 	$i++;
       }
+      $cMacrosInPackage = $#mdef_properties_in_package + 1;
+      print "#Macro definition property histogram: total defs = $cMacrosInPackage\n";
       my %prop_histogram = HistogramNumericFromList(@mdef_properties_in_package);
       foreach my $prop (sort {$prop_histogram{$b} <=> $prop_histogram{$a}}
 			keys %prop_histogram) {
 	print "$prop_histogram{$prop} ", string_from_prop($prop) . "\n";
       }
-      print "#Macro definition property percentages: total defs = $cMacrosInTables\n";
+      print "#Macro definition property percentages: total defs = $cMacrosInPackage\n";
       $i = 0;
       my $cASSIGN = 0;
       my $cFREE_VAR = 0;
