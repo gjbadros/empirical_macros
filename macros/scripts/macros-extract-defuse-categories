@@ -89,6 +89,7 @@ my @use_files;
      being_categorized
      failed_categorization
      multiply_categorized
+     never_defined
     );
 
 @CAT_type =
