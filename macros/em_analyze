@@ -5768,11 +5768,15 @@ sub get_include_path () {
 		   # Linux
 		   "/usr/local/.contrib/gcc-2.7.2/i586-unknown-linux/include",
 		   "/usr/local/.contrib/gcc-2.7.2/lib/gcc-lib/i586-unknown-linux/2.7.2/include",
+		   # Platform-independent
+		   "/usr/include",
+		   "/usr/X11/include",
+		   "/homes/gws/gjb/include",
+		   "/uns/include",
+		   "/uns/include/openwindows",  # for workman, which needs xview 3.2
 		   # Solaris
 		   "/usr/local/sparc-sun-solaris2.5/include",
 		   "/usr/local/lib/gcc-lib/sparc-sun-solaris2.5/2.7.2.f.1/include",
-		   # Platform-independent
-		   "/usr/include",
 #FIX: Should I include "."?  If so, then we have to be careful about
 # multiple inclusions of header files in the project, since they will
 # by pushed onto @files, and also exist in @files already (w/o complete
