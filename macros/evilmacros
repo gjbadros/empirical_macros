@@ -26,7 +26,7 @@
 BEGIN { if (defined $ENV{"PERLINC"})
 	  { unshift(@INC, split(/[ :]+/, $ENV{"PERLINC"})); } }
 
-my $getopts_option_letters = "ihvtIAau1pg:d:D:M:S:F:C:E:P:";
+my $getopts_option_letters = "ihvtIAau1pg:d:D:M:S:F:L:C:E:P:";
 
 # Remove the asterisks below when the options
 # are known to the users
@@ -51,6 +51,7 @@ New options marked with *; options with ':', above, take an argument
   -U [file]  output macro usage information
   -S [file]  output the per directive statistics to file
   -F [file]  output the function information to a file
+  -L [file]  output the file's lines/functions information to a file
   -C [file]  show categorizations to file
   -E [file]  send evil macros to file instead of stdout
   -P [file]  send parse errors to file instead of stdout
@@ -342,12 +343,12 @@ my $catMACROFUN = 11;
 my $catMACROTYPE = 12;
 
 my @categoryname = (
-		    'uncategorized', 'being categorized',
-		    'multiply categorized', 'null define',
-		    'expression', 'expression with free variables',
-		    'literal', 'constant', 'some constant',
-		    'failed categorization', 'has type argument',
-		    'macro as function', 'macro as type',
+		    'uncategorized', 'being_categorized',
+		    'multiply_categorized', 'null_define',
+		    'expression', 'expression_with_free_variables',
+		    'literal', 'constant', 'some_constant',
+		    'failed_categorization', 'has_type_argument',
+		    'macro_as_function', 'macro_as_type',
 		   );
 
 ## Needs to be fixed.
@@ -510,7 +511,7 @@ my @type_name_array = ('typeFAIL', 'bool',
 		    'long', 'unsigned long',
 		    'float', 'double', 'long double',
 		    'char *',
-		    'TYPEunknown');
+		    'typeUNKOWN');
 
 # For determining whether a Perl variable has numeric type.
 # This is incredibly disgusting; do something about it.
@@ -763,9 +764,22 @@ my @rg_cpp_phys_ncnb_lines = (0) x $c_ftype;
 
 my @rg_cpp_cmds = (0) x $c_ftype;
 
+# $ {$rg_category_counts[$ft_index]}{"uncategorized"} ==
+# the number of times a macro definition was categorized as uncategorized
+# for files of type $ft_index
+# (much like @rg_cpp_cmds list of hashes)
+# FIX: don't require listing these all over again to initialize properly
+my @rg_category_counts; #({})
+
+my %category_counts_ni = ();
+my %category_counts_c_ni = ();
+my %category_counts_hdr_ni = ();
+
+
+
 # fixgjb: try omitting this and other pre-initializations, or comment why
 # the initialization is necessary.
-my @rg_cppcmdcounts = { "define" => 0 } x $c_ftype;
+my @rg_cppcmdcounts; #({}) x $c_ftype;
 
 #my $physical_lines = 0;		# as they appear to tools
 #my $ncnb_physical_lines = 0;	# non-comment, non-blank lines
@@ -792,7 +806,23 @@ my $cpp_cmds_c_ni;
 
 # Initialize cppcmdcount{"define"} to avoid uninitialized values
 # when processing the macros (in case there were no macros).
-my %cppcmdcount = (); # number of uses of each cpp command
+# FIX: don't duplicate this information from rg_cppcmdcounts
+my %cppcmdcount = (
+   "define" => 0,
+   "elif" => 0,
+   "else" => 0,
+   "endif" => 0,
+   "error" => 0,
+   "if" => 0,
+   "ifdef" => 0,
+   "ifndef" => 0,
+   "import" => 0,
+   "include" => 0,
+   "include_next" => 0,
+   "pragma" => 0,
+   "undef" => 0,
+   "%OTHER%" => 0,
+); # number of uses of each cpp command
 # cppcmdcount_ni is like cppcmdcount, but only for files listed on cmd line
 # ni == "not includes"
 my %cppcmdcount_ni = (); # number of uses of each cpp command, NI
@@ -821,6 +851,8 @@ my %files_lines;
 #   (file,start,end), one per definition of that function.
 my %function_to_locs;
 
+# hashes "file:function name" to a list of macro names that it uses
+my %function_name_to_macros_it_uses = ();
 
 # If remove "current" from these names, look for other vars of those names.
 my $current_file;		# the current file name
@@ -835,11 +867,10 @@ my $current_function_start_line; # the first line of the current function
 # @files contains the list of files we want to process
 # %file_inclusion_method, a string like "#include<>", tells where file got added
 my @files;
-my %file_inclusion_method;
-# fixgjb: Is this already fixed?
+my %file_inclusion_method = ("%Built In%" => "BuiltIn");
+
 # files that are included should be pushed onto both @files and
 # @files_included -- the latter is used only to prevent multiple inclusion
-# @files, not this-- but that doesn't work right now for some reason.
 my @files_included;
 
 # Output field separator
@@ -892,7 +923,6 @@ my @mdef_file;
 my @mdef_line;
 my @mdef_physical_lines;
 my @mdef_physical_ncnb_lines;
-my @mdef_body_noc;
 my %mdef_freevars;
 my @mdef_freefuns;
 my @mdef_dependenton;
@@ -928,7 +958,7 @@ my $debug_getline = $false;	# a LOT of output; use only on small inputs
 ## Command-line processing
 # Are these in any order?
 use vars qw($opt_i $opt_I $opt_h $opt_v $opt_t $opt_d
-	    $opt_D $opt_M $opt_S $opt_F $opt_C $opt_E $opt_P $opt_p
+	    $opt_D $opt_M $opt_S $opt_F $opt_L $opt_C $opt_E $opt_P $opt_p
 	    $opt_u $opt_1 $opt_A $opt_a $opt_g);
 my $fIgnoreIncludes = $false;
 
@@ -1016,8 +1046,8 @@ sub process_macro_definition
   # so that we don't have to check the defined-ness later
   if (!defined($macros{$name}[0])) {
     $macros{$name}[0] = 0;
-    $macros_c_undefs{$name} = 0;
     $macros_uses{$name} = [0,0];
+    $macros_c_undefs{$name} = 0;
     $macros_used_in_functions{$name} = [];
     $macros_file_line_uses{$name} = [];
   }
@@ -1295,112 +1325,71 @@ sub output_stats
   if ($opt_S) {
     my ($h, $v);
     # Dump statistics on frequencies of directives
-    printf STATS "#DIRECTIVESNI#: ";
-    while ( ($h,$v) = each(%cppcmdcount_ni) ) {
-      print STATS "$h ";
-    }
-    print STATS "\n";
-    printf STATS "DIRECTIVESNI: ";
-    while ( ($h,$v) = each(%cppcmdcount_ni) ) {
-      print STATS "$v ";
-    }
-    print STATS "\n";
+    select STATS;
 
-    print STATS "DIRECTIVESNI%NCNB: ";
-    while ( ($h,$v) = each(%cppcmdcount_ni) ) {
-      printf STATS "%2.2f ", pct2($v,$ncnb_physical_lines_ni);
-    }
-    print STATS "\n";
+    print "#LINES#: physical ncnb_phys cpp_phys cpp_phys_ncnb\n";
+    print "$physical_lines $ncnb_physical_lines $cpp_physical_lines $cpp_physical_ncnb_lines\n";
+    print "#LINESNI#: physical ncnb_phys cpp_phys cpp_phys_ncnb\n";
+    print "$physical_lines_ni $ncnb_physical_lines_ni $cpp_physical_lines_ni $cpp_physical_ncnb_lines_ni\n";
 
-    print STATS "DIRECTIVESNI%PHYS: ";
-    while ( ($h,$v) = each(%cppcmdcount_ni) ) {
-      printf STATS "%2.2f ", pct2($v,$physical_lines_ni);
-    }
-    print STATS "\n";
+    print "\n";
 
+    OutputHistogram("DIRECTIVES_ALL",\%cppcmdcount,1,$true);
 
+    OutputHistogram("DIRECTIVES_NI",\%cppcmdcount_ni,1);
+    OutputHistogram("DIRECTIVES_NI%NCNB",\%cppcmdcount_ni,$ncnb_physical_lines_ni);
+    OutputHistogram("DIRECTIVES_NI%PHYS",\%cppcmdcount_ni,$physical_lines_ni);
 
-    printf STATS "#DIRECTIVES_CNI#: ";
-    while ( ($h,$v) = each(%cppcmdcount_c_ni) ) {
-      print STATS "$h ";
-    }
-    print STATS "\n";
-    printf STATS "DIRECTIVES_CNI: ";
-    while ( ($h,$v) = each(%cppcmdcount_c_ni) ) {
-      print STATS "$v ";
-    }
-    print STATS "\n";
+    OutputHistogram("DIRECTIVES_HNI",\%cppcmdcount_hdr_ni,1);
+    OutputHistogram("DIRECTIVES_HNI%NCNB",\%cppcmdcount_hdr_ni,$ncnb_physical_lines_hdr_ni);
+    OutputHistogram("DIRECTIVES_HNI%PHYS",\%cppcmdcount_hdr_ni,$physical_lines_hdr_ni);
 
-    print STATS "DIRECTIVES_CNI%NCNB: ";
-    while ( ($h,$v) = each(%cppcmdcount_c_ni) ) {
-      printf STATS "%2.2f ", pct2($v,$ncnb_physical_lines_c_ni);
-    }
-    print STATS "\n";
+    OutputHistogram("DIRECTIVES_CNI",\%cppcmdcount_c_ni,1);
+    OutputHistogram("DIRECTIVES_CNI%NCNB",\%cppcmdcount_c_ni,$ncnb_physical_lines_c_ni);
+    OutputHistogram("DIRECTIVES_CNI%PHYS",\%cppcmdcount_c_ni,$physical_lines_c_ni);
 
-    print STATS "DIRECTIVES_CNI%PHYS: ";
-    while ( ($h,$v) = each(%cppcmdcount_c_ni) ) {
-      printf STATS "%2.2f ", pct2($v,$physical_lines_c_ni);
-    }
-    print STATS "\n";
+    print "\n";
 
 
+    OutputHistogram("CATEGORIES_NI",\%category_counts_ni,1,$true);
+    OutputHistogram("CATEGORIES_HNI",\%category_counts_hdr_ni,1);
+    OutputHistogram("CATEGORIES_CNI",\%category_counts_c_ni,1);
 
-    printf STATS "#DIRECTIVES_HNI#: ";
-    while ( ($h,$v) = each(%cppcmdcount_hdr_ni) ) {
-      print STATS "$h ";
-    }
-    print STATS "\n";
-    printf STATS "DIRECTIVES_HNI: ";
-    while ( ($h,$v) = each(%cppcmdcount_hdr_ni) ) {
-      print STATS "$v ";
-    }
-    print STATS "\n";
-
-    print STATS "DIRECTIVES_HNI%NCNB: ";
-    while ( ($h,$v) = each(%cppcmdcount_hdr_ni) ) {
-      printf STATS "%2.2f ", pct2($v,$ncnb_physical_lines_hdr_ni);
-    }
-    print STATS "\n";
-
-    print STATS "DIRECTIVES_HNI%PHYS: ";
-    while ( ($h,$v) = each(%cppcmdcount_hdr_ni) ) {
-      printf STATS "%2.2f ", pct2($v,$physical_lines_hdr_ni);
-    }
-    print STATS "\n";
-
-
-
-    print STATS "#LINES#: physical ncnb_phys cpp_phys cpp_phys_ncnb\n";
-    print STATS "$physical_lines $ncnb_physical_lines $cpp_physical_lines $cpp_physical_ncnb_lines\n";
-    print STATS "#LINESNI#: physical ncnb_phys cpp_phys cpp_phys_ncnb\n";
-    print STATS "$physical_lines_ni $ncnb_physical_lines_ni $cpp_physical_lines_ni $cpp_physical_ncnb_lines_ni\n";
-    print STATS "\n";
+    print "\n";
   }
 
   # -M = dump the macro stats
   if ($opt_M) {
     my $name;
     select MACROS;
-    # FIX: add function/global uses
-    print "#MACROS#: name cDefs cUndefs cCodeUses cCppUses (%functionsThatUseIt)\n";
+    # FIX: compute a category for all definitions of the macro, if possible
+    # or give list of categories
+    print "#MACROS#: name cDefs cUndefs cCodeUses cCppUses cTotalUses HowUsed Categories InclusionMethods (%functionsThatUseIt)\n";
     foreach $name (sort keys %macros) {
       #print STDERR "MNAME=$name, @{$macros{$name}}\n";
       my $i = $macros{$name}[1];
       die "i not defined for $name" if (!defined($i));
-      next if ($mdef_file[$i] eq $built_in_fake_file);
+      
+      #next if ($mdef_file[$i] eq $built_in_fake_file);
+
       die if (!defined($macros_uses{$name}));
       die if (!defined($macros_c_undefs{$name}));
-      die if (!defined($macros_uses{$name}));
       die if (!defined($macros_used_in_functions{$name}));
 
       # FIXPERL: cperl mode doesn't count , as a statement continuer
       # in a print
-
+      
+      my $cCodeUses = $macros_uses{$name}[$i_usage_code];
+      my $cCppUses = $macros_uses{$name}[$i_usage_cpp];
+      my $cTotalUses = $cCodeUses + $cCppUses;
+      
       print "$name", $macros{$name}[0], $macros_c_undefs{$name},
-      $macros_uses{$name}[$i_usage_code],
-      $macros_uses{$name}[$i_usage_cpp], "\n%" .
-        join("\n%",@{$macros_used_in_functions{$name}}),
-        "\n";
+      $cCodeUses, $cCppUses, $cTotalUses,
+      how_used_from_code_cpp_uses($cCodeUses, $cCppUses),
+      join(",",CategoriesForMacroName($name)),
+      join(",",InclusionMethodsForMacroName($name)),
+      "\n%" . join("\n%",@{$macros_used_in_functions{$name}}),
+      "\n";
     }
   }
 
@@ -1409,19 +1398,22 @@ sub output_stats
     my $name;
 # don't want extra lines-- harder for postprocessing tools
 #    print  "\n";
-    # FIX: add $mncategory, $mntype
-    print "#DEFINITIONS#: name iDef file line args plines p_ncnb_lines (%macrosUsedInExpansion)\n";
+    print "#DEFINITIONS#: name iDef inclusion_method filename line args plines p_ncnb_lines categorization (%macrosUsedInExpansion)\n";
     foreach $name (sort keys %macros) {
       # Could also print number of times it's defined.
-      my $iDef = 1;
-      for ( ; $iDef <= $macros{$name}[0]; $iDef++ ) {
+      my $iDef;
+      for ( $iDef = 1; $iDef <= $macros{$name}[0]; $iDef++ ) {
 	my $i = $macros{$name}[$iDef];
 	if ($mdef_file[$i] ne $built_in_fake_file) {
 	  #print STDERR "NAME=$name,", join(", ",@{$macros{$name}}),"\n";
 	  # Used to output $i third here, but it's irrelevant.
-	  print "$name", $iDef, $mdef_file[$i], $mdef_line[$i], count_macro_args($mdef_args[$i]),
-	  $mdef_physical_lines[$i], $mdef_physical_ncnb_lines[$i], "\n%" .
-	    join("\n%",@{$mdef_expansion_uses[$i]}), "\n";
+	  print "$name", $iDef, $file_inclusion_method{$mdef_file[$i]}, 
+	  $mdef_file[$i], $mdef_line[$i], count_macro_args($mdef_args[$i]),
+	  $mdef_physical_lines[$i], $mdef_physical_ncnb_lines[$i], 
+	  $categoryname[$mdef_category[$i]], 
+	  # FIX: add type name back in when we get that working
+	  #$type_name_array[$mdef_type[$i]],  
+	  "\n%" . join("\n%",@{$mdef_expansion_uses[$i]}), "\n";
 	}
       }
     }
@@ -1429,17 +1421,28 @@ sub output_stats
 
   # -F = dump the function information
   if ($opt_F) {
+    select FUNCTIONS;
+    print "#functionId cMacroExpansions (%the macros)\n";
+    my $function_name_id;
+    foreach $function_name_id (sort keys %function_name_to_macros_it_uses) {
+      print $function_name_id,scalar(@{$function_name_to_macros_it_uses{$function_name_id}}),"\n%",
+      join(",",@{$function_name_to_macros_it_uses{$function_name_id}}), "\n";
+    }
+  }
+
+  if ($opt_L) {
     my $filename;
+    select FUNCLINES;
     foreach $filename (sort keys %files_lines) {
-      print FUNCTIONS "file: $filename\n", join("\n ",@{$files_lines{$filename}}), "\n";
+      print "file: $filename\n", join("\n ",@{$files_lines{$filename}}), "\n";
     }
     my $function;
     foreach $function (sort keys %function_to_locs) {
       my $info;
-      print FUNCTIONS "function: $function ";
+      print "function: $function ";
       my @infos = @{$function_to_locs{$function}};
       if ($#infos == 0)
-	{ print FUNCTIONS join(', ',@{$infos[0]}); }
+	{ print join(', ',@{$infos[0]}); }
       else {
 	# avoid extra semicolon at end of line
 	my @one_file_results = (); # each elt describes one file
@@ -1447,19 +1450,138 @@ sub output_stats
 	  # Don't really need semicolon at end of last entry
 	  push(@one_file_results, join(', ',@$info));
 	}
-	print FUNCTIONS join('; ',@one_file_results);
+	print join('; ',@one_file_results);
       }
-      print FUNCTIONS "\n";
+      print "\n";
     }
 
     # Use "local" instead; it seems to work.
     # FIXPERL: Why does this give me an unitialized variable warning?
     # undef $OFS if (defined($OFS));
   }
+
+  #FIXNOW -- Categorizations should probably get put in the per
+  #definition macro file, as well, and statistics need to be accumulated
+  if ($opt_C) {
+    my $name;
+    foreach $name (sort keys %macros) {
+      my $iDef;
+      for ($iDef = 1 ; $iDef <= $macros{$name}[0]; $iDef++ ) {
+	my $index = $macros{$name}[$iDef];
+	my $category = $mdef_category[$index];
+	my $type = $mdef_type[$index];
+	if (!defined($mdef_file[$index])) {
+	  print STDERR "mdef_file[$index] not defined\n"
+	} 
+	if (!defined($mdef_line[$index])) {
+	  print STDERR "mdef_line[$index] not defined\n"
+	} 
+	if (!defined($categoryname[$category])) {
+	  print STDERR "categoryname[$category] not defined\n";
+	}
+	print CATEG "$mdef_file[$index]:$mdef_line[$index]: "
+	  . ($mdef_args[$index] ? "function, " : "") . $categoryname[$category];
+	if (($category == $catEXP)
+	    || ($category == $catEXPFREE)
+	    || ($category == $catLITERAL)
+	    || ($category == $catCONSTANT)
+	    || ($category == $catSOMECONSTANT))
+	  { print CATEG "(", type_name($type), ")"; }
+	print CATEG ": $mdef_name[$index]$mdef_args[$index] $mdef_body[$index]\n"; 
+      }
+    }
+  }
 }
 
 
+# Returns a categorization string describing how the macro was used
+# (one of four)
+sub how_used_from_code_cpp_uses {
+  my ($cCodeUses, $cCppUses) = check_args(2,@_);
+  if ($cCodeUses > 0) {
+    if ($cCppUses > 0) {
+      return "CppAndCode";
+    } else {
+      return "CodeOnly";
+    }
+  } else {
+    if ($cCppUses > 0) {
+      return "CppOnly";
+    } else {
+      return "NoUses";
+    }
+  }
+}
 
+
+# Return a sorted version of the list
+# passed in, with duplicates removed
+sub UniquifyAndSortList {
+  my (@list) = @_;  # check_args_at_least(-1,@_); FIX
+  if (!wantarray) {
+    die "UniquifyAndSortList should return to an array context.";
+  }
+  my %seen = ();
+  foreach (@list) {
+    $seen{$_} = $true;
+  }
+  return sort (keys %seen);
+}
+
+# Returns a list of the categories for the various definitions
+# of the macro with a given name
+sub CategoriesForMacroName {
+  my ($name) = check_args(1,@_);
+  my $iDef;
+  my @list = ();
+  for ($iDef = 1 ; $iDef <= $macros{$name}[0]; $iDef++ ) {
+    my $index = $macros{$name}[$iDef];
+    die if !defined($macros{$name});
+    die if !defined($macros{$name}[$iDef]);
+    die if !defined($mdef_category[$index]);
+    push @list, $categoryname[$mdef_category[$index]];
+  }
+  #print STDERR "CFMN\n";
+  return UniquifyAndSortList(@list);
+}
+
+# Returns a list of the inclusion methods of the various
+# files in which the macro with a given name is defined
+sub InclusionMethodsForMacroName {
+  my ($name) = check_args(1,@_);
+  my $iDef;
+  my @list = ();
+  for ($iDef = 1 ; $iDef <= $macros{$name}[0]; $iDef++ ) {
+    my $index = $macros{$name}[$iDef];
+    die if !defined($macros{$name});
+    die if !defined($macros{$name}[$iDef]);
+    die if !defined($mdef_file[$index]);
+    my $filename = $mdef_file[$index];
+    die "$filename has no inclusion method" if !defined($file_inclusion_method{$filename});
+    push @list, $file_inclusion_method{$filename};
+  }
+  #print STDERR "IMFMN\n";
+  return UniquifyAndSortList(@list);
+}
+
+sub OutputHistogram {
+  my ($heading,$hashref,$divisor,$fPrintHeading) = check_args_at_least(3,@_);
+  my @headings_list = ();
+  my @values_list = ();
+  my $h;
+  foreach $h (sort keys %$hashref) {
+    push @headings_list, $h;
+    my $v = $ {$hashref}{$h};
+    if ($divisor != 1) {
+      push @values_list, sprintf "%2.2f",pct2($v,$divisor);
+    } else {
+      push @values_list, $v;
+    }
+  }
+  if (defined($fPrintHeading)) { print "#${heading}#: ", join($OFS,@headings_list) . "\n"; }
+  print "$heading: ", join($OFS,@values_list) . "\n";
+}
+    
 
 ###########################################################################
 ### Read lines
@@ -3989,7 +4111,6 @@ sub categorize_macro_name
 }
 
 
-#FIXMERNST: need to fix this code-- I think it's broken (categories are wrong)
 # Takes index into macro arrays as argument
 sub categorize_macro_def
 { my ($index) = check_args(1, @_);
@@ -4003,7 +4124,7 @@ sub categorize_macro_def
 
   my $body = $mdef_body_noc[$index];
   if (!defined($body))
-    { die "Why isn't mdef_body_noc[$index] defined?"; }
+    { die "Why isn't mdef_body_noc[$index] defined? ($mdef_body[$index])"; }
   $fDebugCommentRemoval && print STDERR "body = '$mdef_body[$index]'\nbody_noc = '$body'\n";
 
   my $category;
@@ -4102,51 +4223,10 @@ sub categorize_macro_def
     }
 
  CATEGORIZED:
-  # print "categorized as $category = $categoryname[$category]\n";
-  if ($opt_C)
-    { # print defined($index), " ", defined($mdef_file[$index]), " ", defined($mdef_line[$index]), " ", defined($category), " ", defined($categoryname[$category]), " ", defined($mdef_name[$index]), " ", defined($mdef_args[$index]), " ", defined($mdef_body[$index]), "\n";
-      # print "$mdef_file[$index]:$mdef_line[$index]: $category = $categoryname[$category]: $mdef_name[$index]$mdef_args[$index] $mdef_body[$index]\n";
-      if (!defined($mdef_file[$index])) {
-	print STDERR "mdef_file[$index] not defined\n"
-      } elsif (!defined($mdef_line[$index])) {
-	print STDERR "mdef_line[$index] not defined\n"
-      } elsif (!defined($categoryname[$category])) {
-	print STDERR "categoryname[$category] not defined\n";
-      }
-      print CATEG "$mdef_file[$index]:$mdef_line[$index]: "
-	. ($mdef_args[$index] ? "function, " : "") . $categoryname[$category];
-      if (($category == $catEXP)
-	  || ($category == $catEXPFREE)
-	  || ($category == $catLITERAL)
-	  || ($category == $catCONSTANT)
-	  || ($category == $catSOMECONSTANT))
-	{ print CATEG "(", type_name($type), ")"; }
-      print CATEG ": $mdef_name[$index]$mdef_args[$index] $mdef_body[$index]\n"; }
   $mdef_category[$index] = $category;
-
-
-#   if (defined($args)) {
-#     if ($args =~ /^\(\s*\)$/) {
-#       $cWithNullArgs++;
-#       $fShowCategorization &&
-# 	print CATEG "$current_file:@{[ current_line_no() ]}: WithNullArgs: $name $args $fullbody\n";
-#     } else {
-#       $cWithArgs++;
-#       $fShowCategorization &&
-# 	print CATEG "$current_file:@{[ current_line_no() ]}: WithRealArgs: $name $args $fullbody\n";
-#     }
-#   }
-#   # Must not have had args
-#   elsif (!defined($body) || $body eq "") {
-#     if ($lastline =~ /^\#[ \t]*ifndef[ \t]* $name$/) {
-#       $cPreventMI++;
-#     }
-#     else {
-#       $cNullDefine++;
-#       $fShowCategorization &&
-# 	print CATEG "$current_file:@{[ current_line_no() ]}: NullDefine: $name\n";
-#     }
-#   }
+  $mdef_type[$index] = $type;
+  # track our histogram of categories
+  update_categories_for($category);
 }
 
 
@@ -4354,81 +4434,6 @@ sub is_void_macro
 #  print STDERR "false3\n";
   return $false;
 }
-
-
-# # Uses $lastline global, too
-# sub categorize_macro
-# { my ($name, $args, $fullbody) = @_;
-#   check_args(1, @_);
-#   if ($fullbody =~ m!^(.*?)\s*(/\*.*\*/\s*)*(//.*)?$!) {
-#     # $1 matches non-commented part w/ leading,trailing ws removed
-#     $body = $1;
-#   } else {
-#     $body = $fullbody;
-#   }
-#   $fDebugCommentRemoval && print STDERR "fullbody = '$fullbody'\nbody = '$body'\n";
-#   if (defined($args)) {
-#     if ($args =~ /^\(\s*\)$/) {
-#       $cWithNullArgs++;
-#       $fShowCategorization &&
-# 	print CATEG "$current_file:@{[ current_line_no() ]}: WithNullArgs: $name $args $fullbody\n";
-#     } else {
-#       $cWithArgs++;
-#       $fShowCategorization &&
-# 	print CATEG "$current_file:@{[ current_line_no() ]}: WithRealArgs: $name $args $fullbody\n";
-#     }
-#   }
-#   # Must not have had args
-#   elsif (!defined($body) || $body eq "") {
-#     if ($lastline =~ /^\#[ \t]*ifndef[ \t]* $name$/) {
-#       $cPreventMI++;
-#       $fShowCategorization &&
-# 	print CATEG "$current_file:@{[ current_line_no() ]}: PreventMI: $name\n";
-#     }
-#     else {
-#       $cNullDefine++;
-#       $fShowCategorization &&
-# 	print CATEG "$current_file:@{[ current_line_no() ]}: NullDefine: $name\n";
-#     }
-#   }
-#   # Must have a body
-#   elsif ($body =~ /^\".*\"$/) {
-#     $cSimpleStrConstant++;
-#     $fShowCategorization &&
-#       print CATEG "$current_file:@{[ current_line_no() ]}: SimpleStrConstant: $name $fullbody\n";
-#   }
-#   # If the type contains a trailing *, the constant is usually (not always!) 0
-#   elsif ($body =~ /^\(\(\w+(\s+\**)?\)\s*(.*)\)$/ && FIsNumConst($2)) {
-#       $cCastedConstant++;
-#       $fShowCategorization &&
-# 	print CATEG "$current_file:@{[ current_line_no() ]}: CastedConstant: $name $fullbody\n";
-#     }
-#   elsif (FIsNumConst($body) ||
-# 	 $body =~ /^'(\\?.|\\[0-7][0-7][0-7])'$/) { # single character constant 'g'
-#     # is it just a number, possibly like "(4.566)" or "7" or "0x5FaB" or "'g'"
-#     if ($lastline =~ /^\#[ \t]*ifndef[ \t]* $name$/) {
-#       $cSimpleConstantWithDefault++;
-#       $fShowCategorization &&
-# 	print CATEG "$current_file:@{[ current_line_no() ]}: SimpleConstantWithDefault: $name $fullbody\n";
-#     }
-#     else {
-#       $cSimpleConstant++;
-#       $fShowCategorization &&
-# 	print CATEG "$current_file:@{[ current_line_no() ]}: SimpleConstant: $name $fullbody\n";
-#     }
-#   }
-#   elsif ($body =~ /^(L|x|\d|\(|\s|\)|\<|\>|\+|\-|\=|\*|\||\&|\%|\!)*$/) {
-#     # is it a numeric expression?
-#     $cSimpleExpression++;
-#     $fShowCategorization &&
-#       print CATEG "$current_file:@{[ current_line_no() ]}: SimpleExpression: $name $fullbody\n";
-#   }
-#   else {
-#     $cUncategorized++;
-#     $fShowCategorization &&
-#       print CATEG "$current_file:@{[ current_line_no() ]}: Uncategorized: $name $fullbody\n";
-#   }
-# }
 
 #FIX: what is this for?  Nobody calls it.
 sub checkmacrodef
@@ -4668,6 +4673,24 @@ sub count_macro_args {
   return $retval;
 }
 
+
+# Initialize these
+# FIX: comment this better
+sub initialize_lists_of_hashes {
+  check_args(0, @_);
+  my $i;
+  my $j;
+  foreach $i (0..$c_ftype-1) {
+    foreach $j (keys %cppcmdcount) {
+      $ {$rg_cppcmdcounts[$i]}{$j} = 0;
+    }
+    foreach $j (@categoryname) {
+      $ {$rg_category_counts[$i]}{$j} = 0;
+    }
+  }
+}
+    
+
 # Initialize the macros structures for the builtin macros of gcc
 # FIX: Should generalize so that it works for non-gcc compilers
 # This list is not necessarily comprehensive even for gcc
@@ -4688,6 +4711,14 @@ sub initialize_builtin_macros {
 
   my @num_def_macros = ( qw( __STDC__  __OBJC__ ) );
 
+  foreach ((@empty_def_macros,@string_def_macros,@num_def_macros)) {
+    $macros{$_} = [0];
+    $macros_uses{$_} = [0,0];
+    $macros_c_undefs{$_} = 0;
+    $macros_used_in_functions{$_} = [];
+    $macros_file_line_uses{$_} = [];
+  }
+
   foreach (@empty_def_macros) {
     $macros{$_} = [1,$cBuiltinMacros];
     $mdef_name[$cBuiltinMacros] = $_;
@@ -4696,6 +4727,17 @@ sub initialize_builtin_macros {
     $mdef_body_noc[$cBuiltinMacros] = "";
     $mdef_file[$cBuiltinMacros] = $built_in_fake_file;
     $mdef_line[$cBuiltinMacros] = 0;
+    $mdef_physical_lines[$cBuiltinMacros] = 0;
+    $mdef_category[$cBuiltinMacros] = 0;
+
+# FIX: initialize all the mdef_XXX arrays, here and below cases
+#    $mdef_physical_ncnb_lines[$cBuiltinMacros] = 0;
+#    $mdef_physical_dependenton[$cBuiltinMacros] = 0;
+#    $mdef_physical_expansion_uses[$cBuiltinMacros] = 0;
+#    $mdef_physical_type[$cBuiltinMacros] = 0;
+#    $mdef_physical_category[$cBuiltinMacros] = 0;
+#    $mdef_physical_evilness[$cBuiltinMacros] = 0;
+
     $cBuiltinMacros++;
   }
 
@@ -4707,6 +4749,9 @@ sub initialize_builtin_macros {
     $mdef_body_noc[$cBuiltinMacros] = "\"\"";
     $mdef_file[$cBuiltinMacros] = $built_in_fake_file;
     $mdef_line[$cBuiltinMacros] = 0;
+    $mdef_physical_lines[$cBuiltinMacros] = 0;
+    $mdef_category[$cBuiltinMacros] = 0;
+
     $cBuiltinMacros++;
   }
 
@@ -4718,6 +4763,9 @@ sub initialize_builtin_macros {
     $mdef_body_noc[$cBuiltinMacros] = "1";
     $mdef_file[$cBuiltinMacros] = $built_in_fake_file;
     $mdef_line[$cBuiltinMacros] = 0;
+    $mdef_physical_lines[$cBuiltinMacros] = 0;
+    $mdef_category[$cBuiltinMacros] = 0;
+
     $cBuiltinMacros++;
   }
 
@@ -4889,7 +4937,6 @@ $i $#{$listref}\n";
 }
 
 
-#FIX: write this
 sub compute_macros_used_in_functions {
   check_args(0, @_);
 
@@ -4905,12 +4952,17 @@ sub compute_macros_used_in_functions {
     # print STDERR "Handling $macro\n";
     for ( ; $i+1 <= $#{$uses_ref}; $i+=2 ) {
       my ($file,$line) = @{$uses_ref}[$i,$i+1];
-      my $function_name;
-      if (!($function_name = which_function($file,$line))) {
+      my $function_name = which_function($file,$line);
+      my $function_id;
+      if ($function_name) {
+	$function_id = "$file:$function_name";
+      } else {
 	$function_name = "%global%";
+	$function_id = "$file:%global%";
       }
       # print STDERR "USEIN: $function_name\n";
-      push @{$macros_used_in_functions{$macro}}, "$file:$line:$function_name";
+      push @{$macros_used_in_functions{$macro}}, $function_id;
+      push @{$function_name_to_macros_it_uses{$function_id}}, $macro;
     }
   }
 }
@@ -4958,14 +5010,55 @@ sub update_cpp_directives_for {
 
   # This code avoids warnings about using uninitialized values
   no strict 'refs';  #FIX: Must I do this?
-  if (!defined($ {$rg_cppcmdcounts[$current_ftype_index]}{$cpp_cmd})) {
-    $ {$rg_cppcmdcounts[$current_ftype_index]}{$cpp_cmd} = 0;
+
+  if (!defined($cppcmdcount{$cpp_cmd})) {
+    print STDERR "Warning: Uncounted %OTHER% directive: $cpp_cmd for $current_ftype_index\n";
+    $cpp_cmd = "%OTHER%";
   }
   $ {$rg_cppcmdcounts[$current_ftype_index]}{$cpp_cmd}++;
 
   $rg_cpp_cmds[$current_ftype_index]++;
   #print STDERR "GOTCPP: $cpp_cmd, for $current_ftype_index, so have $rg_cpp_cmds[$current_ftype_index]\n";
 }
+
+sub update_categories_for {
+  my ($catnumber) = check_args(1, @_);
+  my $category = $categoryname[$catnumber];
+
+  #FIXPERL: emacs cperl mode requires the space between $ and { below
+  #to correctly not parse the { as an open block
+
+  # This code avoids warnings about using uninitialized values
+  no strict 'refs';  #FIX: Must I do this?
+  if (!defined($ {$rg_category_counts[$current_ftype_index]}{$category})) {
+    $ {$rg_category_counts[$current_ftype_index]}{$category} = 0;
+  }
+  $ {$rg_category_counts[$current_ftype_index]}{$category}++;
+
+  #print STDERR "CAT: $category got incremented -- now is ", 
+  #$ {$rg_category_counts[$current_ftype_index]}{$category}, "\n";
+}
+
+
+# Sum corresponding elements of an array (or array slice)
+# into the destination reference provided
+sub sum_parallel_hashes {
+  my ($dest_hashref,@array_of_hash_refs) = @_; #FIX check_args_at_least(1,@_);
+  no strict 'refs';  #FIX: Must I do this?
+  my $hashref;
+  my $key;
+  foreach $hashref (@array_of_hash_refs) {
+    foreach $key (keys %{$hashref}) {
+      if (!defined($ {$dest_hashref}{$key})) {
+	# print STDERR "UNDEF: $key\n";
+	$ {$dest_hashref}{$key} = 0;
+      }
+      $ {$dest_hashref}{$key} += $ {$hashref}{$key};
+    }
+  }
+  return undef;
+}
+
 
 # compute $cpp_cmds, $cpp_cmds_ni
 # %cppcmpdcount, %cppcmdcount_ni
@@ -4981,50 +5074,15 @@ sub compute_global_cpp_sums {
   $cpp_cmds_hdr = sum_array(@rg_cpp_cmds[@ftype_HEAD]);
   $cpp_cmds_hdr_ni = sum_array(@rg_cpp_cmds[@ftype_HEADER_NOT_INCLUDED]);
 
-  my $hashref;
-  my $key;
+  sum_parallel_hashes(\%cppcmdcount,@rg_cppcmdcounts[@ftype_ALL]);
+  sum_parallel_hashes(\%cppcmdcount_ni,@rg_cppcmdcounts[@ftype_NOT_INCLUDED]);
+  sum_parallel_hashes(\%cppcmdcount_c_ni,@rg_cppcmdcounts[@ftype_NONHEADER_NOT_INCLUDED]);
+  sum_parallel_hashes(\%cppcmdcount_hdr_ni,@rg_cppcmdcounts[@ftype_HEADER_NOT_INCLUDED]);
 
-  my $i = 0;
-  no strict 'refs';  #FIX: Must I do this?
-  foreach $hashref (@rg_cppcmdcounts[@ftype_ALL]) {
-    #  for (;  $i < $#rg_cppcmdcounts; $i++) {
-    #    foreach $key (keys %{$rg_cppcmdcounts[$i]}) {
-    foreach $key (keys %{$hashref}) {
-      if (!defined($cppcmdcount{$key})) {
-	$cppcmdcount{$key} = 0;
-      }
-      $cppcmdcount{$key} += $ {$hashref}{$key};
-      #print STDERR "KEY=$key, adding ", $ {$hashref}{$key}, "\n";
-    }
-  }
-
-  foreach $hashref (@rg_cppcmdcounts[@ftype_NOT_INCLUDED]) {
-    foreach $key (keys %{$hashref}) {
-      if (!defined($cppcmdcount_ni{$key})) {
-	$cppcmdcount_ni{$key} = 0;
-      }
-      $cppcmdcount_ni{$key} += $ {$hashref}{$key};
-    }
-  }
-
-  foreach $hashref (@rg_cppcmdcounts[@ftype_NONHEADER_NOT_INCLUDED]) {
-    foreach $key (keys %{$hashref}) {
-      if (!defined($cppcmdcount_c_ni{$key})) {
-	$cppcmdcount_c_ni{$key} = 0;
-      }
-      $cppcmdcount_c_ni{$key} += $ {$hashref}{$key};
-    }
-  }
-
-  foreach $hashref (@rg_cppcmdcounts[@ftype_HEADER_NOT_INCLUDED]) {
-    foreach $key (keys %{$hashref}) {
-      if (!defined($cppcmdcount_hdr_ni{$key})) {
-	$cppcmdcount_hdr_ni{$key} = 0;
-      }
-      $cppcmdcount_hdr_ni{$key} += $ {$hashref}{$key};
-    }
-  }
-
+  sum_parallel_hashes(\%category_counts_ni,@rg_category_counts[@ftype_NOT_INCLUDED]);
+  sum_parallel_hashes(\%category_counts_c_ni,@rg_category_counts[@ftype_NONHEADER_NOT_INCLUDED]);
+  sum_parallel_hashes(\%category_counts_hdr_ni,@rg_category_counts[@ftype_HEADER_NOT_INCLUDED]);
+ 
 }
 
 
@@ -5412,6 +5470,10 @@ if ($opt_d) {
     open(FUNCTIONS,">$dir/${basename}func") || die "Failed opening $!";
   }
 
+  if (!$opt_L) {
+    open(FUNCLINES,">$dir/${basename}fnln") || die "Failed opening $!";
+  }
+
   if (!$opt_C) {
     open(CATEG,">$dir/${basename}catg") || die "Failed opening $!";
   }
@@ -5427,6 +5489,7 @@ if ($opt_P) { open(PARSE_ERRS,">$opt_P") || die "Failed opening $opt_P"; }
   elsif (!$opt_d) { open(PARSE_ERRS,">-") || die "Failed opening stdout!"; }
 if ($opt_S) { open(STATS,">$opt_S") || die "Failed opening $opt_S"; }
 if ($opt_F) { open(FUNCTIONS,">$opt_F") || die "Failed opening $opt_F"; }
+if ($opt_L) { open(FUNCLINES,">$opt_L") || die "Failed opening $opt_L"; }
 if ($opt_D) { open(DEFINES,">$opt_D") || die "Failed opening $opt_D"; }
 if ($opt_M) { open(MACROS,">$opt_M") || die "Failed opening $opt_M"; }
 if ($opt_C) { open(CATEG,">$opt_C") || die "Failed opening $opt_C"; }
@@ -5440,6 +5503,7 @@ $opt_S = $true;
 $opt_D = $true;
 $opt_M = $true;
 $opt_F = $true;
+$opt_L = $true;
 $opt_C = $true;
 $opt_P = $true;
 
@@ -5470,6 +5534,7 @@ foreach $_ (@ARGV) {
 
 get_include_path();
 initialize_builtin_macros();
+initialize_lists_of_hashes();
 
 # Begin Processing files
 
@@ -5506,23 +5571,14 @@ if (!$opt_1)
   get_macro_call_types();
 }
 
-#FIX: should I only print this stuff w/ -v?
-print STDERR "Computing various global statistics...\n";
-
-compute_global_cpp_sums();
+print STDERR "Computing macro/function use relations...\n";
 compute_macros_used_in_functions();
 
 ### All the files have been read; now process the macros
-# We initialized $cppcmdcount{"define"}, so it will be defined
-# FIXGJB: Actually, we don't do so any longer.
-if (!exists($cppcmdcount{"define"}))
-{ die "No defines found and cppcmdcount{\"define\"} doesn't exist" }
-print STDERR "Processing " . $cppcmdcount{"define"} . " macros\n";
+print STDERR "Categorizing " . ($cMacrosInTables - $cBuiltinMacros + 1) . " macros\n";
 { my $i;
-  # FIX: throughout coode, use explicit for-loop-s instead--
-  # this builds an array and has extra overhead in both space and time
   for ($i = $cBuiltinMacros;
-       $i <= $cppcmdcount{"define"} + $cBuiltinMacros-1;
+       $i < $cMacrosInTables;
        $i++ )
     { # print "$i: $mdef_body[$i]\n";
       #   print &parse_expression($mdef_body[$i]) . ": ";
@@ -5542,6 +5598,10 @@ print STDERR "Processing " . $cppcmdcount{"define"} . " macros\n";
 # 	    $cObsoleted++ if $flags & $OBSOLETE;
 # 	    $cDanger++ if $flags & $DANGER;
 # 	  }
+
+#FIX: should I only print this stuff w/ -v?
+print STDERR "Computing various global statistics...\n";
+compute_global_cpp_sums();
 
 #FIX: split output_stats into two pieces-- one for after first pass,
 # and one for after second pass
