@@ -1,14 +1,15 @@
-Attached is a point-by-point response to Reviewer 3's comments.  (Also see
-our March 31 cover letter, which addresses many of the high-level points.)
-Section numbers and pages refer to the revision unless otherwise noted.
+Attached is an annotated version of Reviewer 3's comments which notes
+changes made in response to them.  (Also see our March 31 cover letter,
+which addresses many of the high-level points.)  Section numbers and pages
+refer to the revision unless otherwise noted.
 
 While we carefully and seriously considered each suggestion and implemented
-most of them, in some cases we chose not to make changes.  This was
+most of them, in a few cases we chose not to make changes.  This was
 primarily due to the fact that, collectively, the referees (and other
 readers) requested expansion of each section in the paper, and occasionally
 the suggestions were in conflict.  Where we do not give a specific page
 number, we generally did not make a change, though the explanatory text
-here may serve if the issue is critical or remains unclear.
+here could be inserted if the issue is critical or remains unclear.
 
 > This paper presents an experimental study of the use of the C
 > preprocessor.  The paper makes two contributions: it presents a
@@ -31,10 +32,10 @@ here may serve if the issue is critical or remains unclear.
 > of the paper.
 
 Most of these points are addressed either in our cover letter or later in
-this document (where in many cases the criticisms are made more specific).
-Briefly, Section 1 now provides a more complete motivation.  This, in turn,
-provides a better background for the taxonomy and helps to connect Sections
-8 and 9.  We also reference the empirical data in Sections 8 and 9, further
+this document (where the criticisms are made more concrete).  Briefly,
+Section 1 now provides a more complete motivation.  This, in turn, provides
+a better background for the taxonomy and helps to connect Sections 8 and 9.
+We also reference the empirical data in Sections 8 and 9, further
 connecting them to the rest of the paper.  In Section 5.1 (page 7), we
 explain the methodology more precisely and thoroughly.
 
@@ -94,8 +95,8 @@ We do more of this now, in the expanded sections 9 and 10.
 
 We process some files containing many macro definitions, some of which were
 primarily used in C code and some of which were primarily used in Makefiles
-or elsewhere.  This does occurs in practice (for instance, for
-configuration), as we've made clear in the paper.
+or elsewhere.  This does occurs in practice (for instance, it may be used
+for configuration), as we've made clear in the paper.
 
 > A serious weakness of your paper is that your taxons are not defined
 > precisely.  You do not explain exactly what your analyzer computes or
@@ -204,7 +205,7 @@ encourage and enable careful study of other features.
 > overlooked Cpp.
 
 We looked but failed to find any metrics-related work on the preprocessor;
-the last paragraph of Section 8.3 now stately this explicitly, with some
+the last paragraph of Section 8.3 now states this explicitly, with some
 supporting documentation.  We expanded many other parts of Section 8 as
 well.
 
@@ -218,8 +219,8 @@ well.
 > willing to supply code that tickles the error messages, so you could
 > identify which had to do with macros.
 
-We ran LCLint, now, and discuss those results in section 8.3, paragraph
-3.  We also added paragraph 4 to discuss FlexeLint.
+Section 8.3, paragraph 3, now describes the results of running LCLint.  We
+also added paragraph 4 to discuss FlexeLint.
 
 > The writing of your paper needs improvement, especially in the
 > introduction.  By page 6, there is no coherent story about what you
@@ -228,11 +229,10 @@ We ran LCLint, now, and discuss those results in section 8.3, paragraph
 > 26, at the beginning of section 8.  This material should appear on
 > page 1.
 
-While changing C programs to make less use of the preprocessor is a worthy
-goal (and one mentioned in the abstract of both the original draft and the
-revised one), it is not the only motivation for our work.  As one other
-example, we consider development of tools to manipulate current programs as
-another important motivation.
+While changing C programming to make less use of the preprocessor is a
+worthy goal which we mention in the abstract, it is not the only motivation
+for our work.  One other important motivation we discuss is development of
+tools to manipulate current programs.
 
 In order to motivate the work earlier and more clearly, we have expanded
 and rewritten the abstract and split it into two paragraphs, and expanded
@@ -279,7 +279,7 @@ Most captions have been expanded and clarified.
 > The abstract claims an analysis taking cpp into account is
 > preferable.  Why?  Make your case or withdraw the claim.
 
-This is discussed in section 2 ("Background").
+We discuss this in section 2 ("Background").
 
 > What does it mean to say cpp can define new syntax?
 
@@ -304,9 +304,9 @@ The remainder of the paper investigates which constructs those are.  They
 will depend to some extent on specific circumstances and needs and as such
 are difficult to formalize.
 
-We chose not to change this terminology in the paper; our intent of using
-this term in the introductory material was to evoke a general notion,
-rather than a precise definition.
+We chose not to change this terminology in the introduction, where our goal
+is to evoke this general notion.  It is made more precise in subsequent
+sections.
 
 > Page 2:
 > 
@@ -327,7 +327,7 @@ reasonable names, into verbose, low-level gibberish.
 > could this problem be solved by limiting macro usage to certain of
 > your taxons?  If so, explain how (and which taxons).
 
-No.
+No, for the reasons above.
 
 > What is a non-syntactic program?
 
@@ -350,7 +350,7 @@ the packages we studied.
 > Why is high total use problematic?  Computers are good at doing
 > the same thing over and over.
 
-People are not, however; the text referred to humans as well as tools.
+People are not, however; the text refers to humans as well as tools.
 More directly to the point, one might hypothesize that the approach chosen
 by most tools -- to ignore macros -- would work well if there are few
 macros.  (The problems with such approaches -- for instance, the tool
@@ -383,8 +383,8 @@ clashes can lead to either bugs or difficulties in understanding the code.
 > claim, make it as precise as possible and provide supporting evidence.
 
 This paragraph (which has been moved to page 2 in the new draft, keeping it
-in the introduction) has been rewritten to avoid the offensive terms and to
-better explains the broad outlines of the results.  Because here we are
+in the introduction) has been rewritten to avoid the vague terms and to
+better explain the broad outlines of the results.  Because here we are
 presenting intuition and flavor, we postponed detailed definitions and
 explanations to the body of the paper, where the more precise results
 appear.
@@ -395,8 +395,7 @@ appear.
 Our source (though not your draft) converts "We analyzed" to "We used
 programs we wrote to analyze".
 
-The bulk of section 3 (in the new draft; was section 2 in the original
-draft) is about how the analysis was done.
+Section 3 now describes the analyses in detail.
 
 > If it's important that some applications are graphical, interactive,
 > etc., identify the applications in Figure 1.
@@ -410,15 +409,16 @@ we do so in the text.  (For instance, see section 4.2.)
 
 > Did you remove non-C files by hand?
 
-No.  This is discussed in section 3.
+No, they were identified automatically.  This is discussed in section 3.
 
 > Disclaimer about library macros should be more prominent.
 
-This is a feature, not a disclaimer.  (The large number of library macros
-overshadows use in the package, rendering the results meaningless for
+We have moved this to a paragraph of its own.
+
+Note that this is a feature, not a disclaimer.  The large number of library
+macros swamps use in the package, rendering the results meaningless for
 learning about how the package uses Cpp.  After we discovered this, we
-suppressed library macros from our results.)  However, per this suggestion,
-we have moved it to a paragraph of its own.
+suppressed library macros from our results.
 
 > Page 4:
 > 
@@ -437,13 +437,13 @@ Added on page 4 (in caption) and page 5 (end of section 3).
 
 >   3) There are almost no small programs.
 
-Yes!  That's a feature.  Small programs are amenable to hand-analysis or to
-ad hoc techniques.  A small program can be successfully written in almost
-any style and can be successfully analyzed by almost any technique,
+Right!  That's a feature.  Small programs are amenable to hand-analysis or
+to ad hoc techniques.  A small program can be successfully written in
+almost any style and can be successfully analyzed by almost any technique,
 including manual ones.  Since small programs may have different properties
 than large programs -- which are the only ones that are hard to deal with,
-so are the only ones of interest to a software researcher -- we have
-omitted them.
+so are of most interest to researchers and practitioners -- we have omitted
+them.
 
 >   4) Interesting codes possibly worth adding include:
 >        - the Linux kernel or parts thereof
@@ -466,19 +466,19 @@ disproved that speculation.  In the absence of our data, one might further
 speculate that a tool could focus on just a few Cpp directives, ignoring
 the others that are little used, and yet handle the majority of Cpp usage.
 Our data also disproves that speculation.  This is now explained in the last
-sentence of the introduction to section 4 (section 3, in the old draft).
+sentence of the introduction to section 4.
 
 Additionally, it seems valuable to provide the data, as others might notice
-patterns that we did not.  Finally, we now address the packages making most
-use of Cpp in section 4.2 (3.2 in the original draft).
+patterns that we did not.  Finally, we address the packages making most use
+of Cpp in section 4.2.
 
 > How much of your 11,000 lines of perl might be useful for other kinds
 > of analyses?
 
 It depends on the analysis; anywhere from nearly all of it it nearly none
-of it, we would guess.  Much of the code is an approximate, Cpp-aware parser
-that others might find useful.  Although perhaps it should have been,
-this was not a primary driver during our research.
+of it, we would guess.  Much of the code is an approximate, Cpp-aware
+parser that others might find useful.  Reuse of our infrastructure for
+other kinds of analyses was not a primary driver during our research.
 
 > Explain precisely what it means to attribute a line of code to a
 > directive.
@@ -503,8 +503,9 @@ Done, except that we use "conditional" instead of
 > 
 > How many is `most uses' of #undef?  Be precise whenever possible.
 
-32%.  Throughout the text, we have been precise and eliminated 
-variation, per this suggestion.
+Throughout the text, we have been precise and eliminated variation, per
+this suggestion.  (In this case, the answer is 32%, as the text now makes
+explicit.)
 
 > HAVE_PROTO is worth discussing.  You may want to compare the
 > HAVE_PROTO technique to this technique:
@@ -521,7 +522,7 @@ variation, per this suggestion.
 Such an approach has the (often unacceptable) consequence of omitting type
 information from the declaration in the K&R case.  Some packages use a more
 convoluted style to achieve the proper effect, like this example from bc
-(we've taken code snippets from bc-1.03/dc.h and bc-1.03/dc-number.c):
+(files bc-1.03/dc.h and bc-1.03/dc-number.c):
 
   #ifndef __STDC__
   # define DC_PROTO(x)			()
@@ -561,11 +562,10 @@ We've made these changes throughout.
 > You say 25% of macro definitions contain latent bugs.  Compare this
 > number to the number found by other tools, e.g., FlexeLint, LClint.
 
-Unfortunately, 
-LCLint crashed most of the times we tried to run it; and, FlexeLint
-doesn't check nearly as many conditions as we did.  We chose not to include
-a competitive analysis of FlexeLint in this paper; see point 9 of our cover
-letter.
+The comparisons are made in Section 8.3.  Unfortunately, LCLint crashed
+most of the times we tried to run it; and, FlexeLint doesn't check nearly
+as many conditions as we did.  We chose not to include a competitive
+analysis of FlexeLint in this paper; see point 9 of our cover letter.
 
 > Page 7:
 > 
@@ -582,7 +582,7 @@ Done.
 
 We don't believe that there is only one interesting thing to be learned
 from the graph, or that we can know the one thing that every reader is
-looking for.  That's why we have included the data for readers to peruse
+looking for.  That's why we have included the data for readers to examine
 for themselves.  We hope others with other problems or interests will take
 from it something that might not have caught our attention.
 
@@ -608,7 +608,8 @@ of page 10).
 
 > Remind us what stringization and pasting are.  
 
-Our current source (though not your draft) adds brief descriptions here.
+Our current source (though not your draft) adds one-phrase descriptions
+here.
 
 > Page 10:
 > 
@@ -620,8 +621,8 @@ Our current source (though not your draft) adds brief descriptions here.
 > LaTeX Companion shows how if you are using LaTeX).  Even with these
 > improvements, however, I can make no sense of this table.
 
-We've added absolute numbers, slanted the headings, and added a bit more
-explanation.
+As suggested, we've added absolute numbers, slanted the headings, and added
+a bit more explanation.
 
 > Page 11:
 > 
@@ -631,12 +632,12 @@ explanation.
 > suggests they are equivalent.  If that's so, how much use is your
 > measurement really?
 
-We now note in the draft that the few macros that use pasting have fewer
-uses on average than macros that do not use pasting.
+We now note that the few macros that use pasting have fewer uses on average
+than macros that do not use pasting.
 
 > Shouldn't the extra-linguistic category include Syntactic macros?
 
-Per the third sentence of the paragraph (in both drafts), extra-linguistic
+The third sentence of the paragraph notes that extra-linguistic
 capabilities provide a feature unavailable in the C language.  By contrast,
 macros categorized as syntactic act as punctuation.  Since these are
 orthogonal classifications, some but not all syntactic macros will provide
@@ -653,12 +654,13 @@ codebase; after developing it, we formally compared it to the lists of
 others, as described in Section 8.  (We did that comparison last to avoid
 being prejudiced by others' results.  We were not completely uninfluenced
 by previous work, as some of the errors are well-known in the C/C++
-community and in many cases we had already read those papers or manuals.)
+community and in many cases we had previously read those papers or
+manuals.)
 
 We have found no other list as comprehensive as ours, though most of the
 items appear on some other list of macro errors or recommendations.
-(Exceptions include free variables (a potential, not certain, error),
-inconsistent arity, and null body with arguments.)
+(Exceptions include free non-global variables (a potential, not certain,
+error), inconsistent arity, and null body with arguments.)
 
 All of our examples come from the packages we studied, and we culled our
 list by eliminating warnings we considered uninteresting or which did not
@@ -696,28 +698,26 @@ error".
 Not all macros look like function calls; in particular, argumentless macros
 do not.  
 
-This is an example of a fact that has startled
-some readers while coming as no surprise to other readers with a different
-background.  Empirically, we have found it impossible
-to predict what will be interesting or
-boring to different audiences; as we note in our cover letter, responses
-have been quite varied.
+This is an example of a fact that has startled some readers while coming as
+no surprise to other readers with a different background.  Empirically, we
+have found it impossible to predict what will be interesting or boring to
+different audiences; as we note in our cover letter, responses have been
+quite varied.
 
-While individuals have never defined a macro that is equivalent to a statement, the
-explanatory text about the "statement" category on page 8 shows that over
-42% of the macros in the "statement" category were either complete
-statements or multiple complete statements.  In other words, across 26
-software packages by a variety of authors, there were nearly as many of the
-complete statements as there were of the partial statements that many
-people favor
-(which made up 56% of the "statement" category).
+While some individuals avoid defining a macro that is equivalent to a
+statement, the explanatory text about the "statement" category on page 8
+now shows that over 42% of the macros in the "statement" category were
+either complete statements or multiple complete statements.  In other
+words, across 26 software packages by a variety of authors, there were
+nearly as many of the complete statements as there were of the partial
+statements that many people favor (which made up 56% of the "statement"
+category).
 
 > Explain /**/-style pasting.
 
-This is described on page 15 of the new draft (and page 14 of the old
-draft).  If desired, we could add one more explanatory sentence: "For
-instance, in K&R C, to/**/ken is interpreted as a single token, and macros
-might be expanded on either side of the comment as well."
+We describe this on page 15.  If desired, we could add one more explanatory
+sentence: "For instance, in K&R C, to/**/ken is interpreted as a single
+token, and macros might be expanded on either side of the comment as well."
 
 > Can't you do a simple reaching-definitions analysis on the cpp code to
 > see which macro definitions could be used at which sites?  Isn't this
@@ -734,18 +734,17 @@ described in Section 3.
 > important to classify macro names.
 
 Our current source (though not your draft) adds a note about this to the
-introduction to section 5 and to Figure 6.  We continue to postpone the
-details to Figure 7.
+introduction to section 5 and to Figure 6.  We postpone the details to
+Figure 7, which appears on the page following Figure 6.
 
 > ``Failed classification'' seems an artifact of your classification
 > scheme.  Does this indicate a flaw in your work or a genuine problem
 > in the data?  
 
-Per page 10 (new draft; in the old draft, page 9), these are oddities that
-our (conservative) classifier couldn't classify into one of the other
-categories.  Also as now noted on those pages, there are so few of them (less
-than 2%) that they don't affect the broad outlines of our results.  Their
-existence is at most a second-order effect.
+Per page 10, these are oddities that our (conservative) classifier couldn't
+classify into one of the other categories.  We also note that there are so
+few of them (less than 2%) that they don't affect the broad outlines of our
+results.  Their existence is at most a second-order effect.
 
 > What is `supporting variant declaration styles'?
 
@@ -756,7 +755,7 @@ Added "(such as ANSI C declarations and K&R C declarations)".
 > Again, lead your reader by the hand.  What does it mean for a curve to
 > be at the top of the graph?  At the bottom?
 
-We dropped this figure from the current draft but follow this suggestion on
+We dropped this figure from the current draft but follow the suggestion on
 all other figures.
 
 > Page 16:
@@ -773,7 +772,7 @@ be more comprehensible.
 
 > The first paragraph of section 4.6 is another mystery.
 
-This is slightly modified in the current draft; and in our current source,
+This is slightly modified in the revision; and in our current source,
 reworded for further improvement.
 
 > Give examples of places where you've identified changes that should be
@@ -781,14 +780,13 @@ reworded for further improvement.
 > Would these places have been identified with a commercial lint tool or
 > other lint-like tool?
 
-We do so on page 17 of the old draft.  This is now on page 18 of the new
-draft, along with one more example.  We also now state (more concretely
-than in the first draft) of one row in figure 8:
+We do so on page 18, also adding one more example.  We also now state (more
+concretely than in the first draft) of one row in figure 8:
 
   those twelve macro names are categorized as ``other'' and, with one
   exception, represent bugs in the packages.
 
-and of another row:
+and of another row of figure 8:
 
   All seven of these are bugs
 
@@ -819,8 +817,8 @@ Done.  We now give per-line frequencies and fractions as percentages.
 > information?
 
 Changed "representing different categories of information" to "with
-different purposes", which is further explained in the (referenced) Section
-6.3.
+different purposes".  We also now reference section 6.3, which further
+explains this terminology.
 
 > How are these categories determined or measured?  How do
 > they fit into your taxonomy?
@@ -832,7 +830,8 @@ added should help to clarify.
 > 
 > Figure 8 is a total loss.  Omit it.
 
-We truncated it, added absolute numbers, and expanded the caption.
+We truncated it, added absolute numbers, and expanded the caption for
+improved understandability.
 
 > Page 19:
 > 
@@ -840,10 +839,11 @@ We truncated it, added absolute numbers, and expanded the caption.
 > would constitute perfect accuracy?  How many instances did you spot
 > check?  How did you select them?
 
-We checked between high dozens and low hundreds of instances to determine
-whether any conditions with the properties we mentioned were used other
-than for macro redefinition.  We found very few exceptions.  However, since
-we don't have a formal statement of this, we have omitted the sentence.
+Since we don't have a formal statement of this, we have omitted the
+sentence.  (We checked some hundreds of instances to determine whether any
+conditions with the properties we mentioned were used other than for macro
+redefinition.  We found very few exceptions and had thought that might be
+of interest to readers.)
 
 > Page 20:
 > 
@@ -866,17 +866,17 @@ Done (for this graph and every graph).
 > 
 > I see no need to abbreviate ``conditional'' in Figure 11.
 
-We feel the figure looks better when the numbers are not so widely
-separated from the labels as they would be by tripling the length of
-"cond."  
+We feel the abbreviation is not unclear and the figure looks better when
+the numbers are not so widely separated from the labels as they would
+become by tripling the length of "cond."
 
 > *What* fraction of uses are accounted for by uses in macro bodies?
 
-We didn't bother to compute this exactly, because it is likely smaller than
-the precision to which we reported these numbers.  If macros used in macro
-bodies are representative (a manual inspection gives no reason do doubt
-this), then the figure would be another 6% of the 5% of macros appearing in
-macro definition bodies.
+We've omitted this sentence from the revision.  (We didn't bother to
+compute this exactly, because it is likely very small.  If macros used in
+macro bodies are representative (our manual inspection gives no reason do
+doubt this), then the figure would be another 6% of the 5% of macros
+appearing in macro definition bodies, or about .3%.)
 
 > Include mean percentages with each of the categories in section 5.3.
 
@@ -897,7 +897,8 @@ The categories are ordered as in the text.
 > these the classifications of the macro names or of the reaching macro
 > definitions?
 
-The name.  We've reworded to clarify this.
+We've reworded to clarify that whenever we discuss macro uses, we are
+referring to macro names.
 
 > Define inclusion dependence precisely and clearly, e.g., a line l is
 > inclusion-dependent on a macro name M (macro definition?) if and only
@@ -953,8 +954,9 @@ Done.
 > dependent on what?  And tell us *how* closely the figure approximates
 > an exponential.
 
-This is right:  a logarithmic-looking decay on a log-scale plot is a  Zipf
-distribution.  We've corrected the text and given some supporting numbers.
+Our original text was mistaken:  a logarithmic-looking decay on a log-scale
+plot is a Zipf distribution.  We've corrected the text and given some
+supporting numbers to show how good the approximation is.
 
 > I read the third paragraph in section 6.2 as saying, ``Of the ten most
 > interesting macros our analyzer found, it got four of them wrong.''
@@ -986,10 +988,10 @@ read with frequency distributions.)
 > axes on the same scale, even if you must increase the amount of
 > vertical space devoted to the figure.
 
-With respect to label size, the size of pages in the journal will determine
-whether the plots can be laid out horizontally or vertically; it seems wise
-to defer fine-tuning until then.  Our cover letter addresses the other
-comments.
+We put the Y axes on the same scale.  With respect to label size, the size
+of pages in the journal will determine whether the plots can be laid out
+horizontally or vertically; it seems wise to defer fine-tuning until then.
+Our cover letter addresses the epsilon bar comment.
 
 > The preprocessor is commonly used to support multiple dialects of
 > *which* languages?  How commonly?  On what evidence do you make this
@@ -1041,14 +1043,14 @@ not find it particularly illuminating).
 > Can the variation be correlated to maturity?  Bug reports?
 > Age relative to the ANSI standard?
 
-As mentioned earlier, a detailed study of specific software packages is
-beyond the scope of this paper.
+As mentioned earlier, a detailed study of specific software packages would
+be welcome but is beyond the scope of this paper.
 
 > Please do a better job explaining Krone and Snelting.  It seems
 > interesting, but I can't follow your explanation.
 
-Expanded; this is the first paragraph of section 8.3.  (Other people were
-interested in other pieces of related work; we couldn't devote large
+Expanded; this is now the first paragraph of section 8.3.  (Other people
+were interested in other pieces of related work; we couldn't devote large
 amounts of space to each.)
 
 > As noted above, I think much more extensive comparison with lint-like
@@ -1062,10 +1064,10 @@ We added section 8.3 about error checking tools.
 > application suite.  How many of the packages (or source files) could
 > it handle without crashing?
 
-Yes, LCLint is essentially useless.  We didn't want to make too big a deal
-of this, however:  our primary goal is not to criticize others.  We have
-slightly expanded the text to answer this question, however (on page 28 of
-the new draft).
+We expanded the text to answer this question (on page 28 of the revision).
+In brief:  yes, LCLint is essentially useless.  We didn't want to make too
+big a deal of this, however, for our primary goal is not to criticize
+others.
 
 > You criticize Spuler and Sajeev for not justifying tradeoffs between
 > techniques that perform parsing and those that do not.  I see no such
@@ -1078,8 +1080,9 @@ incorrect warnings appear rarely," and "This technique will rarely find
 extra errors and the simpler algorithm is quite adequate."  Absolutely no
 justification is provided.  Those tradeoffs in techniques are not the major
 theme of our paper, though perhaps the community would welcome followon
-work that examined this issue more rigorously.  We can add information to
-this effect if it would be helpful.
+work that examined this issue more rigorously.
+
+We can add the above to the paper if it would be helpful.
 
 > Page 27:
 > 
@@ -1123,8 +1126,8 @@ See the top of p. 30 for our now-explicit suggestions
 > Use your empirical data to argue the points in section 8---connect
 > this section to the rest of the paper.
 
-We do now, and this does help connect them.  See paragraphs 2 and 4 of
-section 9.
+We do now, and this does help connect them.  In particular, see paragraphs
+2 and 4 of section 9.
 
 > How are the good practices in section 8 different from recommendations
 > made by others?  The benefits you list are very abstract.  Make a case
@@ -1162,9 +1165,9 @@ We discuss this in section 5.
 > You claim to have found interesting and surprising features.  I'm not
 > convinced---identify the most important such features.
 
-Importance is in the eye of the beholder, and surprise, too, depends on the
+Importance depends crucially on task, and surprise, too, depends on the
 reader's preconceptions, prejudices, and previous experience.  Also see
-point 10 of our cover letter (pages 2-3 of that letter).
+point 10 of our cover letter.
 
 > As noted above, the problems identified in the last and third from
 > last paragraphs must be corrected.  You must not assume that all
