@@ -2,40 +2,40 @@
 \hook{STARTPARSE}{} Called just before the bison parser is started (i.e., before yyparse()).
 \hook{EXIT}{\$return\_\-exit\_\-code} Called just before the system exit() call.
 \hook{HANDLE\_\-DIRECTIVE}{\$directive\_\-name} Called exactly once for each directive.  \$directive\_\-name is
-the directive as it appeared in the source code with the leading \# removed.
-\hook{DO\_\-DEFINE}{\$s\_\-start, \$s\_\-end, \$name\_\-args\_\-body} Called exactly once for each \#define. 
+the directive as it appeared in the source code with the leading \pphash{} removed.
+\hook{DO\_\-DEFINE}{\$s\_\-start, \$s\_\-end, \$name\_\-args\_\-body} Called exactly once for each \pphash{}define. 
 Arguments give the source code character offsets of the line and the 
 unprocessed rest of the line including the name of the macro, its arguments
 and its definition.
-\hook{PRE\_\-DO\_\-UNDEF}{\$s\_\-start, \$s\_\-end, \$mname} Called exactly once for each \#undef.
+\hook{PRE\_\-DO\_\-UNDEF}{\$s\_\-start, \$s\_\-end, \$mname} Called exactly once for each \pphash{}undef.
 Arguments give the source code character offsets of the line and the
 name of the macro being undefined.  This hook is called just before
 the macro is undefined, so its definition still exists 
 in the preprocessor's state.
-\hook{DO\_\-UNDEF}{\$s\_\-start, \$s\_\-end, \$mname} Called exactly once for each \#undef.
+\hook{DO\_\-UNDEF}{\$s\_\-start, \$s\_\-end, \$mname} Called exactly once for each \pphash{}undef.
 Arguments give the source code character offsets of the line and the
 name of the macro being undefined.  This hook is called immediately after
 the macro is undefined.
 \hook{DO\_\-INCLUDE}{\$s\_\-start, \$s\_\-end, \$filename\_\-given, \$filename\_\-resolved, \$flags} 
-Called exactly once for each \#include,
-\#include\_\-next, or \#import directive.  Source coded character offsets of
+Called exactly once for each \pphash{}include,
+\pphash{}include\_\-next, or \pphash{}import directive.  Source coded character offsets of
 the line are given. Also, \$filename\_\-given is the name of the
 file to be included as written in the source;  \$filename\_\-resolved is the
 fully qualified path name of the file to be read; and  \$flags is a bitmap
 with three relevant masks:  \$ANGLE\_\-BRACKETS, for whether the filename appeared
 in angle brackets signifying a system include file; \$SKIP\_\-DIRS, for whether this
-is an \#include\_\-next directive; and \$IMPORTING, for whether this is an \#import
+is an \pphash{}include\_\-next directive; and \$IMPORTING, for whether this is an \pphash{}import
 directive.
 \hook{DO\_\-IF}{\$s\_\-start, \$s\_\-end, \$conditional, \$skipped, \$value} 
-Called exactly once for each \#if 
-(not \#ifdef or \#ifndef) directive seen by the preprocessor. In particular,
-note that normally, nested \#ifXX-s that are ignored will not invoke this hook.
+Called exactly once for each \pphash{}if 
+(not \pphash{}ifdef or \pphash{}ifndef) directive seen by the preprocessor. In particular,
+note that normally, nested \pphash{}ifXX-s that are ignored will not invoke this hook.
 Arguments give the source code character
 offsets of the directive; \$conditional is the guard checked, \$skipped is
 the literal text that is skipped (conditional was false if this is non-empty), and
 \$value is 1 iff the \$conditional evaluated to true (defined), 0 otherwise.
 \hook{DO\_\-XIFDEF}{\$s\_\-start, \$s\_\-end, \$kind, \$conditional, \$trailing\_\-garbage, \$skipped, \$fSkipping, \$s\_\-branch\_\-start}
-Called exactly once for each \#ifdef or \#ifndef.
+Called exactly once for each \pphash{}ifdef or \pphash{}ifndef.
 The arguments are the same as for the DO\_\-IFDEF hook, except \$kind is either
 "IFDEF" or "IFNDEF" depending on the type of conditional; \$fSkipping
 replaces the \$value argument and is non-zero iff the conditional fails
@@ -44,52 +44,52 @@ replaces the \$value argument and is non-zero iff the conditional fails
 the branch taken.  Note that this hook is called after the DO\_\-IFDEF or DO\_\-IFNDEF
 hook.
 \hook{DO\_\-IFDEF}{\$s\_\-start, \$s\_\-end, \$conditional, \$trailer, \$skipped, \$value}
-Called exactly once for each \#ifdef
-(not \#if or \#ifndef) directive seen by the preprocessor. In particular,
-note that normally, nested \#ifXX-s that are ignored will not invoke this hook.
+Called exactly once for each \pphash{}ifdef
+(not \pphash{}if or \pphash{}ifndef) directive seen by the preprocessor. In particular,
+note that normally, nested \pphash{}ifXX-s that are ignored will not invoke this hook.
 Arguments give the source code character
 offsets of the directive; \$conditional is the name checked for defined-ness;
 \$trailer is whatever follows that name on the same line (usually empty); \$skipped is
 the literal text that is skipped (conditional was false if this is non-empty), and
 \$value is 1 iff the name from the \$conditional was defined, 0 otherwise.
 \hook{DO\_\-IFNDEF}{\$s\_\-start, \$s\_\-end, \$conditional, \$trailer, \$skipped, \$value}
-Called exactly once for each \#ifndef
-(not \#if or \#ifdef) directive seen by the preprocessor. In particular,
-note that normally, nested \#ifXX-s that are ignored will not invoke this hook.
+Called exactly once for each \pphash{}ifndef
+(not \pphash{}if or \pphash{}ifdef) directive seen by the preprocessor. In particular,
+note that normally, nested \pphash{}ifXX-s that are ignored will not invoke this hook.
 Arguments give the source code character
 offsets of the directive; \$conditional is the name checked for defined-ness;
 \$trailer is whatever follows that name on the same line (usually empty); \$skipped is
 the literal text that is skipped (conditional was false if this is non-empty), and
 \$value is 1 iff the name from the \$conditional was not defined, 0 otherwise.
 \hook{DO\_\-ELSE}{\$s\_\-start, \$s\_\-end, \$orig\_\-conditional, \$trailer, \$skipped, \$fSkipping, \$s\_\-start\_\-branch}
-Called exactly once for each \#else directive seen by the preprocessor. In particular,
+Called exactly once for each \pphash{}else directive seen by the preprocessor. In particular,
 note that if the directive is skipped due to another outer conditional, this
 hook does not get called.
 Arguments give the source code character
 offsets of the directive; \$orig\_\-conditional is the guard in the
-matching \#ifXX directive; 
-\$trailer is whatever follows \#else on the same line (usually empty); \$skipped is
+matching \pphash{}ifXX directive; 
+\$trailer is whatever follows \pphash{}else on the same line (usually empty); \$skipped is
 the literal text that is skipped (if any); \$fSkipping is 1 iff
-this \#else clause's guarded text got skipped; \$s\_\-start\_\-branch is a souce code
+this \pphash{}else clause's guarded text got skipped; \$s\_\-start\_\-branch is a souce code
 character offset of where the branch begins, if it's used, or the character
 following the skipped text if not.
 \hook{DO\_\-ELIF}{\$s\_\-start, \$s\_\-end, \$already\_\-did\_\-clause, \$conditional, \$skipped, \$value}
-Called exactly once for each \#elif directive seen by the preprocessor. In particular,
+Called exactly once for each \pphash{}elif directive seen by the preprocessor. In particular,
 note that if the directive is skipped due to another outer conditional, this
 hook does not get called.
 Arguments give the source code character
 offsets of the directive; \$already\_\-did\_\-clause is 1 iff one of the
-earlier \#ifXX or \#elif-s succeeded (thus implying the code guarded will be skipped);
+earlier \pphash{}ifXX or \pphash{}elif-s succeeded (thus implying the code guarded will be skipped);
 \$conditional is the conditional tested; \$skipped is the skipped code (if any);
 and \$value is what \$conditional evaluated to.  The code guarded is
 included iff !\$conditional and \$value, in which case \$skipped will be empty.
 \hook{DO\_\-ENDIF}{\$s\_\-start, \$s\_\-end, \$orig\_\-conditional, \$trailer}
-Called exactly once for each \#endif directive seen by the preprocessor. In particular,
+Called exactly once for each \pphash{}endif directive seen by the preprocessor. In particular,
 note that if the directive is skipped due to another outer conditional, this
 hook does not get called.
 Arguments give the source code character
 offsets of the directive; \$orig\_\-conditional is the guard of the matching
-\#ifXX directive; \$trailer is the text following the \#endif (often empty);
+\pphash{}ifXX directive; \$trailer is the text following the \pphash{}endif (often empty);
 \hook{CREATE\_\-PREDEF}{\$mname, \$expansion, \$num\_\-args, \$internal\_\-expansion, \$file, \$line, \$r\_\-argnames, \$flags, \$internal\_\-expansion\_\-args\_\-uses... }
 Called once for each predefined macro CPP installs.
 \$mname is the name of the macro, \$expansion is its expansion [as literal text], 
@@ -127,7 +127,7 @@ into @enum\_\-node\_\-type giving the C constant corresponding to that symbol
 (usually better to just use \$symbol instead).
 \hook{EXPAND\_\-MACRO}{\$s\_\-start, \$s\_\-end, \$mname, \$expansion, \$length, \$raw\_\-call, \$has\_\-escapes, \$cbuffersDeep, \$cnested, @nests, \$cargs, @args}
 Called once for each macro expansion in C source (i.e., not for expansions
-in \#ifXX guards). \$s\_\-start and \$s\_\-end are the source code character offsets
+in \pphash{}ifXX guards). \$s\_\-start and \$s\_\-end are the source code character offsets
 of the macro invocation; \$mname is name of the macro, \$expansion is what
 replaces \$mname in the text (subject to further expansion, of course); \$length
 is the number of characters in that expansion, \$raw\_\-call is how the call
@@ -166,12 +166,12 @@ string used to accumulate the expansion when the CbuffersBack backcall
 is 1 in this hook (meaning you are cleaning up a top level macro expansion).
 See cpphook.pm for an example.
 \hook{IFDEF\_\-MACRO}{\$s\_\-start, \$s\_\-end, \$mname, \$expansion, \$length, \$raw\_\-call, \$has\_\-escapes, \$cbuffersDeep, \$cnested, @nests, \$cargs, @args}
-Called once for each macro expansion in \#if directives.  The arguments
+Called once for each macro expansion in \pphash{}if directives.  The arguments
 passed to the hook are the same as those for the EXPAND\_\-MACRO hook, see its
 documentation for details.  Note, though, that macros are not usually
-expanded in \#ifdef and \#ifndef directives, they are simply tested for
+expanded in \pphash{}ifdef and \pphash{}ifndef directives, they are simply tested for
 defined-ness by lookup in the symbol table, thus triggering the IFDEF\_\-LOOKUP\_\-MACRO
-hook, not this one.  A form such as "\#if FOO" will trigger this hook, however.
+hook, not this one.  A form such as "\pphash{}if FOO" will trigger this hook, however.
 \hook{IFDEF\_\-LOOKUP\_\-MACRO}{\$mname, \$f\_\-defined}
 Called once for each macro name lookup done during conditional compilation
 guard checking.  The arguments are:
@@ -220,10 +220,10 @@ Full tokens and/or whitespace are emitted per each call to the hook.
 Use the CchOutput() and CchOffset() backcalls for output character offset
 and source code character offset, respectively.
 \hook{ADD\_\-IMPORT}{\$filename, \$was\_\-found} FIXGJB: 2nd arg right?
-Called for each filename that is \#import-ed.  Arguments give that
+Called for each filename that is \pphash{}import-ed.  Arguments give that
 file name and \$was\_\-found, which is negative iff the file was not found.
 \hook{INCLUDE\_\-FILE}{\$filename, \$system\_\-include}
-Called for each file that is \#include-d (not necessarily for each \#include
+Called for each file that is \pphash{}include-d (not necessarily for each \pphash{}include
 directive; this hook won't be called if the file cannot be found).
 Arguments are the filename and \$system\_\-include, which is non-zero if the filename
 appears to be a system include file (absolute pathname and in a known
