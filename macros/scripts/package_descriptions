@@ -2,18 +2,15 @@ bash	Command shell
 bc	Desktop calculator 
 bison	Parser generator 
 cvs	Revision control system 
-dejagnu	Testing framework 
 emacs	Text editor
 flex	Scanner generator 
 fvwm	Window manager 
-g77	Fortran compiler 
 gawk	GAWK interpreter 
 gcc	C and C++ compiler
 genscript	Text-to-PostScript converter 
 ghostview	PostScript previewer 
 gnuchess	Chess player 
 gnuplot	Graph plotter 
-groff	Text formatter 
 gs	PostScript interpreter 
 gzip	File compressor 
 m4	Macro expander 
