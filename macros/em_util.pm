@@ -204,10 +204,10 @@ sub simplify_path_name ( $ ) {
 # Not the right place for this, but I want to share it between em_reports
 # and lint-summarize.
 
-sub print_lint_summary ( $$$$$$$$$$$$$$$;$ )
+sub print_lint_summary ( $$$$$$$$$$$$$$$$;$ )
 {
   my ($different_arity, $null_body, $newline_body, $unparen_body,
-      $swallow_semi, $free_var, $formal_name, $formal_mult_use,
+      $swallow_semi, $swallow_else, $free_var, $formal_name, $formal_mult_use,
       $formal_adjacent_use, $formal_unparen_use, $formal_modified,
       $macros, $defs, $names_any_warning, $defs_any_warning, $packages)
     = check_args_range(15, 16, @_);
@@ -236,6 +236,9 @@ sub print_lint_summary ( $$$$$$$$$$$$$$$;$ )
   print "$swallow_semi\t("
     . sprintf("%2.4f",percent2($swallow_semi,$defs))
       . "%) dangling semicolon\n";
+  print "$swallow_else\t("
+    . sprintf("%2.4f",percent2($swallow_else,$defs))
+      . "%) swallows else\n";
   print "$free_var\t("
     . sprintf("%2.4f",percent2($free_var,$defs))
       . "%) free variables\n";

@@ -689,6 +689,7 @@ sub output_lint ( )
   my $warn_newline = 0;
   my $warn_unparen_body = 0;
   my $warn_semicolon_swallowing = 0; # split into multiple_statements and full_statement?
+  my $warn_else_swallowing = 0;
   my $warn_free_var = 0;
   ## Don't bother to do these per total number of formals or per total
   ## number of formal uses; for now, just per number of macro defs.
@@ -912,6 +913,23 @@ sub output_lint ( )
 		       "failure to swallow semicolon: enclose statement in \"do ... while (0)\"");
 		  $warn_semicolon_swallowing++; } }
 
+	  # Check for else swallowing; transliterated from swallows-else.el
+	  { my $esbody = $body;
+	    if ($esbody =~ /(^|[^_]\b)if\b[^_]/)
+	      { # Replace blocks by empty statements
+		while ($esbody =~ s/{[^{}]*}/;/g)
+		  { }
+		if (($esbody =~ /(^|[^_]\b)if\b[^_]/)
+		    && ($esbody !~ /^do.*while \(0\)[ \t]*$/)
+		    # Whole body isn't "do ... while (0)"
+		    )
+		  { if ($esbody !~ /\belse\b(?!.*\b(else|if)\b)/)
+		      # Last (top-level) else isn't followed by if (should I check for a block too?)
+		      { if (! (($esbody =~ /\bif\b/) && ($POSTMATCH =~ /^[^{}]*\}/)))
+			  # Next brace after first else is a close brace
+			  { push(@complaints, "swallows else: enclose statement in \"do ... while (0)\"");
+			    $warn_else_swallowing++; } } } } }
+
 	  if (($properties & $propFREE_VAR)
 	      && ($category != $catCOMMAND_LINE)
 	      && ($category != $catASSEMBLY_CODE))
@@ -938,7 +956,8 @@ sub output_lint ( )
   if ($num_macro_defs > 0)
     { print_lint_summary($warn_different_arity, $warn_null_with_args,
 			 $warn_newline, $warn_unparen_body,
-			 $warn_semicolon_swallowing, $warn_free_var,
+			 $warn_semicolon_swallowing, $warn_else_swallowing,
+			 $warn_free_var,
 			 $warn_formal_bad_name, $warn_formal_multiple_uses,
 			 $warn_formal_use_adjacent,
 			 $warn_formal_use_unparen,
