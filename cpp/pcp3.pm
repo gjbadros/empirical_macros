@@ -1,8 +1,8 @@
 #!/uns/bin/perl -w
 # Update load path
-use lib "/tmp/gjb/cpp/xs/cpp/blib/arch";
-use lib "/tmp/gjb/cpp/xs/cpp/blib/lib";
-use lib "/tmp/gjb/cpp";
+use lib "/scratch/gjb/cpp/xs/cpp/blib/arch";
+use lib "/scratch/gjb/cpp/xs/cpp/blib/lib";
+use lib "/scratch/gjb/cpp";
 
 use English;               # standard package
 #use strict;

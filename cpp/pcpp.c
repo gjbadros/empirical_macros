@@ -143,7 +143,7 @@ main (int argc, char **argv, char **env)
 
   /* Perl startup code */
   char szUseFilename[256];
-  char *startup_code[] = { "", "-I", ".", "-I", "/tmp/gjb/cpp", "-e", szUseFilename };
+  char *startup_code[] = { "", "-I", ".", "-I", "/scratch/gjb/cpp", "-e", szUseFilename };
 
   p = argv[0] + strlen (argv[0]);
   while (p != argv[0] && p[-1] != '/') --p;
