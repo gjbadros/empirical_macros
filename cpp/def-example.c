@@ -1,5 +1,5 @@
 #include <stdio.h>
-
+#define CCD2
 #ifdef CCD1
 #  define FOO 1
 #endif
