@@ -1,6 +1,17 @@
 % $Id$
 % cpp-aware-c-analyses.tex
 
+%% TODO:
+% package and put code up at ftp site
+% add personal.sty package
+% get references in the right order
+% any grants to add?
+% new astlog-example-inspired section?  see FIXME
+% floppies
+% see authors notes
+% sign publishing agreement
+
+
 %\documentclass[twocolumn]{article}
 \documentclass{article}
 %\usepackage{icse99}
@@ -8,9 +19,9 @@
 \usepackage{graphicx}
 \usepackage{rotating}
 \usepackage{lscape}
-\usepackage{personal}
+%\usepackage{personal}
 
-
+\renewcommand{\baselinestretch}{2}
 \newcommand{\B}{\discretionary{}{}{}}
 
 %%% Some stuff from Mike
@@ -96,7 +107,8 @@
 
 %\date{31 January 1999}
 %\date{27 June 1999}
-\date{14 July 1999}
+%\date{14 July 1999}
+\date{14 November 1999}
 
 
 \begin{document}
@@ -127,12 +139,12 @@ preprocessor and the parser further enables some analyses that otherwise
 would be especially difficult to perform.
 
 \subsection*{Keywords}
-Parsing, preprocessor, C, C++, cpp, lexical analysis, syntactic analysis, Perl.
+Parsing, preprocessor, C, lexical analysis, syntactic analysis, Perl.
 
 \bigskip
 
 % Introduction, including problem statement, goals, etc
-\section{Introduction}
+\section*{Introduction}
 \label{sec:intro}
 More than twenty years ago, Dennis Ritchie designed the \C{}
 language~\cite{Kernighan88} to include a textual macro preprocessor
@@ -156,7 +168,7 @@ problem to programmers, maintainers, people porting code, and tool
 builders~\cite[p.~424]{Stroustrup94}.
 \end{quotation}
 
-\subsection{Why \Cpp{} is good $\ldots$ \emph{and} bad}
+\subsection*{Why \Cpp{} is good $\ldots$ \emph{and} bad}
 
 The intrinsic problem with \Cpp{} is also its fundamental strength: it
 is a distinct first pass of textual (non-syntactic) processing over the
@@ -210,7 +222,7 @@ fairly direct way.
 %``stringization'' and pasting operators which manipulate symbols
 %directly, altering their ultimate interpretation by a parser.  
 
-\subsection{\Cpp{} and Software Tools}
+\subsection*{\Cpp{} and Software Tools}
 
 Because of the preprocessor's textual foundations, unprocessed \C{} source code
 cannot be parsed directly.  For example, identifiers that are macro-expanded may
@@ -295,7 +307,7 @@ preprocessor.
 %related work, and sections~\ref{sec:limitations} and \ref{sec:conclusion}
 %review the limitations of our approach and conclude.
 
-\section{The Framework}
+\section*{The Framework}
 \label{sec:framework}
 
 The idea behind our framework is simple: provide an integrated parser
@@ -314,7 +326,8 @@ learn by \C{} programmers.  \Perl{} also provides closures which make
 expressing and registering the callback routines very concise and
 readable. The nearly-immediate turn-around time that
 \Perl{} provides is especially useful when prototyping and debugging new 
-analyses.
+analyses.  Our prototype implementation of the framework is called
+\pcp{}, pronounced ``pee-see-pee-cubed.''
 
 
 Callbacks can be installed on actions such as the scanning of preprocessor directives, the
@@ -322,8 +335,10 @@ creation of a macro definition, the expansion (\ie{} use) of a macro
 name, and the parsing of a variable declaration.  Each action callback
 is passed arguments relevant to the event for which it was invoked.  For
 example, the \texttt{TYPEDEF} action receives the name of the declared
-type as its first argument.  See Appendix~\ref{sec:hooks} for a more complete list of
-the hooks in our current implementation of the framework.
+type as its first argument.  See the first appendix
+%~\ref{sec:hooks} 
+for a more complete list of the hooks in our current implementation of
+the framework.
 
 To supplement the directly-passed arguments, action subroutines may also invoke
 ``backcalls'' to access internal
@@ -331,7 +346,9 @@ parser and preprocessor data structures. Example backcalls include
 getting the name of the currently-processed file, looking up a symbol in
 the parser's symbol table, inserting arbitrary code for the preprocessor
 to process, and instructing the parser to enter a new scope. 
-See Appendix~\ref{sec:backcalls} for a more complete list of
+See the second appendix
+%Appendix~\ref{sec:backcalls} 
+for a more complete list of
 the backcalls in our current implementation of the framework.
 
 The callback and backcall interfaces combined with a general
@@ -345,7 +362,8 @@ analysis, so the additional developer time in writing, compiling, and
 testing C code extensions is acceptable.
 
 
-\begin{figure*}[t]
+%\begin{figure*}[t]
+\begin{figure*}[p]
 \begin{center}
 \begin{small}
 \begin{pseudocode}[5.5in]
@@ -371,7 +389,7 @@ AddHook("FUNCTION",
 \end{figure*}
 %$
 
-\subsection{Example: Call-Graph Extraction}
+\subsection*{Example: Call-Graph Extraction}
 \label{sec:call_graph_extraction}
 
 
@@ -399,7 +417,7 @@ this simple analysis deals only with parser actions, the view the
 analysis sees is exactly the same as if we had analyzed the preprocessed 
 code.
 
-\subsection{Revising the Extractor}
+\subsection*{Revising the Extractor}
 \label{sec:call_graph_revised}
 The simple call-graph extractor used as an example in the preceding
 section suffers from many of the same shortcomings as tools that
@@ -440,8 +458,8 @@ marked as ``possibly calling all functions'' (\ie{} $\bot$).\footnote{A more
 aggressive analysis could maintain data on which functions
 are ever assigned to the variable throughout the program.}
 
-%FIXGJB: maybe this should just be the three changed action hooks?
-\begin{figure*}[hbt]
+%\begin{figure*}[hbt]
+\begin{figure*}[p]
 \begin{center}
 \begin{small}
 \begin{pseudocode}[5.5in]
@@ -474,7 +492,7 @@ Because the activations of the preprocessor and parser hooks
 are intermingled, the analysis can reason about the preprocessed version 
 of the source within the context of how it was preprocessed.  
 
-\subsection{Preprocessor and Parser Interactions}
+\subsection*{Preprocessor and Parser Interactions}
 \label{sec:interactions}
 
 Given a straightforward preprocessor and parser front end, some analyses
@@ -573,7 +591,7 @@ and perform any necessary cleanup or per-header-file processing.
 %** parser debugging, teaching
 %** multi-version reasoning
 
-\section{Further Examples}
+\section*{Further Examples}
 \label{sec:further_examples}
 
 Preprocessor-specific analyses are generally especially difficult to
@@ -581,7 +599,7 @@ write.  The complexities and subtleties of \Cpp{} must be duplicated in
 each tool.  Not surprisingly, our framework is ideal for analyzing
 preprocessor constructs.
 
-\subsection{Macro Expansion Mappings}
+\subsection*{Macro Expansion Mappings}
 \label{ssec:macro_exp_map}
 To support useful interactions between the parser and preprocessor, it
 is essential that \pcp{} maintain an accurate mapping between the
@@ -687,88 +705,31 @@ that expansion.  Similarly, the list \texttt{MacroExpansionHistory()}
 returns can be visualized as the stack of blue expansion
 lines directly above the expansion in question (those that have not
 already been paired with a green line representing the completion of
-their expansion).  See \sectionref{ssec:prg_und_supp} for an example of
-how the results of this macro-expansion-analysis might be presented to
-the user.
-
-
-\subsection{Marking Macro Expansions}
-\label{ssec:mark_macros}
-\nopagebreak
-
-For an empirical study of \C{} preprocessor use~\cite{EmpCpp-TR}, we
-wanted to identify macro expansions in the unprocessed source code.
-Recognizing identifiers that are macro-expanded is exceedingly useful as
-suggested by the nearly universal convention of using all-uppercase
-identifiers for macro names.  Previous tools have difficulty even just
-counting macro expansions~\cite{Griswold96}.  For the empirical study,
-our first approximation of identifying macro expansions did not use this
-framework.  That analysis was overly conservative: we marked as an
-expansion all occurrences of each identifier that was ever
-(in any source file of the program) \ppd{define}d to be a macro.
-To gain more accurate information, we used \pcp{}
-framework for the subsequent version of the analyses for that study.
-
-Since the marking of expansions should cover the entire unprocessed
-source code, we use the boiler-plate code mentioned in \sectionref{sec:interactions}
-to expose all the code to the tool.  Because we wanted a
-conservative analysis (\ie{} it should over-mark when imprecise), we treat an
-identifier as a macro at a program point if it has been \ppd{define}d on
-any path and not yet definitely \ppd{undef}ined.  In particular, the
-improved analysis properly limits the effects of macros that are
-defined for a segment of code and subsequently undefined.
-
-Our improved analysis using the framework is written in under 90 lines
-of code, most of which is the boiler-plate for handling all
-conditionally-included code.
-
-\subsection{Other Possibilities}
-\label{ssec:other_poss}
-
-Our framework has proven useful for several software engineering
-analyses.  Other ad-hoc tools could benefit from our framework, as well.
-For example, Emacs's \texttt{etags}~\cite{GNUELisp} creates a database
-of function definitions in unprocessed source but can be easily confused
-by package-specific macros used in function definition headers.\footnote{To
-circumvent this limitation, \texttt{etags} permits the programmer to manually specify an
-arbitrary regular expression that it uses to find definitions to mark.}
-Also, searching for uses of global variables could be enhanced using our
-framework since it will not omit references to globals hidden by macros.
-
-Another possible use of the framework is in identifying ``tricky'' uses
-of the preprocessor as an aid to determining, for example, which
-\ppd{define}s can be replaced with language-proper features such as
-constant variables or \CPP{} inline functions.
+their expansion).  
 
 %% Emacs support
-\subsection{Program understanding support in Emacs}
-\label{ssec:prg_und_supp}
-%advantage over font-lock mode that you get information from the actual
-%parse, not by some lexical rules which may cause a mismatch
-Some of the analyses \pcp{} has been used to perform generate large amounts of
-information that are not easy to comprehend in raw form.  For example,
-the mapping between unprocessed source code and preprocessed code 
-(see \sectionref{ssec:macro_exp_map}) aids
-program understanding little when the correspondence exists only in a
-\Perl{} data structure.
-A standard \Perl{} module of hook utilities provides a
-mechanism to output character-indexed annotations of the source code.
+%\subsection*{Program understanding support in Emacs}
+%\label{ssec:prg_und_supp}
+This macro-expansion analysis generates a large amount of
+information that is not easy to comprehend in raw form. 
+To support visualizing these data we provide a
+\Perl{} module of hook utilities that 
+outputs character-indexed annotations of the source code.
 These annotations are Emacs Lisp source code that manipulate text
-properties of character ranges when evaluated by Emacs~\cite{GNUELisp}.  This
-provides a useful mechanism (indeed, essential during the debugging of
-the framework) for visualizing the results of the analyses within the
-context of the code analyzed.  As the cursor is moved over source code
+properties of character ranges when evaluated by Emacs~\cite{GNUELisp}.
+As the cursor is moved over source code
 that has been annotated, a subsidiary Emacs frame dynamically displays
 the annotations made to the current character. See
 ~\figref{fig:emacsdocprop} for an example.
 
-\begin{figure}[b!]
+%\begin{figure}[b!]
+\begin{figure}[p]
   \begin{center}
     \leavevmode
     \includegraphics{emacs-xform-view.eps}
     \caption{A view of Emacs using the authors' ``doc-property-display''
       feature to dynamically view textual annotations of results of the
-      analyses of \pcp{}.  The red outline box in the top frame
+      analyses of \pcp{}.  The outline box in the top frame
       indicates the user's cursor position, and the lower frame lists the
       various text properties attached to the character there.
       The bottom frame potentially changes after each cursor movement.}
@@ -794,19 +755,77 @@ powerful source code understanding tools (\eg{} \texttt{font-lock-mode},
 supplied by \pcp{} analyses.
 
 
+
+\subsection*{Marking Macro Expansions}
+\label{ssec:mark_macros}
+\nopagebreak
+
+For an empirical study of \C{} preprocessor use~\cite{EmpCpp-TR}, we
+wanted to identify macro expansions in the unprocessed source code.
+Recognizing identifiers that are macro-expanded is exceedingly useful as
+suggested by the nearly universal convention of using all-uppercase
+identifiers for macro names.  Previous tools have difficulty even just
+counting macro expansions~\cite{Griswold96}.  For the empirical study,
+our first approximation of identifying macro expansions did not use this
+framework.  That analysis was overly conservative: we marked as an
+expansion all occurrences of each identifier that was ever
+(in any source file of the program) \ppd{define}d to be a macro.
+To gain more accurate information, we used \pcp{}
+framework for the subsequent version of the analyses for that study.
+
+Since the marking of expansions should cover the entire unprocessed
+source code, we use the boiler-plate code mentioned previously
+%in \sectionref{sec:interactions}
+to expose all the code to the tool.  Because we wanted a
+conservative analysis (\ie{} it should over-mark when imprecise), we treat an
+identifier as a macro at a program point if it has been \ppd{define}d on
+any path and not yet definitely \ppd{undef}ined.  In particular, the
+improved analysis properly limits the effects of macros that are
+defined for a segment of code and subsequently undefined.
+
+Our improved analysis using the framework is written in under 90 lines
+of code, most of which is the boiler-plate for handling all
+conditionally-included code.
+
+%% GJB:FIXME::
+\subsection*{An ASTLog-inspired analysis}
+\label{ssec:other_analysis}
+\nopagebreak
+Foo bar baz.
+
+\subsection*{Other Possibilities}
+\label{ssec:other_poss}
+
+Our framework has proven useful for several software engineering
+analyses.  Other ad-hoc tools could benefit from our framework, as well.
+For example, Emacs's \texttt{etags}~\cite{GNUELisp} creates a database
+of function definitions in unprocessed source but can be easily confused
+by package-specific macros used in function definition headers.\footnote{To
+circumvent this limitation, \texttt{etags} permits the programmer to manually specify an
+arbitrary regular expression that it uses to find definitions to mark.}
+Also, searching for uses of global variables could be enhanced using our
+framework since it will not omit references to globals hidden by macros.
+
+Another possible use of the framework is in identifying ``tricky'' uses
+of the preprocessor as an aid to determining, for example, which
+\ppd{define}s can be replaced with language-proper features such as
+constant variables or \CPP{} inline functions.
+
+
 % PCP^3
-\section{The \pcp{} Tool}
+\section*{\pcp{} Tool Details}
 \label{sec:pcp3}
 
 Our framework combines a
 \textbf{\textsf{P}}arser, a \textbf{\textsf{C}}
 \textbf{\textsf{p}}re\textbf{\textsf{p}}rocessor, and a
 \textbf{\textsf{P}}erl action language.  Thus, we have named the tool
-that implements the framework \pcppp{} or \pcp{}, pronounced
-``pee-see-pee-cubed.''
-(The tool is available from the authors upon email request.)
+that implements the framework \pcppp{} or \pcp{}.
+%% pronounced ``pee-see-pee-cubed.''  
+The latest version of \pcp{} is available from 
+\file{ftp://\B{}ftp.\B{}cs.\B{}washington.\B{}edu/\B{}homes/\B{}gjb/\B{}pcp3.\B{}tgz}.
 
-\subsection{Parser}
+\subsection*{Parser}
 \label{ssec:parser}
 
 Choosing a parser was difficult as there are many freely available
@@ -831,7 +850,7 @@ reduction rules.
 %  \texttt{CTree}'s symbols from its automatically-generated parsers and
 %  lexical analyzer.}
 
-\subsection{Preprocessor}
+\subsection*{Preprocessor}
 \label{ssec:preprocessor}
 
 %As a software tool targeting \C{} code, the design of \pcp{} faced the
@@ -857,7 +876,7 @@ the changes involved modifying data structures and function calls to
 maintain the extra macro expansion information to support the
 character-by-character correspondence between the source and output.
 
-\subsection{Action Language}
+\subsection*{Action Language}
 \label{sec:perl_action_lang}
 
 \nopagebreak
@@ -878,16 +897,18 @@ the tool in place of a compiler for analyzing complete packages as
 described by Murphy et al.~\cite{Murphy98}).  Additionally, \pcp{}
 accepts a \texttt{--noparse} option that turns off its parser and the
 calls to related hooks.  \pcp{} provides over currently over forty action
-hooks (see Appendix \ref{sec:hooks}).
+hooks (see the first appendix).
+%Appendix \ref{sec:hooks}).
 
-The implementation of the main \pcp{} program, the (roughly thirty)
-backcalls (see Appendix \ref{sec:backcalls}),
+The implementation of the main \pcp{} program, the roughly thirty
+backcalls (see the second appendix),
+%Appendix \ref{sec:backcalls}),
 and the glue connecting the components totals about 1,800
 lines of \C{} code.  About 60\% of this code could be generated automatically
 and deals directly with passing
 arguments between \C{} and \Perl{}.
 
-\subsection{Performance}
+\subsection*{Performance}
 \label{sec:pcp3_performance}
 The performance of \pcp{} depends on the complexity of the
 analysis.  For comparison, for \texttt{gcc} to compile and optimize the
@@ -903,7 +924,7 @@ seconds.  With all action code turned off, the running time is
 less than 10 seconds.  The useful analyses described in this paper involve
 only a handful of callbacks, and thus execute very quickly.
 
-\section{Related Work}
+\section*{Related Work}
 \label{sec:related}
 Numerous tools exist for assisting the software engineer in
 understanding and manipulating source code.  Griswold, Atkinson and McCurdy
@@ -965,7 +986,7 @@ on and relate to each other, and provide a means of visualizing the
 relationships with the goal of improving the programmer's understanding
 of the structure and properties of the configurations~\cite{Krone94}.
 
-\section{Limitations}
+\section*{Limitations}
 \label{sec:limitations}
 
 % Framework problems
@@ -1052,7 +1073,7 @@ preprocessor-specific annotations.
 %Despite these limitations, the simplicity and flexibility of analyses
 %that \pcp{} enables prove its usefulness.
 
-\section{Conclusion}
+\section*{Conclusion}
 \label{sec:conclusion}
 
 Our framework distinguishes itself from other software
@@ -1077,7 +1098,7 @@ paper.
 
 \appendix
 
-\section{Abridged Hooks Reference}
+\section*{Appendix A: Abridged Hooks Reference}
 \label{sec:hooks}
 
 The below lists action hooks and the conditions under which the
@@ -1177,7 +1198,7 @@ information, and the arguments of the current expansion, respectively.
 
 \end{description}
 
-\section{Abridged Backcalls Reference}
+\section*{Appendix B: Abridged Backcalls Reference}
 \label{sec:backcalls}
 
 The below backcalls are grouped by functionality.  Parameters, if any,
