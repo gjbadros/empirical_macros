@@ -1,9 +1,6 @@
 % $Id$
 % macros-paper.tex
-% FIX: Switch to LaTeX2e, not 209
 \documentclass[11pt]{article}
-% epsfig was epsf above, and uses of \epsfig{file=dir.eps} below were
-% {\epsfxsize 7in\epsfbox{dir.eps}}.
 \usepackage{epsfig}
 
 % the "fullpage" package does almost the same thing
@@ -21,8 +18,9 @@
 \textheight  8.5 in
 
 \renewcommand{\floatpagefraction}{.8} %default .5
-%\renewcommand{\textfraction}{.2}  % .2 is the default
-%\renewcommand{\topfraction}{.7}   % .7 is the default
+% Avoid putting all figures at end of text.
+\renewcommand{\textfraction}{.1}  % .2 is the default
+\renewcommand{\topfraction}{.9}   % .7 is the default
 
 \begin{document}
 % \bibliographystyle{plain}
