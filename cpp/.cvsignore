@@ -24,7 +24,6 @@ gscoord.vars
 lexer.c
 macro_expand_stacks
 mapping
-pcp3
 source.exps
 source.funcs
 source.types
