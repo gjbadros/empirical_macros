@@ -744,13 +744,17 @@ unidentifiable syntactic entity (not a symbol, constant, expression, or
 statement; see Section~\ref{sec:categorization}); 14\% of macros take
 advantage of Cpp features that lie outside the C programming language (see
 Section~\ref{sec:extra-linguistic}); and 23\% of macros contain latent bugs
-(see Section~\ref{sec:lint}).  Multiple definitions of a macro name can
-also complicate understanding:  14\% of macro names have multiple
+(see Section~\ref{sec:lint}).  The second half of this section considers
+macro names with multiple definitions, which can also complicate
+understanding.  In the packages we examined, 14\% of macro names have multiple
 definitions (see Section~\ref{sec:mult-def}), although only 8.9\% of macro
 names have definitions with different abstract syntax trees (see
 Section~\ref{sec:mult-diff-def}).  Of macros with multiple definitions, 4\%
 have syntactically incompatible definitions that cannot be substituted for
-one another in code (see Section~\ref{sec:inconsistent}).
+one another in code (see Section~\ref{sec:inconsistent}).  Given
+categorizations (according to Section~\ref{sec:categorization}) of macro
+definitions, Section~\ref{sec:mult-def} shows how to categorize macro names
+with multiple definitions.
 
 
 \subsection{Macro body categorization}
@@ -1263,8 +1267,9 @@ rise to unanticipated behavior from syntactically valid programming
 constructs.  Unlike the extra-linguistic constructs discussed in
 Section~\ref{sec:extra-linguistic}, these are generally bugs rather than
 uses of Cpp mechanisms to achieve results outside the abilities of the C
-language.  We verified that many current uses happen not to trigger the
-problematic conditions; for example, all arguments to a macro with a
+language.  We verified that many current uses in the packages we examined
+happen not to expand erroneously.
+For example, all arguments to a macro with a
 precedence error may be expressions with high precedence, or all argument
 to a macro that evaluates its argument multiple times may be
 side-effect-free.  However, future uses may well give rise to these dormant
@@ -1505,7 +1510,11 @@ be redefined partway through preprocessing.  Multiple compatible
 definitions of a macro do not complicate its use\,---\,such abstraction is
 often desirable.  However, redefinitions make it harder to determine
 exactly which definition of a macro will be used at a particular expansion
-site, which may be necessary for program understanding or debugging.
+site, which may be necessary for program understanding or debugging;
+incompatible macro bodies introduce further complications.  This section
+examines the frequency of macro redefinition, while the following sections
+consider whether multiple macro redefinitions are compatible with one
+another.
 
 Our analysis does not distinguish sequential redefinitions of a macro from
 definitions that cannot take effect in a single configuration.
@@ -1594,7 +1603,8 @@ Section~\ref{sec:mult-def} counted the number of definitions of a given
 macro name, providing an upper bound on the difficulty of
 mapping uses of the macro to its definition.  
 Multiple definitions are less worrisome if
-their bodies are similar or identical.
+their bodies are lexically similar or identical; this section reports how
+often that is the case.
 
 % \begin{figure}
 %   \centerline{\epsfig{file=fig/cat-ddf-frequency.eps,height=7.2in}}
@@ -1622,7 +1632,7 @@ their bodies are similar or identical.
   % This table is made from tbl-avg-{def,ddf}-frequency.
   {\small\centerline{\input{tbl-summarize-frequency.tex}}}
   %%Numbers: read them off the table.
-  \captionsmall{Average number of definitions of macros in each category.
+  \captionsmall{Average number of definitions of macro names in each category.
     The left pair of columns examines just the files that may be compiled
     on a RedHat-4.x-based (libc5) GNU/Linux 2.0.x system (as for all other values we
     report), whereas the right pair considers all C files in the package.
@@ -1634,7 +1644,9 @@ their bodies are similar or identical.
     in a single configuration, but those definitions include only 1.2
     different abstract syntax trees.  When we examine all files in the
     package, we find 1.8 definitions (1.4 different
-    definitions) of each expression macro.}
+    definitions) of each expression macro name.  A macro name is
+    categorized based on the categorizations of its definitions, as
+    detailed in Figure~\ref{fig:category-lub}.}
   \label{fig:freq-sum-cat}
 \end{figure}
 
@@ -1661,13 +1673,15 @@ identically\,---\,usually, only string contents differed.
 \subsection{Inconsistent definitions}
 \label{sec:inconsistent}
 
-This section further refines our analysis of multiply-defined macros by
-considering, rather than syntactic structure, the categorization of the
-macro bodies described in Section~\ref{sec:categorization-details}.  An
-analysis may be able to take better advantage of higher-level commonalities
-among the macro definitions than more exact syntactic similarity.  We focus
-on definitions of a particular name that are given different, incompatible
-categorizations.
+This section continues our analysis of multiply-defined macros.
+Section~\ref{sec:mult-diff-def} considered the syntactic structure of
+multiple definitions of a particular name; this section refines that
+analysis by considering the categorization of the macro bodies described in
+Section~\ref{sec:categorization-details}.  A software engineering tool may
+be able to take advantage of higher-level commonalities among the macro
+definitions (at the level of the categorizations of
+Section~\ref{sec:categorization-details}) more effectively than if it
+relied on syntactic similarity, as in Section~\ref{sec:mult-diff-def}.
 
 %% Collect all these recommendations, or problems that we found, in one
 %% place?  Or remark on this in the macro lint section also?
@@ -1920,7 +1934,7 @@ partially implemented terminal types, such as {\tt tgif}.
 The most frequently used macros are those most likely to cause difficulty
 for a tool or software engineer:  39\% of syntactic macros (those expanding
 to punctuation or containing unbalanced delimiters, and that are
-problematic to parse) and 12\% of type-related macros are used more than 32
+difficult to parse) and 12\% of type-related macros are used more than 32
 times.  The long tails of the frequency distribution result from pervasive
 use of some syntactic or type macros (e.g., at every variable declaration),
 which makes understanding these macros critical.  By contrast, macros that
@@ -2865,9 +2879,9 @@ expression body).  Its warnings can be individually suppressed to
 accommodate intentional uses of these paradigms.
 
 Check~\cite{SpulerS92} is a C macro checker that detects some instances of multiple
-statements, dangling {\tt \#else}, side effects, and precedence errors
+statements, swallowed {\tt \#else}, side effects, and precedence errors
 using largely lexical checks.  Precedence error checks are
-performed on macro uses rather than reporting problematic definitions.  The
+performed on macro uses rather than reporting error-prone definitions.  The
 authors do not report on the effectiveness of the tool in practice or
 justify their tradeoffs between techniques that perform parsing and those
 that do not.
@@ -3042,7 +3056,8 @@ Common Cpp constructs could be replaced by a special-purpose syntax.  For
 instance, declarations or partial declarations could be made explicit
 objects, such as by making type modifiers first-class at compile (or, more
 likely, preprocess) time; the language or the preprocessor could include a
-construct for dynamic binding (as Scheme does~\cite{KelseyCR98}); and
+{\tt dynamic} declaration modifier for dynamic binding (like Lisp's {\tt
+special} delcaration for dynamic variables); and
 similar support could be provided for repetitive constructs.  Manipulations
 of these objects would then be performed through a clearly-specified
 interface rather than via string and token concatenation, easing the
@@ -3163,8 +3178,9 @@ designers, tool writers, programmers, and software engineers.
 
 Language designers can examine how programmers use the macro system's
 extra-linguistic capabilities.  Future language specifications can
-directly support (or prevent) such practices, thus imposing greater
-discipline and structure.  
+directly support (or prevent) such practices\,---\,for instance, along the
+lines suggested in Section~\ref{sec:easier-to-understand}\,---\,thus
+imposing greater discipline and structure.  
 
 % [[[Think more about this:  Also, how do language choices lead to more/less
 % tightly integrated (as opposed to open, component-based) environments?
