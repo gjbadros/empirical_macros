@@ -11,6 +11,7 @@ char *hook_names[] = {
 "SPECIAL_SYMBOL",
 "EXPAND_MACRO",
 "COMMENT",
+"STRING_CONSTANT",
 "CPP_ERROR",
 "CPP_WARN",
 "CPP_PEDWARN",

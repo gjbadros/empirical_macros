@@ -3080,9 +3080,6 @@ macroexpand (pfile, hp)
   /* Pop the space we've used in the token_buffer for argument expansion. */
   CPP_SET_WRITTEN (pfile, old_written);
     
-
-  /* FIXGJB: give more info here! */
-
   /* Recursive macro use sometimes works traditionally.
      #define foo(x,y) bar (x (y,0), y)
      foo (foo, baz)  */
@@ -4898,10 +4895,23 @@ cpp_get_token (pfile)
 		}
 	    }
 	while2end:
-	  pfile->lineno += count_newlines (pfile->token_buffer + old_written,
+	  {
+	  int c_newlines = count_newlines (pfile->token_buffer + old_written,
 					   CPP_PWRITTEN (pfile));
+	  pfile->lineno += c_newlines;
 	  pfile->only_seen_white = 0;
+	  if (c!='\'')
+	    {
+	    /* NOTE: macro expansions containing string constants [or
+	       special symbols, like __FILE__] will call this hook;
+	       also note that this drops the delimiting double quotes */
+	    gjb_call_hooks_szl_i(CPP_OPTIONS(pfile),STRING_CONSTANT,
+				 pfile->token_buffer + old_written + 1,
+				 CPP_PWRITTEN(pfile)-pfile->token_buffer+old_written-2,
+				 c_newlines+1);
+	    }
 	  return c == '\'' ? CPP_CHAR : CPP_STRING;
+	  }
 
 	case '$':
 	  if (!opts->dollars_in_ident)

@@ -71,3 +71,7 @@ __FILE__
 // A C++ Style comment
 // Note that these need the option "-lang-c++" to get parsed as comments
 
+
+char *sz = "A string constant
+
+for all to see \n\n";

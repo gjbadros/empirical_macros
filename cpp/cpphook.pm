@@ -102,6 +102,11 @@ sub comment {
   print "-----------------\n";
 }
 
+sub string_constant {
+  my ($string,$lines) = @_;
+  print "String_constant ($lines lines): \"$string\"\n";
+}
+
 # Add the hooks, now
 AddHook($STARTUP,\&Startup);
 AddHook($DO_DEFINE,\&do_define);
@@ -114,6 +119,7 @@ AddHook($CPP_ERROR,\&cpp_error);
 AddHook($EXPAND_MACRO,\&expand_macro);
 AddHook($SPECIAL_SYMBOL,\&special_symbol);
 AddHook($COMMENT,\&comment);
+AddHook($STRING_CONSTANT,\&string_constant);
 
 
 1;
