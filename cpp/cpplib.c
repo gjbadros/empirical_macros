@@ -841,6 +841,7 @@ macro_cleanup (pbuf, pfile)
     free (pbuf->buf);
   gjb_call_hooks_sz(CPP_OPTIONS(pfile),HI_MACRO_CLEANUP,
 		    macro->name);
+  free (pbuf->args);
   return 0;
 }
 
@@ -2666,6 +2667,26 @@ unsafe_chars (c1, c2)
   return 0;
 }
 
+/* Search for what argument of the macro with cargs args must have
+   expanded to character offset ich using the argdata given */ 
+int
+IargWithOffset(int ich, int cargs, struct argdata *args)
+{
+  int iargdata = 0;
+  while (args && iargdata < cargs)
+    {
+    int iuse = 0;
+    while (iuse < args[iargdata].iuse)
+      {
+      if (ich >= args[iargdata].dchUsesStart[iuse] && 
+	  ich <= args[iargdata].dchUsesEnd[iuse])
+	return iargdata;
+      iuse++;
+      }
+    iargdata++;
+    }
+  return -1;
+}
 
 int
 CbuffersDeep(cpp_reader *pfile)
@@ -2702,7 +2723,7 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchMacroNameStart)
   register U_CHAR *xbuf;
   long start_line, start_column;
   int xbuf_len;
-  struct argdata *args;
+  struct argdata *args = 0;
   long old_written = CPP_WRITTEN (pfile);
 #if 0
   int start_line = instack[indepth].lineno;
@@ -2731,7 +2752,7 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchMacroNameStart)
     {
       enum cpp_token token;
 
-      args = (struct argdata *) alloca ((nargs + 1) * sizeof (struct argdata));
+      args = (struct argdata *) malloc ((nargs + 1) * sizeof (struct argdata));
 
       for (i = 0; i < nargs; i++)
 	{
@@ -2773,6 +2794,7 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchMacroNameStart)
 	    {
 	      cpp_error_with_line (pfile, start_line, start_column,
 				   "unterminated macro call");
+	      free(args);
 	      return;
 	    }
 	  i++;
@@ -3118,7 +3140,7 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchMacroNameStart)
 
   /* Now put the expansion on the input stack
      so our caller will commence reading from it.  */
-  push_macro_expansion (pfile, xbuf, xbuf_len, hp);
+  push_macro_expansion (pfile, xbuf, xbuf_len, hp, args);
   CPP_BUFFER (pfile)->has_escapes = 1;
 
   /* Pop the space we've used in the token_buffer for argument expansion. */
@@ -3133,15 +3155,13 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchMacroNameStart)
 }
 
 static void
-push_macro_expansion (pfile, xbuf, xbuf_len, hp)
-     cpp_reader *pfile;
-     register U_CHAR *xbuf;
-     int xbuf_len;
-     HASHNODE *hp;
+push_macro_expansion (cpp_reader *pfile, U_CHAR *xbuf, int xbuf_len, 
+		      HASHNODE *hp, struct argdata *args)
 {
   register cpp_buffer *mbuf = cpp_push_buffer (pfile, xbuf, xbuf_len);
   mbuf->cleanup = macro_cleanup;
   mbuf->data = hp;
+  mbuf->args = args;
 
   /* The first chars of the expansion should be a "@ " added by
      collect_expansion.  This is to prevent accidental token-pasting
@@ -4829,8 +4849,7 @@ validate_else (pfile, directive)
   
 
 enum cpp_token
-cpp_get_token (pfile)
-     cpp_reader *pfile;
+cpp_get_token (cpp_reader *pfile)
 {
   register int c, c2, c3;
   long old_written;
@@ -4870,7 +4889,7 @@ cpp_get_token (pfile)
 	      gjb_call_hooks_sz(CPP_OPTIONS(pfile),HI_DONE_INCLUDE_FILE,
 				  fname);
 	      /* FIXGJB: Can't get the above to return 
-				  is_system_include(cur_buffer,fname));
+		 is_system_include(cur_buffer,fname));
 		 properly
 	       */
 	    }
@@ -5422,7 +5441,7 @@ cpp_get_token (pfile)
 	      xbuf = (U_CHAR *) xmalloc (xbuf_len + 1);
 	      CPP_SET_WRITTEN (pfile, before_name_written);
 	      bcopy (CPP_PWRITTEN (pfile), xbuf, xbuf_len + 1);
-	      push_macro_expansion (pfile, xbuf, xbuf_len, hp);
+	      push_macro_expansion (pfile, xbuf, xbuf_len, hp, 0 /* no args */);
 	    }
 	    else
 	      {
