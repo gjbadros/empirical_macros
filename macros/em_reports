@@ -295,6 +295,7 @@ sub output_macros ( )
     #my $i = $macros{$name}[1];  #Should this now be 0?
     #die "i not defined for $name" if (!defined($i));
 
+    # if this weren't commented out, would it check command_line_fake_fileno?
     #next if ($mdef_fileno[$i] eq $built_in_fake_fileno);
 
     die if (!defined($macros_uses{$name}));
@@ -338,6 +339,7 @@ sub output_defines ( )
     # Could also print number of times it's defined.
     for (my $iDef = 0; $iDef <= $#{$macros{$name}}; $iDef++ ) {
       my $i = $macros{$name}[$iDef];
+      # Should this check $command_line_fake_fileno?  I think not...
       if ($mdef_fileno[$i] ne $built_in_fake_fileno) {
 	# print STDERR "NAME=$name,", join(", ",@{$macros{$name}}),"\n";
 	# Used to output $i third here, but it's irrelevant.
@@ -379,8 +381,7 @@ sub output_funclines ( )
 { check_args(0, @_);
   if ($opt_v) { print STDOUT "funclines..."; }
   select FUNCLINES;		# *.fnln
-  # index zero is for built-ins; don't use it
-  foreach my $fileno (sort { $files[$a] cmp $files[$b] } (1..$#files)) {
+  foreach my $fileno (sort { $files[$a] cmp $files[$b] } ($fake_files..$#files)) {
     print "file: $files[$fileno]\n", join("\n ",@{$files_function_lines[$fileno]}), "\n";
   }
   foreach my $function (sort keys %function_to_locs) {

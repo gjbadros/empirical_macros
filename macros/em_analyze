@@ -557,7 +557,7 @@ my $current_macro_line_number;	# Used by current_line_no when categorizing macro
 # @file_inclusion_method, a string like "#include<>", tells where file got added
 my @files = ($built_in_fake_filename, $command_line_fake_filename);         # list of files to process
 my @file_inclusion_method = ("BuiltIn", "CommandLineDef");
-my %file_numbers;
+my %file_numbers;		# does not include the fake files
 
 # files that are included should be pushed onto both @files and
 # @files_included -- the latter is used only to prevent multiple inclusion
@@ -778,6 +778,20 @@ sub process_macro_definition ( $$$$ )
   # print STDERR "PARSED: $name\n";
   if (!defined($args)) { $args = ""; }
   # print "parsed: |$name|$args|$body|\n";
+
+  # Bail out early if we are parsing a command-line definition ("-D")
+  # which we have already seen.
+  if (($current_file_number == $command_line_fake_fileno)
+      && exists($macros{$name}))
+    { for my $index (@{$macros{$name}})
+	{ if ($mdef_name[$index] ne $name)
+	    { croak "Bad name $mdef_name[$index] should be $name"; }
+	  if (($mdef_fileno[$index] == $current_file_number)
+	      && ($mdef_formals[$index] eq $args)
+	      && ($mdef_body[$index] eq $body))
+	    { # print STDERR "Skipping redefinition of command-line \#define $def\n";
+	      return; } } }
+
   # Do not just use $cppcmdcount{"define"}, since our builtins require
   # some space in the @mdef_XXXXX arrays
   my $this_macro_index = $cMacrosInTables;
@@ -7147,26 +7161,60 @@ find_macro_definitions();	# also counts other preprocessor usage
 if ($opt_v) { print STDERR "Done finding macro definitions.\n"; }
 
 # Take care of macros defined on the command line.
-{ # This is a hack; should parse output from pcp3 (or the original compilation
-  # flags).
-  my %package_command_line_macros = ("fvwm" => { 'FVWM_ICONDIR' => "",
-						 'FVWMDIR' => "",
-						 'FVWMRC' => "", },
-				     "plan" => { 'NOBODY_UID' => 65534,
-						 'NOBODY_GID' => 9999, },
-				     );
-  my $basename = $statename;
-  if (($basename =~ s/^.*\/([^\/]+)\.state$/$1/)
-      && exists($package_command_line_macros{$basename}))
-    { if (scalar(@current_inclusion_dependenton) != 0)
-	{ croak "Nonempty current_inclusion_dependenton: @current_inclusion_dependenton"; }
-      $current_file_number = $command_line_fake_fileno;
-      my %command_line_macro_defs = % {$package_command_line_macros{$basename}};
-      my ($key, $value);
-      while (($key, $value) = each %command_line_macro_defs)
-	{ process_macro_definition("$key $value", "$key $value", 0, 0); }
-      undef $current_file_number; }
+{
+  if (scalar(@current_inclusion_dependenton) != 0)
+    { croak "Nonempty current_inclusion_dependenton: @current_inclusion_dependenton"; }
+  $current_file_number = $command_line_fake_fileno;
+  $current_ftype_index = compute_ftype_index($current_file_number);
+
+  # skip indices 0 and 1, which are {built_in,command_line}_fake_filename
+  for (my $ifiles = $fake_files; $ifiles <= $#files; $ifiles++)
+    { my $command_line_defs_file = $files[$ifiles];
+      $command_line_defs_file =~ s/(\.[^.\/]+)$/.defgjbmde/;
+      $command_line_defs_file =~ s!^\./!./../!;
+      # print STDERR "command_line_defs_file: $command_line_defs_file\n";
+      if (-f $command_line_defs_file)
+	{ print STDERR "Found command_line_defs_file $command_line_defs_file\n"; }
+      else
+	{ print STDERR "Found no command_line_defs_file for $files[$ifiles]\n"; }
+
+      if (-f $command_line_defs_file)
+	{ if (!open(CMDLINEDEFS,$command_line_defs_file))
+	    { croak "Couldn't open existent file $command_line_defs_file"; }
+	  my $def_line;
+	  while (defined($def_line = <CMDLINEDEFS>))
+	    { if ($def_line !~ s/^\#define //)
+		{ croak "Non-#define line in $command_line_defs_file: $def_line"; }
+	      # Don't bother to remove comments here.
+	      process_macro_definition($def_line, $def_line, 0, 0); } } }
+  undef $current_file_number;
+  undef $current_ftype_index;
 }
+
+
+## Old implementation.
+# # Take care of macros defined on the command line.
+# { # This is a hack; should parse output from pcp3 (or the original compilation
+#   # flags).
+#   my %package_command_line_macros = ("fvwm" => { 'FVWM_ICONDIR' => "",
+# 						 'FVWMDIR' => "",
+# 						 'FVWMRC' => "", },
+# 				     "plan" => { 'NOBODY_UID' => 65534,
+# 						 'NOBODY_GID' => 9999, },
+# 				     );
+#   my $basename = $statename;
+#   if (($basename =~ s/^.*\/([^\/]+)\.state$/$1/)
+#       && exists($package_command_line_macros{$basename}))
+#     { if (scalar(@current_inclusion_dependenton) != 0)
+# 	{ croak "Nonempty current_inclusion_dependenton: @current_inclusion_dependenton"; }
+#       $current_file_number = $command_line_fake_fileno;
+#       my %command_line_macro_defs = % {$package_command_line_macros{$basename}};
+#       my ($key, $value);
+#       while (($key, $value) = each %command_line_macro_defs)
+# 	{ process_macro_definition("$key $value", "$key $value", 0, 0); }
+#       undef $current_file_number; }
+# }
+
 { my %undefined_macros = ();
   for my $word (keys %macros_used_by_cpp)
     { if (!defined($macros{$word}))
