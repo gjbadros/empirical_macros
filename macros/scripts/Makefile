@@ -33,7 +33,7 @@ SCRIPTS := em_analyze em_reports em_constants.pm em_depend.pm em_util.pm cline.p
 SCRIPTSPATH := $(addprefix $(USER_PREFIX)/,$(SCRIPTS))
 SCRIPTSFAST := $(addprefix $(FAST_DIR)/,$(SCRIPTS))
 
-PKGS := $(shell zsh -c "setopt extendedglob; echo $(PKG_DIR)/$(PKG_PREFIX)*(/:t) | sed -e 's/-[^ ]*//g'")
+PKGS := $(shell zsh -c "setopt extendedglob; echo $(USER_PREFIX)/packages/$(PKG_PREFIX)*(.:t) | sed -e 's/-[^ ]*//g'")
 
 STATE := $(addsuffix .state,$(PKGS))
 STAT := $(addsuffix .stat,$(PKGS))
