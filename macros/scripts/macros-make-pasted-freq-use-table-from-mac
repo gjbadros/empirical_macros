@@ -2,4 +2,6 @@
 
 macros-make-use-frequency-tbl-from-mac "$@"
 # rm -f freq_of_use-tbl.txt
+# xargs -n12 means only do 12 columns at a time, so that we get 
+# multiple smaller tables
 echo *.frequse | xargs -n12 paste ~gjb/macros/frequse.buckets >> freq_of_use-tbl
