@@ -656,7 +656,7 @@ my %macros_c_undefs = ();	# hashes macro names to the number of times they
 
 my %macros_uses = ();		# hashes macro names to an array
                                 # listing the number of times they are
-                                # used in (code,cpp_directives)
+                                # used in (code,macro,cond)
 
 # count of uses is half the number of keys in %macros_file_line_uses
 my %macros_file_line_uses = ();	# hashes macro names to an array
