@@ -72,7 +72,7 @@ find-c | evilmacros -iv -d ~/macros/data/stable
 
 #Complex execution (use zsh):
 #
-# for i in *(/); do echo $i; pushd $i; find-c | evilmacros -i -d $TM:${i%%-*} >$i.out 2> $i.err; popd; done
+# for i in *(/); do echo $i; pushd $i; find-c | evilmacros -i -d $TM:${i%%-*} >$TM/${i%%-*}.out 2> $TM/${i%%-*}.err; popd; done
 #
 # For a second run for first-run failures:
 # for i in *(/); do if [[ ! -s $TM/${i%%-*}.stat ]]; then echo $i; pushd $i; find-c | evilmacros -i -d $TM2:${i%%-*}1 >$TM2/${i%%-*}.out 2>$TM2/${i%%-*}.err ; popd; fi; done
@@ -4274,9 +4274,9 @@ sub categorize_macro_def
     { $category = $catLITERAL;
       $type = $typeCHAR; }
   elsif ($body =~ /^$c_reserved_nontype_word_re|$c_reserved_type_word_re$/)
-    { $failure_type = "expands_to_reserved_word";
+    { # $failure_type = "expands_to_reserved_word";
       $category = harder_category($category,$catRESDWORD);
-      evilprint("expands to reserved word\n    $full_body\n");
+      evilprint("expands to reserved word\n    $body\n");
     }
   else
     { my $remaining;
