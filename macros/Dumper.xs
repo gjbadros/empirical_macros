@@ -731,6 +731,7 @@ int     top;
 		return 0;
 	    }
 	}
+#if 1 //REMOVING THIS BLOCK MIGHT HELP WITH MEMORY PROBLEMS
 	else {   /* store our name and continue */
 	    SV *namesv;
 	    if (name[0] == '@' || name[0] == '%') {
@@ -746,6 +747,7 @@ int     top;
 	    (void)hv_store(seenhv, id, strlen(id), newRV((SV*)seenentry), 0);
 	    SvREFCNT_dec(seenentry);
 	}
+#endif
 	
 	(*levelp)++;
 	ipad = sv_x(Nullsv, SvPVX(xpad), SvCUR(xpad), *levelp);
@@ -954,6 +956,7 @@ int     top;
 
 		DD_dumpfile(pio_file,hval, SvPVX(sname), SvCUR(sname), seenhv, postav,
 			levelp,	indent, pad, xpad, newapad, sep,0);
+		// This could be moved up before the recursive call
 		SvREFCNT_dec(sname);
 		Safefree(nkey);
 		if (indent >= 2)
@@ -1028,6 +1031,7 @@ int     top;
 		}
 	    }
 	    else {
+#if 1 //REMOVING THIS BLOCK MIGHT HELP WITH MEMORY PROBLEMS
 		SV *namesv;
 		namesv = newSVpv("\\", 1);
 		sv_catpvn(namesv, name, namelen);
@@ -1037,6 +1041,7 @@ int     top;
 		av_push(seenentry, val);
 		(void)hv_store(seenhv, id, strlen(id), newRV((SV*)seenentry), 0);
 		SvREFCNT_dec(seenentry);
+#endif
 	    }
 	}
 	
@@ -1164,7 +1169,7 @@ Data_Dumper_DumpxsFd(href, fd, ...)
 	    SV *val, *name, *pad, *xpad, *apad, *sep, *tmp, *varname;
 	    char tmpbuf[1024];
 	    I32 gimme = GIMME;
-
+//	    fprintf(stderr,"Using fd = %d\n",fd);
 	    if (!SvROK(href)) {		/* call new to get an object first */
 		SV *valarray;
 		SV *namearray;
