@@ -1,5 +1,5 @@
 # The first matching line (plus the ALL line) is used, so careful w/ordering.
-^CVSROOT mail -s "CVS checkin `date`" gjb mernst
+^CVSROOT mail -s "CVS checkin `date`" gjb@cs mernst@cs
 ^macros/papers mail -s "CVS checkin `date`" gjb mernst notkin@cs.washington.edu
 ^macros mail -s "CVS checkin `date`" gjb mernst
 #Nothing for ALL or for cpp
