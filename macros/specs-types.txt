@@ -1,0 +1,21 @@
+is_type(obj) => bool
+
+type_type (t) => "ptr" [describes type; like enum, but probably string]
+
+type_is_pointer(t) => bool
+type_is_array(t) => bool
+type_is_function(t) => bool
+
+// constructor-like
+type_make_pointer(t) => t  [add a level of indirection]
+type_make_array(t) => t
+type_make_function(@t) => t
+
+// parsing
+parse_type(str) => t
+parse_decl(str_type,str_id_seq) => t, str_identifier
+
+type_usual_binary_conversion = type_lub for only numbers
+type_unify(t,t) => t
+or type_unify(@t) => t
+
