@@ -1,4 +1,5 @@
 #!/uns/bin/perl -w
+#### PROFILE VERSION: #!/uns/bin/perl -wd:DProf
 # $Id$
 # evilmacros
 
@@ -28,7 +29,7 @@ New options marked with *; options with ':', above, take an argument
   -I  ignore include files--just parse files passed in
   -A  do the second pass on all files, not just those passed in
   -a  do macro statistics on all files, not just those passed in
-  -u  ignore usage [hey, explain this!]
+  -u  suppress macro use analysis
   -1  do only the first pass (don't do function parsing, usage)
 	This is a numeral 1, not a lowercase L.
 * -l  forbid the use of `\$' in identifiers, per ANSI standard
@@ -4840,8 +4841,7 @@ sub initialize_lists_of_hashes () {
 # FIX: Should generalize so that it works for non-gcc compilers
 # This list is not necessarily comprehensive even for gcc
 # I got it with:
-# uni,p1:~/macros% strings /usr/lib/gcc-lib/i486-linux/2.7.2/cpp | more
-# and looked for "__"
+# uni,p1:~/macros% strings /usr/lib/gcc-lib/i486-linux/2.7.2/cpp | grep __ | more
 sub initialize_builtin_macros () {
   check_args(0, @_);
   # The standard defines __LINE__ __STDC__ __STDC_VERSION__ __FILE__ __DATE__
