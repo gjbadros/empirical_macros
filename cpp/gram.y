@@ -4,6 +4,11 @@
  ======================================================================
  CTREE Version 0.05
  Written by Shaun Flisakowski (1995)
+ Modified by Greg J. Badros, Fall 1997 and Spring 1998
+ To invoke various Perl callbacks when performing interesting reductions.
+ See my qualifying exam project:
+	"PCP^3: A C Front End for Preprocessor Analysis and Transformation"
+ Greg J. Badros <gjb@cs.washington.edu>
  ======================================================================
   This program is provided free of charge on an "as is" basis without
   warranty of any kind, either express or implied.  Acceptance and use
@@ -229,7 +234,7 @@ top_level_decl: declaration
 
 func_def:  func_spec cmpnd_stemnt
         {
-	    char *szName;
+	    char *szName = NULL;
             leafnode *lm, *rm;
             for_node *tmpnode;
             tmpnode = (for_node *) $1;
@@ -258,8 +263,9 @@ func_def:  func_spec cmpnd_stemnt
                   }
                 }
               }
-	    gjb_call_hooks_sz_i(CPP_OPTIONS(&parse_in),HI_FUNCTION,
-			      	szName, lm && (lm->tok == STATIC));
+	    if (szName)
+	      gjb_call_hooks_sz_i(CPP_OPTIONS(&parse_in),HI_FUNCTION,
+			  	  szName, lm && (lm->tok == STATIC));
         }
 
 enter_scope:
@@ -901,7 +907,7 @@ declaration: decl_specs opt_init_decl_list SEMICOLON
 		  fprintf(stderr,"!= IDENT\n");
 	 	}
               } else {
-		int fIsFunc = 0;
+		int fIsFunc = ($2 && $2->type == TN_FUNC_DECL);
                 /* Find the identifier for a normal declaration. */
                 treenode *here, *rest;
                 here = $$;
@@ -913,13 +919,16 @@ declaration: decl_specs opt_init_decl_list SEMICOLON
                       symtab_insert(ParseStack->contxt->syms,
                                     mk_vardecl(rm->data.sval, $$)); 
                       }
-		    gjb_call_hooks_sz(CPP_OPTIONS(&parse_in),HI_VARDECL,
-				      rm->data.sval->str);
-		  } else {
+	 	    if (!fIsFunc) {
+ 		      gjb_call_hooks_sz(CPP_OPTIONS(&parse_in),HI_VARDECL,
+			  	        rm->data.sval->str);
+		    }
+		  } /* FIXGJB: else {
 	 	    fIsFunc = 1;
-		  }
+		  } */
                   here = rest;
                 } while (here != NULL);
+#ifdef FIXGJB_MOVED
 	        if (fIsFunc) {
 	          leafnode *fn = find_func_name($$);
 	          if (fn) {
@@ -927,6 +936,7 @@ declaration: decl_specs opt_init_decl_list SEMICOLON
 				      fn->data.sval->str);
                   }
 	        }
+#endif
               }
             } else {
 	      fprintf(stderr,"!lm\n");
@@ -1274,6 +1284,16 @@ declarator: pointer direct_declarator
             $$ = tmpnode;
         }
           | direct_declarator
+	{
+	  if ($1 && $1->type == TN_FUNC_DECL) {
+            leafnode *fn = find_func_name($1);
+            if (fn) {
+              gjb_call_hooks_sz(CPP_OPTIONS(&parse_in),HI_FUNC_PROTO,
+	      fn->data.sval->str);
+            }
+	  }
+	}
+
         ;
 
         
