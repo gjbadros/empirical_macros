@@ -25,7 +25,7 @@ use checkargs;
  $catMULTIPLE $catFAILURE $catLast @categoryname
  &category_lub
 
- @mcat_NULL @mcat_LITERAL @mcat_NONLITERAL_EXPRESSION
+ @mcat_NULL @mcat_CONSTANT @mcat_NONCONSTANT_EXPRESSION
  @mcat_STATEMENT @mcat_SYNTAX @mcat_TYPE
  @mcat_NON_C_CODE @mcat_OTHER @mcat_SYMBOL_UNKNOWN @mcat_FAILURE
 
@@ -204,8 +204,8 @@ if ((not defined($categoryname[$catLast]))
 @mcat_FAILURE = qw( catNOT_YET catIN_PROCESS catNO_DEF catFAILURE
 		       catMULTIPLE );
 @mcat_NULL = qw( catNULL_DEFINE );
-@mcat_LITERAL = qw( catCONSTANT catLITERAL catSOME_CONSTANT );
-@mcat_NONLITERAL_EXPRESSION = qw( catEXP );
+@mcat_CONSTANT = qw( catCONSTANT catLITERAL catSOME_CONSTANT );
+@mcat_NONCONSTANT_EXPRESSION = qw( catEXP );
 @mcat_STATEMENT = qw( catSTATEMENT catSTATEMENT_SANS_SEMI catPARTIAL_STATEMENT
 			 catSTATEMENTS catSTATEMENTS_SANS_SEMI catPARTIAL_STATEMENTS );
 @mcat_TYPE = qw( catTYPE catPARTIAL_TYPE catDECLARATION catDECLARATION_SANS_SEMI);
