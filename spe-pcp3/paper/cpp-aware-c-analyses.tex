@@ -172,7 +172,7 @@ misunderstandings of source code due to the arbitrary transformations
 function \texttt{foo} is not invoked in a given block of code.  By
 simply visually scanning that code segment, though, she may be oblivious 
 to a seemingly-unrelated macro that happens to expand to an invocation
-of the function intended to be avoided.
+of \texttt{foo}, the function intended to be avoided.
 
 Such confusions are easily reduced, if not eliminated,
 by allowing the software engineer to see the code exactly as the
@@ -197,7 +197,10 @@ body of \C{} programs, and helping programmers understand and extend
 those software artifacts. \Cpp{} is a necessary and integral part of the
 \C{} programming language specification.  In practice, the \C{}
 preprocessor is almost never separated from \C{} code, thus the issues
-relating the \Cpp{} arise with virtually all \C{} programs.
+relating the \Cpp{} arise with virtually all \C{} programs.  In
+addition, the framework we describe could be applied to analyze other
+uses of \Cpp{} (and even other textual preprocessing languages) in a
+fairly direct way.
 
 
 %Unlike syntax-based macros~\cite{Weise93} which operate at the parser
@@ -338,7 +341,7 @@ re-compiling the analysis tool after inserting the new callback
 invocations and backcall functions.  Extending the framework is intended 
 to be a far less frequent need than using the framework to perform a new 
 analysis, so the additional developer time in writing, compiling, and
-testing C code extensions is justified.
+testing C code extensions is acceptable.
 
 
 \begin{figure*}[t]
@@ -406,7 +409,7 @@ degrees of freedom for call-graph extractors~\cite{Murphy98}.  As
 written, the analysis counts all function calls in macro expansions as
 occurring from the function in which the macro is expanded---the macro
 expansion itself is omitted from the call graph.  This behaviour may not 
-always be what the software engineer desires. A substantial
+always be what the software engineer desires. However, a substantial
 strength of our framework is that it lets a tool-builder easily
 fine-tune the extraction to derive the desired view.
 
@@ -798,8 +801,8 @@ Our framework combines a
 \textbf{\textsf{P}}arser, a \textbf{\textsf{C}}
 \textbf{\textsf{p}}re\textbf{\textsf{p}}rocessor, and a
 \textbf{\textsf{P}}erl action language.  Thus, we have named the tool
-that implements the framework \pcppp{} or \pcp{}.\footnote{The tool is
-  available from the authors upon email request.}
+that implements the framework \pcppp{} or \pcp{}. (The tool is
+  available from the authors upon email request.)
 
 \subsection{Parser}
 \label{ssec:parser}
@@ -878,8 +881,8 @@ hooks (see Appendix \ref{sec:hooks}).
 The implementation of the main \pcp{} program, the (roughly thirty)
 backcalls (see Appendix \ref{sec:backcalls}),
 and the glue connecting the components totals about 1,800
-lines of \C{} code.  About 60\% of this code is automatically
-generate-able and deals directly with passing
+lines of \C{} code.  About 60\% of this code could be generated automatically
+and deals directly with passing
 arguments between \C{} and \Perl{}.
 
 \subsection{Performance}
