@@ -91,8 +91,8 @@ clean_reports:
 # Could also depend on $(PKG_DIR)/$(ANALYZE_OUTPUT_DIR)*/c-files-listing
 %.state: #[REMOVE THIS # TO DEPEND ON SCRIPTS] $(COMMON_DIR)/../em_analyze
 	em_make_state_file $(PKG_DIR) $(ANALYZE_OUTPUT_DIR) $@ $(EXTRA_ANALYZE_FLAGS) || echo $< >> $(ANALYZE_OUTPUT_DIR)/failures
-	chgrp macros `basename $@ .state`
-	chmod g+rw `basename $@ .state`
+	chgrp macros `basename $@ .state`.*
+	chmod g+rw `basename $@ .state`.*
 
 %.stat: %.state #[REMOVE THIS # TO DEPEND ON SCRIPTS] $(COMMON_DIR)/../em_reports
 	em_reports -s $< -t $(EXTRA_REPORTS_FLAGS) -d $(ANALYZE_OUTPUT_DIR):`echo $@ | sed -e 's/\.stat$$//'`
