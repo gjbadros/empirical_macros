@@ -49,8 +49,9 @@
 ./expect/pty_unicos.c
 ./expect/strerror.c
 ./expect/testsuite/exp_test.c
-./expect/confdefs.h
-./expect/conftest.c
+# These temporary files are created by ./configure
+#./expect/confdefs.h
+#./expect/conftest.c
 ./tcl/compat/dirent.h
 ./tcl/compat/dirent2.h
 ./tcl/compat/fixstrtod.c
