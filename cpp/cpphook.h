@@ -135,8 +135,7 @@ typedef enum hook_index_constants {
 ///% #ifXX directive; $trailer is the text following the #endif (often empty);
 
   HI_CREATE_PREDEF,
-///% {$mname, $expansion, $num_args, $internal_expansion, $file, $line, $r_argnames, $flags,
-///% $internal_expansion_args_uses... }
+///% {$mname, $expansion, $num_args, $internal_expansion, $file, $line, $r_argnames, $flags,$internal_expansion_args_uses... }
 ///% Called once for each predefined macro CPP installs.
 ///% $mname is the name of the macro, $expansion is its expansion [as literal text], 
 ///% $num_args is the number of arguments it takes, $internal_expansion is an
@@ -149,8 +148,7 @@ typedef enum hook_index_constants {
 ///% remaining arguments (special gcc cpp feature).
 
   HI_CREATE_DEF,
-///% {$s_start, $s_end, $mname, $expansion, $num_args, $internal_expansion,
-///%  $file, $line, $r_argnames, $flags, $internal_expansion_args_uses... }
+///% {$s_start, $s_end, $mname, $expansion, $num_args, $internal_expansion,$file, $line, $r_argnames, $flags, $internal_expansion_args_uses... }
 ///% Called once for each macro definition read by  CPP.
 ///% $s_start and $s_end are the source code character offsets of the definition,
 ///% $mname is the name of the macro, $expansion is its expansion [as literal text], 
@@ -180,8 +178,7 @@ typedef enum hook_index_constants {
 ///% (usually better to just use $symbol instead).
 
   HI_EXPAND_MACRO,
-///% {$s_start,$s_end,$mname,$expansion,$length,$raw_call,$has_escapes,$cbuffersDeep,
-///% $cnested,@nests,$cargs,@args}
+///% {$s_start,$s_end,$mname,$expansion,$length,$raw_call,$has_escapes,$cbuffersDeep,$cnested,@nests,$cargs,@args}
 ///% Called once for each macro expansion in C source (i.e., not for expansions
 ///% in #ifXX guards). $s_start and $s_end are the source code character offsets
 ///% of the macro invocation; $mname is name of the macro, $expansion is what
@@ -211,7 +208,7 @@ typedef enum hook_index_constants {
 ///% just two), it must have been stringified. FIXGJB is this true?
 
   HI_MACARG_EXP,
-///% {$mname,$raw,$number}
+///% obsoleted{$mname,$raw,$number}
 
   HI_MACRO_CLEANUP,
 ///% {$s_start, $s_end, $mname, $c_nested, @nests}
@@ -227,8 +224,7 @@ typedef enum hook_index_constants {
 ///% See cpphook.pm for an example.
 
   HI_IFDEF_MACRO,
-///% {$s_start,$s_end,$mname,$expansion,$length,$raw_call,$has_escapes,$cbuffersDeep,
-///% $cnested,@nests,$cargs,@args}
+///% {$s_start,$s_end,$mname,$expansion,$length,$raw_call,$has_escapes,$cbuffersDeep,$cnested,@nests,$cargs,@args}
 ///% Called once for each macro expansion in #if directives.  The arguments
 ///% passed to the hook are the same as those for the EXPAND_MACRO hook, see its
 ///% documentation for details.  Note, though, that macros are not usually
