@@ -463,12 +463,14 @@ XS(XS_cpp_EnterScope)
 #line 337 "backcalls.xs"
 #line 337 "backcalls.xs"
 #line 338 "backcalls.xs"
+	if (!fShouldParse) goto done;
 	enter_scope(ParseStack->contxt);
+	done:
 	PUTBACK;
 	return;
-#line 338 "backcalls.xs"
-#line 338 "backcalls.xs"
-#line 338 "backcalls.xs"
+#line 340 "backcalls.xs"
+#line 340 "backcalls.xs"
+#line 340 "backcalls.xs"
     }
 }
 
@@ -479,15 +481,17 @@ XS(XS_cpp_ExitScope)
 	croak("Usage: cpp::ExitScope()");
     SP -= items;
     {
-#line 347 "backcalls.xs"
-#line 347 "backcalls.xs"
-#line 348 "backcalls.xs"
+#line 349 "backcalls.xs"
+#line 349 "backcalls.xs"
+#line 350 "backcalls.xs"
+	if (!fShouldParse) goto done;
 	exit_scope(ParseStack->contxt);
+	done:
 	PUTBACK;
 	return;
-#line 348 "backcalls.xs"
-#line 348 "backcalls.xs"
-#line 348 "backcalls.xs"
+#line 352 "backcalls.xs"
+#line 352 "backcalls.xs"
+#line 352 "backcalls.xs"
     }
 }
 
@@ -498,15 +502,15 @@ XS(XS_cpp_PushHashTab)
 	croak("Usage: cpp::PushHashTab()");
     SP -= items;
     {
-#line 356 "backcalls.xs"
-#line 356 "backcalls.xs"
-#line 357 "backcalls.xs"
+#line 359 "backcalls.xs"
+#line 359 "backcalls.xs"
+#line 360 "backcalls.xs"
 	cpp_push_hashtab(&parse_in);
 	PUTBACK;
 	return;
-#line 357 "backcalls.xs"
-#line 357 "backcalls.xs"
-#line 357 "backcalls.xs"
+#line 360 "backcalls.xs"
+#line 360 "backcalls.xs"
+#line 360 "backcalls.xs"
     }
 }
 
@@ -516,13 +520,13 @@ XS(XS_cpp_PopHashTab)
     if (items != 0)
 	croak("Usage: cpp::PopHashTab()");
     {
-#line 364 "backcalls.xs"
-#line 364 "backcalls.xs"
-#line 365 "backcalls.xs"
+#line 367 "backcalls.xs"
+#line 367 "backcalls.xs"
+#line 368 "backcalls.xs"
 	cpp_pop_hashtab(&parse_in);
-#line 365 "backcalls.xs"
-#line 365 "backcalls.xs"
-#line 365 "backcalls.xs"
+#line 368 "backcalls.xs"
+#line 368 "backcalls.xs"
+#line 368 "backcalls.xs"
     }
     XSRETURN_EMPTY;
 }
@@ -533,13 +537,13 @@ XS(XS_cpp_SetParseDebugging)
     if (items != 0)
 	croak("Usage: cpp::SetParseDebugging()");
     {
-#line 373 "backcalls.xs"
-#line 373 "backcalls.xs"
-#line 374 "backcalls.xs"
+#line 376 "backcalls.xs"
+#line 376 "backcalls.xs"
+#line 377 "backcalls.xs"
  	ct_yydebug = 1;
-#line 374 "backcalls.xs"
-#line 374 "backcalls.xs"
-#line 374 "backcalls.xs"
+#line 377 "backcalls.xs"
+#line 377 "backcalls.xs"
+#line 377 "backcalls.xs"
     }
     XSRETURN_EMPTY;
 }
@@ -550,13 +554,13 @@ XS(XS_cpp_ResetParseDebugging)
     if (items != 0)
 	croak("Usage: cpp::ResetParseDebugging()");
     {
-#line 383 "backcalls.xs"
-#line 383 "backcalls.xs"
-#line 384 "backcalls.xs"
+#line 386 "backcalls.xs"
+#line 386 "backcalls.xs"
+#line 387 "backcalls.xs"
 	ct_yydebug = 0;
-#line 384 "backcalls.xs"
-#line 384 "backcalls.xs"
-#line 384 "backcalls.xs"
+#line 387 "backcalls.xs"
+#line 387 "backcalls.xs"
+#line 387 "backcalls.xs"
     }
     XSRETURN_EMPTY;
 }
@@ -567,15 +571,15 @@ XS(XS_cpp_YYPushStackState)
     if (items != 0)
 	croak("Usage: cpp::YYPushStackState()");
     {
-#line 391 "backcalls.xs"
-#line 391 "backcalls.xs"
-#line 392 "backcalls.xs"
+#line 394 "backcalls.xs"
+#line 394 "backcalls.xs"
+#line 395 "backcalls.xs"
 	if (!fShouldParse) goto done;
 	PushStackState();
 	done:
-#line 394 "backcalls.xs"
-#line 394 "backcalls.xs"
-#line 394 "backcalls.xs"
+#line 397 "backcalls.xs"
+#line 397 "backcalls.xs"
+#line 397 "backcalls.xs"
     }
     XSRETURN_EMPTY;
 }
@@ -586,15 +590,15 @@ XS(XS_cpp_YYPopAndRestoreStackState)
     if (items != 0)
 	croak("Usage: cpp::YYPopAndRestoreStackState()");
     {
-#line 400 "backcalls.xs"
-#line 400 "backcalls.xs"
-#line 401 "backcalls.xs"
+#line 403 "backcalls.xs"
+#line 403 "backcalls.xs"
+#line 404 "backcalls.xs"
 	if (!fShouldParse) goto done;
 	PopAndRestoreStackState();
 	done:
-#line 403 "backcalls.xs"
-#line 403 "backcalls.xs"
-#line 403 "backcalls.xs"
+#line 406 "backcalls.xs"
+#line 406 "backcalls.xs"
+#line 406 "backcalls.xs"
     }
     XSRETURN_EMPTY;
 }
@@ -605,15 +609,15 @@ XS(XS_cpp_YYPopAndDiscardStackState)
     if (items != 0)
 	croak("Usage: cpp::YYPopAndDiscardStackState()");
     {
-#line 409 "backcalls.xs"
-#line 409 "backcalls.xs"
-#line 410 "backcalls.xs"
+#line 412 "backcalls.xs"
+#line 412 "backcalls.xs"
+#line 413 "backcalls.xs"
 	if (!fShouldParse) goto done;
 	PopAndDiscardStackState();
 	done:
-#line 412 "backcalls.xs"
-#line 412 "backcalls.xs"
-#line 412 "backcalls.xs"
+#line 415 "backcalls.xs"
+#line 415 "backcalls.xs"
+#line 415 "backcalls.xs"
     }
     XSRETURN_EMPTY;
 }
@@ -624,15 +628,15 @@ XS(XS_cpp_YYSwapStackState)
     if (items != 0)
 	croak("Usage: cpp::YYSwapStackState()");
     {
-#line 419 "backcalls.xs"
-#line 419 "backcalls.xs"
-#line 420 "backcalls.xs"
+#line 422 "backcalls.xs"
+#line 422 "backcalls.xs"
+#line 423 "backcalls.xs"
 	if (!fShouldParse) goto done;
 	SwapStackState();
 	done:
-#line 422 "backcalls.xs"
-#line 422 "backcalls.xs"
-#line 422 "backcalls.xs"
+#line 425 "backcalls.xs"
+#line 425 "backcalls.xs"
+#line 425 "backcalls.xs"
     }
     XSRETURN_EMPTY;
 }
@@ -643,15 +647,15 @@ XS(XS_cpp_YYPushDupTopStackState)
     if (items != 0)
 	croak("Usage: cpp::YYPushDupTopStackState()");
     {
-#line 429 "backcalls.xs"
-#line 429 "backcalls.xs"
-#line 430 "backcalls.xs"
+#line 432 "backcalls.xs"
+#line 432 "backcalls.xs"
+#line 433 "backcalls.xs"
 	if (!fShouldParse) goto done;
 	PushDupTopStackState();
 	done:
-#line 432 "backcalls.xs"
-#line 432 "backcalls.xs"
-#line 432 "backcalls.xs"
+#line 435 "backcalls.xs"
+#line 435 "backcalls.xs"
+#line 435 "backcalls.xs"
     }
     XSRETURN_EMPTY;
 }
@@ -662,19 +666,19 @@ XS(XS_cpp_YYFCompareTopStackState)
     if (items != 0)
 	croak("Usage: cpp::YYFCompareTopStackState()");
     {
-#line 439 "backcalls.xs"
+#line 442 "backcalls.xs"
 	bool	RETVAL;
-#line 439 "backcalls.xs"
-#line 440 "backcalls.xs"
+#line 442 "backcalls.xs"
+#line 443 "backcalls.xs"
         RETVAL = TRUE;
 	if (!fShouldParse) goto done;
 	RETVAL = FCompareTopStackState();
 	done:
-#line 445 "backcalls.xs"
+#line 448 "backcalls.xs"
 	ST(0) = boolSV(RETVAL);
 	if (SvREFCNT(ST(0))) sv_2mortal(ST(0));
-#line 445 "backcalls.xs"
-#line 445 "backcalls.xs"
+#line 448 "backcalls.xs"
+#line 448 "backcalls.xs"
     }
     XSRETURN(1);
 }
@@ -686,13 +690,13 @@ XS(XS_cpp_FLookupSymbol)
 	croak("Usage: cpp::FLookupSymbol(szSymbol)");
     {
 	char *	szSymbol = (char *)SvPV(ST(0),na);
-#line 454 "backcalls.xs"
+#line 457 "backcalls.xs"
 	str_t *pstr;
 	symentry_t *se;
-#line 456 "backcalls.xs"
+#line 459 "backcalls.xs"
 	bool	RETVAL;
-#line 456 "backcalls.xs"
-#line 457 "backcalls.xs"
+#line 459 "backcalls.xs"
+#line 460 "backcalls.xs"
 	RETVAL = FALSE;
 	if (!fShouldParse) goto done; 
 	pstr = nmelook(szSymbol,strlen(szSymbol));
@@ -704,11 +708,11 @@ XS(XS_cpp_FLookupSymbol)
 	  RETVAL = (se != NULL);
 	}
 	done:
-#line 469 "backcalls.xs"
+#line 472 "backcalls.xs"
 	ST(0) = boolSV(RETVAL);
 	if (SvREFCNT(ST(0))) sv_2mortal(ST(0));
-#line 469 "backcalls.xs"
-#line 469 "backcalls.xs"
+#line 472 "backcalls.xs"
+#line 472 "backcalls.xs"
     }
     XSRETURN(1);
 }
