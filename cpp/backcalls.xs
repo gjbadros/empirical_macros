@@ -335,7 +335,9 @@ PushBuffer($buffer_to_push)
 void
 EnterScope()
 	PPCODE:
+	if (!fShouldParse) goto done;
 	enter_scope(ParseStack->contxt);
+	done:
 
 
 ###%\backcall{}{ExitScope}{}
@@ -345,8 +347,9 @@ EnterScope()
 void
 ExitScope()
 	PPCODE:
+	if (!fShouldParse) goto done;
 	exit_scope(ParseStack->contxt);
-
+	done:
 
 ###%\backcall{}{PushHashTab}{}
 ###% Copies the current cpp hash table and begins using the copy;  the copy
