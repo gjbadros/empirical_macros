@@ -237,7 +237,7 @@ software engineer on better ways to do Cpp-like things.
 Similarly, a number of organizations provide hints about effective
 ways to the use the C preprocessor.  The GNU documentation, for example,
 discusses a set of techniques including simple macros, argument
-macros, predefined macros, stringification macros, concatentation
+macros, predefined macros, stringification macros, concatenation
 macros, undefining and redefining
 macros.
 It also identifies a set of ``pitfalls and subtleties of
@@ -420,18 +420,20 @@ this categorizations (though we don't do any of this now)]
 In addition to classifying each macro as taking arguments or not, our tool
 identifies the following specific categories (and a few more rarely-used
 ones omitted for reasons of space):
-\begin{itemize}
+\begin{description}
+  \sloppy
+  \emergencystretch=2em
 
-\item[{\em Null define\/}]  The \verb+#define+ gives only an
+\item[Null define]  The \verb+#define+ gives only an
 identifier name.  Such macros appear most frequently in Cpp directives
 (such as \verb|#ifdef|), but may also appear in code.  For instance,
 macro \verb|private| to expand either to \verb|static| or to nothing,
-depending on whether a debugging mode was set, or macro \verb|then| might
+depending on whether a debugging mode is set, or macro \verb|then| might
 expand to nothing for programmers who like \verb|else| to be offset by
 \verb|then|.  Macros with null definitions are often used as boolean
 variables by the preprocessor.
 
-\item[{\em Literal\/}]  The macro is defined to be a specific constant
+\item[Literal]  The macro is defined to be a specific constant
   value; for instance, \verb|#define NULL 0| or \verb|#define ETCHOSTS
   "/etc/hosts"|.  Such macros act like \verb|const| variables, albeit
   without type information, debugging information in the symbol table, and
@@ -440,7 +442,7 @@ variables by the preprocessor.
   that are literals or constants, so this number is an underestimate of the
   number of macros with constant values.
 
-\item[{\em Expression}]  The macro body is an expression.  This expression
+\item[Expression]  The macro body is an expression.  This expression
   might have a single constant value everywhere (the usual case for
   expression macros without arguments), or might have a different value on
   each use (the usual case for expression macros with arguments).  Of
@@ -458,79 +460,78 @@ variables by the preprocessor.
 %    * expression sans assignment
 %    * expression with assignment
 
-\item[{\em Statement}]  The macro body is a statement.  Such macros can be
+\item[Statement]  The macro body is a statement.  Such macros can be
   confusing to use, because programmers are inclined to add a semicolon
-  after a call to such a macro, which causes problems (such as
-  misparsing of nested \verb|if| statements) for most statements.  The
+  after a call to such a macro, which can cause problems such as 
+  misparsing of nested \verb|if| statements).  The
   well-known \verb|do {|\ldots\verb|} while (0)| partial statement trick
   solves this problem.  To our surprise, we found very few uses of that
   construct, but many instances of a macro which expanded to a statement
   like \verb|{|\ldots\verb|}| in which a call to the macro was immediately
   followed by a semicolon.
 
-\item[{\em Stringization and pasting}]  The macro body contains \verb|#| or
+\item[Stringization and pasting]  The macro body contains \verb|#| or
   \verb|##|, which treat the macro argument not as a token but as a
   string.  No language mechanism could replace such macros.  Our
   implementation separates these categories, but we conflate them to
   simplify our figures.
 
-\item[{\em Other syntactic macros}]  Like stringization and pasting, these
+\item[Other syntactic macros]  Like stringization and pasting, these
   macros make essential use of the unique features of the preprocessor.
   Our framework separately categorizes a number of such macros, including
   those that expand to a reserved word (such as \verb|#define private
-  static|, mentioned above), those which expand to a delimiter such as 
+  static|, mentioned above), those which expand to a delimiter such as
+  \verb|,| or \verb|;|, and those with mismatched parentheses, brackets, or
+  braces.  (The latter are often used to create a block and perform actions
+  that must occur at its beginning and end, such as \verb|BEGIN_GCPRO| and
+  \verb|END_GCPRO|.)
 
-those with mismatched parentheses, braces, or
-  brackets, 
+\item[Classification failure]  Frequent reasons for classification failure
+  included multiple adjacent tokens
+  (\verb|#define EXFUN(name, proto) name proto|,
+  \verb|#define DO_OP(OP,a,b) ((a) OP (b))|) and illegal identifier
+  names (\verb|#define FAT$C_VFC 3| for VMS compilation), tokens
+  (\verb|#define| \verb|LIB_PATH| \verb|/usr/ucblib|), and constants (\verb|1ULL| for
+  \verb|unsigned long long|).  Of the fewer than 1000 classification
+  failures in the 23 packages, over half appeared in gnuplot; gnuplot, cvs,
+  and grof accounted for over 75% of the failures, many of which could be
+  eliminated by relaxing the parsing rules.  Only 5 packages had no
+  macro classification failures at all.
 
-This category con
-  
 
+% \item {\em Constants\/}, where the \verb+#define+ gives only an
+% identifier name and a value.
+% 
+% \item {\em Null defines\/}, where the \verb+#define+ gives only an
+% identifier name.
+% 
+% \item {\em Functions\/}, where the \verb+#define+ has one or more
+% parameters.  The functions are broken down into several sub-categories:
+% \begin{itemize}
+% 
+% \item {\em Functions/Cpp\/}, where the body of the macro invokes one
+% or more other macros.  [FIX: This is currently ``function, macro as
+% function'', I think.]
+% 
+% \item {\em Functions/C-expression\/}, where the body of the macro is
+% defined as a well-defined C expression.  [FIX: This is currently
+% ``function, some constant'', I think.]
+% 
+% \item {\em Functions/Essential\/}, [FIX: bad name?] where the body of the
+% macro is not defined as a C expression; specific reasons include
+% ...
+% 
+% These are of special interest with respect to translation.  Some of
+% them, for instance ones that define C statements rather than
+% expressions, might yield to translation if further analysis shows that
+% they are used in particular, disciplined ways.
+% 
+% \end{itemize}
+% 
+% \item{\em Uncategorized\/}, where we could not characterize the macro
+% as any of the above categories.
 
-* statements
-* other:
-   * stringization, pasting
-   * syntactic entity, reserved word, mismatched parentheses
-%    * stringization
-%    * pasting
-%    * syntactic entity
-%    * reserved word
-%    * mismatched parentheses
-* classification failure
-
-\item {\em Constants\/}, where the \verb+#define+ gives only an
-identifier name and a value.
-
-\item {\em Null defines\/}, where the \verb+#define+ gives only an
-identifier name.
-
-\item {\em Functions\/}, where the \verb+#define+ has one or more
-parameters.  The functions are broken down into several sub-categories:
-\begin{itemize}
-
-\item {\em Functions/Cpp\/}, where the body of the macro invokes one
-or more other macros.  [FIX: This is currently ``function, macro as
-function'', I think.]
-
-\item {\em Functions/C-expression\/}, where the body of the macro is
-defined as a well-defined C expression.  [FIX: This is currently
-``function, some constant'', I think.]
-
-\item {\em Functions/Essential\/}, [FIX: bad name?] where the body of the
-macro is not defined as a C expression; specific reasons include
-...
-
-These are of special interest with respect to translation.  Some of
-them, for instance ones that define C statements rather than
-expressions, might yield to translation if further analysis shows that
-they are used in particular, disciplined ways.
-
-\end{itemize}
-
-\item {\em Uncategorized\/}, where we could not characterize the macro
-as any of the above categories.
-
-\end{itemize}
+\end{description}
 
 In anticipation of the translator tool, the analysis tool infers
 types, using techniques similar to those of Siff and Reps~\cite{Siff-fse96}
@@ -538,8 +539,8 @@ and O'Callahan and Jackson~\cite{OCallahan-icse97}.  Our use of the
 type information is in the early stages, however, and we do not report
 on the preliminary results in this paper.
 
-[FIX: Benefits even from simple literal constant conversion -- exposes
-symbolic information to the debugger]
+% [FIX: Benefits even from simple literal constant conversion -- exposes
+% symbolic information to the debugger]
 
 %[FIX: Should this also include Mike's manual breakdown into categories
 %for gzip.  --not tonight!]
