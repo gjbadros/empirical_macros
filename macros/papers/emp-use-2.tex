@@ -68,7 +68,7 @@ Department of Computer Science and Engineering \\
 University of Washington \\
 Box 352350, Seattle, WA  98195-2350  USA \\
 {\small \{{\tt mernst},{\tt gjb},{\tt notkin}\}{\tt @cs.washington.edu}} \\
-28 January 1999}  
+1 February 1999}  
 
 \maketitle
 
@@ -654,8 +654,7 @@ The ten definition categories follow.
 % }
 \centerline{\epsfig{file=fig/def-categories.eps,height=6in}}
 \captionsmall{Categorization of macro definition bodies.  The legend numerically
-  represents the information in the top row.  \comment{Remove this: the category names in the
-  legend should be read across, by rows.}  The packages are ordered from
+  represents the information in the top row.  The packages are ordered from
   most preprocessor directives per line to fewest (as in
   Figure~\ref{fig:directives-breakdown}).}
 \label{fig:categorization}
@@ -1120,7 +1119,7 @@ described below.
         expression and is suppressed if the body is a single token or a
         function call (which has high precedence).
 
-\item[does not swallow semicolon]\label{item:swallow-semicolon}
+\item[dangling semicolon]\label{item:swallow-semicolon}
         The macro body takes arguments and expands into a statement or
         multiple statements.  Thus, its invocations look like function
         calls, but it cannot be legally used like a function call, as in
@@ -1197,7 +1196,7 @@ described below.
         
         This problem results from a potentially incomplete statement which
         may be attached to some following information.  It is the mirror of
-        the ``does not swallow semicolon'' problem listed above which
+        the ``dangling semicolon'' problem listed above which
         resulted from a too-complete statement that failed to be
         associated with a textually subsequent token.  The solution is
         similar: either add an else clause with an empty statement
@@ -1720,8 +1719,7 @@ just that line; see Section~\ref{sec:dependence}.
 \captionsmall{Categories for conditional compilation directives.
   The legend indicates what percentage of all Cpp conditionals fall
   into each category, numerically presenting the information in the top row
-  of the chart.  \comment{Remove this:  The
-  legend should be read across, by rows.}}
+  of the chart.}
 \label{fig:ccd-categories}
 \end{figure}
 
@@ -1969,13 +1967,14 @@ lines are expansion-dependent on more than 3 macros, and only 1\% are
 expansion-dependent on more than 7 macros.  However, one line of
 \pkg{gcc}\,---\,{\tt \verb|LEGITIMIZE_ADDRESS| (x, oldx, mode,
 win);}\,---\,is expansion-dependent on 187 different macros.  Macro
-\verb|LEGITIMIZE_ADDRESS| is defined 30 times in \pkg{gcc}, with many of the
+\verb|LEGITIMIZE_ADDRESS|, which creates a legitimate memory address for a
+memory operand of a given mode, is defined 30 times in \pkg{gcc}, with many of the
 definitions dozens of lines long and themselves studded with macro
 invocations.  Overall, only 13 out of 325,000 lines in \pkg{gcc} are
 expansion-dependent on more than 100 macros.
 
 Inclusion dependences have a much wider distribution.  20\% of lines
-is inclusion-dependent on at least 133 macros, and 1\% of lines are
+are inclusion-dependent on at least 133 macros, and 1\% of lines are
 dependent on over 300 macros.  As an example, the line of \pkg{gcc}
 mentioned above has 182 inclusion dependences (with only 13 macros in
 common with its set of expansion dependences), but over over 10,000 lines
@@ -2160,14 +2159,19 @@ uses of \texttt{\#ifdef} in the 21,000 lines of C News.
 
 Krone and Snelting use mathematical concept analysis to determine the
 conditional compilation structure of code~\cite{Krone94}.  They determine
-which preprocessor macros each line depends upon and display that
-information in a lattice.  They do not determine how macros depend upon one
-another directly, only by their nesting in {\tt \#if}, and the information
-conveyed is about the program as a whole.  When the lattice does not have a
-grid-like structure, it is possible that the code does not properly
-separate concerns.  Section~\ref{sec:ccd} analyzed single compilation
-directives that tested multiple incompatible macros using a fixed set of
-categories.
+which preprocessor macros each line depends upon (in our terminology, they
+only compute inclusion dependence, not expansion dependence) and display
+that information in a concept lattice.  They do not determine how macros
+depend upon one another directly, only by their nesting in {\tt \#if}, and
+the information conveyed is about the program as a whole.  Each point in
+the lattice stands for a set of lines dependent on exactly the same
+preprocessor symbols, though not necessarily in exactly the same way.  The
+lattice can reveal that one macro is only tested within another one's
+influence, for example.  When the lattice does not have a regular grid-like
+structure, it is possible that the code does not properly separate
+concerns.  The most closely related part of this paper is
+Section~\ref{sec:ccd}, which analyzed single compilation directives that
+tested multiple incompatible macros using a fixed set of categories.
 
 
 %Greg:  describe LCLint methodology and results.  Say exactly what you did
@@ -2233,6 +2237,10 @@ understand code with containing Cpp directives.  Emacs's
 preprocessor variables as explicitly defined or not defined; the mode then
 presents a view of the source code corresponding to that configuration,
 hiding code that is conditionally unincluded, much like our Cppp tool.
+A similar tool is the VE editor, which supports both selective viewing of
+source code and automatic insertion of Cpp conditionals around edited
+code.  Based on evidence from version control logs, this tool was found to
+be effective in making programmers more productive~\cite{AtkinsBGM99}. 
 Various language construct ``tagging'' mechanisms (e.g., \texttt{etags} and
 \texttt{ctags}) recognize macro definitions and permit tag-aware editors
 to move easily from a macro expansion to the various definitions of that

@@ -27,6 +27,8 @@ Software Engineering"}
 
 @string{icse97 = "Proceedings of the 1997 International Conference on
 Software Engineering"}
+@string{icse99 = "Proceedings of the 1999 International Conference on
+Software Engineering"}
 
 
 @TechReport{ellemtel92,
@@ -582,6 +584,62 @@ evaluation has been performed yet.
                  k{\"o}nnen Redundanzen in der Beschreibung der
                  Variantenstruktur entdeckt und entfernt werden.",
 }
+
+
+
+@InProceedings{AtkinsBGM99,
+  author = 	 "David Atkins, Thomas Ball, Todd Graves, and Audris Mockus",
+  title = 	 "Using Version Control Data to Evaluate the Impact of Software Tools",
+  booktitle = 	 icse99,
+  OPTpages = 	 "",
+  year =	 1999,
+  address =	 "Los Angeles, CA",
+  month =	 may # "~19-21,"
+}
+The idea is to evaluate VE, a #if-aware editor that supports changing a
+program that makes extensive use of the C preprocessor.  The editor hides
+Cpp conditionals that are not active in a particular version of the
+software, and it automatically inserts Cpp conditionals around new code
+added using the editor.
+  The methodology is to find programmers who have made nontrivial numbers
+of modifications to the codebase both using and not using the tool and
+compare their productivity, measured in time per number of lines of
+changes, while controlling for type of change.  This information is found
+in the version control logs.  Only 9 out of 5000 programmers fit the
+criterion; of these, 8 switched from not using the tool to using it, and
+one vice versa.
+  They conclude that the tool is effective.
+
+
+% This might be the right reference for the VE editor.
+J. O. Coplien, D. L. DeBruler, and M. B. Thompson
+The delta system:  A nontraditional approach to software version management
+In International Switching Symposium, March 1987.
+
+
+
+% This doesn't look like the right reference for the VE editor.
+Version Sensitive Editing: Change History as a Programming Tool 
+David L. Atkins
+Bell labs - Lucent Technologies, USA 
+Lecture Notes in Computer Science 1439, Springer Verlag, Boris Magnusson (Ed.)
+     System Configuration Management
+     ECOOP'98 SCM-8 Symposium
+     Brussels, Belgium, July 1998
+Abstract: 
+Software Version Control Systems (VCSs) are used to store the versions of
+program source code created throughout the software development cycle. The
+traditional purpose of such systems has been mostly administrative,
+providing the safe storage of source code and the ability to recreate
+earlier versions, as well as tracking the progress of new feature
+development and problem resolution. Software developers often regard the
+VCS as a necessary but unpleasant encumbrance to the software design and
+coding process. However, when the change history data gathered by the VCS
+is easily available to the programmer in the context of an editor, the
+programming process is enhanced. Faults introduced by earlier changes can
+be more rapidly located, dependencies on other changes can be avoided, and
+the version history provides valuable hindsight that can help to guide
+future development.
 
 
 
