@@ -1,0 +1,60 @@
+#!/uns/bin/perl
+BEGIN {
+# FIX: These table headings need to be kept
+# in synch w/ macros-make-subset-metacateg-from-mac script
+# (which uses em_constants' @mcat_XXXX lists)
+print '
+%\usepackage{graphics}
+%\newcommand{\black}{\ensuremath{\blacksquare}}
+\newcommand{\black}{\vrule height5.5pt depth0.5pt width6pt}
+{\small
+\addtolength{\columnsep}{-.5\columnsep}
+% The *{n}{c|} below creates n duplicate columns of that type (centered, here)
+\begin{tabular}{|r|*{11}{c|}}\hline
+\rotatebox{90}{Percentage of macro names} &
+\rotatebox{90}{failed categorization} &
+\rotatebox{90}{null define} &
+\rotatebox{90}{literal} &
+\rotatebox{90}{non-literal expression} &
+\rotatebox{90}{statement} &
+\rotatebox{90}{type-related} &
+\rotatebox{90}{syntax-related} &
+\rotatebox{90}{recursive} &
+\rotatebox{90}{non-c code} &
+\rotatebox{90}{unknown symbol} &
+\rotatebox{90}{other}
+\\\\\\hline
+';
+}
+
+END {
+print '
+\end{tabular}}
+';
+}
+
+if (defined $ARGV[0]) {
+  $sum = $ARGV[0];
+  shift;
+  $pct = 1;
+} else {
+  $pct = 0;
+}
+
+while (<>) {
+  ($count,$marks) = /^( +\d+)\s(.*)$/;
+
+#  print STDERR $count, "\n";
+  @m = split(//,$marks);
+  $out = join("&", @m);
+  $out =~ s/\*/\\black/g;
+
+  if (100*$count/$sum >= 0.05) {
+    if ($pct == 0) {
+      print "$count &";
+    } else {
+      printf "%6.02g\\% &",100*$count/$sum;
+    }
+    print $out, ' \\\\\\hline', "\n";
+  }
+}

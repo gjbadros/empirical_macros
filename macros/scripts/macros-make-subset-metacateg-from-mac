@@ -1,0 +1,84 @@
+#!/uns/bin/perl -anw
+BEGIN {
+  my $getopts_option_letters = 'had:';
+
+  use Getopt::Std;
+  use em_constants;
+
+  getopts($getopts_option_letters);
+
+  sub usage () {
+    die "@_\nUsage: $0 [-$getopts_option_letters]
+-h usage message
+-d <num> set the minimum number of defs before outputting a row for that name
+-a print all lines, even ones which do not have the minimum number of defs
+";
+  }
+
+  usage() if ($opt_h);
+
+  use vars qw($opt_d $opt_a $opt_h %categoryname $cCategoryNames);
+
+  my $i = 0;
+# we need to use $i+0, or else the value pointed to
+# by the first handful keeps getting incremented, and
+# we get uncategorized => 21, or whatever
+# The postincrement returns a temporary which gets
+# stored as the value in the hash
+
+# FIX: this table must be kept in sync with the table
+# headings in latexify-meta-mark-table
+  %categoryname = ();
+
+  make_mapping_for($i++,@mcat_FAILURE);
+  make_mapping_for($i++,@mcat_NULL);
+  make_mapping_for($i++,@mcat_LITERAL);
+  make_mapping_for($i++,@mcat_NONLITERAL_EXPRESSION);
+  make_mapping_for($i++,@mcat_STATEMENT);
+  make_mapping_for($i++,@mcat_TYPE);
+  make_mapping_for($i++,@mcat_SYNTAX);
+  make_mapping_for($i++,@mcat_RECURSIVE);
+  make_mapping_for($i++,@mcat_NON_C_CODE);
+  make_mapping_for($i++,@mcat_SYMBOL_UNKNOWN);
+  make_mapping_for($i++,@mcat_OTHER);
+  $cCategoryNames = $i;
+
+  sub make_mapping_for {
+    my ($i,@vars) = @_;
+    foreach my $varname (@vars) {
+      my $catname = $categoryname[$$varname];
+      $categoryname{$catname} = $i;
+#DBG      print STDERR "Setting $catname to $i\n";
+    }
+  }  
+}
+
+my $cdefs_min_filter = $opt_d || 0;   # only output stats with more than this many defintions
+sub marks_for_categories {
+  $listref = $_[0];
+  my $c;
+  my $str = " " x $cCategoryNames;
+  if (scalar(@$listref) > $cdefs_min_filter) {
+    foreach $c (@$listref) {
+      my $offset = $categoryname{$c};
+      if (!defined($offset)) {
+	die "Couldn't map category \"$c\" to a meta category!";
+      }
+      substr($str,$offset,1) = "*";
+    }
+  }
+  return $str;
+}
+
+use English;
+next if /^[\#%]/;
+next if /FromInclude<>/;
+next if !defined($F[8]); # the categories are not listed for cond comp directive only macros
+#i.e. macros that are used in ccd-s, but not #define-d anywhere
+my @cat = split(/,/,$F[8]);
+
+my $row = marks_for_categories(\@cat);
+if ($opt_a || $row =~ m/\*/) {
+  print $row;
+}
+print "\n";
