@@ -42,6 +42,9 @@ Michael D. Ernst <F<mernst@cs.washington.edu>>
 my $true = (1 == 1);
 my $false = (1 == 0);
 
+my $debug_find_paren = $false;
+# $debug_find_paren = $true;
+
 
 ###########################################################################
 ### Counting change
@@ -51,7 +54,7 @@ my $false = (1 == 0);
 # unbalanced braces (empty string if all braces are balanced).
 sub brace_change ($)
 { my ($line) = check_args(1, @_);
-  # print "brace_change $line";
+  if ($debug_find_paren) { print "brace_change $line"; }
   my $result_num = 0;
   my $result_chars = "";
   while ($line =~ /[\{\}]/)
@@ -72,7 +75,7 @@ sub brace_change ($)
 # found before parens balance).
 sub paren_change ($)
 { my ($line) = check_args(1, @_);
-  # print "paren_change $line";
+  if ($debug_find_paren) { print "paren_change $line"; }
   my $result_num = 0;
   my $result_chars = "";
   while ($line =~ /[\(\)]/)
@@ -102,7 +105,7 @@ sub find_close_paren ($;$)
 { my ($exp, $pos) = check_args_range(1, 2, @_);
   if (!defined($pos))
     { $pos = 0; }
-  # print "find_close_paren: $exp\n";
+  if ($debug_find_paren) { print "find_close_paren: $exp\n"; }
   my $opens = 1;
   my $brace_pos;			# undefined if no brace found
   { my $open_pos = index($exp, "\{", $pos);
@@ -117,7 +120,8 @@ sub find_close_paren ($;$)
   while ($opens > 0)
     { my $next_open = index($exp, "\(", $pos);
       my $next_close = index($exp, "\)", $pos);
-      # print "next_open $next_open next_close $next_close\n";
+      if ($debug_find_paren)
+	{ print "next_open $next_open next_close $next_close\n"; }
       if (($next_close != -1)
 	  && (($next_open == -1) || ($next_close < $next_open)))
 	{ if (defined($brace_pos) && ($next_close > $brace_pos))
@@ -130,7 +134,8 @@ sub find_close_paren ($;$)
 	    { croak "Found brace before matching paren in $exp"; }
 	  $opens++;
 	  $pos = $next_open+1;
-	  # print "open paren at $next_open, opens = $opens, pos = $pos\n";
+	  if ($debug_find_paren)
+	    { print "open paren at $next_open, opens = $opens, pos = $pos\n"; }
 	}
       else
 	# Didn't find an open or close parenthesis.
@@ -138,7 +143,8 @@ sub find_close_paren ($;$)
 	    { die "bad values for next_open $next_open and next_close $next_close"; }
 	  return $false; }
     }
-  print "find_close_paren(\"$exp\") => ", $pos-1, "\n";
+  if ($debug_find_paren)
+    { print "find_close_paren(\"$exp\") => ", $pos-1, "\n"; }
   return $pos - 1;
 }
 
@@ -149,14 +155,15 @@ sub find_close_brace ($;$)
 { my ($exp, $pos_init) = check_args_range(1, 2, @_);
   if (!defined($pos_init))
     { $pos_init = 0; }
-  # print "find_close_brace: $exp\n";
+  if ($debug_find_paren) { print "find_close_brace: $exp\n"; }
   my $opens = 1;
   my $pos = $pos_init;
 
   while ($opens > 0)
     { my $next_open = index($exp, "\{", $pos);
       my $next_close = index($exp, "\}", $pos);
-      # print "next_open $next_open next_close $next_close\n";
+      if ($debug_find_paren)
+	{ print "next_open $next_open next_close $next_close\n"; }
       if (($next_close != -1)
 	  && (($next_open == -1) || ($next_close < $next_open)))
 	{ $opens--;
@@ -165,7 +172,8 @@ sub find_close_brace ($;$)
 	     && (($next_close == -1) || ($next_open < $next_close)))
 	{ $opens++;
 	  $pos = $next_open+1;
-	  # print "open brace at $next_open, opens = $opens, pos = $pos\n";
+	  if ($debug_find_paren)
+	    { print "open brace at $next_open, opens = $opens, pos = $pos\n"; }
 	}
       else
 	{ if (!(($next_open == -1) && ($next_close == -1)))
