@@ -67,7 +67,14 @@ typedef enum hook_index_constants {
 ///% $value is 1 iff the $conditional evaluated to true (defined), 0 otherwise.
 
   HI_DO_XIFDEF,
-///% {}
+///% {$s_start,$s_end, $kind, $conditional, $trailing_garbage, $skipped, $fSkipping, $s_branch_start}
+///% Called exactly once for each #ifdef or #ifndef.
+///% The arguments are the same as for the DO_IFDEF hook, except $kind is either
+///% "IFDEF" or "IFNDEF" depending on the type of conditional; $fSkipping
+///% replaces the $value argument and is non-zero iff the conditional fails
+///% (i.e., an IFDEF with a not-defined macro, or an IFNDEF with a defined macro);
+///% $s_branch_start gives the source code character offset of the start of
+///% the branch taken.
 
   HI_DO_IFDEF,
 ///% {$s_start, $s_end, $conditional, $trailer, $skipped, $value}
@@ -221,9 +228,20 @@ typedef enum hook_index_constants {
   HI_IFDEF_MACRO,
 ///% {$s_start,$s_end,$mname,$expansion,$length,$raw_call,$has_escapes,$cbuffersDeep,
 ///% $cnested,@nests,$cargs,@args}
-///% Called once for each macro expansion in #ifXX directives.  The arguments
+///% Called once for each macro expansion in #if directives.  The arguments
 ///% passed to the hook are the same as those for the EXPAND_MACRO hook, see its
-///% documentation for details.
+///% documentation for details.  Note, though, that macros are not usually
+///% expanded in #ifdef and #ifndef directives, they are simply tested for
+///% defined-ness by lookup in the symbol table, thus triggering the IFDEF_LOOKUP_MACRO
+///% hook, not this one.  A form such as "#if FOO" will trigger this hook, however.
+
+  HI_IFDEF_LOOKUP_MACRO,
+///% {$mname,$f_defined}
+///% Called once for each macro name lookup done during conditional compilation
+///% guard checking.  The arguments are:
+///% $mname is the macro name being looked up; $f_defined is non-zero
+///% iff the macro has been defined.  Use backcalls to get the expansion if
+///% it is desired.
 
   HI_COMMENT,
 ///% {$s_start, $s_end, $comment_text, $how_terminated, $c_lines}
@@ -447,8 +465,11 @@ void gjb_call_hooks_szx4(struct cpp_options *, HOOK_INDEX, char *, char *, char 
 void gjb_call_hooks_sz_szlx3_i(struct cpp_options *, HOOK_INDEX, char *, 
 			       char *, int,  char *, int,  char *, int,   int);
 
-void gjb_call_hooks_i_i_sz_szlx3_i(struct cpp_options *, HOOK_INDEX, char *, int, int,
+void gjb_call_hooks_i_i_sz_szlx3_i(struct cpp_options *, HOOK_INDEX, int, int, char *,
 				   char *, int,  char *, int,  char *, int,   int);
+
+void gjb_call_hooks_i_i_sz_szlx3_i_i(struct cpp_options *, HOOK_INDEX, int, int, char *,
+				     char *, int,  char *, int,  char *, int,   int, int);
 
 void gjb_call_hooks_sz_szlx3_i_i(struct cpp_options *, HOOK_INDEX, char *, 
 				 char *, int,  char *, int,  char *, int,   int, int);
