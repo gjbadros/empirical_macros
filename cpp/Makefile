@@ -352,7 +352,7 @@ cpphook.o: cpphook_names.h cpphook.h
 backcalls.c: backcalls.xs cpphook.h
 	$(PERL-XSUBPP) $< > $@
 
-backcalls.o: backcalls.c cppmain.h
+backcalls.o: backcalls.c pcpp.h
 
 hook_index_constants.pm: cpphook.h
 	(awk <$< '\
