@@ -17,7 +17,9 @@ checkargs -- Provide rudimentary argument checking for perl5 functions
   check_args(cArgsExpected, @_)
   check_args_range(cArgsMin, cArgsMax, @_)
   check_args_at_least(cArgsMin, @_)
-where "caller(0)" and "@_" should be supplied literally.
+where "@_" should be supplied literally.
+
+=head1 DESCRIPTION
 
 As the first line of user-written subroutine foo, do one of the following:
 
@@ -30,13 +32,8 @@ These functions may also be called for side effect (put a call to one
 of the functions near the beginning of the subroutine), but using the
 argument checkers to set the argument list is the recommended usage.
 
-The number of arguments and their definedness are checked.
-
-=head1 DESCRIPTION
-
-I<check_args> and I<check_args_range> simply report if it received the wrong
-number of arguments to a function.  They will die with a message
-listing a brief description of the situation.
+The number of arguments and their definedness are checked; if the wrong
+number are received, the program exits with an error message.
 
 =head1 AUTHOR
 

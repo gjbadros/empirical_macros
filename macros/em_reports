@@ -13,12 +13,6 @@
 #   _ni = non-include; for a file, means it was on command line (?)
 #   mi = method of inclusion; why this file is being processed
 
-# Should set $PERLLIB variable, not $PERLINC, as $PERLLIB has
-# this stuff done by default in newer (5.003, maybe earlier) versions
-# Can't use "use", as it is executed upon parsing even if in guard.
-BEGIN { if (defined $ENV{"PERLINC"})
-	  { unshift(@INC, split(/[ :]+/, $ENV{"PERLINC"})); } }
-
 my $getopts_option_letters = 'ihvtIAau1pTg:d:D:M:S:F:L:C:s:';
 
 # FIX: remove -D -U -S -F -L -C options.
@@ -46,7 +40,7 @@ New options marked with *; options with ':', above, take an argument
 
 e.g.
 
-find-c | evilmacros -iv -d ~/macros/data/stable
+em_reports -s ../../evilout.state -d ../../:evilout
 ";
 }
 
@@ -376,7 +370,7 @@ sub how_used_from_code_cpp_uses ($$$) {
   return $result;
 }
 
-				 
+
 # Return a sorted version of the list
 # passed in, with duplicates removed
 sub UniquifyAndSortList (@) {
@@ -426,8 +420,8 @@ sub InclusionMethodsForMacroName ($) {
   #print STDERR "IMFMN\n";
   return UniquifyAndSortList(@list);
 }
-				
-				    
+
+
 
 sub OutputHistogram ($$$;$) {
   my ($heading,$hashref,$divisor,$fPrintHeading) = check_args_range(3,4,@_);
@@ -496,7 +490,7 @@ sub MacroNotDefinedInsidePackage ($) { # returns bool
   # it isn't defined inside the package
   return $true;
 }
-  
+
 
 sub compute_freq_use_info () {
   check_args(0, @_);
@@ -590,7 +584,7 @@ sub make_cum_array (@) { # returns @cum_array
   }
   return @cum_array;
 }
-  
+
 
 # Sum corresponding elements of an array (or array slice)
 # into the destination reference provided
