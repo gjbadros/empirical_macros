@@ -2672,7 +2672,7 @@ sub peek_to_cpp_command ($$$)
   my $this_result = "";
   my $this_size = 0;
   my $next_line = peek_fulltoken_line($peekahead+1);
-  while ($next_line !~ /^\s*\#\s*$cpp_cmd_re\b/)
+  while (defined($next_line) && ($next_line !~ /^\s*\#\s*$cpp_cmd_re\b/))
     { if ($debug_peek)
 	{ print "didn't find $cpp_cmd_re, offset $this_size: $next_line"; }
       if (($this_size > $size_limit) || ($next_line =~ /^\s*\#/))
@@ -2791,7 +2791,8 @@ sub cpp_merged_branches ()
 			my $discarded = get_fulltoken_line();
 			# print "discarding $discarded";
 		      }
-		    if (peek_fulltoken_line(1) !~ /^\s*\{/)
+		    my $next_line = peek_fulltoken_line(1);
+		    if ((!defined($next_line)) || ($nextline !~ /^\s*\{/))
 		      { die "Must have seen an open brace following brances: ", peek_fulltoken_line(1); }
 		    return($parts[0]); } } } } }
 
@@ -3636,6 +3637,7 @@ PROCESSLINE:
 # 			 (peek_fulltoken_line(1) =~ /^$declarator_re\s*\(/o))
 		     # && ((print "found lone typespec, indented=$indented, line=$line\n") ? $true : $true)
 		     && ((!$indented)
+			 && (defined(peek_fulltoken_line(1)))
 			 && (peek_fulltoken_line(1) !~ /^\s*$/))
 		     )
 		{ # Definition or declaration (probably of a function)
@@ -4618,10 +4620,10 @@ sub categorize_macro_name ($)
 	if ((!defined($type)) || (!defined($mdef_type[$mdef_index])))
 	  { $type = undef; }
 	else
-	  { $type = type_lub($type, $mdef_type[$mdef_index]); } 
-      } 
+	  { $type = type_lub($type, $mdef_type[$mdef_index]); }
+      }
   }
-  
+
 
   if ($debug_categorize_macro)
     { print " => $category",
@@ -4785,7 +4787,7 @@ sub categorize_macro_def ($)
 		# (which would be OK; a local would be bad).
 		{ $category = $catEXPFREE; # should be more specific here
 		  goto CATEGORIZED; }
-	    } 
+	    }
 	}
 	# Don't set category here; it was defaulted to $catEXP above.
 	# print "category postfree = $category\n";
@@ -4806,7 +4808,7 @@ sub categorize_macro_def ($)
 	$category = harder_category($category,$extended_category);
       }
   }
-	     
+
 CATEGORIZED:
 { #HACKINDENT
   $mdef_category[$index] = $category;
@@ -4814,7 +4816,7 @@ CATEGORIZED:
   # track our histogram of categories
   update_categories_for($category,$mdef_file[$index]);
   #print STDERR "$mdef_name[$index] in $mdef_file[$index], type ", compute_ftype_index($mdef_file[$index]), "\n";
-  
+
   if ($debug_categorize_macro)
     { print "categorize_macro_def ($index: $mdef_name[$index]): $categoryname[$category]",
           (defined($type) ? "(" . type_name($type) . ")" : ""),
@@ -4822,7 +4824,7 @@ CATEGORIZED:
 }
 }
 
-	     
+
 # Return true for a macro that takes a single arg and either returns it or
 # returns only open and close parens, which can be used to construct either
 # a K&R or ANSI function declaration by passing in a parenthesized list as
@@ -5341,8 +5343,9 @@ sub forbidden_file ($)
   # /usr/include/linux/linkage.h is assembly, not C code
   # glibc/asm-syntax.h and glibc/sysdep.h are assembly, not C code
   # print "Checking '$filename'\n";
-  return ((($opt_d =~ /bash/) && ($filename eq "./machines.h"))
-	  || ($filename eq "/usr/include/linux/linkage.h")
+  return (($filename eq "/usr/include/linux/linkage.h")
+	  || (($opt_d =~ /bash/) && ($filename eq "./machines.h"))
+	  || (($opt_d =~ /gawk/) && ($filename eq "./config/solaris2.cc"))
 	  || (($opt_d =~ /glibc/) && (($filename =~ /\/asm-syntax\.h$/)
 				      || ($filename =~ /\/sysdep\.h$/))));
 }
