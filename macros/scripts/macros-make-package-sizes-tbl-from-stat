@@ -1,2 +1,5 @@
 #!/uns/bin/zsh
-awk '/^#LINESNI#/ { nextln = 1; next} nextln==1 {phys = $1; ncnb = $2; sumphys+= phys; sumncnb += ncnb; nextln = 0; print FILENAME " " phys " " ncnb; next} END { print "Total " sumphys " " sumncnb } ' "$@" | sed 's/1\?.stat / /'
+awk '/^#LINESNI#/ \
+{ nextln = 1; next} nextln==1 {phys = $1; ncnb = $2; sumphys+= phys; sumncnb += ncnb; nextln = 0; \
+gsub(/\..*$/, "", FILENAME); \
+print FILENAME " " phys " " ncnb; next} END { print "Total " sumphys " " sumncnb } ' "$@"
