@@ -16,7 +16,6 @@
 \newcommand{\pkg}[1]{\textsf{#1}}
 
 \newcommand{\file}[1]{\texttt{#1}}
-\newcommand{\vs}{vs}
 
 % the "fullpage" package does almost the same thing
 % as the below lines-- it doesn't make things quite as
@@ -73,7 +72,7 @@ Box 352350, Seattle, WA  98195-2350  USA \\
   programs, such as compilers, debuggers, call graph extractors, and
   translators.  Most tools make no attempt to analyze macro usage, but
   simply preprocess their input, which has a number of negative
-  consequences; an analysis that takes Cpp into accont is preferable.  In
+  consequences; an analysis that takes Cpp into account is preferable.  In
   order to determine how the preprocessor is used in practice, and the
   feasibility of automatic analysis of preprocessor use, this paper
   analyzes {\numpackages} packages comprising {\numlines} lines of publicly
@@ -85,7 +84,7 @@ Box 352350, Seattle, WA  98195-2350  USA \\
   material to the development of tools for C or C++, including translating
   from C to C++ to reduce preprocessor usage.  Our results show that while
   most Cpp usage follows fairly simple patterns, an effective program
-  anlysis tool must address the preprocessor in order to be effective.
+  analysis tool must address the preprocessor in order to be effective.
   These results are of interest to language designers, tool writers,
   programmers, and software engineers.
 \end{abstract}
@@ -109,7 +108,7 @@ one cannot write practical C programs without these facilities.
 While disciplined use of the preprocessor can reduce programmer effort
 and improve portability, performance, or readability, Cpp is widely
 viewed as a source of difficulty for understanding and transforming C
-programs.  Cpp's lack of structure\,---\,its inputs and
+programs.  Cpp's lack of structure\,---\,ius inputs and
 outputs are raw token streams\,---\,engenders flexibility but allows
 arbitrary source code manipulations that complicate 
 understanding of the program by both software engineers and tools.  In
@@ -232,9 +231,9 @@ software engineers and tool builders:
   errors, such as function-like macros that fail to swallow a following
   semicolon and macros that fail to parenthesize, or side-effect, uses of
   formal variables.
-\item[inconsistent usage]  A macro used both for conditional
-  compilation and to expand code is harder to understand than one used just
-  for one purpose.
+\item[inconsistent usage]  A macro used both for conditional compilation
+  and to expand code is harder to understand than one used just for one
+  purpose.
 \item[mixed tests]  A single Cpp conditional may test conceptually
   distinct, unrelated conditions, making it difficult to perceive the
   test's purpose.
@@ -280,12 +279,12 @@ program understanding, and discusses avenues for future work.
 % code lines that are preprocessor directives, including a breakdown of the
 % frequency of specific directives such as {\tt \#define}.  C programs
 % commonly have preprocessor directives as over 10\% of their total lines,
-% and over 20\% of the lines were directives in 3 of the {\numpackages}
+% and over 20\% of the lines are directives in 3 of the {\numpackages}
 % packages.
 % 
 % Section~\ref{sec:usage} reports how often each macro is defined and
 % expanded.   Identifiers tend to be {\tt \#define}d relatively few times
-% (96\% of macro identifiers had three or fewer definitions).  Many packages
+% (96\% of macro identifiers have three or fewer definitions).  Many packages
 % also have a significant number of macros that are never expanded, even
 % disregarding system and library header files.
 % 
@@ -388,7 +387,7 @@ We generated a list of all the C files in the package (both code and header
 files).  In general, these have extensions like \file{.c}, \file{.h},
 \file{.cc}, \file{.cpp}, \file{.hxx}, etc.  We removed files with such
 extensions that don't actually contain valid C, and added others which were
-{\tt \#include}d by valid C files (some included files had extension
+{\tt \#include}d by valid C files (some included files have extension
 \file{.def}).
 
 We analyzed all the C files in the package, as well as every file {\tt
@@ -541,9 +540,9 @@ Three quarters of macros correspond to complete syntactic entities in the C
 language; these macros should present little difficulty.  Our tool
 classified over 98\% of macros, though not all of these will be easy to
 understand.  One sixth of macros use Cpp features unavailable in C, and
-one quarter contained latent bugs.  These numbers indicate the necessity
+one quarter contain latent bugs.  These numbers indicate the necessity
 and difficulty of a thorough understanding of macro definitions to a
-software engineer or tool.  Multiple definitions of a macro were generally
+software engineer or tool.  Multiple definitions of a macro are generally
 innocuous:  only 2\% of macros contained definitions with different
 abstract syntax trees.
 
@@ -769,7 +768,7 @@ statements that contain snippets of assembly code.
 % @mcat_FAILURE = qw( catNOT_YET catIN_PROCESS catNO_DEF catFAILURE catMULTIPLE );
 \item[Failed classification]
   Our tool failed to categorize less than 2\% of the 46462 definitions, and
-  8 of the {\numpackages} packages had no macro classification failures.
+  8 of the {\numpackages} packages have no macro classification failures.
   No one variety of macro stands out among the failures, so a more complete
   categorization is unlikely to affect our conclusions.
   
@@ -862,7 +861,7 @@ Figure~\ref{fig:subset-properties}.
   symbols are typically local or global variables.  Uses of global
   variables are generally innocuous.  Uses of local variables (in which the
   local definition in scope at the point of use captures the free variable
-  in the macro body) can be used to achieve dynamic scoping, which C does
+  in the macro body) can produce dynamic scoping, which C does
   not directly support.  We did not separately analyze global and local
   free variables.
 
@@ -920,11 +919,11 @@ macro result as a type, this is impossible in C\@.
 
 \item[Self-referential]
   The body refers to its own name, as in {\tt \#define LBIT vcat(LBIT)}.
-  This feature is used when building a wrapper around an existing function
-  or variable.  Since the ISO C preprocessor performs only one level of
-  expansion on recursively defined macros, the expanded macro contains a
-  reference to the original name.  (Pre-ANSI implementations were permitted
-  to loop forever when expanding self-referential macros.)
+  This feature can build a wrapper around an existing function or variable.
+  Since the ISO C preprocessor performs only one level of expansion on
+  recursively defined macros, the expanded macro contains a reference to
+  the original name.  (Pre-ANSI implementations could loop forever when
+  expanding self-referential macros.)
 
 \item[Stringization]
   The body uses argument stringization ({\tt \#}), which replaces its
@@ -967,7 +966,7 @@ macro, may well give rise to these dormant errors.
   \label{fig:macro-lint}
 \end{figure}
 
-Because it flags such errors, our tool can be used as a sort of macro lint.
+Because it flags such errors, our tool is a sort of macro lint.
 It discovered many more problems than we expected: one fourth of all macro
 definitions triggered at least one macro lint warning, and one fourth of
 macro names have a definition which triggers a warning.
@@ -1073,7 +1072,7 @@ described below.
 \item[side-effected formal]
         A formal argument is side-effected.  This is erroneous if the
         argument is not an lvalue (a value which can be assigned to, like
-        {\tt a[i]} but unlinke {\tt 3+4}).  A similar constraint applies to
+        {\tt a[i]} but unlike {\tt 3+4}).  A similar constraint applies to
         reference parameters in C++, which can model such macro arguments.
 
 \item[inconsistent arity]
@@ -1133,7 +1132,7 @@ described below.
 
 
 Our tool discovered a number of additional
-errors.  There were some illegal constructs, such as {\tt \#module} (which
+errors.  There are some illegal constructs, such as {\tt \#module} (which
 is not a meaningful Cpp directive) and {\tt \#undef
 \verb|GO_IF_INDEXABLE_BASE|(X, ADDR)} ({\tt \#undef} takes a macro name,
 not the arguments as they appeared in the {\tt \#define} directive).
@@ -1146,7 +1145,7 @@ them.  This construct does not perform merging in newer implementations,
 so users are warned of its appearance.
 
 A number of files in our test suite begin or end inside a brace scope or an
-{\tt \#if} scope.  Some of these were intentional\,---\,as in files meant
+{\tt \#if} scope.  Some of these are intentional\,---\,as in files meant
 to be included around other code.  Others are bugs (such as, in one case, a
 failure to close a {\tt /* */} style comment) which were apparently not
 discovered because testing did not build the package under all possible
@@ -1253,7 +1252,7 @@ their bodies are similar or identical.
 %     Figures~\ref{fig:freq-def-cat},~\ref{fig:freq-ddf-cat},
 %     and~\ref{fig:freq-use-cat}.  The table is by macro name.  Add percentages?
 %     [[The 1.0 distinct defs for unknown symbol is surprising; it indicates
-%     that it was the *same* unknown symbol in each definition (doesn't
+%     that it is the *same* unknown symbol in each definition (doesn't
 %     it?).  But a name is only in the category if none of its defs was
 %     recognized.  Double-check this!]]}
 %   \label{fig:freq-sum-cat}
@@ -1380,16 +1379,16 @@ of the macro are full statements).
 
 The previous section demonstrated ways in which macro definitions
 complicate program understanding; now we turn to macro uses.  Heavy macro
-usage make macro analysis more important by amplifying the effect of each
-macro, which is a particular concern if difficult-to-understand macros are
-frequently used.  Consistency of use is also an important effect, for it
-can resolve some of the ambiguities inherent in macro definitions.  A macro
-used in a limited way can be replaced\,---\,in a tool's analysis or in the
-source\,---\,by a simpler mechanism.  Finally, which macros appear in a
-conditional compilation test can reveal the programmer intention underlying
-that test.
+usage makes macro analysis more important by amplifying the effect of each
+macro, which is a particular concern if difficult-to-understand macros
+appear frequently.  Consistency of use can resolve some of the ambiguities
+inherent in macro definitions, while inconsistent use has the opposite
+effect.  A macro used in a limited way can be replaced\,---\,in a tool's
+analysis or in the source\,---\,by a simpler mechanism.  Finally, which
+macros appear in a conditional compilation test can reveal the programmer
+intention underlying that test.
 
-The packages we analyzed had widely varied macro usage: \pkg{perl} uses
+The packages we analyzed have widely varied macro usage: \pkg{perl} uses
 about two macros per three lines of code, while \pkg{ghostview} uses only a
 tenth as many.  While half of macro names are used two or fewer times,
 macros with hundreds of uses are not uncommon.  Macros categorized as
@@ -1400,19 +1399,7 @@ code, and only 4\% of Cpp conditionals test multiple macros representing
 different categories of information.
 
 
-\subsection{Freuency of macro usage}
-
-Figure~\ref{fig:use-per-line} illustrates how frequently each package
-uses macros.  For packages such as \pkg{perl} which use macros most
-aggressively, there are about two uses every three lines;  but for
-packages with the least use, 14 of 15 
-lines [[it might be even lower, if many
-lines that use macros use multiple ones]] use no macro names.
-The four packages that use macros the most
-(\pkg{perl}, \pkg{gcc}, \pkg{gs}, and \pkg{python}) are the
-only four language implementations in our study.  [[Heavy prefprocessor
-usage is not the same as heavy macro usage.]]
-
+\subsection{Frequency of macro usage}
 
 \begin{figure}
 \centerline{\epsfig{file=fig/uses-per-line.eps,height=5in}}
@@ -1422,67 +1409,46 @@ usage is not the same as heavy macro usage.]]
 \label{fig:use-per-line}
 \end{figure}
 
-Macro usage also varies widely relative to the kind of macro definition,
-as categorized in the preceding section.  Figure~\ref{fig:freq-use-cat}
-reports on the frequency of use of the various kinds of macros.  It is
-structured like Figure~\ref{fig:freq-def-cat}.  A higher line indicates less frequent use.
-Notice that half of the macros that are defined inside a package are
-used only twice or fewer.  In fact, 12\% are never used at all!  One
-significant reason for unused macros is code that is either no longer
-supported or incomplete but still included with the package;
-\pkg{gnuplot}, which does not use 24\% of the macros it defines,
-includes some partially supported terminal types which account for the
-large number of unused macros.
+Figure~\ref{fig:use-per-line} illustrates how frequently each package uses
+macros.  Macros pervade the code: across the packages, there are more than
+three uses per ten lines, though individual packages vary from .07 to .65
+uses per line.  Heavy preprocessor use (high incidence of preprocessor
+directives, as reported in Figure~\ref{fig:directives-breakdown}, is only
+weakly correlated with heavy macro usage, even though many preprocessor
+directives use macros.  The language implementations in our study
+(\pkg{perl}, \pkg{gcc}, \pkg{gs}, and \pkg{python}) use macros the most.
 
-One of the reasons to be concerned about excessive use of macros is that
-a macro expansion can confuse a tool analyzing the unprocessed source
-code.  Each expansion can hide essential constructs from such a tool.
-Not all macro expansions necessarily cause substantial difficulty: a
-macro defined as a constant or an expression would likely not hinder the
-extraction capabilities of a tool at all, while a syntactic or
-type-related macro may cause a mis-parse at each use.  Unfortunately for
-tools operating on unprocessed source code, macros in these categories which are more
-difficult to handle are use much more frequently
-than simpler macros.  While 58\% of macros defining constants are
-used 2 or fewer times, the same fraction of syntactic macros are used up
-to 40 times!  (One notable outlier is \texttt{NULL} which, though usually
-defined simply, is sometimes used very heavily\,---\,4233 times in the
-62,137 lines of \pkg{python} source). Type-related macros are also used
-very often\,---\,over 10\% are used more than 80 times.  Often, such macros
-are used idiomatically, and pervasively (e.g., at every variable
-declaration), thus accounting for their substantial use, and the long
-tail of the distribution.
+Macro usage also varies relative to macro definition categories of
+Section~\ref{sec:categorization}.  Figure~\ref{fig:freq-use-cat}
+illustrates that half of macros are expanded no more than twice, and 12\% are
+never used at all.  Many of these unused macros appear in incomplete or
+obsolete code.  For example, \pkg{gnuplot}, which does not use 24\% of the
+macros it defines, includes several partially implemented terminal types,
+such as {\tt tgif}.
 
-%        All packages follow approximately the same curve.  The outlier is
-%          \pkg{gnuplot}, which uses macros less, on average, than other packages
-%          do.  Over 40\% of the macros it defines are never used at all --
-%          say why.  (Largely due to unsupported terminals like tgif; that
-%          appears elsewhere in this document, so reference it.)
+The most frequently used macros are those most likely to cause difficulty
+for a tool or software engineer.  Macros that act like C variables by
+expanding to a constant or expression generally appear only a few
+times\,---\,58\% of macros defining constants occur 2 or fewer times.
+% (One notable outlier is \texttt{NULL} which, though usually
+% defined simply, is sometimes used very heavily\,---\,4233 times in the
+% 62,137 lines of \pkg{python} source.)
+The same fraction of syntactic (those expanding to punctuation or
+containing unbalanced delimiters, and which are problematic to parse)
+macros are used up to 40 times, and over 10\% of type-related macros are
+used more than 80 times.  The long tails of the frequency distribution
+result from pervasive use of some syntactic or type macros (e.g., at every
+variable declaration), which makes understanding them critical.
 
 %          Another reason for unused macros might be uses in Makefiles and
 %          other non-C-code files that we don't examine.
-
-% \section{Macro use}
-
-% \begin{figure}
-% % {\small
-% %   \setlength{\tabcolsep}{.25em}
-% %   \centerline{\input{freq_of_use-tbl.tex}}%
-% % }
-% \centerline{\epsfig{file=fig/use-frequency.eps,height=7.5in}}
-% \captionsmall{Number of expansions per Cpp macro.  The numbers in the
-%   table represent the percentage of identifiers which are expanded a given
-%   number of times or fewer.  For example, \pkg{g77} expands 65\% of its
-%   macros two or fewer times.}
-% \label{fig:freq-use}
-% \end{figure}
 
 \begin{figure}
 \centerline{\epsfig{file=fig/cat-use-frequency.eps,height=7.5in}}
 \captionsmall{Number of expansions per Cpp macro.  The numbers in the
   table represent the percentage of identifiers which are expanded a given
-  number of times or fewer.  For example, 50\% of all
-  macros are expanded two or fewer times. Higher lines indicate less usage.}
+  number of times or fewer.  For example, 50\% of all macros are expanded
+  two or fewer times.  In this chart, higher lines indicate less usage.}
 \label{fig:freq-use-cat}
 \end{figure}
 
@@ -1499,77 +1465,63 @@ tail of the distribution.
 
 \subsection{Inconsistent usage}
 
-Macros have two general purposes: they can control the inclusion of
-lines of code (by appearing in a \texttt{\#if} condition that controls
-that line) or can change the text of a line (by being expanded on that
-line).  Each of these uses can correspond to language features\,---\,normal
-\texttt{if} clauses or (for certain types of substitution) {\tt const}s
-and {\tt inline}s.  But when a macro is used in both ways, something
-more subtle is occurring, and there is
-no easy mapping to a language feature.  It is harder to understand
-and analyze a macro that is used in both ways.
+Macros have two general purposes: they can control the inclusion of lines
+of code (by appearing in a \texttt{\#if} condition that controls that line)
+or can change the text of a line (by being expanded on that line).  Each of
+these uses may correspond to language features\,---\,conditional statements
+and expressions (\texttt{if}and {\tt ?:}) or (for certain types of
+substitution) {\tt const} and {\tt inline} declarations.  Understanding is
+inhibited when a macro is used in both ways, for there is no easy mapping
+to an existing language feature.
+
 
 We split macro uses into three categories:
-\begin{itemize}
-\item uses in C code, where the macro's expansion controls textual
-      replacement; 
-\item uses in \texttt{\#if}, \texttt{\#ifdef}, \texttt{\#ifndef},
-      \texttt{\#elif} conditions;\footnote{We discarded uses in Cpp
-        conditionals whose only purpose was to prevent redefinition.
-        More specifically, if the condition tested only definedness, the
-        next line defined the macro just tested, and the line after that
-        ended the CPP conditional.  This is a bit overrestrictive, but
-        conservative, and in practice quite accurate.} and
-\item uses in the body of a macro definition.\footnote{These eventually
-        bottoms out to one of the other contexts if that definition is
-        ever used.  Uses in a macro body generally are intended to be
-        used however the containing macro is.  Since those uses also
-        appear in the figure, we did not attempt to track each such use
-        in a body to some macro's appearance in either code or a
-        conditional.}
+\begin{itemize}\itemsep 0pt \parskip 0pt
+\item uses in C code.   The macro's expansion controls textual
+      replacement.
+\item uses in \texttt{\#if}, \texttt{\#ifdef}, \texttt{\#ifndef}, and
+  \texttt{\#elif} conditions.  In this section, we discard uses in Cpp
+  conditionals whose only purpose is to prevent redefinition.  More
+  specifically, we ignore uses in a condition that tests only a macro's
+  definedness and whose body only defines that macro.  Spot-checking
+  indicated that this conservative test is very accurate in practice.
+\item uses in the body of a macro definition.
+  Macros used in such contexts eventually control either textual
+  replacement or code inclusion (according to uses of the macro being
+  defined).  Uses in macro bodies account for only a fraction of all macro
+  uses.
 \end{itemize}
-
-%        A definition isn't a use of the macro being defined, only of those
-%        in the body.  Since those are uses, 12\% is a lower bound on those
-%        that never affect the code. It would be reasonable to assign the
-%        5.4\% that are macro only, to the other categories on a pro rata basis.
-%
-%        Thus, the interesting categories are "code",
-%        "conditional", "code and conditional", and "no use".
-
-\noindent Figure~\ref{fig:where-used} reports on the ways that macro
-names are used.  It shows that macros are expanded ten times more often
-than they are used to control source code inclusion.  (However, each
-inclusion use can control many lines of code; see
-Section~\ref{sec:dependence}.)  The potentially subtle uses are those
-for which a macro appears both in code and in a conditional.
-
-Our data shows that packages use macros either to direct conditional
-compilation or to produce code, but not for both purposes. This
-separation of concerns makes the source code easier to understand.  Only
-3.4\% of macros both expand in code and are used in conditional
-contexts.\footnote{Plus a similar percentage of those used in other
-  macro definition bodies, probably bringing the total up only another
-  fraction of a percent to around 4\%.}  
-
-%Conditional usage is rare in
-%general; conditional compilation accounts for half of Cpp directives but
-%only 7.1\% of macro usage (plus the categories just listed above).  But
-%each use in a conditional can have a large effect on the system.
-
 
 \begin{figure}
 \centerline{\small
   \setlength{\tabcolsep}{.25em}
   \input{tbl-where-used.tex}%
 }
-\captionsmall{Where macros are used: in C code, in macro definition bodies, in
-  conditional tests, or in some combination thereof.  The numbers don't sum to
-  100\% because of rounding.  [[The 11.7\% is the same as in
-  Figure~\ref{fig:freq-use-cat}.]]}
+\captionsmall{Macro usage contexts.  Macros may be used in C code, in
+  macro definition bodies, in conditional tests, or in some combination
+  thereof.  The numbers don't sum to 100\% because of rounding.  The 11.7\%
+  of ``No uses'' is the same number as the 0 uses value of the Mean line in
+  Figure~\ref{fig:freq-use-cat}.}
 \label{fig:where-used}
 \end{figure}
 
+Figure~\ref{fig:where-used} reports in which of these three contexts macro
+names are used.  In general, packages use macros either to direct
+conditional compilation or to produce code, but not for both purposes.
+Only 3.4\% of macros both expand in code and are used in conditional
+contexts.  Even if a similar percentage of macros used in macro definition
+bodies have such mixed usage, the total is below 4\%.  Macros are expanded
+ten times more often than they are used to control source code inclusion.
+Conditional compilation accounts for half of Cpp directives but only 7.1\%
+of macro usage (plus a fraction more from macros appearing in macro
+definitions).  However, each use in a conditional use can control many
+lines of code, whereas each use in code affects the final program text for
+just that line; see Section~\ref{sec:dependence}.
+
+%        A definition isn't a use of the macro being defined, only of those
+%        in the body.  Since those are uses, 12\% is a lower bound on those
+%        that never affect the code. It would be reasonable to assign the
+%        5.4\% that are macro only, to the other categories on a pro rata basis.
 
 
 %[[Move this to the previous section, and reference back to it.]]
@@ -1578,7 +1530,7 @@ contexts.\footnote{Plus a similar percentage of those used in other
 %        this]] this is a result of shipping a 
 %        standard set of headers with the package -- it's like a library for
 %        that development team, but one that can't be counted upon to exist
-%        everywhere, so it has to be provided.  For gnuplot, over 40\% of
+%        everywhere, so it has to be provided.  For gnuplot, over 24\% of
 %        macros are never used because the package's support for several
 %        terminal types, such as tgif, is unfinished (and thus unused).
 %        Even discounting that package, though, the numbers are remarkably
@@ -1600,28 +1552,64 @@ contexts.\footnote{Plus a similar percentage of those used in other
 
 
 \subsection{Macro usage in conditional control}
+\label{sec:ccd}
 
 \begin{figure}
 \centerline{\epsfig{file=fig/ccd-categories.eps,height=6in}}
-\captionsmall{Categories for conditional compilation directives.}
+\captionsmall{Categories for conditional compilation directives.  The
+  legend should be read across, by rows.}
 \label{fig:ccd-categories}
 \end{figure}
 
-Conditionals are used to control inclusion of code for many different
-reasons.  We categorized the uses of conditionals by the name and
-context, and looked at how frequently conditionals are used for various
-purposes.
+Cpp conditionals are used to control inclusion of code for portability,
+debugging, efficiency, and other purposes.  The programmer intention behind
+a {\tt \#if} line can often be inferred from its structure or context or
+the macros it uses.  This classification can reveal the structure of
+conditional compilation directives and assist in program understanding.
+
+We categorized each Cpp conditional into one of the categories of
+Figure~\ref{fig:ccd-categories} (the categories are described below).  For
+conditionals that could not be categorized based on their structure or
+context, we classified each macro appearing in the conditional according to
+what system properties it reifies.  If each macro in the conditional has the
+same classification, then the conditional is given that classification;
+otherwise, the conditional is classified as ``mixed usage''.
+
+There is significant variation among packages, and no clear pattern of use
+emerges.  Portability accounts for over half of conditional compilation
+directives.  Redefinition warning suppression, at 16.5\%, is surprisingly
+high; it is essentially a macro definition mechanism, not a conditional
+inclusion technique.  Mixed categories are relatively rare.  This suggests
+both that the conventions for macro names are fairly standardized and that
+programmers rarely write conditional tests which combine entirely different
+concerns in a single expression.
 
 
-The following categories are based on macro names:
+Cpp conditionals are classified according to structure or context as follows:
+\begin{description}\itemsep 0pt \parskip 0pt
+\item[Commenting] These guards either definitely succeed and
+  have no effect as written (e.g., \texttt{\#ifdef 1}), or definitely fail
+  and unconditionally skip a block (e.g., {\tt \#ifdef (0 \&\&
+  \verb|OTHER_TEST|)}).  These guards comment out code or override other
+  conditions (e.g., to unconditionally enable a previously experimental
+  feature).
+      
+\item[Redefinition suppression] These guards test non-definedness of
+  symbol, and control only a definition of the same symbol, thus avoiding
+  preprocessor warnings about a redefinition of a name (e.g.,
+  \texttt{\#ifndef FOO} followed by \texttt{\#define FOO ...} and
+  \texttt{\#endif}).  
+  The purpose is to provide a default value used unless another part of the
+  system, or the compilation command, specifies another value.
 
-\begin{description}
+\end{description}
+
+For Cpp conditionals not classified by the above rules, each macro
+appearing in the conditional is placed in one of the following categories:
+
+\begin{description}\itemsep 0pt \parskip 0pt
 %% See ccd_lexical_category in em_analyze for the routines
 %% which implements these heuristics
-
-\item[Package-specific] 
-  These symbols are specific to the given package.  They do not fit any of
-  the other categories.
 
 \item[Portability, machine]
   These symbols name the operating system or machine
@@ -1646,7 +1634,7 @@ The following categories are based on macro names:
   (e.g., \texttt{GNUC}, \texttt{STDC}, or \verb|HAS_BOOL|).
 
 \item[Miscellaneous system]
-  These symbols are reserved (i.e., they begin with two underscores) and do
+  These symbols are reserved (they begin with two underscores) and do
   not fit any other category.
       
 \item[Debugging]
@@ -1658,54 +1646,23 @@ The following categories are based on macro names:
   seen only once per translation unit by the compiler.  Such guards are
   indicated by convention with a trailing \verb|_H| or \verb|_INCLUDED| in the macro name
   they check.
+
+\item[Package-specific] 
+  These symbols are specific to the given package.  They do not fit any of
+  the other categories.
+
 \end{description}
 
+When every macro appearing in a Cpp conditional is classified identically,
+the conditional gets that classification, too.  Otherwise, it is classified
+as ``mixed'':
 
-The below three categories consider the entire guard or the context of
-the directive.  These categories have precedence over the above name-based
-heuristics:
-
-\begin{description}
-\item[Commenting] These guards either definitely succeed and
-  have no effect as written (e.g., \texttt{\#ifdef 1}), or definitely fail
-  and unconditionally skip a block (e.g., {\tt \#ifdef (0 \&\&
-    \verb|OTHER_TEST|)}).  These guards are used to comment out code or to
-  override other conditions (e.g., to unconditionally enable a previously
-  experimental feature).
-      
-\item[Redefinition suppression] These guards test non-definedness of
-  symbol, and control only  a definition of the same symbol, thus avoid preprocessor
-      warnings about a redefinition of a name (e.g., \texttt{\#ifndef
-      FOO} followed by \texttt{\#define FOO ...} and \texttt{\#endif}).
-    
-    The purpose is to provide a default value used unless another part of
-    the system, or the compilation command, specifies another value.
-
+\begin{description}\itemsep 0pt \parskip 0pt
 \item[Mixed categories] These guards test multiple symbols
       which independently fall into different categories (e.g.,
       {\tt \#if defined(\verb|STDIO_H|) || \verb|SYSV_SIGNALS|}).
-
 \end{description}
 
-
-
-Figure~\ref{fig:ccd-categories} shows how each package uses macros in
-conditional compilation directives.  There is significant variation
-among packages, but overall portability is a major use of conditional
-compilation directives.  Redefinition warning suppression, at 16.5\%, is
-surprisingly high, and is essentially a macro definition mechanism, not
-a conditional inclusion technique.  Encouragingly, mixed categories were
-relatively rare; these correspond to conditional inclusions whose
-meaning and intent is especially unclear.  Additionally, the low mixed
-categories suggests that the conventions for macro names are fairly
-standardized.
-
-[[ The macros with mixed usage (especially here, but also in the
-previous section) are akin to Krone \& Snelting's anomalous macros that
-interfere in the lattice.  But we found more than they seemed to!  Did
-we analyze the package in which they found their problem?  I'd like to
-somehow be able to compare. --mernst]]
-      
 
 
 % \subsection{Number of arguments}
@@ -1743,30 +1700,30 @@ somehow be able to compare. --mernst]]
 \label{sec:last-content-section}
 
 Macros control the program which results from running Cpp in two distinct
-ways.  {\em Inclusion} dependence results from Cpp conditionals testing
+ways.  {\em Inclusion} dependence results from Cpp conditionals which test
 macros (for definedness, or by examining expansions) to determine which
-which lines of the Cpp input appear in the output.  {\em Expansion}
-dependence results from replacement of macros outside Cpp conditionals by
-their definition bodies, which controls the content of the lines on which
-the macros appear.  This section reports the incidence of these
-dependences, both by macro and by line.
+lines of the Cpp input appear in the output.  {\em Expansion} dependence
+results from replacement of macros outside Cpp conditionals by their
+definition bodies, which controls the content of the lines on which the
+macros appear.  This section reports the incidence of these dependences,
+both by macro and by line.
 
 We report both direct and indirect dependences.  A line directly depends
 upon macros that appear in the line or in a {\tt \#if} condition whose
-scope contains the line.  It also has indirect dependences on macros that
-control the definitions of directly controlling macros.  For instance,
-after {\tt \#define \verb|S_ISBLK|(m) ((m)~\&~\verb|S_IFBLK|)}, the final
-text of a line that uses \verb|S_ISBLK| depends not just on its definition
-but also on that of \verb|S_IFBLK|.  An indirect dependence is an expansion
-dependence if every dependence in the chain is an expansion dependence;
-otherwise, the indirect dependence is an inclusion dependence.
+scope contains the line.  It indirectly depends on macros that control the
+definitions of directly controlling macros.  After {\tt \#define
+\verb|S_ISBLK|(m) ((m)~\&~\verb|S_IFBLK|)}, the final text of a line that
+uses \verb|S_ISBLK| depends not just on its definition but also on that of
+\verb|S_IFBLK|.  An indirect dependence is an expansion dependence if every
+dependence in the chain is an expansion dependence; otherwise, the indirect
+dependence is an inclusion dependence.
 
-We did not distinguish must from may dependences.  When a macro was defined
-on both branches of a {\tt \#if} conditional, the macro's definedness was
-not deemed to depend on the values tested in the conditional, though its
-value was.  We tracked dependences across file boundaries: if a macro
-controls whether a file is {\tt \#include}d, then the macro also controls
-every line of that file.
+We do distinguish must from may dependences.  When a macro is defined on
+both branches of a {\tt \#if} conditional, the macro's definedness does not
+depend on the values tested in the conditional, though its value does.  We
+do track dependences across file boundaries: if a macro controls whether a
+file is {\tt \#include}d, then the macro also controls every line of that
+file.
 
 %% This makes absolutely no sense.  What is going on here?
 %% I think there's something meaningful about lopping off prefixes of must
@@ -1790,11 +1747,13 @@ every line of that file.
 % defined at all.  That is, no setting of {\tt A} can affect {\tt M}'s
 
 The statistics reported in this section are underestimates because they
-omit two packages which aggressively use of macros.  The full dependence
+omit two packages which aggressively use macros.  The full dependence
 information for \pkg{emacs} and \pkg{mosaic} exceeded our computer's
-virtual memory.  These packages' excessive dependences result in part from
-use of Motif, a complex external library.  We did generate dependence
-information for \pkg{plan}, which is the smallest of the three packages
+virtual memory, in part due to use of Motif, a complex external library.
+(While this paper reports only on macros defined in each package, we
+computed dependences and other information for all macros, including those
+defined or used in libraries.)  We did generate dependence information for
+\pkg{plan}, which is the smallest of the three packages in our test suite
 which use the Motif library.
 
 
@@ -1814,10 +1773,12 @@ which use the Motif library.
 
 Figure~\ref{fig:dep-byline} graphs the percentage of lines dependent on a
 given number of macros.  Over two in five lines (42\%) are controlled by
-macros.  Most of these (38\% of all lines) are inclusion-controlled by at
-least one macro; some of these lines, such as those in header files, appear
+macros (this is the complement of the 58\% of lines that depend on zero
+macros).  Almost as many lines (38\%) are inclusion-controlled by at least
+one macro; some of these lines, such as those in header files, appear
 unconditionally but are inside a guard to avoid multiple inclusion.  Over
-one in four lines (28\%) expands a macro, a higher value than we anticipated.
+one in four lines (28\%) expands a macro, a higher value than we
+anticipated.
 
 Expansion dependence on multiple macros is not prevalent\,---\,only 5\% of
 lines are expansion-dependent on more than 3 macros, and only 1\% are
@@ -1836,10 +1797,10 @@ mentioned above has 182 inclusion dependences (with only 13 macros in
 common with its set of expansion dependences), but over over 10,000 lines
 of \pkg{gcc} have even heavier inclusion dependences than that.
 
-On average, each line in the {\numpackageslesstwo} packages tested is
-expansion-dependent on .04 macros, inclusion-dependent on .31 macros, and
-has both varieties of dependence on .01 macros, and has some dependence on
-.34 macros.
+On average, each line in the {\numpackageslesstwo} packages tested is is
+expansion-dependent on .04 macros, inclusion-dependent on .31 macros, has
+both varieties of dependence on .01 macros, and has some dependence on .34
+macros.
       
 
 \subsection{Dependences by macro}
@@ -1862,9 +1823,9 @@ has both varieties of dependence on .01 macros, and has some dependence on
   indicates that 286 macros each control between .17\% and .26\% of the
   entire package which contains that macro.  The maximum falls in the last
   bucket specified (i.e., the first bucket off the chart is the first empty
-  one).  The ``Epsilon'' bar represents a small non-zero value, so that
+  one).  The $\varepsilon$ bar represents a small non-zero value, so that
   macros not controlling any lines are not conflated with macros
-  controlling very few lines.  A log scale is used for the x axis labels.}
+  controlling very few lines.  A log scale is used for the x axis.}
 
 %% expansion is red; inclusion is blue
 \label{fig:dep-bymacro}
@@ -1876,13 +1837,14 @@ than by macro).  Since the {\numpackageslesstwo} packages vary in size, the
 graphs of Figure~\ref{fig:dep-bymacro} aggregate them by reporting
 percentages of a package rather than absolute numbers.
 
+%% The second sentence of this paragraph is a non sequitur.
 
 The expansion dependence chart closely approximates an exponential decay.
 Most macros control few lines, a few macros control many lines, and the
 transition between the two varieties is gradual.  Most {\tt \#if}
 directives (which account for about 2.2\% of all lines) expand at least one
-macro; the rare exceptions include such tests as which character set is
-being used on the compiling machine.
+macro; the rare exceptions include testing the compiling machine's
+character set.
 
 Of the ten macros that are expanded by more than 5\% of lines in a package,
 six are types ({\tt int} and {\tt rtx} in \pkg{gcc}, {\tt ANY} and {\tt
@@ -1892,7 +1854,7 @@ RCS), one is a constant ({\tt NULL} in python), and three are expressions
 \pkg{xfig}).  Three of these ({\tt int}, {\tt const}, and {\tt NULL})
 redefine built-in C keywords or values, and those macros are not
 necessarily active on every line containing the symbol.  Likewise, {\tt ip}
-is an ordinary variable in most of its uses, though our anlysis did not
+is an ordinary variable in most of its uses, though our analysis did not
 discover that fact.
 
 %         Outliers (> 6\% of all lines expand):
@@ -1913,7 +1875,7 @@ discover that fact.
 
 
 The inclusion dependence graph is bimodal.  While most macros control
-inclusion of zero or few lines, quite a few control very substantial
+inclusion of zero or few lines, quite a few control substantial
 fractions (10\% or so) of the package, and there are not a lot of macros in
 between.  The graphs for the individual packages exhibit far higher peaks
 than the aggregate inclusion dependence graph of
@@ -1937,24 +1899,26 @@ classifications of macro bodies, and so forth.
 
 We built a Cpp partial evaluator called Cppp.  Given Cpp-style command-line
 arguments specifying which macros are known to be defined or undefined
-(and, optionally, their expansions), it discharges Cpp conditionals that
-depend on those macros.  It does not expand macros inline or use
-definitions found in its input files.
+(and, optionally, their expansions), Cppp discharges Cpp conditionals that
+depend on those macros.  Other conditionals, and macro uses, remain in the
+output.  Cppp does not expand macros inline or use definitions found in its
+input files.
 
 % (It does not eliminate or expand other macros with only one
 % remaining definition, because other definitions may appear in libraries or
 % on the command line when the package is compiled.)
 
-We defined all the macros that can be depended on if using ANSI standard C
-or C++ (including prototypes and booleans) with POSIX-compliant libraries,
-preprocessed all the source (and all library header files), and reran all
-of our other experiments.  The results were little changed from the full
-versions of the packages (which generally supported both K\&R and ANSI C,
-and sometimes other dialects as well): the number of multiple definitions
-of macros, of failed classifications, and of dependences on macros did not
-decline substantially.  We conclude that macro usage in our test programs
-presents no obvious single point of attack:  even eliminating one prevalent
-use did not eliminate the complexity introduced by preprocessor.
+We used Cppp to preprocess all of our test suite (and all library header
+files) with definitions for all the macros that can be depended on if using
+ANSI standard C or C++ (including prototypes and booleans) with
+POSIX-compliant libraries.  We then reran all of our experiments, but the
+results were little changed from the full versions of the packages (which
+generally supported both K\&R and ANSI C, and sometimes other dialects as
+well): the number of multiple definitions of macros, of failed
+classifications, and of dependences on macros did not decline
+substantially.  We conclude that macro usage in our test programs presents
+no obvious single point of attack: even eliminating one prevalent use did
+not eliminate the complexity introduced by preprocessor.
 
 
 \section{Related work}
@@ -1972,59 +1936,60 @@ using C macros effectively, tools for checking macro usage, and
 techniques for understanding and exploring C source code which uses the
 preprocessor.
 
-A number of organizations provide hints about effective ways to the use
-the C preprocessor.  The GNU C preprocessor manual~\cite{cpp-manual}
-discusses a set of techniques including simple macros, argument macros,
-predefined macros, stringization macros, concatenation macros, and
-undefining and redefining macros.  It also identifies a set of
-``pitfalls and subtleties of macros''; these are much like some of the
-problems our analysis tool identifies.  Several coding style guides
-discuss the preprocessor and make recommendations on its acceptable uses
-and on ways to reduce unexpected behavior resulting from poorly
-designed constructs~\cite{Stallman97,ellemtel92,Cannon95,Dolenc90}.
+A number of organizations provide hints about effective ways to the use the
+C preprocessor.  The GNU C preprocessor manual~\cite{cpp-manual} discusses
+a set of techniques including simple macros, argument macros, predefined
+macros, stringization macros, concatenation macros, and undefining and
+redefining macros.  It also identifies a set of ``pitfalls and subtleties
+of macros''; these are much like some of the problems our analysis tool
+identifies.  Several coding style guides make recommendations on
+preprocessor use and on ways to reduce unexpected behavior resulting from
+poorly designed constructs~\cite{Stallman97,ellemtel92,Cannon95,Dolenc90}.
 
-Carroll and Ellis state that ``almost all uses of macros can be
-eliminated from C++ libraries''~[p.~146]{Carroll95}.  They list eight
-categories of macro usage and explain how the software engineer can use
-C++ language features instead of using the preprocessor.  Our categories
-differ from theirs\,---\,we focus on actual use in C programs, whereas they
-concentrate on potential uses in C++ programs.
+Carroll and Ellis state that ``almost all uses of macros can be eliminated
+from C++ libraries''~\cite[p.~146]{Carroll95}.  They list eight categories
+of macro usage and explain how the software engineer can use C++ language
+features instead of using the preprocessor.  Our categories focus on actual
+use in C programs rather than potential uses in C++ programs.
 
 Spencer and Collyer recommend against using most varieties of
-\texttt{\#ifdef}~\cite{SpencerC92}.  As we do, they accept the special
-cases of providing default values for macros and preventing
-multiple-inclusion of header files as essential uses of the
-preprocessor.  Spencer and Collyer also suggest testing for specific
-features instead of machines in conditional compilation directives; we
-use this preference in our categorization of those directives.
+\texttt{\#ifdef}~\cite{SpencerC92}, except for  providing default values
+for macros and preventing multiple inclusion of header files.  They suggest
+testing for specific features instead of machines in conditional
+compilation directives, as we do in Section~\ref{sec:ccd}.
 
 Krone and Snelting use mathematical concept analysis to determine the
 conditional compilation structure of code~\cite{Krone94}.  They determine,
 for each line, which preprocessor macros it depends upon, and display that
 information in a lattice.  They do not determine how macros depend upon one
 another directly, only by their nesting in {\tt \#if}, and the information
-conveyed is about the program as a whole.  
+conveyed is about the program as a whole.  When the lattice does not have a
+grid-like structure, it is possible that the code does not properly
+separate concerns.  Section~\ref{sec:ccd} analyzed single compilation
+directives which tested multiple incompatible macros using a fixed set of
+categories.
 
-%[[Compare to our CCD work, which
-%also tries to find such mismatches; and talk a bit more about what they
-%discovered and how it compares to what we discovered.]]
 
 %Greg:  describe LCLint methodology and results.  Say exactly what you did
 %(i.e., how hard you tried), and what the results were.  Also, that you tried
 %on only 20, not all 30, packages, which doesn't include the biggest ones.
 
 A number of tools check whether specific C programs satisfy particular
-constraints.  Various ``lint'' source-code analyzers checks for
-potentially problematic uses of C, often including the C preprocessor.
-LCLint also allows the programmer to add annotations which enable more
-sophisticated checks than many other lint programs~\cite{Evans-fse94}.
-LCLint optionally checks function-like macros\,---\,that is, those which
-take arguments\,---\,for macro arguments on the left hand side of
-assignments, for statements playing the role of expressions, and for
+constraints.  Various ``lint''~\cite{Johnson77} source-code analyzers check
+for potentially problematic uses of C, often including the C preprocessor.
+Macro errors are usually discovered as a byproduct of macro
+expansion\,---\,for instance, by generating an empty statement which causes
+lint to issue a warning\,---\,rather than in their own right.
+
+LCLint~\cite{Evans-fse94,Evans:LCLint} allows the programmer to add
+annotations which enable more sophisticated checks than many other lint
+programs.  LCLint optionally checks function-like macros\,---\,that is,
+those which take arguments\,---\,for macro arguments on the left hand side
+of assignments, for statements playing the role of expressions, and for
 consistent return types.  LCLint's approach is prescriptive: programmers
-are encouraged not to use constructs that might be dangerous, or to
-change code that contains such constructs.  Our macro lint work notices
-a similar but broader set of subtle or potentially dangerous constructs.
+are encouraged not to use constructs that might be dangerous, or to change
+code that contains such constructs.  Our macro lint work notices a similar
+but broader set of subtle or potentially dangerous constructs.
 
 %LCLint considers assignment to a macro argument dangerous but does not
 %appear to check for assignments to local variables.~\cite[\S
@@ -2052,15 +2017,15 @@ a similar but broader set of subtle or potentially dangerous constructs.
 %% that would be great, but I doubt the benefit is worth the effort for now
 
 A limited number of tools do exist to assist software engineers to
-understand code with containing Cpp directives.  Emacs provides
-\texttt{hide-ifdef-mode} which enables the programmer to specify
-preprocessor variables as explicitly defined or not defined; the mode
-then presents a view of the source code corresponding to that
-configuration, hiding code that is conditionally unincluded.  Various
-language construct ``tagging'' mechanisms (e.g., \texttt{etags},
+understand code with containing Cpp directives.  Emacs~\cite{GNUEmacs19.26}
+provides \texttt{hide-ifdef-mode} which enables the programmer to specify
+preprocessor variables as explicitly defined or not defined; the mode then
+presents a view of the source code corresponding to that configuration,
+hiding code that is conditionally unincluded, much like our Cppp tool.
+Various language construct ``tagging'' mechanisms (e.g., \texttt{etags} and
 \texttt{ctags}) recognize macro definitions and permit tag-aware editors
-to move easily from a macro expansion to the various definitions of
-that macro name.
+to move easily from a macro expansion to the various definitions of that
+macro name.
 
 %[[ What debugger does this? --11/21/97 gjb]]
 % [[ I don't remember, and couldn't find a reference.  -MDE ]]
@@ -2069,16 +2034,16 @@ that macro name.
 \section{Conclusions}
 \label{sec:conclusion}
 
-[[Grist for conclusion: These data demonstrate that multiple definitions of
-symbols is not numerically frequent; even more importantly, the definitions
-of a symbol tend to be compatible, as shown in
-Section~\ref{sec:inconsistent}.]]
+% [[Grist for conclusion: These data demonstrate that multiple definitions of
+% symbols is not numerically frequent; even more importantly, the definitions
+% of a symbol tend to be compatible, as shown in
+% Section~\ref{sec:inconsistent}.]]
 
 
 \subsection{Relevance of the results}
 
 The results of this research are of interest to language designers, tool
-writers, programmers and software engineers.
+writers, programmers, and software engineers.
 
 Language designers can examine how programmers use the macro system's
 extra-linguistic capabilities.  Future language specifications can
@@ -2106,10 +2071,10 @@ results.
 % Also, learn weird new Cpp tricks!
 
 Finally, our results are of interest to software engineers for all of the
-above reasons and more.  Since this is the first study of Cpp usage of which
-we are aware, it is worth performing simply to determine whether the
-results were predictable a priori; we did in fact discover a number of
-interesting features of our suite of programs.
+above reasons and more.  Since this is the first study of Cpp usage of
+which we are aware, it is worth performing simply to determine whether the
+results were predictable a priori; we did discover a number of interesting
+features of our suite of programs.
 
 
 \subsection{Making C programs easier to understand}
@@ -2134,64 +2099,56 @@ proposal moves the responsibility for portability (really, conformance to a
 specification) from the application program into the library or operating
 system.  
 
-Likewise, one of the most common uses of Cpp macros could be eliminated
-if the C language and its dialects had only a single declaration syntax.
+Likewise, one of the most common uses of Cpp macros could be eliminated if
+the C language and its dialects had only a single declaration syntax.
 Because most C compilers, and all C++ compilers, accept ANSI-style
-declarations, much support for multiple declaration style may have
-outlived its usefulness.  The ``ansi2knr'' tool~\cite{Deutsch90}
-translates a C program using ANSI style function declarations into one
-using classical function declarations.  By ubiquitous use of this
-transformation tool, we can free the primary source code artifact from
-the need to maintain two commonly required configurations.  This would
-dramatically reduce the use of a large class of preprocessor constructs
-in packages which support both declaration styles.
+declarations, support for multiple declaration styles may have outlived its
+usefulness.  The ``ansi2knr'' tool~\cite{Deutsch90} translates a C program
+using ANSI style function declarations into one using classical function
+declarations.  This tool frees authors from maintaining two commonly
+required configurations.
 
 Some Cpp directives, such as {\tt \#include}, can be moved into the
 language proper; this would also eliminate the need for Cpp constructs that
 prevent multiple inclusion of header files.  Likewise, compilers that do a
 good job of constant-folding and dead code elimination can encourage
 programmers to use language constructs rather than relying on the
-guarantees of an extra-linguistic tool like Cpp.\footnote{Interestingly,
-  the issue seems to not be whether compilers do the appropriate
-  optimizations, but whether programmers have confidence that the
-  optimizations will be performed; if unsure, programmers will continue to
-  resort to Cpp, since certainly a compiler cannot generate code for source
-  that it does not ever even see (because Cpp has already stripped it
-  away).}
+guarantees of an extra-linguistic tool like Cpp.  It is less important that
+compilers perform the appropriate optimizations than that programmers have
+confidence in this; skeptical programmers will prevent code from being
+generated by using Cpp to hide computations from the compiler.
 
 Common Cpp constructs could be replaced by a special-purpose syntax.  For
 instance, declarations or partial declarations could be made explicit
-(perhaps first-class) objects; similar support could be provided for
-repetitive constructs and dynamic scoping.  Manipulations of these objects
-would then be performed through a clearly-specified interface rather than
-via string and token concatenation, easing the understanding burden on the
-programmer.  Such uses would also be visible to the compiler and could be
-checked and reasonable error messages provided.  The downside of this
-approach is the introduction of a new syntax or new library functions which
-may not simplify the program text and which cannot cover all cases, only a
-few specified ones.
+objects; similar support could be provided for repetitive constructs and
+dynamic scoping.  Manipulations of these objects would then be performed
+through a clearly-specified interface rather than via string and token
+concatenation, easing the understanding burden on the programmer or tool.
+Such uses would also be visible to the compiler and to program checkers
+such as lint.  The downside of this approach is the introduction of a new
+syntax or new library functions which may not simplify the program text and
+which cannot cover every possible case.
 
-[[Add a hygienic macros reference somewhere.]]  
-[[What is this? --gjb]]  [[Scheme's macro system never captures variables;
-see the end of the R$^n$ Report, for instance.  -MDE]]
+Some macro systems have been designed that avoid particular pitfalls of Cpp.
+A hygienic macro system~\cite{lfp86*151} never unintentionally captures
+variables, though it can do so when necessary via a special construct.
+Other macro systems require that their output to be a syntactic AST rather
+than merely a token stream~\cite{WeiseC93}.
 
-An alternative approach which avoids the clumsiness of a separate
-language of limited expressiveness is to make the macro language more
+An alternative approach which avoids the clumsiness of a separate language
+of limited expressiveness is to make the macro language more
 powerful\,---\,perhaps even using the language itself via constructs
 evaluated at compile time rather than run time.  (The macro systems of
-Common Lisp and Scheme, and their descendants~\cite{WeiseC93}, take this
-approach.)  An extreme example is to provide a full-fledged reflection
-capability.  Such an approach is highly general, powerful, and
-theoretically clean; it circumvents many of the limitations of Cpp,
-though it does not necessarily support all of Cpp's low-level features.
-Such a syntactic approach does eliminate the problem of mis-parsing due
-to macro expansion, but the added generality seems likely to degrade a
-tool's ability to reason about the source code.  In practice, such
+Common Lisp~\cite{commonlisp:languagespec} and
+Scheme~\cite{Clinger91:R4RS}, and their descendants~\cite{WeiseC93}, take
+this approach.)  In the limit, a language can provide a full-fledged
+reflection capability~\cite{kicz91}.  Such an approach is highly general,
+powerful, and theoretically clean.  The added generality, however, degrades
+a tool's ability to reason about the source code.  In practice, such
 systems are used in fairly restricted ways, perhaps because other uses
-would be too complicated.  A dialog among users, compiler writers, tool
-writers, and language theorists is necessary when introducing a feature
-in order to prevent unforeseen consequences from turning it into a
-burden.
+would be too complicated.  A dialogue among users, compiler writers, tool
+writers, and language theorists is necessary when introducing a feature in
+order to prevent unforeseen consequences from turning it into a burden.
 
 
 %% See slide 15 and its notes from Mike's quals talk.
@@ -2201,37 +2158,32 @@ These results suggest a wide variety of future avenues for research, both
 in terms of expanding our understanding of uses of the preprocessor in
 practice and in addressing the issues identified by this study.
 
-We did not analyze any reusable libraries (e.g., \pkg{glibc}) for their
-macro use patterns.  Comparing how Cpp is used in libraries in contrast
-to application code may yield insights into the different needs of
-library authors.  Other dimensions to the packages may be beneficial to
-analyze independently and contrast.  [[Not a sentence:]]  For example, cross-platform
-packages \vs{} Unix-only \vs{} Microsoft Windows\footnote{Windows is a
-  trademark of Microsoft Corporation.} packages, or GNU-project packages
-\vs{} non-GNU packages.
+We did not analyze any libraries (e.g., \pkg{glibc}) for their macro use
+patterns.  Comparing how Cpp use in libraries and application code may
+yield insights into the different needs of library authors.  Other
+comparisons, such as Unix vs.~Microsoft Windows packages, may also prove
+valuable.
 
-Similarly, we did not formally analyze any C++ source code.  Preliminary
-results indicate that many C++ packages rely heavily on Cpp, even when
-C++ supports a nearly identical language construct.  This unfortunate
-situation probably stems from a combination of trivial translations from
-C to C++ and of C programmers becoming C++ programmers without changing
-their habits.  A useful analysis of C++ packages would consider the code
-in the context of both the history of the package and the background of
-its authors.
+We did not formally analyze any C++ source code.  Preliminary results
+indicate that many C++ packages rely heavily on Cpp, even when C++ supports
+a nearly identical language construct.  This unfortunate situation probably
+stems from a combination of trivial translations from C to C++ and of C
+programmers becoming C++ programmers without changing their habits.  A
+useful analysis of C++ packages would consider the code in the context of
+both the history of the package and the background of its authors.
 
-Further analysis of the macros with free variables is needed to see
-which of the roughly 32\% of expression macros should be easy to convert
-to inline functions.  In particular, we did not investigate whether the
-free variables in macro definitions referred to local or global
-variables.  The former achieve dynamic scoping which is impossible using
-the C language proper, while the latter could likely be converted to an
-inline function.
+Further analysis of the macros with free variables is needed to see which
+of the roughly 32\% of expression macros should be easy to convert to
+inline functions.  In particular, we did not investigate whether the free
+variables in macro definitions referred to local or global variables.  The
+former achieve dynamic scoping which is impossible using the C language
+proper, while the latter could likely be converted to inline functions.
 
 Our framework currently does not benefit from analyzing the context of
 macro expansions in determining a macro's category.  For example, a
 macro used where a type should appear can be inferred to expand to a
 type; a macro used before a function body is probably expanding to a
-declarator.  We are actively pursuing this extension.
+declarator.
 
 Additionally, the framework is overly conservative with respect to
 conflicting definitions.  We assume that every occurrence (except in
@@ -2262,7 +2214,11 @@ Fellowship and an IBM Cooperative Fellowship.
 \section{Merging categories}
 \label{app:category-lub}
 
-The following rules determine how two categories are merged:
+The following rules determine how two macro definition categories are
+merged.  These rules are used when combining categories of multiple
+definitions of a symbol in order to assign a category for that macro name,
+as in Sections~\ref{sec:mult-def}--\ref{sec:inconsistent}.
+
 \begin{itemize}\itemsep 0pt \parskip 0pt
 
 \item If the categories are the same, use that.
@@ -2275,10 +2231,10 @@ The following rules determine how two categories are merged:
   modifier may be present or absent.  In order to either perform an action
   or do nothing, macros not uncommonly expand to either a statement or to
   nothing (though it would be more robust to expand to a null statement in
-  the latter case).  Additionally, macros used as boolean variables which
-  are checked for definedness may be set via a null define or by being
+  the latter case).  Additionally, a macro used as a boolean variable which
+  is checked for definedness may be set via a null define or by being
   assigned a constant (generally 1).  This practice is an error if the
-  macro is used outside Cpp's {\tt defined} operator, but is also frequent
+  macro is used outside the Cpp {\tt defined} operator, but is also frequent
   and generally innocuous.
 
 \item If one is a constant and the other is an expression, use the latter.
