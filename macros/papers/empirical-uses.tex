@@ -99,7 +99,6 @@ Having tools use post-processed source code increases the dissonance
 between what the programmer sees and what the tools analyze.  There
 are several ways to try to reduce this problem; Stroustrup suggests
 the following:
-
 \begin{quote}
 I'd like to see Cpp abolished.  However, the only realistic and
 responsible way of doing that is first to make it redundant, then
@@ -306,8 +305,8 @@ The specific categories that our analysis tool identifies are:
 \item {\em Constants\/}, where the \verb+#define+ gives only an
 identifier name and a value.\footnote{In anticipation of the
 translator tool, the analysis tool infers types; this is in the early
-stages, however, and we do not report on the intermediate results in
-this paper.}  
+stages, however, and we do not report on the preliminary results in
+this paper.}
 
 \item {\em Null defines\/}, where the \verb+#define+ gives only an
 identifier name.
@@ -345,8 +344,18 @@ for gzip.]
 
 \section{Discussion}\label{sec:discussion}
 
-[FIX: Includes discussion of the analyses, brief discussion of the
-``framework'', etc.]
+What do these analyses tell us about the use of the C pre-processor?
+[FIX: well?] 
+
+We wrote several Perl scripts to produce and analyze these data.  As
+we developed them, we slowly shifted from a lexical analysis of the
+source to a syntactic analysis of the source.  For example, we now
+properly parse all declarations in every package.  We're pursuing even
+more analysis, pushing into semantics.  For instance, we can now
+determine which identifiers are free variables within a defined macro.
+We are also close to being able to infer the types of the bodies of
+defined macros, one of several steps necessary before we can attempt
+to build a converter from C to C++.
 
 \section{Conclusion}\label{sec:conclusion}
 
