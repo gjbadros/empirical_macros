@@ -486,7 +486,7 @@ sub get_spliced_cline_maybe_ungot ($;$)
 #
 # Constructing simplified values are a bit wasteful on the first pass, when we
 # only care about macro definitions; special-case that?
-sub get_fulltoken_cline ($;$)
+sub get_fulltoken_cline ( $;$ )
 { my($filehandle,$peeking) = check_args_range(1, 2, @_);
   # If $peeking is set, get_fulltoken_cline doesn't use @cline_ungot_*
   if (!defined($peeking))
