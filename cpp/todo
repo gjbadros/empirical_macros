@@ -73,6 +73,8 @@ o switch
   - case
   - end
 
+o cast [type conversions]
+
 -----------------------
 Vars that need to be visible to perl
 
