@@ -1,0 +1,75 @@
+Mike:  My responses follow '->' markers below --01/31/99 gjb
+
+
+Can "extra linguistic" be precisely defined? 
+
+-> Maybe we should talk about textual processing features of Cpp and
+discuss instead how it can provide abstraction facilities that the C
+language proper (is that phrase well-defined to you? to our readers?)
+does not support
+
+
+----------------
+
+To Greg:
+
+Write a good motivation of why "syntactic" classification is named that.
+-> I added some more description, and explain in terms of hiding of
+syntactic elements in unprocessed view;  I give parenthetical example of 
+Emacs's indentation mode.
+
+The methodology section doesn't describe some of the limitations of pcp3.
+For instance, macros used in macros aren't marked.
+-> These are *not* expansions!  What do you think the below outputs?
+
+/* begin example */
+#define FOO 5
+#define BAR FOO
+#define FOO 9
+BAR
+/* end example */
+
+-> The expansion of BAR causes FOO to get expanded at the last line of
+the example, *not* on the line where BAR is #defined.  Since FOO doesn't 
+occur on the line where it is expanded, there is nothing to mark.  Maybe 
+this example is interesting since perhaps it is counterintuitive?
+(Similarly for:
+
+/* begin example */
+#define FOO 5
+#define BAR FOO
+#undef FOO
+BAR
+/* end example */
+
+What version of LCLint did you use when you tried running it on the
+packages?
+-> Version 2.3i -- 15 Sep 97;  I added the version number to the text,
+but can't fairly expand on the results as I have no recollection any
+longer.
+
+
+Page 19:
+How accurate is ``very accurate in practice''?  How do you know?  What
+would constitute perfect accuracy?  How many instances did you spot
+check?  How did you select them?
+-> I dropped that sentence, since the sentence before tells exactly what 
+we did, and that matches exactly what we say we discard.  The intended
+point was that:
+
+#ifndef FOO
+#define FOO 5
+#define BAR 7
+#endif
+
+doesn't happen very often.  But when it does happen, it's not strictly
+just for redefinition prevention.
+
+
+Page 22:
+Explain the significance of the data.  Could the categories be reordered to
+make the significance clearer?
+
+-> I added a paragraph about the data at the end.  I don't love it,
+though, since elsewhere we've generally refrained from subjective and
+what-if scenarios.

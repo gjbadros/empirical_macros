@@ -1,0 +1,60 @@
+X-From-Line: mernst@uni.cs.washington.edu  Sun May 11 18:03:00 1997
+Received: from uni.cs.washington.edu (uni.cs.washington.edu [128.95.4.33]) by june.cs.washington.edu (8.8.5+CS/7.2ju) with ESMTP id SAA27776; Sun, 11 May 1997 18:02:59 -0700
+Received: (from mernst@localhost) by uni.cs.washington.edu (8.8.4/8.8.2) id SAA10602; Sun, 11 May 1997 18:02:59 -0700
+Date: Sun, 11 May 1997 18:02:59 -0700
+Message-Id: <199705120102.SAA10602@uni.cs.washington.edu>
+From: Michael Ernst <mernst@cs.washington.edu>
+To: Greg Badros <gjb@cs.washington.edu>,         David Notkin <notkin@cs.washington.edu>
+Subject: Notes on macro dependences
+Lines: 47
+Xref: tolt.cs.washington.edu inbox:539
+X-Gnus-Article-Number: 539   Mon May 12 08:49:09 1997
+
+Here are some thoughts on macro dependences I wrote up; comments are welcome.
+
+					-Mike
+
+
+There are two ways for a line to directly depend on a macro:
+ * those that control whether this line is included
+ * those that are control expansion (to first order, are expanded on this line)
+
+For a macro definition, similar to above (inclusion vs. expansion).  For a
+macro proper, can convert inclusion dependences into three types:
+ * must inclusion dependences, common prefix for all inclusion dependences
+    (eg, "defined_dependenton"), eg foo if two defs
+    depend on (foo and bar) and (foo and baz), respectively.
+    All direct line inclusion dependences are must dependences.
+ * expansion dependences, exhaustive suffixes for all inclusion dependences
+    -- that is, when the macro is defined on both branches (eg,
+    #if foo define bar 1 #else define bar 2 #endif).  These control
+    expansion, slightly differently than macros which are themselves expanded.
+ * may inclusion dependences: everything else, eg bar and baz if two defs
+    depend on (foo and bar) and (foo and baz), respectively.  These need to
+    be sets of arbitrary conditions rather than stacks of arbitrary
+    conditions (as for must inclusion dependences).
+Can we split expansion dependences similarly?  I doubt it.
+
+Transitive closure (ie, indirect dependences):  Given line L,
+let I control L's must inclusion, E control expansion, Y control may inclusion.
+Now, if something controls I, E, or Y, what is its control of L?
+ * must inclusion of I's definition => must inclusion of L
+ * expansion of I's definition => must inclusion
+ * may inclusion of I's definition => may inclusion
+ * must inclusion of E's definition => must inclusion
+	That condition must be implied by I.
+	(There is an issue of logical implication vs. actual control: that
+	doesn't control this line, but might be implied by something that does.
+	That's fine, I think: just define must inclusion as what must be true.)
+     expansion, because it controls that definition -- not very convincing
+ * expansion of E's definition: expansion
+ * may inclusion of E's definition: may inclusion
+ * must inclusion of Y's definition => may inclusion
+ * expansion of Y's definition => may inclusion
+ * may inclusion of Y's definition => may inclusion
+
+One could imagine having must and may expansion dependences, too (what is
+expanded for every definition, what for just some); but don't bother with
+that.  (Maybe I shouldn't bother with must and may inclusion dependences...)
+
+

@@ -1,0 +1,79 @@
+X-From-Line: mernst@nishin.cs.washington.edu  Wed May  7 09:28:58 1997
+Received: from nishin.cs.washington.edu (nishin.cs.washington.edu [128.95.4.39]) by june.cs.washington.edu (8.8.5+CS/7.2ju) with ESMTP id JAA13478 for <gjb@cs.washington.edu>; Wed, 7 May 1997 09:28:57 -0700
+Received: (from mernst@localhost) by nishin.cs.washington.edu (8.8.4/8.8.2) id JAA02087; Wed, 7 May 1997 09:28:57 -0700
+Date: Wed, 7 May 1997 09:28:57 -0700
+Message-Id: <199705071628.JAA02087@nishin.cs.washington.edu>
+From: Michael Ernst <mernst@cs.washington.edu>
+To: Greg Badros <gjb@cs.washington.edu>
+Subject: Precursor to LCLint parser
+Lines: 66
+Xref: tolt.cs.washington.edu inbox:508
+X-Gnus-Article-Number: 508   Wed May  7 09:29:23 1997
+
+Greg-
+
+The files are in ~mernst/research/notkin/macros/Cprocessor and Cprocessor2.
+
+					-Mike
+
+------- Start of forwarded message -------
+Date: Mon, 05 May 1997 13:13:44 -0400
+From: Nate Osgood <hacrat@lcs.mit.edu>
+Subject: Re: Precursor to LCLint parser?
+X-Sender: 109pn2u2oq4o@mail04.internetMCI.com
+To: Michael Ernst <mernst@cs.washington.edu>
+
+Mike,
+
+[...]
+
+	I had to rummage around a bunch to find what I think may be the code I
+gave David (I had moved all my stuff over to my home machine since doing
+that, so it's been reshuffled and such).  To make a long story short,
+however, I have two bodies of code that might be of use:
+
+	A "cmetrics" program that analyzes c code and reports statistics on them.
+this was written in a commercial environment quite a few years ago now, but
+it would be best if we kept the wraps on anything more substantial than
+e.g. the grammar and attribute declarations/actions.  as was the practice
+back in '89, this is written in standard C.  as i recall, the grammar
+worked darn well, but you may conceivably find an obscure bug or two fixed
+in the later version (see below).  the code also accepts a number of
+Microsoft C extensions (e.g. 16 bit segmenting extensions like far, a few
+others) that may prove useful.
+
+	A "desugar" program that also sports a complete C grammar that is a
+derivative of the first one, possibly spruced up and with one or two extra
+bugs removed. the semantic actions here and the code itself are in c++.
+this is public domain and you can feel free to use or not use whatever
+portion you'd like.  (i think the project is an MSVisual C++ 4.0 project,
+so you could probably just open it up in that and fire it up.)   it's slow
+and clunky compared to the cmetrics program, but is a very general purpose
+desugaring program that would be rather easy to modify, etc.   the c++ is
+pretty inefficient but relatively clean, with classes for all C constructs
+and types that are pretty transparent.  it could be retargeted or
+re-instrumented pretty easily.  (wish i could offer lots of tips on its
+use, but time constraints prevent that. my suggestion woudl be to compile
+it with browse info under vc++ and use the browsing to explore it.  would
+probably help understand it pretty aquickly.)  again, feel free to use this
+however you'd like, and distribute it as broadly or narrowly as desired --
+anything's fine with me.
+
+[...]
+
+n
+
+
+===========================================================================
+
+	one correction: it turns out that i had already deleted it, but decided to
+put the browser file (desugar.bsc in the WinDebug directory) back into this
+zip file. the zip file is now extra hefty, but if you can get your hands on
+VC++ 4.0 or higher you should be able to directly read in the bsc file and
+start browsing -- up to you entirely, but thought it might be handy to
+include it, despite the size.
+
+again, best of luck and wishes!
+------- End of forwarded message -------
+
+
