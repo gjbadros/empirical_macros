@@ -58,6 +58,9 @@ cat c-files-listing | $0 -i -d ~/macros/data/stable:pkgname
 #
 # TM=/tmp/$USER/macros/data/stable
 # (assume c-files-listing has find-c output; otherwise, use "find-c")
+# for i in *(/); do echo $i; pushd $i; NM=${i%%-*}; cat c-files-listing | em_analyze -i -d $TM:$NM > $TM/$NM.out 2> $TM/$NM.err || (cd ..; echo $i >> failures); popd; done
+# (Above puts a list of failed packages in "failures"
+# or (older version)
 # for i in *(/); do echo $i; pushd $i; cat c-files-listing | em_analyze -i -d $TM:${i%%-*} >$TM/${i%%-*}.out 2> $TM/${i%%-*}.err; popd; done
 #
 # For a second run for first-run failures:
@@ -1958,12 +1961,21 @@ sub getline_handle_preprocessor_command ($$$$$)
 	# For now, hack for gnuchess-4.0.pl77/src/binsort.c
 	if ($cpp_cmd_arg_noc =~ /^(errno|std(io|lib)|time)$/)
 	  { $cpp_cmd_arg_noc = "<$cpp_cmd_arg_noc.h>"; }
-	if ($cpp_cmd_arg_noc !~ /^(?:<(.*)>|\"(.*)\")$/) {
-	  # Didn't match "foo.h" or <bar.h>
-	  # FIX: actually, this is legal, if it's a CPP name that expands to "..." or <...>.
+	if ($cpp_cmd_arg_noc !~ /^(?:<(.*)>|\"(.*)\")$/ &&
+	    # This is still hacky, as it only checks the first definition, but
+	    # it's less hacky than the below for gnuchess --gjb
+	    (!defined($macros{$cpp_cmd_arg_noc}) ||
+	     !defined($mdef_body_noc[$macros{$cpp_cmd_arg_noc}[-1]]) ||
+	     $mdef_body_noc[$macros{$cpp_cmd_arg_noc}[-1]] !~  /^(?:<(.*)>|\"(.*)\")$/)) {
+	  # Didn't match "foo.h" or <bar.h>, or a macro whose last definition
+	  # expands to something in quotes or brockets
+
+	  # FIXGJB: Old hack below.... is this still necessary?
 	  # For now, hack for gnuchess-4.0.pl77/src/binsort.c
-	  if ($cpp_cmd_arg_noc !~ /^(descrip|processes|unixio)$/)
-	    { mdie('#include not followed by file name in "" or <>: ', $cpp_cmd_arg_noc, " == ", $cpp_cmd_arg_noc); }
+	  if ($cpp_cmd_arg_noc !~ /^(descrip|processes|unixio)$/) {
+	    mdie('#include not followed by file name in "" or <>: ', $cpp_cmd_arg_noc, " == ", $cpp_cmd_arg_noc); 
+	  }
+	  # What is this message about? --gjb
 	  parse_error("Ignoring VAX include $cpp_cmd_arg\n");
 	  # Just fall through if one of the OK-to-ignore includes
 	} else {
