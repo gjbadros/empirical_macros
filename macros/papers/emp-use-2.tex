@@ -1743,7 +1743,7 @@ There is significant variation among packages, and no clear pattern of use
 emerges.  Portability accounts for over \comment{be specific}half of conditional compilation
 directives.  Redefinition warning suppression, at 16.5\%, is surprisingly
 high; it is essentially a macro definition mechanism, not a conditional
-inclusion technique.  Mixed categories are relatively rare.  This suggests
+inclusion technique.  Mixed usages are relatively rare.  This suggests
 both that the conventions for macro names are fairly standardized and that
 programmers rarely write conditional tests that combine entirely different
 concerns in a single expression.
@@ -1824,8 +1824,8 @@ the conditional gets that classification, too.  Otherwise, it is classified
 as ``mixed'':
 
 \begin{description}\itemsep 0pt \parskip 0pt
-\item[Mixed categories] These guards test multiple symbols
-      that independently fall into different categories (e.g.,
+\item[Mixed usage] These guards test multiple symbols
+      that independently fall into different classes (e.g.,
       {\tt \#if defined(\verb|STDIO_H|) || \verb|SYSV_SIGNALS|}).
 \end{description}
 
@@ -1836,7 +1836,7 @@ an Objective-C-like \ppd{import} facility which automatically avoids
 multiple inclusions.  Another 30\% of conditional compilation directives
 involve handling portability across variances in target operating
 systems.  Tools such as the GNU project's \texttt{autoconf} may account
-for the prevalence of this category by making it easier to maintain code
+for the prevalence of these guards by making it easier to maintain code
 bases with sprinkled \ppd{ifdef}s managing multiple target operating
 system variants.  It would be interesting to compare these data to those
 collected for software that targets only a single specific platform.
