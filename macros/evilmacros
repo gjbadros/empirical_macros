@@ -904,8 +904,6 @@ sub test_typedecl_regexp
 
 my $incomment = $false;		# in /* */ style comment
 my $instring = $false;
-my $seen_comment = $false;
-my $maybe_seen_code = $false;
 # Shouldn't be in a character constant across lines.
 # my $incharconst = $false;
 use vars '$commaop';		# not "my" because dynamically bound
@@ -929,7 +927,6 @@ $commaop = $true;		# whether commas should be operators or not
 #   and not in string or comment.
 # Result ends with newline.
 # With argument, doesn't pop (actually, shift) from getline_ungotlines.
-
 # FIX: need to track cpp_physical_lines, ncnb_physical_lines
 sub getline
 { my ($dont_pop) = check_args_range(0, 1, "getline", caller, @_);
@@ -950,74 +947,24 @@ sub getline
   else
     { if (not ($result = <INPUT>)) #do not update physical lines -- failed read
 	{ return $result; }
-      if ($finding_macro_defs) {
-	$physical_lines++;
-	$logical_lines++;
-      }
+      $physical_lines++;
+      $logical_lines++;
 
-      my $old_result = $result;
       $result = updateinvars($result);
-      # FIX: This block is repeated inside the splicing code
-      #      and inside the comment parsing code
-      #      it needs to be factored out cleanly
-      # FIX: This could be done on the second pass more cleanly,
-      # maybe, since getline_nocomment would already be true
-      # FIX: sematics of $maybe_seen_code are confusing, at best
-      # print "mnr = $result";
-      if ($finding_macro_defs)
-	{ local $getline_nocomment = $true;
-	  local $getline_nocpp = $true;
-	  my $no_comment_result = updateinvars($old_result,"noreset");
-	  # print "ncr = $no_comment_result";
-	  if ($maybe_seen_code && $no_comment_result !~ /^\s*$/) {
-	    # print "Seen code: $no_comment_result";
-	    $ncnb_physical_lines++;
-	  }
-	}
-
-      #print "Result = $result";
-      #$in_cpp_directive only gets set to true if we're ion
-      # a directive and we're $finding_macro_defs
-      my $in_cpp_directive = $false;
-
-      # Allow leading whitespcace before #
-      if ($finding_macro_defs) {
-	if ($result =~ /^\s*\#/) {
-	  $in_cpp_directive = $true;
-	  $cpp_physical_lines++;
-	}
-      }
-      
-
       # perhaps check for $mname and mention it in message if it's set
       while ($incomment || $instring || ($result =~ m/\\$/))
 	{
 	  # splice lines
 	  while ($result =~ m/\\$/)
 	    {			# block to localize match data
-	      { if ($result =~ m/\\\Z(?!\n)/) # backslash, end of string, no newline:ne
+	      { if ($result =~ m/\\\Z(?!\n)/) # backslash, end of string, no newline
 		  { evilprint("evil: file ends with backslash (no newline)\n"); } }
 	      $result = $PREMATCH;	# remove backslash and possibly newline
 	      my $nextline;
 	      if ($nextline = <INPUT>)
-		{ if ($finding_macro_defs) 
-		    { $physical_lines++;
-		      $cpp_physical_lines++ if $in_cpp_directive; }
+		{ $physical_lines++;
 		  # Not a logical line-- do not increment it
-		  my $old_nextline = $nextline;
-		  $nextline = updateinvars($nextline,"noreset");
-		  # FIX: This block is repeated outside the splicing code
-		  #      it needs to be factored out cleanly
-		  if ($finding_macro_defs)
-		    { local $getline_nocomment = $true;
-		      local $getline_nocpp = $true;
-		      my $no_comment_nextline = 
-			updateinvars($old_nextline,"noreset");
-		      if ($maybe_seen_code && $no_comment_nextline !~ /^\s*$/) {
-			# print "Seen code: $no_comment_nextline";
-			$ncnb_physical_lines++;
-		      }
-		    }
+		  $nextline = updateinvars($nextline);
 		  $result = append_lines($result, $nextline);
 		  # The append_lines trims trailing spaces, prettying the message.
 		  if ($nextline =~ m/^\s*$/)
@@ -1027,33 +974,15 @@ sub getline
 	      else
 		# Already removed backslash and newline from result.
 		# (Should I add them back?)
-		{ evilprint("dangerous: file ends with continuation character:\n    $result\n"); } 
-	    }
+		{ evilprint("dangerous: file ends with continuation character:\n    $result\n"); } }
 
 	  while ($incomment)
 	    { my $nextline;
 	      if ($nextline = <INPUT>)
-		{ # Do not increment ncnb_physical_lines-- these are comments
-		  $cpp_physical_lines++ if $in_cpp_directive;
-		  my $old_nextline = $nextline;
-		  $nextline = updateinvars($nextline,"noreset");
-		  # FIX: This block is repeated outside the splicing code
-		  #      it needs to be factored out cleanly
-		  if ($finding_macro_defs)
-		    { $physical_lines++; $logical_lines++;
-		      local $getline_nocomment = $true;
-		      local $getline_nocpp = $true;
-		      # print "cl = $result", "nl = $nextline";
-		      my $no_comment_nextline = 
-			updateinvars($old_nextline,"noreset");
-		      if ($maybe_seen_code && $no_comment_nextline !~ /^\s*$/) {
-			# print "Seen code: $no_comment_nextline";
-			$ncnb_physical_lines++;
-		      }
-		    }
-		  $result = append_lines($result, $nextline);
-		  # print "NR = $result","ic = $incomment"; 
-		}
+		{ $physical_lines++;
+		  $logical_lines++;
+		  $nextline = updateinvars($nextline);
+		  $result = append_lines($result, $nextline); }
 	      else
 		{ evilprint("dangerous: file ends in comment:\n    $result");
 		  $incomment = 0; } }
@@ -1063,9 +992,9 @@ sub getline
 	  if ($instring)
 	    { my $nextline;
 	      if ($nextline = <INPUT>)
-		{ if ($finding_macro_defs) 
-		    {$physical_lines++; $logical_lines++; }
-		  $nextline = updateinvars($nextline,"noreset");
+		{ $physical_lines++;
+		  $logical_lines++;
+		  $nextline = updateinvars($nextline);
 		  # Strict ANSI C does not permit newlines in string constants;
 		  # perhaps warn.
 		  # Not "$result = append_lines($result, $nextline);" because in string.
@@ -1075,10 +1004,9 @@ sub getline
 		{ evilprint("dangerous: file ends in string:\n    $result\n");
 		  $instring = 0; } }
 	} }
-	  
 
-  #FIXCHECK: has leading ws been eliminated
-  # print "CNR = $result";
+  # FIX: Check for macro uses here
+
   if (($result =~ /^\#/) && !$getline_nocpp)
     { # Preprocessor line; usually just return "\n";
       return getline_handle_preprocessor_line($result);
@@ -1087,7 +1015,7 @@ sub getline
   if ($result eq "")
     { mdie("empty getline result"); }
   # print "getline returning <<$result>>\n"; # $result ends in newline
-  $result;
+  return $result;
 }
 
 # Users shouldn't use this, because they won't be able to correctly set
@@ -1253,27 +1181,18 @@ sub find_close_paren
 # All backslash line continuations have already been processed.
 sub updateinvars
 {
-  my ($remaining,$noreset) = check_args_at_least(1, "updateinvars", caller, @_);
+  my ($remaining) = check_args(1, "updateinvars", caller, @_);
   my $result;
   my $computeresult = ($getline_nocomment || $getline_simplify);
-
-  if (!defined($noreset)) {
-    $seen_comment = $false;
-    $maybe_seen_code = $false;
-  }
-
   if ($computeresult)
     { $result = ""; }
   else
     { $result = $remaining; }
 
   # print "updateinvars ($computeresult) $remaining"; # $remaining ends w/newline
-  while ($remaining) 
-    { if (!$incomment && $remaining !~ /^\s*$/)
-	{ $maybe_seen_code = $true; }
-      if ($incomment)
-	{ $seen_comment = $true;
-	  if ($remaining =~ m%\*/%)
+  while ($remaining)
+    { if ($incomment)
+	{ if ($remaining =~ /\*\//)
 	    { if ($computeresult && !$getline_nocomment)
 		{ $result .= $PREMATCH . $MATCH; }
 	      $remaining = $POSTMATCH;
@@ -1302,8 +1221,7 @@ sub updateinvars
 	      return $result; } }
       # If not instring, \" suffices instead of the more complicated
       # regexp that checks for leading backslashes.
-      elsif ($remaining =~ m%/[\*/]|[\'\"]%) #'HACKCOLOR
-      #elsif ($remaining =~ m/\/[\*\/]|[\'\"]/) #'HACKCOLOR FIXNOW
+      elsif ($remaining =~ m/\/[\*\/]|[\'\"]/) #'HACKCOLOR
 	{ my $match = $MATCH;
 	  my $postmatch = $POSTMATCH;
 	  if ($computeresult)
@@ -1555,8 +1473,8 @@ sub discard_to_endif
   while ($if0depth > 0)
     { if (not ($line = <INPUT>))
 	{ mdie("File ends in \#ifdef 0"); }
-      if ($finding_macro_defs)
-	  { $physical_lines++; $logical_lines++; }
+      $physical_lines++;
+      $logical_lines++;
       # I'll trust that no comment or string contains anything that
       # looks like a preprocessor command.  Strictly speaking, I should
       # use getline and/or updateinvars, because anything in an #ifdef
@@ -1600,8 +1518,6 @@ sub cpp_merged_branches
   check_args(0, "cpp_then_part", caller, @_);
   # print "cpp_merged_branches\n";
 
-  my $failure_value;		# undefined
-
   my @parts = ();
 
   my $prev_sizes = 0;		# sum of all previous sizes
@@ -1616,7 +1532,7 @@ THENPART:
       $next_line = peek_line($prev_sizes+1);
       while (!($next_line =~ /^\#\s*els(e|if)\b/))
 	{ if (($this_size > $size_limit) || ($next_line =~ /^\#/))
-	    { return $failure_value; }
+	    { return undef; }
 	  $this_result .= $next_line;
 	  $this_size++;
 	  $next_line = peek_line($prev_sizes+$this_size+1); }
@@ -1638,7 +1554,7 @@ ELSEPART:
 	    { $num_endifs++;
 	      goto THENPART; }
 	  if (($this_size > $size_limit) || ($next_line =~ /^\#/))
-	    { return $failure_value; }
+	    { return undef; }
 	  $this_result .= $next_line;
 	  $this_size++;
 	  $next_line = peek_line($prev_sizes+$this_size+1); }
@@ -1650,7 +1566,7 @@ ELSEPART:
     while ($num_endifs > 0)
       { $next_line = peek_line(++$prev_sizes);
 	if (!($next_line =~ /^\#\s*endif\b/))
-	  { return $failure_value; }
+	  { return undef; }
 	$num_endifs--; }
   }
 
@@ -1693,7 +1609,7 @@ ELSEPART:
 	      }
 	    # print "merging ", scalar(@parts), " brace-identical parts: <", join(">|<", @parts), ">\n";
 	    return merge_brace_unbalanced_lines($firstbrace_change, @parts); } } }
-  return $failure_value;
+  return undef;
  }
 
 
@@ -3088,7 +3004,7 @@ sub is_fun_decl_arg_macro
   # print "is_fun_decl_arg_macro: $identifier $macros{$identifier}[0] $margs[$macros{$identifier}[1]] $margs[$macros{$identifier}[2]]\n";
 
   if (($macros{$identifier}[0] == 2)
-      #FIXCHECK: Is this what mernst needed to check that they aren't null?
+      #Check for macro with exactly one argument
       && ($margs[$macros{$identifier}[1]] ne "") 
       && ($margs[$macros{$identifier}[2]] ne "") 
       && (!($margs[$macros{$identifier}[1]] =~ /,/))
@@ -3325,6 +3241,7 @@ sub evilprint {
   my ($msg) = check_args_at_least(1,"evilprint",caller,@_);
   unshift @_, "\"$current_file\" line @{[ current_line_no() ]}: ";
   print EVIL @_;
+  return undef;
 }
 
 # Return the current line number-- hopefully we can just compute
@@ -3383,6 +3300,7 @@ sub initialize_builtin_macros {
   # This works:
   # print "HERE:", join(',',@$macros{"__LINE__"}), "\n";
 
+  return undef;
 }
 
 
@@ -3407,7 +3325,8 @@ sub get_include_path {
 # by pushed onto @files, and also exist in @files already (w/o complete
 # pathname) from stdin
 #		   ".",
-		   )
+		  );
+  return undef;
 }
 
 # Search through @include_path's directories and find the first
