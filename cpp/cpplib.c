@@ -6916,6 +6916,11 @@ cpp_handle_options (pfile, argc, argv)
         /* Just ignore -O option */
         break;
 
+      case 'f':
+        /* Just ignore -f options, e.g., -fno-strength-reduce */
+        fprintf(stderr,"ignoring -f option: %s\n",argv[i]);
+        break;
+
       case 'i':
 	if (!strcmp (argv[i], "-include")
 	    || !strcmp (argv[i], "-imacros")) {
