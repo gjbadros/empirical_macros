@@ -17,7 +17,8 @@
 BEGIN { if (defined $ENV{"PERLINC"})
 	  { unshift(@INC, split(/[ :]+/, $ENV{"PERLINC"})); } }
 
-my $getopts_option_letters = "ihvtIAau1pTg:d:D:M:S:F:L:C:E:P:";
+# Fix: I want to use '-$' like cpp does, not '-l'; how to do this?
+my $getopts_option_letters = 'ihvtIAau1pTlg:d:D:M:S:F:L:C:E:P:';
 
 # fix: remove -D -U -S -F -L -C options.
 
@@ -33,10 +34,13 @@ New options marked with *; options with ':', above, take an argument
   -I  ignore include files--just parse files passed in
   -A  do the second pass on all files, not just those passed in
   -a  do macro statistics on all files, not just those passed in
-  -u  ignore usage
+  -u  ignore usage [hey, explain this!]
   -1  do only the first pass (don't do function parsing, usage)
-	This a a numeral 1, not a lowercase L.
+	This is a numeral 1, not a lowercase L.
+* -l  forbid the use of `\$' in identifiers, per ANSI standard
+	This is a lowercase L, not a numeral 1.
 * -g [num]  set the num'th debugging option to true  {ought to be able to name}
+	-g 0 turns off all debugging flags.
 * -T  run tests instead of main code body
 * -d [directory:basename]  use standard filenames under the given directory
 	If basename is not supplied, use extensions (sans .) as whole name.
@@ -74,9 +78,6 @@ find-c | evilmacros -iv -d ~/macros/data/stable
 # ext=all; p=~/505/data; for i in *(/); do pushd $i; find-c | nice evilmacros -i -D$p/$i.def.$ext -e$p/$i.em.$ext -c$p/$i.cat.$ext -S$p/$i.stat.$ext > $p/$i.out.$ext 2> $p/$i.err.$ext; popd; done
 # alias find-c='find . \( -name UNUSED -o -name CVS -o -name SCCS -o -name RCS \) -prune -o \( -name "*.[chCH]" -o -name "*.[cC][cC]" -o -name "*.[cC][pP][pP]" \) -print'
 # ext=all; p=/tmp/mernst/data; for i in *(/); do pushd $i; find-c | nice /homes/rivers/mernst/research/notkin/macros/evilmacros-961223 -i -D$p/$i.def.$ext -e$p/$i.em.$ext -c$p/$i.cat.$ext -S$p/$i.stat.$ext > $p/$i.out.$ext 2> $p/$i.err.$ext; popd; done
-# For some reason, adding " >&! ../out-err" doesn't work.
-# Probably omit ">! ../out-out", too, so I can see output.
-# find-c | evilmacros -i -D../out-def -e../out-evil -c../out-cat -S../out-stat -v >! ../out-out
 # Bad idea: it's best to operate on an entire project, so you know all the
 # functions, macros, etc.
 # evilmacros -d ../ -v getopt.c
@@ -381,10 +382,11 @@ my $string_literal_re = 'L?\"(|.*?[^\\\\])(\\\\\\\\)*\"'; # string literal
 ### Types
 
 # Types and declarations/definitions.
-# These should be $identifier_re, not "\w+"
-my $identifier_re = '\b[a-zA-Z_]\w*\b';	# 0 groups
+# In general, use $identifier_re in preference to "\w+"
+my $identifier_no_dollar_re = '\b[a-zA-Z_]\w*\b';	# 0 groups
+my $identifier_re = '\b[a-zA-Z_\$][a-zA-Z0-9_\$]*\b';	# 0 groups
 my $type_specifier_re = $identifier_re . '(?:\s+' . $identifier_re. ')*'; # 0 groups
-# Gross special case.  I'm sorry.
+# Gross special case.  I'm sorry.  [I think this isn't necessary any more.]
 # Don't combine with type_re because that is sometimes combined with
 # $type_declarator_re, which must match before $type_re but after this.
 my $type_special = 'int (*)(dc_num, dc_num, int, dc_num *)';
@@ -953,10 +955,11 @@ my $debug_merge_branches = $false;
 my $debug_parse_array_init = $false;
 my $debug_peek = $false;
 my $debug_getline = $false;	# a LOT of output; use only on small inputs
+my $debug_categorize_macro = $false;
 
 ## Command-line processing
 # Are these in any order?
-use vars qw($opt_i $opt_I $opt_h $opt_v $opt_t $opt_d
+use vars qw($opt_i $opt_I $opt_h $opt_v $opt_t $opt_d $opt_l
 	    $opt_D $opt_M $opt_S $opt_F $opt_L $opt_C $opt_E $opt_P $opt_p
 	    $opt_u $opt_1 $opt_A $opt_a $opt_g $opt_T);
 my $fIgnoreIncludes = $false;
@@ -2913,7 +2916,7 @@ sub parse_exp ($;$)
       # return parse_exp_follower($type,$remaining);
       my @result = parse_exp_follower($type,$remaining);
       if ($debug_parse_expression)
-	{ print "parse_exp_follower($type,$remaining) => ", join("||", @result), "\n"; }
+	{ print "parse_exp_follower(", type_name($type), ",$remaining) => ", join("||", @result), "\n"; }
       return @result;
     }
 
@@ -2921,26 +2924,32 @@ sub parse_exp ($;$)
   elsif ($exp =~ /^$identifier_re/o)
     { my $var = $MATCH;
       my $remaining = $POSTMATCH;
-      # I'm not at all sure what the deal is with this.  It ensures that
-      # mntype is set, but I doubt I want to do this yet, or to do it here.
-      # Instead, perhaps use the list of macros used in other macros.
-      categorize_macro_name($var); # huh??
+      # See if this is a macro, and if so try to categorize it now.
+      # (This assumes that parse_exp isn't called until all macros bodies
+      # have been discovered; I think this is reasonable, as the first pass
+      # does no parsing.)
+      categorize_macro_name($var);
       my $vartype = $mntype{$var};
-      if (!defined($vartype))
+      my $is_macro = defined($vartype);
+      if (!$is_macro)
+	# This isn't a macro.
 	# Need to do a MUCH better job here; in particular, infer a type.
 	# Perhaps return a negative number, an index into a list of things
 	# whose types need to be inferred.
 	# Also try looking up in global symbol table.
 	{ $vartype = $typeUNKNOWN; }
+      elsif ($debug_parse_expression)
+	{ print "macro $var as variable of type '", type_name($vartype), "'\n"; }
+
       # Perhaps do something different if the categorization was successful.
       # Not sure what this means: "Perhaps get info back here, so we can stash
       # it in calls to macros.  Make sure that agrees with Greg's data structures."
       if ($remaining =~ /^\s*\(/)
-	{ $parsefuns{$var} = $true;
+	{ if (!$is_macro) { $parsefuns{$var} = $true; }
 	  return parse_arglist($vartype, $POSTMATCH);
 	}
       else
-	{ $parsevars{$var} = $true;
+	{ if (!$is_macro) { $parsevars{$var} = $true; }
 	  return parse_exp_follower($vartype, $remaining); }
     }
   else
@@ -3004,7 +3013,7 @@ sub parse_array_initializer ($)
       else
 	{ ($thisinittype, $comma) = parse_exp_nocommaop($initlist);
 	  if ($debug_parse_array_init)
-	    { print "parse_exp_nocommaop returned ($thisinittype) $comma\n"; }
+	    { print "parse_exp_nocommaop returned (", type_name($thisinittype), ") $comma\n"; }
 	}
       if (!$thisinittype) { return($typeFAIL, $initlist); }
       if (!defined($elttype))
@@ -3143,7 +3152,7 @@ sub parse_exp_follower ($$)
   my ($type, $follow) = check_args(2, @_);
 
   if ($debug_parse_expression)
-    { print "parse_exp_follower: '$type' '$follow'\n"; }
+    { print "parse_exp_follower: '", type_name($type), "' '$follow'\n"; }
 
 ## Enable when the other bug is squashed.
 #  if ($follow =~ /^\s*$/)
@@ -3223,7 +3232,7 @@ sub parse_exp_follower ($$)
       return (type_lub($thentype, $elsetype), $remaining); }
 
   if ($debug_parse_expression)
-    { print "parse_exp_follower returning $type; found nothing in '$follow'\n"; }
+    { print "parse_exp_follower returning ", type_name($type), "; found nothing in '$follow'\n"; }
   return ($type, $follow);
 }
 
@@ -4301,9 +4310,9 @@ sub categorize_macro_name ($)
   if (defined($mntype{$name}))
     { return; }
   if (!defined($macros{$name}))
-    { # We called this on a non-macro (we try for every name in a definition).
-      # note that accessing $macros{$name}[0] ends up adding $name to the
-      # hash %macros, even though the value is undefined
+    { # We called this on a non-macro (we try for every name in a macro body).
+      # Note that accessing $macros{$name}[0] ends up adding $name to the
+      # hash %macros, even though the value is undefined.
       return; }
   my $numdefs = $macros{$name}[0];
   # if the assertion below gets tripped, it's likely that
@@ -4317,22 +4326,50 @@ sub categorize_macro_name ($)
   #}
 
   # Fix: should also get value here.
-  my $type;
-  my $category;
+
+  # Categorize each definition body.
   { my $i;
     for ($i = 1; $i <= $numdefs; $i++)
       { my $mdef_index = $macros{$name}[$i];
 	if (!defined($mdef_category[$mdef_index]))
-	  { categorize_macro_def($mdef_index);
-	    if (!defined($type))
-	      { $type = $mdef_type[$mdef_index];
-		$category = $mdef_category[$mdef_index]; }
-	    else
-	      { if (!defined($mdef_type[$mdef_index]))
-		  { parse_error("Undefined mdef_type[$mdef_index]: $mdef_name[$mdef_index] $mdef_args[$mdef_index] $mdef_body[$mdef_index] $mdef_body_noc[$mdef_index]"); }
-		else
-		  { $type = type_lub($type, $mdef_type[$mdef_index]); }
-		$category = category_lub($category, $mdef_category[$mdef_index]); } } } }
+	  { categorize_macro_def($mdef_index); }
+	# Type may be undefined; it's ingored for some categories.
+	if (!defined($mdef_category[$mdef_index]))
+	  { die "Undefined category (type $mdef_type[$mdef_index]): $i $mdef_index $mdef_name[$mdef_index] $mdef_args[$mdef_index] $mdef_body[$mdef_index] $mdef_body_noc[$mdef_index]"; } } }
+
+  if ($debug_categorize_macro)
+    { my @cat_and_type = ();
+      my $i;
+      for ($i = 1; $i <= $numdefs; $i++)
+	{ my $mdef_index = $macros{$name}[$i];
+	  my $this_type = $mdef_type[$mdef_index];
+	  push(@cat_and_type,
+	       $mdef_category[$mdef_index]
+	       . (defined($this_type) ? "(" . type_name($this_type) . ")" : "")); }
+      # No newline yet.
+      print "categorize_macro_name $name: (", join("; ", @cat_and_type), ")"; }
+
+  # Collect the categorizations
+  # Fix: this isn't quite right; rather than two literal categorizations
+  # resulting in another literal categorizations, they should go to "some
+  # constant" unless the values are identical.
+  my $type = $mdef_type[$macros{$name}[1]];
+  my $category = $mdef_category[$macros{$name}[1]];
+  { my $i;
+    for ($i = 2; $i <= $numdefs; $i++)
+      { my $mdef_index = $macros{$name}[$i];
+	$category = category_lub($category, $mdef_category[$mdef_index]);
+	# Type is allowed to be undefined; it's ignored for some categories.
+	if ((!defined($type)) || (!defined($mdef_type[$mdef_index])))
+	  { $type = undef; }
+	else
+	  { $type = type_lub($type, $mdef_type[$mdef_index]); } } }
+
+  if ($debug_categorize_macro)
+    { print " => $category",
+          (defined($type) ? "(" . type_name($type) . ")" : ""),
+          "\n"; }
+
   $mntype{$name} = $type;
   $mncategory{$name} = $category;
 }
@@ -4477,11 +4514,16 @@ sub categorize_macro_def ($)
 	}
     }
 
- CATEGORIZED:
+CATEGORIZED:
   $mdef_category[$index] = $category;
   $mdef_type[$index] = $type;
   # track our histogram of categories
   update_categories_for($category);
+
+  if ($debug_categorize_macro)
+    { print "categorize_macro_def ($index): $category",
+          (defined($type) ? "(" . type_name($type) . ")" : ""),
+          ": $body\n"; }
 }
 
 
@@ -5855,6 +5897,7 @@ if ($opt_M) { open(MACROS,">$opt_M") || die "Failed opening $opt_M"; }
 if ($opt_C) { open(CATEG,">$opt_C") || die "Failed opening $opt_C"; }
 if ($opt_I) { $fIgnoreIncludes = $true; }
 if ($opt_t) { $outOFS = "\t"; } # use tab for OFS
+if ($opt_l) { $identifier_re = $identifier_no_dollar_re; } # no $ in identifiers
 
 # Fix: Explain why these are set unconditionally.
 # Now set these so we'll actually do the output
@@ -5870,7 +5913,19 @@ $opt_P = $true;
 
 # Clunky, but faster than editing and saving the file over NFS.
 if ($opt_g)
-{ if ($opt_g == 1) { $fDebugCmdProcessing = $true; }
+{ if ($opt_g == 0)
+    { $fDebugCmdProcessing = $false;
+      $fDebugCommentRemoval = $false;
+      $debug_scopes = $false;
+      $debug_type_match = $false;
+      $debug_parse_function = $false;
+      $debug_parse_expression = $false;
+      $debug_merge_branches = $false;
+      $debug_parse_array_init = $false;
+      $debug_peek = $false;
+      $debug_getline = $false;
+      $debug_categorize_macro = $false; }
+  elsif ($opt_g == 1) { $fDebugCmdProcessing = $true; }
   elsif ($opt_g == 2) { $fDebugCommentRemoval = $true; }
   elsif ($opt_g == 3) { $debug_scopes = $true; }
   elsif ($opt_g == 4) { $debug_type_match = $true; }
@@ -5880,6 +5935,8 @@ if ($opt_g)
   elsif ($opt_g == 8) { $debug_parse_array_init = $true; }
   elsif ($opt_g == 9) { $debug_peek = $true; }
   elsif ($opt_g == 10) { $debug_getline = $true; }
+  elsif ($opt_g == 11) { $debug_categorize_macro = $true; }
+  else { die "Bad -g option $opt_g"; }
 }
 
 if ($opt_T)
