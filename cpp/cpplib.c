@@ -43,6 +43,7 @@ Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #ifdef EMACS
 #define NO_SHORTNAMES
 #include "../src/config.h"
+
 #ifdef open
 #undef open
 #undef read
@@ -106,6 +107,11 @@ Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 /* This defines "errno" properly for VMS, and gives us EACCES. */
 #include <errno.h>
+
+#ifdef USE_DMALLOC
+#include <dmalloc.h>
+#endif
+
 
 extern char *index ();
 extern char *rindex ();
@@ -268,8 +274,6 @@ struct cpp_pending {
 
 /* Forward declarations.  */
 
-extern char *xmalloc ();
-
 static void add_import ();
 static void append_include_chain ();
 // static void make_undef ();
@@ -312,8 +316,6 @@ static void push_macro_expansion PARAMS ((cpp_reader *,
 					  cpp_expand_info *pcei,
 					  long, long));
 static struct cpp_pending *nreverse_pending PARAMS ((struct cpp_pending*));
-extern char *xrealloc ();
-extern char *xcalloc ();
 static char *savestring ();
 
 static void conditional_skip (cpp_reader *pfile, int skip, enum node_type type, 
@@ -333,6 +335,9 @@ extern char *version_string;
 extern struct tm *localtime ();
 
 char szCompileFileName[200] = "@UNSET@";
+
+/* FIXGJBNOW */
+/* #define free(x) */
 
 /* These functions are declared to return int instead of void since they
    are going to be placed in a table and some old compilers have trouble with
@@ -4477,10 +4482,16 @@ do_if (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *limit)
   int cchOffsetBranchStart = 0;
   U_CHAR *pchStartExpr = CPP_BUFFER(pfile)->cur+1;
   U_CHAR *pchEndExpr = NULL;
+  U_CHAR *pchRealEnd = NULL;
   pfile->fGettingDirective++; // FIXGJB: better flag?
   value = eval_if_expression (pfile, buf, limit - buf);
   pfile->fGettingDirective--;
   pchEndExpr = CPP_BUFFER(pfile)->cur;
+  pchRealEnd = strchr(pchStartExpr,'\n');
+  if (pchEndExpr > pchRealEnd) { /* FIXGJB */
+    fprintf(stderr,"Using pchRealEnd, since pchEndExpr > pchRealEnd by %ld\n",pchEndExpr-pchRealEnd);
+    pchEndExpr = pchRealEnd;
+  }
   cchConditionalClause = pchEndExpr - pchStartExpr - 1; /* don't want the newline */
   szConditionalClause = (char *) xmalloc(cchConditionalClause + 2);
   strncpy(szConditionalClause,pchStartExpr,cchConditionalClause);
