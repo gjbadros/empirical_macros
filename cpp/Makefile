@@ -204,7 +204,7 @@ HOST_OBSTACK=$(OBSTACK)
 PERLLIBS = -rdynamic  -L/usr/local/lib /uns/lib/perl5.004/arch/auto/DynaLoader/DynaLoader.a -L/uns/lib/perl5.004/arch/CORE -lperl -lgdbm -ldb -lm -lc
 
 OBJECTS = cppmain.o cpplib.o cpphook.o cpphash.o cppalloc.o cpperror.o cppexp.o \
-  version.o
+  version.o backcalls.o
 
 # Making the preprocessor
 pcpp: cppmain hook_index_constants.pm
@@ -236,7 +236,7 @@ $(srcdir)/cexp.c: $(srcdir)/cexp.y
 .c.o:
 	$(CC) -c $(ALL_CFLAGS) $(ALL_CPPFLAGS) $(INCLUDES) $<
 
-cppmain.o: cppmain.c cpphook.h Cpp/cpp.c
+cppmain.o: cppmain.c cpphook.h
 
 cccp.o: cccp.c $(CONFIG_H) pcp.h version.c config.status cpphook.h
 # The reason we use $(libdir)/g++-include rather than using libsubdir
@@ -289,71 +289,18 @@ f == 1 { gsub("^ +",""); gsub(",",""); print "\""$$0"\"," }') > $@
 
 .PHONY: tags clean
 
+PERL=/uns/bin/perl
+PERL-EMBED = -MExtUtils::Embed
+PERL-EXTUTILS-DIR := $(shell $(PERL) -e 'use Config; print "$$Config{privlibexp}/ExtUtils";')
+PERL-XSUBPP := $(PERL) $(PERL-EXTUTILS-DIR)/xsubpp -typemap $(PERL-EXTUTILS-DIR)/typemap
+PERL-INCS := $(shell $(PERL) $(PERL-EMBED) -e ccopts)
+STANDARD-INCS += $(PERL-INCS)
+PERL-LINKAGE := $(shell $(PERL) $(PERL-EMBED) -e ldopts)
+STANDARD-LINKAGE += $(PERL-LINKAGE)
+C++-FLAGS := $(STANDARD-INCS) ...
 
-AR_STATIC_ARGS = cr
-NAME = cpp
-DISTNAME = cpp
-NAME_SYM = cpp
-VERSION = 0.01
-VERSION_SYM = 0_01
-XS_VERSION = 0.01
-INST_BIN = ./blib/bin
-INST_EXE = ./blib/script
-INST_LIB = ./blib/lib
-INST_ARCHLIB = ./blib/arch
-INST_SCRIPT = ./blib/script
-PREFIX = /uns
-INSTALLDIRS = site
-INSTALLPRIVLIB = /uns/share/lib/perl5.004
-INSTALLARCHLIB = $(PREFIX)/lib/perl5.004/arch
-INSTALLSITELIB = /uns/share/lib/perl5.004/site_perl
-INSTALLSITEARCH = /uns/share/lib/perl5.004/site_perl/i586-linux
-INSTALLBIN = $(PREFIX)/bin
-INSTALLSCRIPT = $(PREFIX)/share/bin
-PERL_LIB = /uns/share/lib/perl5.004
-PERL_ARCHLIB = /uns/lib/perl5.004/arch
-SITELIBEXP = /uns/share/lib/perl5.004/site_perl
-SITEARCHEXP = /uns/share/lib/perl5.004/site_perl/i586-linux
-LIBPERL_A = libperl.a
-FIRST_MAKEFILE = Makefile
-MAKE_APERL_FILE = Makefile.aperl
-PERLMAINCC = $(CC)
-PERL_INC = /uns/lib/perl5.004/arch/CORE
-PERL = /uns/bin/perl
-FULLPERL = /uns/bin/perl
+# Could use "-typemap typemap" w/ typemap file "typemap"
+backcalls.c: backcalls.xs
+	$(PERL-XSUBPP) $< > $@
 
-VERSION_MACRO = VERSION
-DEFINE_VERSION = -D$(VERSION_MACRO)=\"$(VERSION)\"
-XS_VERSION_MACRO = XS_VERSION
-XS_DEFINE_VERSION = -D$(XS_VERSION_MACRO)=\"$(XS_VERSION)\"
-
-MAKEMAKER = /uns/share/lib/perl5.004/ExtUtils/MakeMaker.pm
-MM_VERSION = 5.4002
-
-
-# --- MakeMaker tool_xsubpp section:
-
-XSUBPPDIR = /uns/share/lib/perl5.004/ExtUtils
-XSUBPP = $(XSUBPPDIR)/xsubpp
-XSPROTOARG = 
-XSUBPPDEPS = $(XSUBPPDIR)/typemap
-XSUBPPARGS = -typemap $(XSUBPPDIR)/typemap
-
-
-# --- MakeMaker tools_other section:
-
-SHELL = /bin/sh
-CHMOD = chmod
-CP = cp
-LD = gcc
-MV = mv
-NOOP = $(SHELL) -c true
-RM_F = rm -f
-RM_RF = rm -rf
-TEST_F = test -f
-TOUCH = touch
-UMASK_NULL = umask 0
-DEV_NULL = > /dev/null 2>&1
-
-Cpp/cpp.c: Cpp/cpp.xs
-	$(PERL) -I$(PERL_ARCHLIB) -I$(PERL_LIB) $(XSUBPP) $(XSPROTOARG) $(XSUBPPARGS) $< > $@
+backcalls.o: backcalls.c cppmain.h

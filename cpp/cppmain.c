@@ -152,16 +152,16 @@ print_token_kind(enum cpp_token kind) {
 
 static PerlInterpreter *my_perl;
 
-// This fn is defined in cpp.c, #included at bottom of this file
-// That cpp.c file is created using cpp.xs and h2xs
-void  boot_cpp (CV* cv);
+// This fn is defined in backcalls.c, #included at bottom of this file
+// That .c file is created using .xs and perl xsubpp
+void  boot_backcalls (CV* cv);
 
 // This is the function pssed as the 2nd arg to perl_parse, which
 // calls the above function to make those C functions defined in
-// cpp.xs visible; only exists because the prototype for boot_cpp
+// cpp.xs visible; only exists because the prototype for boot_backcalls
 // isn't quite right
 void cpp_functions_init(void) {
-  boot_cpp(NULL);
+  boot_backcalls(NULL);
 }
 
 int
@@ -241,10 +241,3 @@ main (int argc, char **argv, char **env)
   gjb_call_hooks_i(opts,EXIT,return_exit_code);
   exit (return_exit_code);
 }
-
-#include "cpphash.h"
-
-// Get the XS functions that allow calling back into this C code from perl
-// Created w/ something like:
-// /uns/bin/perl -I/uns/lib/perl5.004/arch -I/uns/share/lib/perl5.004 /uns/share/lib/perl5.004/ExtUtils/xsubpp  -typemap /uns/share/lib/perl5.004/ExtUtils/typemap cpp.xs > cpp.c
-#include "Cpp/cpp.c"
