@@ -1092,7 +1092,7 @@ sub cpp_trivially_true_condition ($)
     { return $true; }
   elsif ($cond =~ /^\(\s*(.*)\s*\)$/)
     { return cpp_trivially_true_condition($1); }
-  elsif ($cond =~ /^!\s*1$/)
+  elsif ($cond =~ /^!\s*0$/)
     { return $true; }
   elsif ($cond =~ /^!\((.*)\)$/)
     { my $negated = $1;
@@ -4084,6 +4084,7 @@ sub simple_macro_substitute_2 ($)
   my $mdef_index = $macros{$name}[0];
 
   if (!$mdef_formals[$mdef_index])
+    # Or, put the body before the actuals.
     { return $text; }
 
   my @formals = formals_array($mdef_formals[$mdef_index]);
@@ -6159,6 +6160,17 @@ sub test_typedecl_regexps ()
 # print scalar("int (*)(dc_num, dc_num, int, dc_num *), int));" =~ /^\s*($type_re_special)\s*([,\(\)])/o), "\n";
 # print $type_re_special, "\n";
 
+# print join(':', formals_array("(foo)")), "\n";
+# print join(':', formals_array("()")), "\n";
+# print join(':', formals_array("(foo,bar)")), "\n";
+# print join(':', formals_array("(foo, bar)")), "\n";
+# print join(':', formals_array(" ( foo , bar ) ")), "\n";
+# 
+# print join(':', actuals_array("(foo)")), "\n";
+# print join(':', actuals_array("()")), "\n";
+# print join(':', actuals_array("(foo,bar)")), "\n";
+# print join(':', actuals_array("(foo, bar)")), "\n";
+# print join(':', actuals_array(" ( foo , bar ) ")), "\n";
 
 
 ###########################################################################
@@ -6357,6 +6369,11 @@ initialize_lists_of_hashes();
 # Testing
 if ($opt_T)
 { local $categorizing_macros = $true;
+  use IO::Handle;
+  STDIN->autoflush(1);
+  STDOUT->autoflush(1);
+  STDERR->autoflush(1);
+
   $current_file = "testing";
   test_typedecl_regexps();
   test_parse_expressions();

@@ -11,6 +11,7 @@ use em_constants;
 use paren;
 
 use Carp;
+use English;
 
 # Common functions to em_reports and em_analyze
 # For determining whether a Perl variable has numeric type.
@@ -59,18 +60,24 @@ sub formals_array ($)
 # Like formals_array, but works for arbitrary expressions
 sub actuals_array ($)
 { my ($args) = check_args(1, @_);
+  # print "actuals_array <= $args\n";
   if (!($args =~ s/^\s*\(\s*(.*)\)\s*$/$1/))
     { croak "argument to args_array not enclosed in parentheses: $args"; }
+  # print "actuals_array (2) <= $args\n";
   my $remaining = $args;
   my @results = ();
   my $this_arg = "";
   while ($remaining =~ /[,\(\{]/)
     { my $pre = $PREMATCH;
-      my $remaining = $POSTMATCH;
+      $remaining = $POSTMATCH;
+      # print "actuals_array $pre<<$MATCH>>$remaining\n";
+      # print "results size = ", scalar(@results), ", this_arg = $this_arg\n";
+      if (!defined($remaining))
+	{ croak "remaining undefined"; }
       if ($MATCH eq ",")
 	{ push(@results, $this_arg . $pre);
 	  $this_arg = ""; }
-      else
+      elsif (($MATCH eq "\(") || ($MATCH eq "\{"))
 	{ $this_arg .= $pre . $MATCH;
 	  my $close_index = (($MATCH eq "\(")
 			     ? find_close_paren($remaining)
@@ -78,7 +85,11 @@ sub actuals_array ($)
 	  if ($close_index eq $false)
 	    { mdie("No match for $MATCH found in $remaining"); }
 	  $this_arg .= substr($remaining, 0, $close_index+1);
-	  $remaining = substr($remaining, $close_index+1); } }
+	  $remaining = substr($remaining, $close_index+1);
+	  if (!defined($remaining))
+	    { croak "remaining undefined (2)"; } }
+      else
+	{ croak "what match? '$MATCH'"; } }
   push(@results, $this_arg . $remaining);
   return @results;
 }
