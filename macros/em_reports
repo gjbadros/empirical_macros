@@ -120,6 +120,19 @@ my $debug_getline = $false;	# a LOT of output; use only on small inputs
 my $debug_categorize_macro = $false;
 my $debug_cpp_if_comments = $false;
 
+# Horrible hack.  Leave set to $false.  (And certainly only set one at a time.)
+# To use these, set one of them to $true, then
+#  cd /scratch/mernst; mkdir data-prop; cd data-prop
+#  ln -s Makefile* ../data/*.state ../data/*.estate .
+#  make clean_reports; make data_reports; make tbl-properties-percents
+# The resulting .prop files only address macros of the specified category.
+# Ignore the .prop files' "total defs =" info; it doesn't count just the
+# definitions in the specified categories.
+# Then repeat for the other category.
+my $properties_only_expressions = $false;
+my $properties_only_statements = $false;
+
+
 ## Command-line processing
 # Are these in any order?
 use vars qw($opt_i $opt_I $opt_h $opt_v $opt_t $opt_d
@@ -474,10 +487,22 @@ sub output_properties ( )
   my $cMacrosInPackage = 0;
   my $i = 0;
   my @mdef_properties_in_package = ();
+  my $category;
   while ($i < $cMacrosInTables) {
     ($i++ and next) if ($file_inclusion_method[$mdef_fileno[$i]] ne "FromStdin");
+      ## Start hack.  (Must not be surrounded by braces or "next" fails!)
+      $category = $mdef_category[$i];
+      ($i++ and next) if ($properties_only_expressions && ($category != $catEXP));
+      ($i++ and next) if ($properties_only_statements
+			  && (($category != $catSTATEMENT)
+			      && ($category != $catSTATEMENT_SANS_SEMI)
+			      && ($category != $catPARTIAL_STATEMENT)
+			      && ($category != $catSTATEMENTS)
+			      && ($category != $catSTATEMENTS_SANS_SEMI)
+			      && ($category != $catPARTIAL_STATEMENTS)));
+      ## End hack.
     push @mdef_properties_in_package, $mdef_properties[$i];
-#DBG    print STDERR "Adding i=$i, $mdef_properties[$i], $mdef_name[$i]\n";
+#DBG print STDERR "Adding i=$i, $mdef_properties[$i], $mdef_name[$i], $categoryname[$mdef_category[$i]]\n";
     $i++;
   }
   $cMacrosInPackage = $#mdef_properties_in_package + 1;
@@ -505,6 +530,18 @@ sub output_properties ( )
 #        outputting information for any definition which is defined somewhere inside
 #        the package, even those definitions from outside the package
     ($i++ and next) if ($file_inclusion_method[$mdef_fileno[$i]] ne "FromStdin");
+    # Identical hack code as above.
+      ## Start hack.  (Must not be surrounded by braces or "next" fails!)
+      $category = $mdef_category[$i];
+      ($i++ and next) if ($properties_only_expressions && ($category != $catEXP));
+      ($i++ and next) if ($properties_only_statements
+			  && (($category != $catSTATEMENT)
+			      && ($category != $catSTATEMENT_SANS_SEMI)
+			      && ($category != $catPARTIAL_STATEMENT)
+			      && ($category != $catSTATEMENTS)
+			      && ($category != $catSTATEMENTS_SANS_SEMI)
+			      && ($category != $catPARTIAL_STATEMENTS)));
+      ## End hack.
     $cASSIGN++ if ($mdef_properties[$i] & $propASSIGN);
     $cFREE_VAR++ if ($mdef_properties[$i] & $propFREE_VAR);
     $cINVOKES_MACRO++ if ($mdef_properties[$i] & $propINVOKES_MACRO);
@@ -517,16 +554,20 @@ sub output_properties ( )
     $cSELF_REFERENTIAL++ if ($mdef_properties[$i] & $propSELF_REFERENTIAL);
     $i++;
   }
-  prop_line_for('assign',$cASSIGN,$cMacrosInTables);
-  prop_line_for('free_var',$cFREE_VAR,$cMacrosInTables);
-  prop_line_for('invokes_macro',$cINVOKES_MACRO,$cMacrosInTables);
-  prop_line_for('passes_type_as_arg',$cPASSES_TYPE_AS_ARG,$cMacrosInTables);
-  prop_line_for('uses_macro_as_type',$cUSES_MACRO_AS_TYPE,$cMacrosInTables);
-  prop_line_for('uses_arg_as_type',$cUSES_ARG_AS_TYPE,$cMacrosInTables);
-  prop_line_for('assembly_code',$cASSEMBLY_CODE,$cMacrosInTables);
-  prop_line_for('pasting',$cPASTING,$cMacrosInTables);
-  prop_line_for('stringize',$cSTRINGIZE,$cMacrosInTables);
-  prop_line_for('self_referential',$cSELF_REFERENTIAL,$cMacrosInTables);
+  # All these $cMacrosInPackage were $cMacrosInTables, so the percentages
+  # were completely wrong.  I *think* this shouldn't have affected our
+  # output, because combine-histogram uses the raw numbers rather than the
+  # percentages.  -MDE 3/24/99
+  prop_line_for('assign',$cASSIGN,$cMacrosInPackage);
+  prop_line_for('free_var',$cFREE_VAR,$cMacrosInPackage);
+  prop_line_for('invokes_macro',$cINVOKES_MACRO,$cMacrosInPackage);
+  prop_line_for('passes_type_as_arg',$cPASSES_TYPE_AS_ARG,$cMacrosInPackage);
+  prop_line_for('uses_macro_as_type',$cUSES_MACRO_AS_TYPE,$cMacrosInPackage);
+  prop_line_for('uses_arg_as_type',$cUSES_ARG_AS_TYPE,$cMacrosInPackage);
+  prop_line_for('assembly_code',$cASSEMBLY_CODE,$cMacrosInPackage);
+  prop_line_for('pasting',$cPASTING,$cMacrosInPackage);
+  prop_line_for('stringize',$cSTRINGIZE,$cMacrosInPackage);
+  prop_line_for('self_referential',$cSELF_REFERENTIAL,$cMacrosInPackage);
 }
 
 
@@ -734,6 +775,8 @@ sub output_lint ( )
 	  my @complaints = ();
 	  my $body = $mdef_body_simple[$i];
 	  my $args = $mdef_formals[$i];
+	  # Why doesn't this use the category_is_expression() function?
+	  # Or the %meta_category_number hash?
 	  my $category_is_expression
 	    = (($category == $catEXP)
 	       || ($category == $catLITERAL)

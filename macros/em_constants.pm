@@ -219,7 +219,8 @@ if ((not defined($categoryname[$catLast]))
 @mcat_SYMBOL_UNKNOWN = qw( catSYMBOL_UNKNOWN );
 @mcat_SYMBOL = qw( catRESERVED_WORD catFUNCTION_NAME );
 
-# Map from category name to its metacategory's category number
+# Map from category name to its metacategory's category number.
+# Not used as of 3/99, but is a nice abstraction and should be used.
 %meta_category_number = ();
 sub setup_meta_category_number ( $@ )
 { my ($meta_num, @sub_names) = check_args_at_least(2, @_);
