@@ -1,4 +1,5 @@
 *.d
+.emacs.desktop
 ansi-c-lex.c
 ansi-c.tab.c
 ansi-c.tab.h
