@@ -10,18 +10,18 @@ print '
 {\small
 \addtolength{\columnsep}{-.5\columnsep}
 % The *{n}{c|} below creates n duplicate columns of that type (centered, here)
-\begin{tabular}{|r|*{11}{c|}}\hline
-\rotatebox{90}{Percentage of macro names} &
-\rotatebox{90}{failed categorization} &
-\rotatebox{90}{null define} &
-\rotatebox{90}{literal} &
-\rotatebox{90}{non-literal expression} &
-\rotatebox{90}{statement} &
-\rotatebox{90}{type-related} &
-\rotatebox{90}{syntax-related} &
-\rotatebox{90}{non-c code} &
-\rotatebox{90}{unknown symbol} &
-\rotatebox{90}{other}
+\begin{tabular}{|r|*{10}{c|}}\hline
+\rotatebox{90}{Percentage of macro names~} &
+\rotatebox{90}{Null define~} &
+\rotatebox{90}{Constant~} &
+\rotatebox{90}{Expression~} &
+\rotatebox{90}{Statement~} &
+\rotatebox{90}{Type related~} &
+\rotatebox{90}{Syntactic~} &
+\rotatebox{90}{Unknown symbol~} &
+\rotatebox{90}{Not C code~} &
+\rotatebox{90}{Other~} &
+\rotatebox{90}{Failed classification~} &
 \\\\\\hline
 ';
 }
