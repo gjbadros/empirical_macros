@@ -26,7 +26,7 @@ TEXT_TABLES :=	tbl-package_sizes \
 		tbl-how_used_ni
 
 # Maybe "baked" is actually a text table?
-RAW_TABLES := raw-directives-hist baked-directives-hist \
+RAW_TABLES := raw-directives-hist tbl-baked-directives-hist \
 		tbl-categories tbl-subset-categories
 
 LATEX_TABLES :=	tbl-categories.tex tbl-subset-categories.tex
@@ -65,6 +65,9 @@ tbl-use_frequency: $(USECUM)
 tbl-how_used_ni: $(MAC)
 	macros-make-how-used-ni-tbl-from-mac $^ > $@
 
+tbl-how_used: tbl-how_used_ni
+	ln -s $^ $@
+
 ###########################################################################
 ### Raw tables
 ###
@@ -74,7 +77,7 @@ raw: $(RAW_TABLES)
 raw-directives-hist: $(STAT)
 	macros-make-directives-raw-hist-from-stats $^ > $@
 
-baked-directives-hist: raw-directives-hist
+tbl-baked-directives-hist: raw-directives-hist
 	macros-bake-raw-directives-hist $^ > $@
 
 package_and_sizes-tbl.txt: $(STAT)
