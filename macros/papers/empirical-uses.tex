@@ -1,5 +1,4 @@
 % $Id$
-% macros-paper.tex
 \documentclass[11pt]{article}
 \usepackage{epsfig}
 \usepackage{dcolumn}
@@ -28,7 +27,7 @@
 % \bibliographystyle{plain}
 \bibliographystyle{alpha}
 
-\title{An Empirical Analysis of C Preprocessor Use}
+\title{An Empirical Analysis of C Preprocessor Use \\ DRAFT of 11 March 1997}
 
 \author{Michael Ernst%
   \and Greg J. Badros%
@@ -58,14 +57,14 @@ Seattle, WA  98195-2350  USA \\
   {\numlines} lines of publicly available C code, determining the ways in
   which the preprocessor is used in practice.  We developed a framework for
   analyzing preprocessor usage and used it to extract information about the
-  indicence of preprocessor directives, the frequency of macro use and
+  incidence of preprocessor directives, the frequency of macro use and
   redefinition, the purposes of macros (in terms of both definitions and
   uses), and how many macros are expressible in terms of other C or C++
-  language features.  We report on the analysis (and the supporting
-  framework), in particular illustrating data that are material to the
-  development of tools for C or C++ such as a tool to reduce usage of the
-  preprocessor by translating from C to C++.  The results are of interest
-  to language designers, tool writers, programmers, and software engineers.
+  language features.  We report on the analysis, in particular illustrating
+  data that are material to the development of tools for C or C++ such as a
+  tool to reduce usage of the preprocessor by translating from C to C++.
+  The results are of interest to language designers, tool writers,
+  programmers, and software engineers.
 \end{abstract}
 
 \bigskip
@@ -76,12 +75,12 @@ The C programming language~\cite{ansi} is intimately connected to its macro
 preprocessor, Cpp~\cite[Ch.~3]{Harbison91}.   C is incomplete without the
 preprocessor, which supplies essential 
 facilities such as file inclusion, defining constants and macros, and
-conditional compilation which are present in essentially every C program.
-While disciplied use of  the preprocessor reduces programmer effort and 
-improves portability, performance, or readability, it also lends itself to
+conditional compilation that are present in essentially every C program.
+While disciplined use of  the preprocessor can reduce programmer effort and 
+improve portability, performance, or readability, Cpp also lends itself to
 arbitrary source code manipulations that complicate understanding of the
 program by both software engineers and tools.  The designer of C++, which
-inherits C's preprocessor, also noted these problems:
+shares C's preprocessor, also noted these problems:
 ``Occasionally, even the most extreme uses of Cpp are useful, but its
 facilities are so unstructured and intrusive that they are a constant
 problem to programmers, maintainers, people porting code, and tool
@@ -89,10 +88,10 @@ builders.''~\cite[p.~424]{Stroustrup-DesignEvolution}
 
 \subsection{Coping with Cpp}
 
-Tools have three options for coping with Cpp.  (Humans usually adopt one of
-these approaches, as well.)  They may ignore preprocessor directives
+Tools\,---\,and, to a lesser degree, software engineers\,---\,have three
+options for coping with Cpp.    They may ignore preprocessor directives
 (including macro definitions) altogether, accept only post-processed code
-(perhaps by running Cpp on their input), or attempt to emulate the
+(usually by running Cpp on their input), or attempt to emulate the
 preprocessor.
 
 Ignoring preprocessor directives is an option for approximate tools (such
@@ -108,7 +107,7 @@ information is lost in the mapping back to the original source code.
 For instance, source-level debuggers have no symbolic names or types
 for constants and functions introduced via {\tt \#define}, nor can tools
 trace or set breakpoints in function macros, as they can for ordinary
-functions, even those that have been inlined~\cite{Zellweger83:TR}.
+functions (even those that have been inlined~\cite{Zellweger83:TR}).
 As another example, Siff
 and Reps describe a technique that uses type inferencing to produce
 C++ function templates from C; however, the input is ``a C program
@@ -117,7 +116,7 @@ files are incorporated and all macros
 expanded~\cite[p.~145]{Siff-fse96}.''  Such preprocessing may limit
 the readability and reusability of the resulting C++ templates.  As
 yet another related example, call graph extractors generally work in
-terms of the post-processed code, even when a human programmer is the intended
+terms of the post-processed code, even when a human is the intended
 consumer of the call graph~\cite{Murphy-icse18}.  Some tools even
 leave the software engineer responsible for inferring the mapping between the
 original and the post-processed source, which is an undesirable and
@@ -125,10 +124,10 @@ error-prone situation.
 
 A tool that first preprocesses code, or insists on preprocessed code as
 input, cannot be run on a non-syntactic program or one that will not
-preprocess (or produces nonsense) on the platform on which the tool is being
-run.  These constraints complicate porting and maintenance, two of the
-situations in which program understanding and transformation tools are most
-likely to be needed.  Additionally, a tool supplied with only one post-processed
+preprocess on the platform on which the tool is being run.  These
+constraints complicate porting and maintenance, two of the situations in
+which program understanding and transformation tools are most likely to be
+needed.  Additionally, a tool supplied with only one post-processed
 instantiation of the source code cannot reason about the program as a
 whole, only about that version that results from one particular set of
 preprocessor variables.  (For instance, a bug in one configuration may not
@@ -157,18 +156,19 @@ preprocessor directives.  This is exactly what Stroustrup suggests:
   belongs~\cite[p.~426]{Stroustrup-DesignEvolution}.
 \end{quote}
 C++ contains features\,---\,such as constant variables, inline functions,
-templates, and reference parameters\,---\,that obviate many uses of Cpp.  Thus,
-translation to C++ is another path for partial elimination of Cpp.  (Macros
-that cannot be eliminated might be annotated with their types or effects on
-parser or program state, so that even tools which do no Cpp analysis can
-operate correctly on such programs.)  This study indicates the feasibility,
-and, our framework for analyzing preprocessor usage provides a basis for
-the development, of an automatic translator with two attractive properties:
-it will take as input C programs complete with preprocessor directives, and
-it will map many\,---\,preferably most\,---\,uses of directives into C++ language
-features.  (It is not practical to eliminate all uses of Cpp.  For example,
-C++ currently provides no replacement for the {\tt \#include} directive, or
-for stringization or pasting.)
+templates, and reference parameters\,---\,that obviate many uses of Cpp.
+Thus, translation to C++ is another path for partial elimination of Cpp.
+(Macros that cannot be eliminated might be annotated with their types or
+effects on parser or program state, so that even tools that do no Cpp
+analysis can operate correctly on such programs.)  This study indicates the
+feasibility\,---\,and our framework for analyzing preprocessor usage
+provides a basis for the development\,---\,of an automatic translator with
+two attractive properties.  It would take as input C programs complete with
+preprocessor directives, and it would map many\,---\,preferably
+most\,---\,uses of directives into C++ language features.  (It is not
+practical to eliminate all uses of Cpp.  For example, C++ currently
+provides no replacement for the {\tt \#include} directive, or for
+stringization or pasting.)
 
 Another niche already filled by our tool is that of a ``macro lint''
 program which warns of potentially dangerous uses of Cpp.
@@ -183,16 +183,16 @@ program which warns of potentially dangerous uses of Cpp.
 Despite its evident shortcomings, Cpp is a useful and often necessary
 adjunct to C, for it provides capabilities unavailable in the language or
 its implementations.  Cpp permits definition of portable language
-extensions which can define new syntax, abbreviate repetitive or
-complicated constructs, or eliminate of reliance on a compiler
-implementation to open-code functions, propagate symbolic constants,
-eliminate dead code, and short-circuit constant tests.  The latter
-guarantees are especially valuable for compilers which do a poor job
-optimizing or when the programmer wishes to override the compiler's
-heuristics.  Cpp also permits system dependences to be made explicit and
-tested, resulting in a clearer separation of concerns.  Finally, Cpp
-permits a single source to contain multiple different dialects of C; a
-frequent use is to support both K\&R-style and ANSI-style declarations.
+extensions that can define new syntax, abbreviate repetitive or complicated
+constructs, or eliminate of reliance on a compiler implementation to
+open-code (inline) functions, propagate symbolic constants, eliminate dead
+code, and short-circuit constant tests.  The latter guarantees are
+especially valuable for compilers that do a poor job optimizing or when the
+programmer wishes to override the compiler's heuristics.  Cpp also permits
+system dependences to be made explicit and tested, resulting in a clearer
+separation of concerns.  Finally, Cpp permits a single source to contain
+multiple different dialects of C; a frequent use is to support both
+K\&R-style and ANSI-style declarations.
 
 %% NEED A REFERENCE TO DEBUGGER HERE!
 %% also mention Emacs hide-ifdef mode
@@ -201,14 +201,14 @@ While Cpp directives are often difficult to understand, some tools do
 exist, such as debuggers that can call {\tt \#define}d functions and
 editors that support viewing one particular configuration of the code.
 
-Our goal is not to take these useful features away from programmers, but to
-reduce Cpp use to just these, making programs easier for both humans and
-tools to understand.
+Our long-term goal is not to take these useful features away from
+programmers, but to reduce Cpp use, making programs easier for both humans
+and tools to understand.
 
 
 \subsection{The analyses}
 
-In order to build a better understanding of how the preprocessor is used,
+To build a better understanding of how the preprocessor is used,
 we wrote tools to analyze preprocessor usage and ran them on {\numpackages}
 C packages comprising {\numlines} lines of code.  Figure~\ref{fig:packages}
 describes the packages and lists their sizes in terms of physical lines (or
@@ -248,9 +248,9 @@ of the added richness and benefits of C++ constructs.
 In terms of the complexity of preprocessor usage, the results reported here
 contain both good news and bad, regardless of one's perspective.  By far
 the largest number of macro definitions and uses are relatively simple, of
-the variety that a programmer could understand without undue effort (though
+the variety that a programmer could understand without undue effort (although
 perhaps requiring tedious work) or that a relatively unsophisticated tool
-could understand (though in practice very few even try).  Despite the
+could understand (although in practice very few even try).  Despite the
 preponderance of innocuous macros, the preprocessor is so heavily used that
 the remaining ones are numerically significant.  It is precisely these
 macros that are mostly likely to cause difficulties, and there are enough
@@ -321,7 +321,6 @@ interesting features of our suite of programs.
 \subsection{Outline}
 
 The remainder of this paper is organized as follows.
-This section concludes with a discussion of why the work is of interest.
 
 Section~\ref{sec:directives} reports the percentage of original C source
 code lines that are preprocessor directives, including a breakdown of the
@@ -348,7 +347,7 @@ braces or partial declarations (half of one percent), and others not
 directly expressible in the programming language (about four percent).
 
 
-\section{Occurrence of Preprocessor Directives}
+\section{Occurrence of preprocessor directives}
 \label{sec:directives}
 
 Figure~\ref{fig:directives-breakdown} shows how often preprocessor
@@ -360,8 +359,8 @@ are ``other'' directives (such as {\tt \#error} and {\tt \#pragma}).  These
 numbers do not include Cpp directives discovered in system header files,
 only in files included in the package.\footnote{Only
   Figures~\ref{fig:freq-use} and~\ref{fig:where-used}, which relate to
-  macro expansion rather than macro definition or general preprocesor
-  usage, include macros defined in system files\,---\,though even in those
+  macro expansion rather than macro definition or general preprocessor
+  usage, include macros defined in system files\,---\,although even in those
   figures, only expansions in user code, not in system headers, are counted.}
 
 % Conditional compilation =  ({\tt \#ifdef},
@@ -386,7 +385,7 @@ indicating quite heavy use of the preprocessor.
 
 % package other   line    cond.   include undef   define  total
 % Average 0.028   0.169   4.661   1.944   0.202   3.080   10.084
-(mapcar (lambda (x) (/ x 10.084)) '(0.028 0.169 4.661 1.944 0.202 3.080))
+% (mapcar (lambda (x) (/ x 10.084)) '(0.028 0.169 4.661 1.944 0.202 3.080))
 
 Conditional compilation directives account for just under half (46\%) of
 the total directives in all packages, macro definitions comprise another
@@ -400,21 +399,21 @@ percentage of conditional directives varies from 16\% to 74\%.
 
 \subsection{{\tt \#line}, {\tt \#undef}, and ``other'' directives}
 
-The definedness of a macro can be used as a boolean value.  However, {\tt
-\#undef} is very rarely used to set
-such macros to ``false''.  Most uses of {\tt \#undef} immediately precede a
-definition of the just-undefined macro, in order to avoid preprocessor
-warnings about incompatible macros redefinitions.  (About 90\% of glibc's
-{\tt \#undef}s are used for this purpose, and 216 of the 614 {\tt \#undef}s
-appear in a single file which constists of a long series of {\tt \#undef}
-followed by a single {\tt \#include}.)
+The definedness of a macro is often used as a boolean value.  However, our
+study shows that {\tt \#undef} is very rarely used to set such macros to
+``false''.  Most uses of {\tt \#undef} immediately precede a definition of
+the just-undefined macro, to avoid preprocessor warnings about incompatible
+macro redefinitions.  (About 90\% of glibc's {\tt \#undef}s are used this
+way, and 216 of the 614 {\tt \#undef}s appear in a single file which
+consists of a long series of {\tt \#undef}s followed by a single {\tt
+\#include}.)
 
 Every use of {\tt \#line} (in bash, cvs, flex, fvwm, gawk, groff, and perl)
-appears in lex or yacc output which enables packages build on systems which
-don't have lex, yacc, or their equivalents installed.  For instance, flex
-uses itself to parse its input, but also includes an already-procesed
-version of its input specification (that is, C code corresponding to a {\tt
-.l} file) for bootstrapping.
+appears in lex or yacc output that enables packages build on systems
+lacking lex, yacc, or their equivalents.  For instance, flex uses itself to
+parse its input, but also includes an already-processed version of its
+input specification (that is, C code corresponding to a {\tt .l} file) for
+bootstrapping.
 
 The only significant user of ``other'' directives is the g77 package, which
 contains 157 uses of {\tt \#error} to check for incompatible preprocessor
@@ -423,15 +422,14 @@ flags.
 
 \subsection{Packages with heavy preprocessor use}
 
-This section examines the packages\,---\,gzip, glibc, remind, and
-bash\,---\,which use the preprocessor most, in order to explain their heavy
-usage.  The first three have preprocessor directives as 21--23\% of NCNB
-lines.
+Four packages\,---\,gzip, glibc, remind, and bash\,---\,deserve special
+attention for their heavy preprocessor usage.  The first three have
+preprocessor directives as 21--23\% of their lines.
 
 glibc's heavy preprocessor use is largely accounted for by {\tt \#include}
 directives.  Its files average just 42 NCNB lines each, and most contain
-several {\tt \#include} directives.  Of the 1684 files, 182 are header files
-consisting of a single {\tt \#include} line, which relieves glibc users of
+several {\tt \#include} directives.  Of the 1684 files, 182 are header
+files consisting of a single {\tt \#include} line, relieving glibc users of
 the need to know in which directory a service really resides.
 
 gzip {\tt \#define}s disproportionately many macros as literals (these
@@ -442,11 +440,11 @@ directives, since low-level file operations (such as setting creation time
 and access control bits, accessing directories, and so forth) are done
 differently on different systems; gzip is a highly portable program.
 
-In order to support speakers of many different languages, remind uses {\tt
+remind supports speakers of many different languages by using {\tt
 \#define}d constants for basically all user output.  It also contains
 disproportionately many conditional compilation directives; over half of
 these test the definedness of \verb|HAVE_PROTO|, in order to provide both
-K\&R and ANSI prototypes.  
+K\&R and ANSI prototypes.
 
 Like gzip, bash is portable across a large variety of systems, but bash
 uses even more operating system services.  Ninety-seven percent of bash's
@@ -456,7 +454,7 @@ system supports.  The presence or absence of a feature requires different
 (or sometimes additional) system calls or other code.
 
 
-\section{Frequency of Defined Macro Usage}
+\section{Frequency of macro definition and usage}
 \label{sec:usage}
 
 % The second question we asked was: where and how often are macros
@@ -496,7 +494,7 @@ system supports.  The presence or absence of a feature requires different
 \begin{figure}
 \centerline{\epsfig{file=freq-def.eps,height=7.5in}}
 \caption{Number of definitions per Cpp identifier, graphed as the
-  the percentage of identifiers which are defined a given number of times
+  the percentage of identifiers that are defined a given number of times
   or fewer.  [[[Check when real total data is available:]]] 
   In all the packages, 90\% of all macros were defined four or
   fewer times; the other 10\% of macros had five or more distinct
@@ -507,13 +505,13 @@ system supports.  The presence or absence of a feature requires different
 
 Figure~\ref{fig:freq-def} graphs the number of times each identifier is
 {\tt define}d in each of the packages.  No distinction is made between
-sequential redefinitions of a macro and mulitple definitons that cannot
-take effect in a single configuration (because they appear in different
-branches of a Cpp conditional or are otherwise guarded to prevent conflicts).
+sequential redefinitions of a macro and multiple definitions that cannot
+take effect in a single configuration (say, because they appear in
+different branches of a Cpp conditional).
 
-This graph shows a great deal of variation.  All macros defined by bc have
-only one or two different expansions, but more than 50\% of all macros
-defined by remind expand to more than eight different texts.
+This graph shows a great deal of variation.  For example, all macros
+defined by bc have only one or two different expansions, but more than 50\%
+of all macros defined by remind expand to more than eight different texts.
 
 In all but three packages, at least 87\% of all macros are defined five or
 fewer times.  In gawk and glibc, such macros represent 83\% and 81\% of all
@@ -578,10 +576,9 @@ the macro invocation occurs in C code, in Cpp code (which is further broken
 down into conditional tests and definition bodies), in both, or in neither
 (i.e., no uses).  
 
-No package expanded all of its defined macros; two did not expand as many
-as 40\% of the defined macros.  The dominant usage was in C code only;
-these uses don't, therefore, have any affect on conditional compilation
-(for example).
+No package expanded all of its defined macros; two expanded fewer than 70\%
+of the defined macros.  The dominant usage was in C code only; these uses
+don't, therefore, have any affect on conditional compilation (for example).
 
 
 \section{Categorization}
@@ -594,7 +591,10 @@ uses to aid this categorization.
 
 In addition to classifying each macro as taking arguments or not, our tool
 identifies the following specific categories (and a number of more
-rarely-used ones omitted for reasons of space):
+rarely-used ones omitted for reasons of space).  All of the examples given
+are taken from the packages studied and were chosen for clarity and brevity
+rather than as examples of complicated or difficult-to-understand code.
+
 \begin{description}
   \sloppy
   \emergencystretch=2em
@@ -635,7 +635,7 @@ to a local variable, however, demands that such a variable exist wherever
 the macro is invoked, and assigns to different variables at different
 invocations.\footnote{By contrast, LCLint considers assignment to a macro
   argument dangerous but does not appear to check for assignments to local
-  variables.}
+  variables.~\cite{Evans:LCLint}}
 
 % Computed ``10% use assignment'' from CATEGORIES_NI lines of *.stat files.
 
@@ -664,7 +664,7 @@ invocations.\footnote{By contrast, LCLint considers assignment to a macro
   macros make essential use of the unique features of the preprocessor.
   Our framework separately categorizes a number of such macros, including
   those that expand to a reserved word (such as {\tt \#define private
-  static}, mentioned above), those which expand to a delimiter (such as
+  static}, mentioned above), those that expand to a delimiter (such as
 {\tt \#define AND ;}), and those with mismatched parentheses, brackets, or
 braces.  The latter are often used to create a block and perform actions
 that must occur at its beginning and end, as for \verb|BEGIN_GC_PROTECT|
@@ -716,7 +716,7 @@ all that often or missed ones that are actually frequent.)]]
 
 Figure~\ref{fig:categorization} shows the percentage of macros that fit
 into these categories for each package.  Overall, 83\% of macros are
-expressions\,---\,mostly constants; these, and the 7\% which are null
+expressions\,---\,mostly constants; these, and the 7\% that are null
 defines, should be easy to understand and/or translate.  Another five
 percent are statements, most of which are also straightforward
 (complications include scoping and semicolon swallowing).  That only 0.2\%
@@ -774,44 +774,40 @@ most of those failures categorizable.
 
 
 
-\section{Related Work}
+\section{Related work}
 \label{sec:related}
 
 We could find no other empirical study of the use of the C preprocessor nor
 any other macro processor.  However, a number of other efforts provide
-guidance on how to use C macros effectively, provide tools for
-checking macro usage for given programs, etc.
+guidance on how to use C macros effectively, provide tools for checking
+macro usage for given programs, etc.
 
-Carroll and Ellis state that ``almost all uses of macros can be
-eliminated from C++ libraries''~\cite[p.~146]{Carroll95}. 
-They list eight categories of macro usage and explain how to convert
-them into C++ mechanisms.  They do not
-discuss automatic conversion, but  focus on instructing the
-software engineer on better ways to do Cpp-like things.
+Carroll and Ellis state that ``almost all uses of macros can be eliminated
+from C++ libraries''~\cite[p.~146]{Carroll95}.  They list eight categories
+of macro usage and explain how to convert them into C++ mechanisms.  They
+do not discuss automatic conversion, but focus on instructing the software
+engineer on better ways to do Cpp-like things.
 
-Similarly, a number of organizations provide hints about effective
-ways to the use the C preprocessor.  The GNU documentation, for example,
-discusses a set of techniques including simple macros, argument
-macros, predefined macros, stringification macros, concatenation
-macros, undefining and redefining
-macros.
-It also identifies a set of ``pitfalls and subtleties of
-macros''; these are much like some of the problems our analysis tool
-identifies, as discussed below.  Our effort not only categorizes
-problems, but it also determines the frequency of appearance of those
-problems and discovers other idiosyncratic uses.
+Similarly, a number of organizations provide hints about effective ways to
+the use the C preprocessor.  The GNU documentation, for example, discusses
+a set of techniques including simple macros, argument macros, predefined
+macros, stringization macros, concatenation macros, undefining and
+redefining macros.  It also identifies a set of ``pitfalls and subtleties
+of macros''; these are much like some of the problems our analysis tool
+identifies, as discussed below.  Our effort not only categorizes problems,
+but it also determines the frequency of appearance of those problems and
+discovers other idiosyncratic uses.
 
-A number of tools check whether specific C programs
-satisfy particular constraints.  The lint program checker, distributed
-with most Unix systems, checks for potentially problematic uses of C\@.
-The implementation of lint is complicated by the fact
-that it tries to replicate significant functions of both the C
-compiler and the preprocessor.
+A number of tools check whether specific C programs satisfy particular
+constraints.  The lint program checker, distributed with most Unix systems,
+checks for potentially problematic uses of C\@.  The implementation of lint
+is complicated by the fact that it tries to replicate significant functions
+of both the C compiler and the preprocessor.
 
 LCLint performs many of lint's checks and also
 allows the programmer to add annotations which enable additional
 checks~\cite{Evans-pldi96,Evans-fse94}.
-LCLint's  optionally checks  on function-like
+LCLint's  optionally checks function-like
 macros\,---\,that is, those which take arguments\,---\,include checking for
 macro arguments on the left hand side of assignments, checking for statements
 playing the role of expressions, and checking for consistent return types.
@@ -821,7 +817,7 @@ playing the role of expressions, and checking for consistent return types.
 %syntactically equivalent to a statement when it is invoked followed by
 %a semicolon $\ldots$, the type of the macro body must match the return
 %type of the corresponding function $\ldots$\footnote{From Section 8 of
-%David Evan's LCLint User's Guide, Version 2.2 (August 1996); larch-www.lcs.mit.edu:8001/\discretionary{}{}{}larch/\discretionary{}{}{}lclint/\discretionary{}{}{}guide/\discretionary{}{}{}guide.html}
+%David Evans's LCLint User's Guide, Version 2.2 (August 1996); larch-www.lcs.mit.edu:8001/\discretionary{}{}{}larch/\discretionary{}{}{}lclint/\discretionary{}{}{}guide/\discretionary{}{}{}guide.html}
 %[FIX: That footnote should really be a reference instead.]
 %\end{quote}
 %[Fix: that quotation is really easy to nitpick:
@@ -845,7 +841,6 @@ for each line, which preprocessor macros it depends upon, and display that
 information in a lattice.  They do not determine how macros depend upon one
 another directly, only by their nesting in {\tt \#if}, and the information
 conveyed is about the program as a whole.
-
 
 
 % Not really right:  Don't want the ``References'' section head to be small.
