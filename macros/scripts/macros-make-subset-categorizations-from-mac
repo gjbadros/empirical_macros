@@ -1,0 +1,47 @@
+#!/uns/bin/perl -anw
+BEGIN {
+  my $i = 0;
+  %categoryname = (
+		      'uncategorized' =>$i+0,
+		      'being_categorized' =>$i+0,
+		      'multiply_categorized' =>$i+0,
+		      'failed_categorization' => $i++,
+		      'null_define' =>$i++,
+		      'expression' =>$i++,
+		      'expression_with_assignment' =>$i++,
+		      'expression_with_free_variables' =>$i++,
+		      'literal' =>$i++,
+		      'constant' =>$i++,
+		      'some_constant' =>$i++,
+		      'has_type_argument' => $i++,
+		      'macro_as_function' => $i++,
+		      'macro_as_type' => $i++,
+		      'assembly_code' => $i++,
+		      'syntax_tokens' => $i++,
+		      'expands_to_type' => $i++,
+		      'expands_to_reserved_word' => $i++,
+		      'statement' => $i++,
+		      'mismatched_entities' => $i++,
+		      'token_pasting' => $i++,
+		      'stringization' => $i++,
+		      'LAST' =>$i++
+		     );
+
+sub marks_for_categories {
+  $listref = $_[0];
+  my $c;
+  my $str = " " x ($categoryname{"LAST"});
+  foreach $c (@$listref) {
+    my $offset = $categoryname{$c};
+    substr($str,$offset,1) = "*";
+  }
+  return $str;
+}
+}
+
+use English;
+next if /^[#%]/;
+next if /FromInclude<>/;
+my @cat = split(/,/,$F[8]);
+print marks_for_categories(\@cat);
+print "\n";

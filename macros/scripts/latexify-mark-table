@@ -1,0 +1,61 @@
+#!/uns/bin/perl
+BEGIN {
+print '
+%\usepackage{graphics}
+\newcommand{\black}{\ensuremath{\blacksquare}}
+\begin{tabular}{|r|*{18}{c|}}\hline
+\rotatebox{90}{\# Occurences} &
+\rotatebox{90}{failed categorization} &
+\rotatebox{90}{null define} &
+\rotatebox{90}{expression} &
+\rotatebox{90}{expression with assignment} &
+\rotatebox{90}{expression with free variables} &
+\rotatebox{90}{literal} &
+\rotatebox{90}{constant} &
+\rotatebox{90}{some constant} &
+\rotatebox{90}{has type argument} &
+\rotatebox{90}{macro as function} &
+\rotatebox{90}{macro as type} &
+\rotatebox{90}{assembly code} &
+\rotatebox{90}{syntax tokens} &
+\rotatebox{90}{expands to type} &
+\rotatebox{90}{expands to reserved word} &
+\rotatebox{90}{statement} &
+\rotatebox{90}{mismatched entities} &
+\rotatebox{90}{token pasting} &
+\rotatebox{90}{stringization}
+\\\\\\hline
+';
+}
+
+END {
+print '
+\end{tabular}
+';
+}
+
+if (defined $ARGV[0]) {
+  $sum = $ARGV[0];
+  shift;
+  $pct = 1;
+} else {
+  $pct = 0;
+}
+
+while (<>) {
+  ($count,$marks) = /^( +\d+)\s(.*)$/;
+
+  print STDERR $count, "\n";
+  @m = split(//,$marks);
+  $out = join("&", @m);
+  $out =~ s/\*/\\black/g;
+
+  if ($count > .005) {
+    if ($pct == 0) {
+      print "$count &"; 
+    } else {
+      printf "%3.1f\\% &",(100*$count/$sum + 0.05);
+    }
+    print $out, ' \\\\\\hline', "\n";
+  }
+}
