@@ -98,8 +98,8 @@ sub paren_change ($)
 # Return index of first close paren which doesn't match a preceding open paren,
 # or $false if no match is found.  Ignores strings, braces, etc.
 # Optional second argument says where to start (right after the open, usually).
-sub find_close_paren ($;$$)
-{ my ($exp, $pos) = check_args_range(1, 3, @_);
+sub find_close_paren ($;$)
+{ my ($exp, $pos) = check_args_range(1, 2, @_);
   if (!defined($pos))
     { $pos = 0; }
   # print "find_close_paren: $exp\n";
