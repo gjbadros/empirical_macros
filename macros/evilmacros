@@ -813,12 +813,14 @@ my %cppcmdcount = (
    "else" => 0,
    "endif" => 0,
    "error" => 0,
+   "ident" => 0,
    "if" => 0,
    "ifdef" => 0,
    "ifndef" => 0,
    "import" => 0,
    "include" => 0,
    "include_next" => 0,
+   "line" => 0,
    "pragma" => 0,
    "undef" => 0,
    "%OTHER%" => 0,
@@ -1420,6 +1422,8 @@ sub output_stats
   }
 
   # -F = dump the function information
+  # Want a histogram of this info?  try something like:
+  # awk '$0 !~ /^[%#]/ {print $2}' < gzip.func | sort -n | uniq -c
   if ($opt_F) {
     select FUNCTIONS;
     print "#functionId cMacroExpansions (%the macros)\n";
