@@ -1,0 +1,3 @@
+#!/uns/bin/zsh
+awk '/^#LINESNI#/ { nextln = 1; next} nextln==1 {lines = $2; nextln = 0; next} /^DIRECTIVES_NI:/ {$1 = ""; $2 = ""; printf lines " " FILENAME " " $0 "\n"}' "$@" | sed 's/1\?\.stat //'
+

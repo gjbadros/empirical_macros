@@ -1,0 +1,9 @@
+#!/uns/bin/zsh -
+find_c=(find . \( -name UNUSED -o -name CVS -o -name SCCS -o -name RCS \) -prune -o \( -name "*.[chCH]" -o -name "*.[cC][cC]" -o -name "*.[cC][pP][pP]" \) -print)
+
+for i in *(/); do
+  if [[ -s $TM/${i%%-*}.stat ]];  then pushd $i
+    $find_c | xargs wc -l | grep total
+    popd
+  fi
+done

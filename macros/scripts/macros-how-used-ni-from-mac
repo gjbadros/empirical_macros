@@ -1,0 +1,2 @@
+#!/uns/bin/zsh -
+awk < "$@" 'NR>1 && $0 !~ /^[%#]/ && $9 !~ /^FromInclude/ {print $7}' | sort | uniq -c

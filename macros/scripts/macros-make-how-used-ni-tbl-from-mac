@@ -1,0 +1,3 @@
+#!/uns/bin/zsh
+echo "Package CodeOnly CppAndCode CppOnly NoUses"
+for i in "$@"; ( echo $i; macros-how-used-ni-from-mac $i ) | awk 'END { print file " " c1 " " c2 " " c3 " " c4 } NR == 1 {file = $0} NR == 2 {c1 = $1} NR == 3 { c2 = $1 } NR == 4 {c3 = $1} NR == 5 {c4 = $1}' | sed 's/1\?\.mac / /' | awk 'NF == 5'

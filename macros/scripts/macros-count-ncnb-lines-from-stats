@@ -1,0 +1,2 @@
+#!/uns/bin/zsh -
+grep -A1 '#LINESNI#' "$@" | egrep -v '#|--' | sed 's/^.*-//' | awk '{sum += $2} END {print sum}'

@@ -1,0 +1,25 @@
+#!/uns/bin/zsh
+awk 'function pct(x) {return 100*x/totLine}; \
+/^CATEGORIES_NI:/ { \
+cNull = $16; sNull += cNull; \
+cLit = $4 + $11 + $17; sLit += cLit; \
+cExp = $6 + $7 + $8 + $12; sExp += cExp; \
+cStm = $18; sStm += cStm; \
+cStrPast = $19 + $21; sStrPast += cStrPast; \
+cSyntax = $5 + $10 + $13 + $14 + $20; sSyntax += cSyntax; \
+cFail = $2 + $3 + $9 + $15 + $22; sFail += cFail; \
+totLine = cNull + cLit + cExp + cStm + cStrPast + cSyntax + cFail;
+print FILENAME, pct(cNull), pct(cLit), pct(cExp), pct(cStm), pct(cStrPast), pct(cSyntax), pct(cFail); \
+totLine = 0;
+} \
+BEGIN { \
+OFS=" & "; \
+OFMT="%2.2f"; \
+ORS="\\\\\\hline\n"; \
+print "\\begin{tabular}{|l|c|c|c|c|c|c|c|}\\hline\n" "Package", "Null define", "Literal", "Expression", "Statement", "Stringization and pasting", "Other syntatic macros", "Failed classification" } \
+END { \
+totLine = sNull + sLit + sExp + sStm + sStrPast + sSyntax + sFail;
+print "\\hline\nTotal", pct(sNull), pct(sLit), pct(sExp), pct(sStm), pct(sStrPast), pct(sSyntax), pct(sFail); \
+ORS="\n";
+print "\\end{tabular}" } ' \
+"$@" | sed 's/.stat / /'

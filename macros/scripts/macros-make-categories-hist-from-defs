@@ -1,0 +1,2 @@
+#!/uns/bin/zsh -
+awk < "$@" '$0 !~ /^[#%]/ { print $NF}' | sort | uniq -c

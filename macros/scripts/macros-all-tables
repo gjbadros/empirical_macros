@@ -1,0 +1,25 @@
+#!/uns/bin/zsh
+cd /tmp/gjb/newdata
+NT=~/macros/newtables
+
+macros-make-package-sizes-tbl-from-stat *.stat > $NT/package_and_sizes-tbl.txt
+
+macros-make-def-frequency-tbl-from-mac *.mac
+rm -f $NT/freq_of_def-tbl.txt
+echo *.freqdef | xargs -n12 paste freqdef.buckets >> $NT/freq_of_def-tbl.txt
+
+latexify $NT/freq_of_def-tbl.txt > $NT/freq_of_def-tbl.tex
+
+
+macros-make-use-frequency-tbl-from-mac *.mac
+rm -f $NT/freq_of_use-tbl.txt
+echo *.frequse | xargs -n12 paste frequse.buckets >> $NT/freq_of_use-tbl.txt
+
+latexify $NT/freq_of_use-tbl.txt > $NT/freq_of_use-tbl.tex
+
+macros-make-how-used-ni-tbl-from-mac *.mac | sed -e 's/ \+/	/g' > $NT/where_uses-tbl.txt
+
+latexify $NT/where_uses-tbl.txt > $NT/where_uses-tbl.tex
+
+# This one creates a latex file directly
+macros-make-categories-tbl-from-stat-pct *.stat > $NT/categories-tbl.tex

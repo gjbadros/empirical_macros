@@ -1,0 +1,28 @@
+#!/uns/bin/perl -w
+sub sum_through {
+  my $i = $_[0];
+  for (; $i >= 0; $i--) {
+    if (defined($cum[$i])) { return $cum[$i]; }
+  }
+  return 0;
+}
+    
+$file = shift @ARGV;
+
+$total = <>;
+
+exit if $total == 0;
+
+while (<>) {
+  @F = split(' ');
+  $cum[$F[0]] = $F[1];
+}
+
+print "$file\n";
+for ($i = 1; $i < 10; $i++) {
+#  printf "%2d %2.2f\n", $i, 100*sum_through($i)/$total;
+  printf "%2.2f\n", 100*sum_through($i)/$total;
+}
+
+#printf "%2d %2.2f\n", 10, 100;
+printf "%2.2f\n", 100;
