@@ -4530,10 +4530,12 @@ do_elif (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *limi
   int cchOffsetBranchStart = 0;
   HOST_WIDE_INT value;
 
+
   if (pfile->if_stack == CPP_BUFFER (pfile)->if_stack) {
+    cchOffsetBranchStart = CchOffset_internal(pfile) + 2;
     cpp_error (pfile, "`#elif' not within a conditional");
-    gjb_call_hooks_i_i_sz_sz_i(CPP_OPTIONS(pfile),HI_DO_ELIF,cchOffsetStart,cchOffsetEnd,
-			   "@BAD@","@BAD@",value);
+    gjb_call_hooks_i_i_i_sz_sz_i_i(CPP_OPTIONS(pfile),HI_DO_ELIF,cchOffsetStart,cchOffsetEnd,fSkip_IfWasTrue,
+			   "@BAD@","@BAD@",value, cchOffsetBranchStart);
     return 0;
   } else {
     if (pfile->if_stack->type != T_IF && pfile->if_stack->type != T_ELIF) {
@@ -4555,6 +4557,7 @@ do_elif (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *limi
     /* Eval it anyway, for the hook */
     value = eval_if_expression (pfile, buf, limit - buf); /* FIXNOWGJB: may need to remove this */
     pchEndExpr = CPP_BUFFER(pfile)->cur;
+    cchOffsetBranchStart = CchOffset_internal(pfile) + 2;
     skip_if_group (pfile, 0);
     fSkip_IfWasTrue = 1;
     }
@@ -4938,7 +4941,7 @@ do_else (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *limi
   skip_rest_of_line (pfile);
   cchOffsetEnd = pfile->buffer->cur - pfile->buffer->buf + 1;
   pchEndGarbage = ip->cur+1;
-  cchOffsetBranchStart = CchOffset_internal(pfile) + 2;
+  cchOffsetBranchStart = CchOffset_internal(pfile) + 3;
 
   if (pfile->if_stack == CPP_BUFFER (pfile)->if_stack) {
     cpp_error (pfile, "`#else' not within a conditional");
