@@ -16,4 +16,8 @@ extern int fShouldParse;
 
 extern int ct_yydebug;
 
+int  FIsSpeculative();
+char * SzIsSpeculative();
+ 
+
 #endif _CPPMAIN_H_
