@@ -1,4 +1,4 @@
-#!/uns/bin/zsh -
+#!/uns/bin/zsh -f
 # macros-make-data
 
 if [[ $# != 1 ]]; then
@@ -13,6 +13,7 @@ cd $PKG
 for i in *(/); do 
   echo $i
   pushd $i
-  find-c | em_analyze -i -t -d $TM:${i%%-*} > $TM/${i%%-*}.out 2> $TM/${i%%-*}.err
+    ( cat c-files-listing || find-c ) \
+     | em_analyze -i -t -d $TM:${i%%-*} > $TM/${i%%-*}.out 2> $TM/${i%%-*}.err
   popd
 done
