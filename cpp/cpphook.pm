@@ -11,6 +11,8 @@ use enum_node_type;
 use em_util;
 use vars qw( *CHOUT @Hooks );
 use Boolean;
+#use Data::Dumper;
+
 
 sub AddHook {
   my ($indexname,$fnref) = @_;
@@ -433,7 +435,6 @@ sub do_xifdef {
   !$fSkipping?"Not ":"", "skipped\n";
   print CPP ": @[$s_start - $s_end]\n";
   if ($fSkipping) {
-    print STDERR "#$fname:(put-face-property-if-none $s_branch_start $s_branch_end \'font-lock-reference-face)\n";
     print TPSOURCE "#$fname:(put-face-property-if-none $s_branch_start $s_branch_end \'font-lock-reference-face)\n";
     print TPSOURCE "#$fname:(add-text-property $s_branch_start $s_branch_end \'doc \"Skipped due to $kind $conditional\")\n";
   }
@@ -446,6 +447,12 @@ sub do_ifdef {
   cpp::YYPushStackState();
   @state_stack = cpp::ParseStateStack();
   print CPP ": Stack: @state_stack\n";
+  if ($fSkipping) {
+    print STDERR "Pushing skipped branch\n";
+    print STDERR ": ParseStateStack: ", join(",",cpp::ParseStateStack()), "\n";
+    cpp::YYPushStackState();
+    cpp::PushBuffer($skipped);
+  }
 }
 
 sub do_ifndef {
@@ -456,6 +463,18 @@ sub do_ifndef {
   @state_stack = cpp::ParseStateStack();
   print CPP ": Stack: @state_stack\n";
 }
+
+sub pop_perl_buffer {
+  my ($cbb) = @_;
+  print CPP "POP_PERL_BUFFER, $cbb buffers back\n";
+  print STDERR ": ParseStateStack: ", join(",",cpp::ParseStateStack()), "\n";
+  if (cpp::YYFCompareTopStackState()) {
+    print STDERR ": Identical!\n";
+  }
+  cpp::YYPopAndRestoreStackState();
+  print STDERR ": After ParseStateStack: ", join(",",cpp::ParseStateStack()), "\n";
+}
+
 
 sub do_else {
   my ($s_start,$s_end, 
@@ -520,7 +539,7 @@ sub Got_token {
   print TOKEN ": From $mname\n";
   print TOKEN ": Argno = $argno\n";
   if ($raw =~ m/^[\w\$]+$/) {
-    print TOKEN ": ", cpp::FLookupSymbol($raw)? "Found symbol" : "Not found", "\n";
+    print TOKEN ": lookup: ", cpp::FLookupSymbol($raw)? "Found symbol" : "Not found", "\n";
   }
 
   my $end = cpp::CchOutput()+1;
@@ -594,6 +613,7 @@ AddHook("FUNCTION",\&do_function);
 AddHook("FUNC_CALL",\&do_func_call);
 AddHook("ANNOTATE",\&annotate);
 AddHook("POP_BUFFER",\&pop_buffer);
+AddHook("POP_PERL_BUFFER",\&pop_perl_buffer);
 
 
 1;
