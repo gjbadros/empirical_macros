@@ -544,7 +544,7 @@ my %macros = ();	  # for each macro, list of indexes for info about it
 			  # (first list element is number of following elements)
 
 # Also want to have summary info true about all definitions...
-use vars qw(@mname @margs @mbody @mfile @mline
+use vars qw(@mname @margs @mbody @mfile @mline @mplines
 	    @mbody_noc %mfreevars @mfreefuns
 	    @mdependenton @mtype @mcategory @mevilness);
 # These are for aggregate information.  Keep it for all macros, or just
@@ -580,7 +580,7 @@ $merge_cpp_if_branches = $false;
 
 # For getline():
 # These can't be declared with "my" because they're dynamically bound
-use vars qw($getline_nocomment $getline_simplify $getline_nocpp);
+use vars qw($getline_nocomment $getline_simplify $getline_nocpp $getline_physical_lines);
 $getline_nocomment = $false;
 $getline_simplify = $false;
 $getline_nocpp = $false;
@@ -607,7 +607,7 @@ sub find_macro_definitions
   for (; $ifiles <= $#files; $ifiles++)
     { $current_file = $files[$ifiles];
       if ($opt_v)
-	{ print STDERR $current_file . "\n"; }
+	{ print STDERR "file: \"$current_file\"\n"; }
       open(INPUT,$current_file) or next; # skip to next file if open fails
       # Commented out to quiet compiler
       # $files{$current_file} = 1;
@@ -628,7 +628,7 @@ sub find_macro_definitions
 # trailing space), enter it into the appropriate global arrays
 sub process_macro_definition
 {
-  my ($def) = check_args(1, "process_macro_definition", caller, @_);
+  my ($def,$macro_physical_lines) = check_args(2, "process_macro_definition", caller, @_);
   # print "process_macro_definition <<$def>>\n";
   my ($name, $args, $body) = macroparse($def);
 
@@ -648,6 +648,7 @@ sub process_macro_definition
   $mname[$thisnum] = $name;
   $margs[$thisnum] = $args;
   $mbody[$thisnum] = $body;
+  $mplines[$thisnum] = $macro_physical_lines;
   # @mdependenton[$thisnum] = @dependenton;
   { my $i;
     $mdependenton[$thisnum][0] = @dependenton;
@@ -904,6 +905,8 @@ sub test_typedecl_regexp
 
 my $incomment = $false;		# in /* */ style comment
 my $instring = $false;
+my $uiv_seen_code = $false;
+
 # Shouldn't be in a character constant across lines.
 # my $incharconst = $false;
 use vars '$commaop';		# not "my" because dynamically bound
@@ -932,6 +935,7 @@ sub getline
 { my ($dont_pop) = check_args_range(0, 1, "getline", caller, @_);
   if (!defined($dont_pop))
     { $dont_pop = $false; }
+  $getline_physical_lines = 0;
 
   if ($instring || $incomment)
     { mdie("Bad instring $instring or incomment $incomment"); }
@@ -943,12 +947,13 @@ sub getline
       #gd# @dependenton = shift(@getline_ungotdependenton);
       #gd# return shift(@getline_ungotlines);
       $result = shift(@getline_ungotlines);
+      $getline_physical_lines++;
     }
   else
     { if (not ($result = <INPUT>)) #do not update physical lines -- failed read
 	{ return $result; }
-      $physical_lines++;
-      $logical_lines++;
+      $getline_physical_lines++;
+      $logical_lines++ if $finding_macro_defs;
 
       $result = updateinvars($result);
       # perhaps check for $mname and mention it in message if it's set
@@ -962,7 +967,7 @@ sub getline
 	      $result = $PREMATCH;	# remove backslash and possibly newline
 	      my $nextline;
 	      if ($nextline = <INPUT>)
-		{ $physical_lines++;
+		{ $getline_physical_lines++;
 		  # Not a logical line-- do not increment it
 		  $nextline = updateinvars($nextline);
 		  $result = append_lines($result, $nextline);
@@ -979,21 +984,21 @@ sub getline
 	  while ($incomment)
 	    { my $nextline;
 	      if ($nextline = <INPUT>)
-		{ $physical_lines++;
-		  $logical_lines++;
+		{ $getline_physical_lines++;
+		  $logical_lines++ if $finding_macro_defs;
 		  $nextline = updateinvars($nextline);
 		  $result = append_lines($result, $nextline); }
 	      else
 		{ evilprint("dangerous: file ends in comment:\n    $result");
-		  $incomment = 0; } }
+		  $incomment = $false; } }
 
 	  # Not "while ($instring) ..." because processing continuation lines
 	  # takes priority over simple concatenation.
 	  if ($instring)
 	    { my $nextline;
 	      if ($nextline = <INPUT>)
-		{ $physical_lines++;
-		  $logical_lines++;
+		{ $getline_physical_lines++;
+		  $logical_lines++ if $finding_macro_defs;
 		  $nextline = updateinvars($nextline);
 		  # Strict ANSI C does not permit newlines in string constants;
 		  # perhaps warn.
@@ -1002,13 +1007,19 @@ sub getline
 		}
 	      else
 		{ evilprint("dangerous: file ends in string:\n    $result\n");
-		  $instring = 0; } }
+		  $instring = $false; } }
 	} }
+
+  #print STDERR "GETLINE $getline_physical_lines, $finding_macro_defs: $result";
+  if ($finding_macro_defs) {
+    $physical_lines += $getline_physical_lines;
+  }
 
   # FIX: Check for macro uses here
 
   if (($result =~ /^\#/) && !$getline_nocpp)
     { # Preprocessor line; usually just return "\n";
+      $cpp_physical_lines += $getline_physical_lines if $finding_macro_defs;
       return getline_handle_preprocessor_line($result);
     }
 
@@ -1184,6 +1195,8 @@ sub updateinvars
   my ($remaining) = check_args(1, "updateinvars", caller, @_);
   my $result;
   my $computeresult = ($getline_nocomment || $getline_simplify);
+  $uiv_seen_code = $false;
+
   if ($computeresult)
     { $result = ""; }
   else
@@ -1196,13 +1209,14 @@ sub updateinvars
 	    { if ($computeresult && !$getline_nocomment)
 		{ $result .= $PREMATCH . $MATCH; }
 	      $remaining = $POSTMATCH;
-	      $incomment = 0; }
+	      $incomment = $false; }
 	  else
 	    { if ($computeresult && !$getline_nocomment)
 		{ $result .= $remaining; }
-	      return $result; } }
+	      goto UIV_RETURN; } }
       elsif ($instring)
-	{ # print "in string, processing $remaining";
+	{ $uiv_seen_code = $true;
+	  # print "in string, processing $remaining";
 	  if ($remaining =~ m/$non_escaped_double_quote_re/o)
 	    # Found a non-escaped double quote
 	    { # print "non-escaped double quote: $result|$remaining|$PREMATCH|$MATCH|$POSTMATCH\n";
@@ -1213,12 +1227,12 @@ sub updateinvars
 		    { $result .= $PREMATCH . $MATCH; } }
 	      # print "post-nonescdquote: $result|$remaining\n";
 	      $remaining = $POSTMATCH;
-	      $instring = 0; }
+	      $instring = $false; }
 	  else
 	    { # print "$current_file:@{[ current_line_no() ]}: in string after line $_[0]";
 	      if ($computeresult && !$getline_simplify)
 		{ $result .= $PREMATCH . $MATCH; }
-	      return $result; } }
+	      goto UIV_RETURN; } }
       # If not instring, \" suffices instead of the more complicated
       # regexp that checks for leading backslashes.
       elsif ($remaining =~ m/\/[\*\/]|[\'\"]/) #'HACKCOLOR
@@ -1250,23 +1264,36 @@ sub updateinvars
 	    { if ($computeresult)
 		{ $result .= $match; }
 	      $remaining = $POSTMATCH;
-	      $instring = 1; }
+	      $instring = $true; }
 	  elsif ($match eq "//")
-	    { if ($computeresult && !$getline_nocomment)
+	    { if ($PREMATCH !~ /^\s*$/)
+		{ $uiv_seen_code = $true; }
+	      if ($computeresult && !$getline_nocomment)
 		{ $result .= $match . $postmatch; }
-	      return $result; }
+	      goto UIV_RETURN; }
 	  elsif ($match eq "/*")
-	    { if ($computeresult && !$getline_nocomment)
+	    { $remaining = $POSTMATCH;
+	      if ($PREMATCH !~ /^\s*$/)
+		{ $uiv_seen_code = $true; }
+	      if ($computeresult && !$getline_nocomment)
 		{ $result .= $match . $postmatch; }
-	      $remaining = $POSTMATCH;
-	      $incomment = 1; }
+	      $incomment = $true; }
 	  else
 	    { mdie("updateinvars: what match?  $match in $_[0]\n"); } }
       else
-	{ if ($computeresult)
+	{ if ($remaining !~ /^\s*$/)
+	    { $uiv_seen_code = $true; }
+	  if ($computeresult)
 	    { $result .= $remaining; }
-	  return $result; }
+	   goto UIV_RETURN; }
     }
+  
+  UIV_RETURN: 
+  if ($uiv_seen_code && $finding_macro_defs) {
+    $ncnb_physical_lines++;
+    print "SC: $result";
+  }
+  return $result;
 }
 
 # All backslash line continuations have already been processed; no
@@ -1417,7 +1444,7 @@ sub getline_handle_preprocessor_command
       push(@dependenton, negate_if_condition($last)); }
   elsif ($cpp_cmd eq "define")
     { if ($finding_macro_defs)
-	{ process_macro_definition($cpp_cmd_arg); }
+	{ process_macro_definition($cpp_cmd_arg,$getline_physical_lines); }
     }
   elsif ($cpp_cmd eq "include")
     {
@@ -1438,7 +1465,10 @@ sub getline_handle_preprocessor_command
 	  my $complete_filename = complete_include_pathname($include_file);
 	  # Check to see if we're already reading this file anyway
 
-	  if (scalar(grep($_ eq $complete_filename, @files_included)) == 0) {
+	  # if we resolved the filename to a real file,
+	  # and we've not already added the file to our list we need to parse
+	  if (defined($complete_filename) 
+	      && scalar(grep($_ eq $complete_filename, @files_included)) == 0) {
 	    # FIX: may want to insert this where we are
 	    # or do some sort of recursive reading of *all* included files
 	    # WIERD: Why does this cause a problem in parsing a macro argument
@@ -1473,8 +1503,7 @@ sub discard_to_endif
   while ($if0depth > 0)
     { if (not ($line = <INPUT>))
 	{ mdie("File ends in \#ifdef 0"); }
-      $physical_lines++;
-      $logical_lines++;
+      $logical_lines++ if $finding_macro_defs;
       # I'll trust that no comment or string contains anything that
       # looks like a preprocessor command.  Strictly speaking, I should
       # use getline and/or updateinvars, because anything in an #ifdef
@@ -1486,6 +1515,7 @@ sub discard_to_endif
 	{ $if0depth++; }
       elsif ($line =~ m/^\#\s*endif\b/o)
 	{ $if0depth--; } }
+  return undef;
 }
 
 # This handles
@@ -2107,7 +2137,7 @@ sub get_macro_call_types
   for (; $ifiles <= $#files; $ifiles++)
     { $current_file = $files[$ifiles];
       if ($opt_v)
-	{ print STDERR "file $current_file ($files{$current_file})\n"; }
+	{ print STDERR "file: \"$current_file\" ($files{$current_file})\n"; }
       # open(INPUT,$current_file) or next; # skip to next file if open fails
       open(INPUT,$current_file) or next; # skip to next file if open fails
       # Commented out to quiet compiler
@@ -3116,9 +3146,10 @@ sub check_macro_body
   my $result = 0;
   if ($#_ != 0) { mdie("Wrong number of arguments to check_macro_body."); }
   # print "check_macro_body: $body\n";
-  my $indquote = 0;
-  my $insquote = 0;
-  my $incomment = 0;
+  # FIX: These variables do not appear to be used
+  my $indquote = $false;
+  my $insquote = $false;
+  my $incomment = $false;
   my @nesting = ();
   while ($body =~ m/[\]\[(){}\"\'\#]|\/\/|\/\*|\*\//) #'HACKCOLOR
     # Found paren, quote, cpp directive, or comment
@@ -3333,12 +3364,17 @@ sub get_include_path {
 # directory that has $file in it
 sub complete_include_pathname {
   my ($file) = check_args(1,"complete_include_pathname",caller,@_);
-  my $complete_file;
+  my $complete_file_try;
+  my $complete_file = undef;
   foreach (@include_path) {
-    $complete_file = $_ . "/$file";
-    last if -f $complete_file;
+    $complete_file_try = $_ . "/$file";
+    if (-f $complete_file_try) {
+      $complete_file = $complete_file_try;
+      last;
+    }
   }
   # print STDERR "Found $file to be $complete_file\n";
+  # returns undefined if never set
   return $complete_file;
 }
 
