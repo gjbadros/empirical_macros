@@ -175,7 +175,7 @@ The use of "\relax{}" in the note prevents BibTeX from making a bad break
 @InProceedings{Krone94,
   author = 	 {Krone, Maren and Snelting, Gregor},
   title = 	 "On the Inference of Configuration Structures from Source Code",
-  booktitle = 	 {Proceedings of the 16th International Conference on Software Engineering},
+  booktitle = 	 ICSE94,
   year =	 1994,
   publisher =	 {IEEE Computer Society Press},
   month =	 {May},
@@ -285,6 +285,10 @@ Also CodeWizard, which implements the tests in Scott Myers's books:
      http://www.parasoft.com/wizard/papers/tech.htm
 
 
+PC-Lint:
+See http://www.gimpel.com, or call (610) 584-4261;  PC-Lint (runs on PCs
+under NT) is $239, FlexeLint (the Unix offering) is more (they don't say
+in the ad) and is distributed as shrouded source code.
 
 
 @InProceedings{SpencerC92,
@@ -389,6 +393,29 @@ They also break down the 166 uses of #ifdef into categories:
   number =       "3",
   year =         "1991",
 }
+
+
+@Article{KelseyCR98,
+  title = 	 "The Revised\(^{5}\) Report on the Algorithmic Language
+                 {S}cheme",
+  author = 	 "Richard Kelsey and William Clinger and Jonathan A. Rees",
+  journal =      "ACM SIG{\-}PLAN Notices",
+  volume =       33,
+  number =       9,
+  pages =        "26--76",
+  month =        sep,
+  year =         1998,
+  coden =        "SINODQ",
+  ISSN =         "0362-1340",
+  bibdate =      "Tue Sep 15 17:01:28 1998",
+  note =         "With H. Abelson, N. I. {Adams, IV}, D. H. Bartley, G.
+                 Brooks, R. K. Dybvig, D. P. Friedman, R. Halstead, C.
+                 Hanson, C. T. Haynes, E. Kohlbecker, D. Oxley, K. M.
+                 Pitman, G. J. Rozas, G. L. {Steele, Jr.}, G. J.
+                 Sussman, and M. Wand.",
+  acknowledgement = ack-nhfb,
+}
+
 
 @InProceedings{lfp86*151,
   author =       "Eugene Kohlbecker and Daniel P. Friedman and Matthias
@@ -496,6 +523,51 @@ actually trigger the problem.  No reports about running it on actual code
 [[Also see David A. Spuler, Check: A Better Checker for C, B Sc (Honours)
 Thesis, James Cook Universaity, Townsville, Australia (1990).]]
 
+
+@Unpublished{Lindig98:dagstuhl,
+  author = 	 "Christian Lindig",
+  title = 	 "Analysis of Software Variants",
+  note = 	 "Talk at  Schloss Dagstuhl Seminar on Program Comprehension and Software Reengineering",
+  year =	 1998,
+  month =	 mar # "~9--13"
+}
+Christian Lindig <lindig at ips.cs.tu-bs.de> gave a talk at Dagstuhl regarding
+analysis of software variants; the slides are
+  http://www.cs.tu-bs.de/softech/papers/#Papers
+  ftp://ftp.ips.cs.tu-bs.de/pub/local/softech/papers/lindig-dagstuhl-slides.ps.gz
+This is a use of concept analysis to analyze C preprocessor (Cpp)
+conditionals (#if), similar to Krone and Snelting.
+  Lindig suggests that this can be used to find redundant concepts:  either
+two conditions appear at an identical node of the lattice (those conditions
+control the same lines) or a node is and-reducible (is exactly the
+intersection of two other concepts/lattice nodes).  These redundant
+conditions can be removed if desired.
+A concept analysis tool written in C is available, but no empirical
+evaluation has been performed yet.
+  The full paper (in German) is lindig/98/tr-98-04.
+
+
+@TechReport{lindig/98/tr-98-04,
+  author =       "Christian Lindig",
+  title =        "Analyse von Softwarevarianten",
+  institution =  "TU Braunschweig, Institut f{\"u}r Programmiersprachen
+                 und Informationssysteme, Abt. Softwaretechnologie",
+  year =         "1998",
+  type =         "Informatik-Bericht",
+  number =       "98-04",
+  address =      "D-38106 Braunschweig",
+  month =        jan,
+  annote =       "Software-Quelltexte werden oft durch den Einsatz eines
+                 Pr{\"a}prozessors an verschiedenen Zielplattformen
+                 angepa{\"s}t. Aus einem Quelltext entstehen dabei durch
+                 den Pr{\"a}prozessor verschiedene Varianten der
+                 Software, die einen Variantenverband bilden. Formale
+                 Begriffsanalyse ist eine mathematische Theorie, mit
+                 deren Hilfe der Variantenverband von Quelltexten
+                 effizient bestimmt werden kann. Dar{\"u}berhinaus
+                 k{\"o}nnen Redundanzen in der Beschreibung der
+                 Variantenstruktur entdeckt und entfernt werden.",
+}
 
 
 
