@@ -221,7 +221,10 @@ sub evaluate_conditional ($)
 
   # Convert character, octal, and hexadecimal integer constants into decimal
   $exp =~ s/$char_literal_re/char_literal_as_int($1)/ge;
-  $exp =~ s/\b0x?[0-9]+\b/oct($MATCH)/ge;
+  $exp =~ s/\b0[0-9]+\b/oct($MATCH)/ge;
+  $exp =~ s/\b0x[0-9a-f]+\b/oct($MATCH)/ge;
+  # Strip trailing L from long integer constants
+  $exp =~ s/\b([0-9]+)L+\b/$1/g;
 
   # Replace other macro calls by UNKNOWNMACRO; this catches "defined(FOO)".
   while ($exp =~ /\b\w+\s*\(/)
@@ -439,9 +442,9 @@ sub eval_substituted_conditional ($)
 	  die "impossible"; }
     }
   # Skip unary +,-
-  elsif ($exp =~ /^\s*([~!])/)
+  elsif ($exp =~ /^[~!]/)
     { my $rand = $POSTMATCH;
-      my $op = $1;
+      my $op = $MATCH;
       my $val = eval_substituted_conditional($rand);
       if (is_unknown($val))
 	{ return $unknown; }
@@ -456,10 +459,13 @@ sub eval_substituted_conditional ($)
   elsif ($exp =~ /[~!]/)
     { print "File: $current_file\n";
       die "Should only find [~!] at beginning of expression: $exp"; }
-  elsif ($exp =~ /^\s*[-+]?[0-9]+\b\s*$/)
+  elsif ($exp =~ /^[-+]?[0-9]+$/)
     { return int($exp); }
-  elsif ($exp =~ /^\s*[_A-Za-z]\w*\b\s*$/)
+  elsif ($exp =~ /^[_A-Za-z][_A-Za-z0-9\$]*$/)
     { return $unknown; }
+  elsif ($exp =~ /^\#\s*[_A-Za-z][_A-Za-z0-9\$]*$/)
+    { # I don't think stringization is legal, nor how to deal with it.
+      return $unknown; }
   else
     { print "File: $current_file\n";
       die "What expression? $exp"; }
@@ -590,7 +596,11 @@ sub process_file ($)
 	{ $simple =~ s/^\#\s*//;
 	  if ($debug_cppp)
 	    { print "simple preprocessor line: $simple"; }    # ends in newline
-	  if ($simple =~ /^endif\b/)
+	  if ((scalar(@condition_stack) == 0) && ($simple =~ /^(el(se|if)|endif)\b/))
+	    { # This is an extra directive, perhaps an error or a file fragment.
+	      # Just pass it through.
+	      print OUTPUT $raw; }
+	  elsif ($simple =~ /^endif\b/)
 	    { my $thisvalue = pop(@condition_stack);
 	      my $needs_endif = pop(@elif_needs_endif);
 	      pop(@condition_value_stack);
