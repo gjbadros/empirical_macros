@@ -1,4 +1,8 @@
 #!/uns/bin/perl
+# checkargs -- check number of args in function calls
+# Michael D. Ernst <mernst@cs.washington.edu>
+# http://sdg.lcs.mit.edu/~mernst/software/checkargs.pm
+# Time-stamp: <2000-10-26 23:08:27 mernst>
 
 package checkargs;
 require 5.004;			# uses "for my $var"
@@ -10,7 +14,7 @@ use Carp;
 
 =head1 NAME
 
-checkargs -- Provide rudimentary argument checking for perl5 functions
+checkargs -- Check number of args in function calls
 
 =head1 SYNOPSIS
 
@@ -42,12 +46,13 @@ number are received, the program exits with an error message.
 Use of checkargs is not without cost:  profiling reveals that in one
 system, checkargs consumes 35% of all time.  To create a faster version of
 your program after you have thoroughly tested it, name the following script
-remove_check_args and run remove_check_args on perl source to create a
-faster version.
+remove_check_args and run remove_check_args on the perl source to create a
+faster version.  (You should probably keep around the original version,
+containing the checkargs calls, for future debugging.)
 
   #!/uns/bin/perl -wp
   # remove_check_args -- replace check_args_.* function calls by "@_"
-  # (check_args can easily consume 35% of a program's running time)
+  # (check_args may consume 35% or more of a program's running time)
   s/^(\s*{)?\s*\bcheck_args(|_at_least|_range)\s*\(.*;/$1||""/e;
   s/=\s*\bcheck_args(|_at_least|_range)\s*\(.*;/= \@_;/;
 
@@ -65,6 +70,7 @@ sub check_args ( $@ )
 {
   my ($num_formals, @args) = @_;
   my ($pack, $file_arg, $line_arg, $subname, $hasargs, $wantarr) = caller(1);
+  # Fake uses to satisfy shadowed-variables-perl: $pack $hasargs $wantarr.
   if (@_ < 1) { croak "check_args needs at least 7 args, got ", scalar(@_), ": @_\n "; }
   if ((!wantarray) && ($num_formals != 0))
     { croak "check_args called in scalar context"; }
@@ -86,6 +92,7 @@ sub check_args_range ( $$@ )
 {
   my ($min_formals, $max_formals, @args) = @_;
   my ($pack, $file_arg, $line_arg, $subname, $hasargs, $wantarr) = caller(1);
+  # Fake uses to satisfy shadowed-variables-perl: $pack $hasargs $wantarr.
   if (@_ < 2) { croak "check_args_range needs at least 8 args, got ", scalar(@_), ": @_"; }
   if ((!wantarray) && ($max_formals != 0) && ($min_formals !=0) )
     { croak "check_args_range called in scalar context"; }
@@ -104,6 +111,7 @@ sub check_args_at_least ( $@ )
 {
   my ($min_formals, @args) = @_;
   my ($pack, $file_arg, $line_arg, $subname, $hasargs, $wantarr) = caller(1);
+  # Fake uses to satisfy shadowed-variables-perl: $pack $hasargs $wantarr.
   # Don't do this, because we want every sub to start with a call to check_args*
   # if ($min_formals == 0)
   #   { die "Isn't it pointless to check for at least zero args to $subname?\n"; }

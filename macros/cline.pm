@@ -1,4 +1,7 @@
-#!/uns/bin/perl
+#!/uns/bin/perl -w
+# cline -- Read physical, logical, or full-token lines from C program files
+# Michael Ernst <mernst@cs.washington.edu>
+# Time-stamp: <2000-07-23 16:39:46 mernst>
 
 package cline;
 require 5.003;			# uses prototypes
@@ -35,17 +38,28 @@ cline -- Read physical, logical, or full-token lines from C program files
 
 =head1 DESCRIPTION
 
+cline is a lightweight approximate scanner and parser for C code.  It reads
+C programs and returns physical lines, logical lines (that may span line
+continuation directives), and full-token lines (that may span C tokens).
+It works in many cases even when the input does not strictly follow the C
+syntax, making it useful for programs containing syntax errors.  It is
+designed to operate on unpreprocessed C code.  It does not return a parse
+tree, but rather lines of text.
+
 I<get_spliced_cline>, I<get_fulltoken_cline>, and I<peek_fulltoken_cline>
 all return a five-element list of (raw_line, simplified_line,
 num_phys_lines, num_ncnb_lines, warnings), where warnings is a reference to
-an array of strings.  The optional argument to I<get_spliced_cline> causes
-it not to track comments or strings.  This permits processing of
-non-syntactic C code which is often found in CPP comments of the form "#if
-0 ... #endif".
+an array of strings.  Simplified lines contain no comments, string
+contents, or escaped newlines.  The optional argument to
+I<get_spliced_cline> causes it not to track comments or strings.  This
+permits processing of non-syntactic C code which is often found in CPP
+comments of the form "#if 0 ... #endif".
 
 I<cline_resetinvars> is used for abandoning internal state changes made by
 I<get_spliced_cline>, for example when end of file is unexpectedly
 encountered.
+
+Also see C::Scan, which tries to return a representation of a parsed C file.
 
 =head1 AUTHOR
 
