@@ -353,6 +353,16 @@ typedef enum hook_index_constants {
 ///% deep the stack is.  In particular, when that number is 0, 
 ///% the parser is not parsing a macro expansion any longer.
 
+  HI_POP_PERL_BUFFER,
+///% {$cbuffersDeep}
+///% Called once for each perl-pushed buffer that is popped off of the stack of
+///% buffers to be parsed (i.e., those pushed with the PushBuffer() backcall)
+///% The only argument is the new (after the pop)
+///% number of non-file buffers
+///% deep the stack is.  In particular, when that number is 0, 
+///% the parser is not parsing a macro expansion any longer.
+
+
 } HOOK_INDEX;
 // end hook_index_constants
 

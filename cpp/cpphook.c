@@ -153,8 +153,8 @@ gjb_call_hooks_void(struct cpp_options *opts, HOOK_INDEX ih)
 {
   SV *psvFunc = NULL;
   dSP;
-  
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -169,7 +169,7 @@ gjb_call_hooks_i(struct cpp_options *opts, HOOK_INDEX ih, int i)
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -186,7 +186,7 @@ gjb_call_hooks_sz(struct cpp_options *opts, HOOK_INDEX ih, char *sz)
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -204,7 +204,7 @@ gjb_call_hooks_sz_szl(struct cpp_options *opts, HOOK_INDEX ih,
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -223,7 +223,7 @@ gjb_call_hooks_i_i_sz_szl(struct cpp_options *opts, HOOK_INDEX ih, int s, int e,
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -244,7 +244,7 @@ gjb_call_hooks_sz_szl_i(struct cpp_options *opts, HOOK_INDEX ih,
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -264,7 +264,7 @@ gjb_call_hooks_sz_szl_i_i(struct cpp_options *opts, HOOK_INDEX ih,
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -285,7 +285,7 @@ gjb_call_hooks_sz_i_i(struct cpp_options *opts, HOOK_INDEX ih,
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -305,7 +305,7 @@ gjb_call_hooks_i_i_sz(struct cpp_options *opts, HOOK_INDEX ih, int i1, int i2,
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -326,7 +326,7 @@ gjb_call_hooks_sz_szl_i_szl_i(struct cpp_options *opts, HOOK_INDEX ih,
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -360,7 +360,7 @@ void gjb_call_hooks_pcat_szl(struct cpp_options *opts, HOOK_INDEX ih,
   SV *psvFunc = NULL;
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -405,7 +405,7 @@ gjb_call_hooks_expansion(struct cpp_reader *pfile, HOOK_INDEX ih,
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -466,7 +466,7 @@ gjb_call_hooks_macro_cleanup(struct cpp_options *opts, HOOK_INDEX ih, int s, int
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -494,7 +494,7 @@ gjb_call_hooks_sz_szl_szl(struct cpp_options *opts, HOOK_INDEX ih,
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -514,7 +514,7 @@ gjb_call_hooks_sz_szl_szl_i(struct cpp_options *opts, HOOK_INDEX ih,
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -536,7 +536,7 @@ gjb_call_hooks_sz_szl_szl_i_i(struct cpp_options *opts, HOOK_INDEX ih,
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -559,7 +559,7 @@ gjb_call_hooks_i_i_sz_szl_szl_i_i(struct cpp_options *opts, HOOK_INDEX ih, int s
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -583,7 +583,7 @@ gjb_call_hooks_szl(struct cpp_options *opts, HOOK_INDEX ih,
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -601,7 +601,7 @@ gjb_call_hooks_szl_sz_i(struct cpp_options *opts, HOOK_INDEX ih,
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -621,7 +621,7 @@ gjb_call_hooks_szl_szl_i(struct cpp_options *opts, HOOK_INDEX ih,
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -641,7 +641,7 @@ gjb_call_hooks_i_i_szl_szl_i(struct cpp_options *opts, HOOK_INDEX ih, int s, int
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -663,7 +663,7 @@ gjb_call_hooks_i_i_szl_sz_i(struct cpp_options *opts, HOOK_INDEX ih, int s, int 
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -686,7 +686,7 @@ gjb_call_hooks_i_i_i_szl_szl_i(struct cpp_options *opts, HOOK_INDEX ih,
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -710,7 +710,7 @@ gjb_call_hooks_szlx3_i(struct cpp_options *opts, HOOK_INDEX ih,
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -733,7 +733,7 @@ gjb_call_hooks_i_i_szlx3_i(struct cpp_options *opts, HOOK_INDEX ih, int s, int e
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -757,7 +757,7 @@ gjb_call_hooks_i_i_szlx3_i_i(struct cpp_options *opts, HOOK_INDEX ih, int s, int
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -783,7 +783,7 @@ gjb_call_hooks_i_i_sz_szlx3_i_i(struct cpp_options *opts, HOOK_INDEX ih, int s, 
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -809,7 +809,7 @@ gjb_call_hooks_sz_szlx3_i(struct cpp_options *opts, HOOK_INDEX ih, char *sz,
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -832,7 +832,7 @@ gjb_call_hooks_sz_szlx3_i_i(struct cpp_options *opts, HOOK_INDEX ih, char *sz,
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -855,7 +855,7 @@ gjb_call_hooks_sz_sz_i(struct cpp_options *opts, HOOK_INDEX ih,
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -875,7 +875,7 @@ gjb_call_hooks_i_i_sz_sz_i(struct cpp_options *opts, HOOK_INDEX ih, int s, int e
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -897,7 +897,7 @@ gjb_call_hooks_i_i_sz_sz_3flags(struct cpp_options *opts, HOOK_INDEX ih, int s, 
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -918,7 +918,7 @@ gjb_call_hooks_sz_i(struct cpp_options *opts, HOOK_INDEX ih, char *sz, int i)
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -937,7 +937,7 @@ gjb_call_hooks_sz_i_sz_i(struct cpp_options *opts, HOOK_INDEX ih,
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -958,7 +958,7 @@ gjb_call_hooks_sz_i_sz_i_i(struct cpp_options *opts, HOOK_INDEX ih,
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -979,7 +979,7 @@ gjb_call_hooks_szl_i(struct cpp_options *opts, HOOK_INDEX ih, char *sz, int cch,
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -998,7 +998,7 @@ gjb_call_hooks_i_i_szl_i(struct cpp_options *opts, HOOK_INDEX ih, int s, int e,
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -1019,7 +1019,7 @@ gjb_call_hooks_i_i_szl(struct cpp_options *opts, HOOK_INDEX ih, int s, int e,
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -1041,7 +1041,7 @@ gjb_call_hooks_i_i_szl_sz_defn(struct cpp_options *opts, HOOK_INDEX ih,
   struct reflist *prlCurr = NULL;
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -1078,7 +1078,7 @@ gjb_call_hooks_szl_sz_defn(struct cpp_options *opts, HOOK_INDEX ih,
   struct reflist *prlCurr = NULL;
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -1114,7 +1114,7 @@ gjb_call_hooks_szx4(struct cpp_options *opts, HOOK_INDEX ih,
 
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -1136,7 +1136,7 @@ void gjb_call_hooks_sz_i_sprintf(struct cpp_options *opts, HOOK_INDEX ih,
   int cch = 0;
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
@@ -1158,7 +1158,7 @@ void gjb_call_hooks_sz_i_i_sprintf(struct cpp_options *opts, HOOK_INDEX ih,
   int cch = 0;
   dSP;
   
-  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+  if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
     return;
 
   PUSHMARK(sp);
