@@ -7035,8 +7035,8 @@ print STDERR "Categorizing $cMacrosInTables macros\n";
 
 # Flush the output, becuase DumpxsFd may close them and delete buffered output.
 # (I can no longer reproduce that problem, but just in case...)
-select(EVIL); $| = 1; print EVIL "";
-select(PARSE_ERRS); $| = 1; print PARSE_ERRS "";
+select(EVIL); $| = 1; print EVIL "\n";
+select(PARSE_ERRS); $| = 1; print PARSE_ERRS "\n";
 # # close(EVIL);
 # # close(PARSE_ERRS);
 
