@@ -89,18 +89,18 @@ XS(XS_cpp_SumCchExpansionOffset)
     }
 }
 
-XS(XS_cpp_CchOffset)
+XS(XS_cpp_CbuffersBack)
 {
     dXSARGS;
     if (items != 0)
-	croak("Usage: cpp::CchOffset()");
-    SP -= items;
+	croak("Usage: cpp::CbuffersBack()");
     {
 	cpp_buffer * buffer = parse_in.buffer;
 	int cbuffersBack = 0;
+#line 75 "backcalls.xs"
+	int	RETVAL;
+#line 75 "backcalls.xs"
 #line 76 "backcalls.xs"
-#line 76 "backcalls.xs"
-#line 77 "backcalls.xs"
 	while (buffer != CPP_NULL_BUFFER(&parse_in)) {
 	    if (buffer->nominal_fname) {
 		break;
@@ -109,14 +109,100 @@ XS(XS_cpp_CchOffset)
 		buffer = CPP_PREV_BUFFER(buffer);
 	    }
 	}
-	XPUSHs(sv_2mortal(newSViv(buffer->cur - buffer->buf)));
-	XPUSHs(sv_2mortal(newSViv(cbuffersBack)));
-	PUTBACK;
-	return;
+	RETVAL=cbuffersBack;
 #line 86 "backcalls.xs"
+	ST(0) = sv_newmortal();
+	sv_setiv(ST(0), (IV)RETVAL);
 #line 86 "backcalls.xs"
 #line 86 "backcalls.xs"
     }
+    XSRETURN(1);
+}
+
+XS(XS_cpp_MacroExpansionHistory)
+{
+    dXSARGS;
+    if (items != 0)
+	croak("Usage: cpp::MacroExpansionHistory()");
+    SP -= items;
+    {
+	cpp_buffer * buffer = parse_in.buffer;
+	int cbuffersBack = 0;
+#line 93 "backcalls.xs"
+#line 93 "backcalls.xs"
+#line 94 "backcalls.xs"
+	while (buffer != CPP_NULL_BUFFER(&parse_in)) {
+	    if (buffer->data == 0) {
+		break;
+	    } else {
+		XPUSHs(sv_2mortal(newSVpv(buffer->data?
+					  ((HASHNODE*) (buffer->data))->name:
+					  (U_CHAR *)"",0)));
+		cbuffersBack++;
+		buffer = CPP_PREV_BUFFER(buffer);
+	    }
+	}
+	PUTBACK;
+	return;
+#line 104 "backcalls.xs"
+#line 104 "backcalls.xs"
+#line 104 "backcalls.xs"
+    }
+}
+
+XS(XS_cpp_ArgOf)
+{
+    dXSARGS;
+    if (items != 0)
+	croak("Usage: cpp::ArgOf()");
+    {
+	HASHNODE * macro = (HASHNODE*)(parse_in.buffer->data);
+	int offset = parse_in.buffer->cur - parse_in.buffer->buf - 1;
+	struct argdata * args = parse_in.buffer->args;
+#line 113 "backcalls.xs"
+	int	RETVAL;
+#line 113 "backcalls.xs"
+#line 114 "backcalls.xs"
+	RETVAL = -1;
+	if (args)
+	  RETVAL = IargWithOffset(offset, macro->value.defn->nargs,args) + 1;
+#line 118 "backcalls.xs"
+	ST(0) = sv_newmortal();
+	sv_setiv(ST(0), (IV)RETVAL);
+#line 118 "backcalls.xs"
+#line 118 "backcalls.xs"
+    }
+    XSRETURN(1);
+}
+
+XS(XS_cpp_CchOffset)
+{
+    dXSARGS;
+    if (items != 0)
+	croak("Usage: cpp::CchOffset()");
+    {
+	cpp_buffer * buffer = parse_in.buffer;
+	int cbuffersBack = 0;
+#line 126 "backcalls.xs"
+	int	RETVAL;
+#line 126 "backcalls.xs"
+#line 127 "backcalls.xs"
+	while (buffer != CPP_NULL_BUFFER(&parse_in)) {
+	    if (buffer->nominal_fname) {
+		break;
+	    } else {
+		cbuffersBack++;
+		buffer = CPP_PREV_BUFFER(buffer);
+	    }
+	}
+	RETVAL=buffer->cur - buffer->buf;
+#line 137 "backcalls.xs"
+	ST(0) = sv_newmortal();
+	sv_setiv(ST(0), (IV)RETVAL);
+#line 137 "backcalls.xs"
+#line 137 "backcalls.xs"
+    }
+    XSRETURN(1);
 }
 
 XS(XS_cpp_Fname)
@@ -126,10 +212,10 @@ XS(XS_cpp_Fname)
 	croak("Usage: cpp::Fname()");
     {
 	cpp_buffer * buffer = parse_in.buffer;
-#line 100 "backcalls.xs"
+#line 150 "backcalls.xs"
 	char *	RETVAL;
-#line 100 "backcalls.xs"
-#line 101 "backcalls.xs"
+#line 150 "backcalls.xs"
+#line 151 "backcalls.xs"
 	while (buffer != CPP_NULL_BUFFER(&parse_in)) {
 	    if (buffer->nominal_fname) {
 		RETVAL = buffer->nominal_fname;
@@ -138,11 +224,11 @@ XS(XS_cpp_Fname)
 		buffer = CPP_PREV_BUFFER(buffer);
 	    }
 	}
-#line 110 "backcalls.xs"
+#line 160 "backcalls.xs"
 	ST(0) = sv_newmortal();
 	sv_setpv((SV*)ST(0), RETVAL);
-#line 110 "backcalls.xs"
-#line 110 "backcalls.xs"
+#line 160 "backcalls.xs"
+#line 160 "backcalls.xs"
     }
     XSRETURN(1);
 }
@@ -153,84 +239,84 @@ XS(XS_cpp_fname_obsoleted)
     if (items != 0)
 	croak("Usage: cpp::fname_obsoleted()");
     {
-#line 115 "backcalls.xs"
+#line 165 "backcalls.xs"
 	char *	RETVAL;
-#line 115 "backcalls.xs"
-#line 116 "backcalls.xs"
+#line 165 "backcalls.xs"
+#line 166 "backcalls.xs"
 	if (parse_in.buffer)
 	  RETVAL = parse_in.buffer->fname;
 	else
 	  RETVAL = "@NOBUFFER@";
-#line 121 "backcalls.xs"
+#line 171 "backcalls.xs"
 	ST(0) = sv_newmortal();
 	sv_setpv((SV*)ST(0), RETVAL);
-#line 121 "backcalls.xs"
-#line 121 "backcalls.xs"
+#line 171 "backcalls.xs"
+#line 171 "backcalls.xs"
     }
     XSRETURN(1);
 }
 
-XS(XS_cpp_nominal_fname)
+XS(XS_cpp_FnameNominal)
 {
     dXSARGS;
     if (items != 0)
-	croak("Usage: cpp::nominal_fname()");
+	croak("Usage: cpp::FnameNominal()");
     {
-#line 125 "backcalls.xs"
+#line 175 "backcalls.xs"
 	char *	RETVAL;
-#line 125 "backcalls.xs"
-#line 126 "backcalls.xs"
+#line 175 "backcalls.xs"
+#line 176 "backcalls.xs"
 	if (parse_in.buffer)
 	  RETVAL = parse_in.buffer->nominal_fname;
 	else
 	  RETVAL = "@NOBUFFER@";
-#line 131 "backcalls.xs"
+#line 181 "backcalls.xs"
 	ST(0) = sv_newmortal();
 	sv_setpv((SV*)ST(0), RETVAL);
-#line 131 "backcalls.xs"
-#line 131 "backcalls.xs"
+#line 181 "backcalls.xs"
+#line 181 "backcalls.xs"
     }
     XSRETURN(1);
 }
 
-XS(XS_cpp_lookup)
+XS(XS_cpp_ExpansionLookup)
 {
     dXSARGS;
     if (items != 1)
-	croak("Usage: cpp::lookup(sz)");
+	croak("Usage: cpp::ExpansionLookup(sz)");
     {
 	char *	sz = (char *)SvPV(ST(0),na);
-#line 136 "backcalls.xs"
+#line 186 "backcalls.xs"
 	char *	RETVAL;
-#line 136 "backcalls.xs"
-#line 137 "backcalls.xs"
+#line 186 "backcalls.xs"
+#line 187 "backcalls.xs"
 	HASHNODE *hp = cpp_lookup(&parse_in,sz,-1,-1);
 	RETVAL = hp->value.defn->expansion;
-#line 140 "backcalls.xs"
+#line 190 "backcalls.xs"
 	ST(0) = sv_newmortal();
 	sv_setpv((SV*)ST(0), RETVAL);
-#line 140 "backcalls.xs"
-#line 140 "backcalls.xs"
+#line 190 "backcalls.xs"
+#line 190 "backcalls.xs"
     }
     XSRETURN(1);
 }
 
-XS(XS_cpp_CBytesOutput)
+XS(XS_cpp_CbytesOutput)
 {
     dXSARGS;
     if (items != 0)
-	croak("Usage: cpp::CBytesOutput()");
+	croak("Usage: cpp::CbytesOutput()");
     {
-#line 144 "backcalls.xs"
+#line 194 "backcalls.xs"
 	int	RETVAL;
-#line 144 "backcalls.xs"
-#line 145 "backcalls.xs"
+#line 194 "backcalls.xs"
+#line 195 "backcalls.xs"
 	RETVAL = cBytesOutput;
-#line 147 "backcalls.xs"
+#line 197 "backcalls.xs"
 	ST(0) = sv_newmortal();
 	sv_setiv(ST(0), (IV)RETVAL);
-#line 147 "backcalls.xs"
-#line 147 "backcalls.xs"
+#line 197 "backcalls.xs"
+#line 197 "backcalls.xs"
     }
     XSRETURN(1);
 }
@@ -241,36 +327,36 @@ XS(XS_cpp_CbytesOutputAndBuffer_obsolete)
     if (items != 0)
 	croak("Usage: cpp::CbytesOutputAndBuffer_obsolete()");
     {
-#line 153 "backcalls.xs"
+#line 203 "backcalls.xs"
 	int	RETVAL;
-#line 153 "backcalls.xs"
-#line 154 "backcalls.xs"
+#line 203 "backcalls.xs"
+#line 204 "backcalls.xs"
 	RETVAL = cBytesOutput + CPP_WRITTEN(&parse_in);
-#line 156 "backcalls.xs"
+#line 206 "backcalls.xs"
 	ST(0) = sv_newmortal();
 	sv_setiv(ST(0), (IV)RETVAL);
-#line 156 "backcalls.xs"
-#line 156 "backcalls.xs"
+#line 206 "backcalls.xs"
+#line 206 "backcalls.xs"
     }
     XSRETURN(1);
 }
 
-XS(XS_cpp_CBytesCppRead)
+XS(XS_cpp_CbytesCppRead)
 {
     dXSARGS;
     if (items != 0)
-	croak("Usage: cpp::CBytesCppRead()");
+	croak("Usage: cpp::CbytesCppRead()");
     {
-#line 160 "backcalls.xs"
+#line 210 "backcalls.xs"
 	int	RETVAL;
-#line 160 "backcalls.xs"
-#line 161 "backcalls.xs"
+#line 210 "backcalls.xs"
+#line 211 "backcalls.xs"
 	RETVAL = cBytesCppRead;
-#line 163 "backcalls.xs"
+#line 213 "backcalls.xs"
 	ST(0) = sv_newmortal();
 	sv_setiv(ST(0), (IV)RETVAL);
-#line 163 "backcalls.xs"
-#line 163 "backcalls.xs"
+#line 213 "backcalls.xs"
+#line 213 "backcalls.xs"
     }
     XSRETURN(1);
 }
@@ -281,16 +367,16 @@ XS(XS_cpp_FExpandingMacros)
     if (items != 0)
 	croak("Usage: cpp::FExpandingMacros()");
     {
-#line 167 "backcalls.xs"
+#line 217 "backcalls.xs"
 	int	RETVAL;
-#line 167 "backcalls.xs"
-#line 168 "backcalls.xs"
+#line 217 "backcalls.xs"
+#line 218 "backcalls.xs"
 	RETVAL = !parse_in.no_macro_expand;
-#line 170 "backcalls.xs"
+#line 220 "backcalls.xs"
 	ST(0) = sv_newmortal();
 	sv_setiv(ST(0), (IV)RETVAL);
-#line 170 "backcalls.xs"
-#line 170 "backcalls.xs"
+#line 220 "backcalls.xs"
+#line 220 "backcalls.xs"
     }
     XSRETURN(1);
 }
@@ -307,14 +393,17 @@ XS(boot_backcalls)
 
         newXS("cpp::SzToken", XS_cpp_SzToken, file);
         newXS("cpp::SumCchExpansionOffset", XS_cpp_SumCchExpansionOffset, file);
+        newXS("cpp::CbuffersBack", XS_cpp_CbuffersBack, file);
+        newXS("cpp::MacroExpansionHistory", XS_cpp_MacroExpansionHistory, file);
+        newXS("cpp::ArgOf", XS_cpp_ArgOf, file);
         newXS("cpp::CchOffset", XS_cpp_CchOffset, file);
         newXS("cpp::Fname", XS_cpp_Fname, file);
         newXS("cpp::fname_obsoleted", XS_cpp_fname_obsoleted, file);
-        newXS("cpp::nominal_fname", XS_cpp_nominal_fname, file);
-        newXS("cpp::lookup", XS_cpp_lookup, file);
-        newXS("cpp::CBytesOutput", XS_cpp_CBytesOutput, file);
+        newXS("cpp::FnameNominal", XS_cpp_FnameNominal, file);
+        newXS("cpp::ExpansionLookup", XS_cpp_ExpansionLookup, file);
+        newXS("cpp::CbytesOutput", XS_cpp_CbytesOutput, file);
         newXS("cpp::CbytesOutputAndBuffer_obsolete", XS_cpp_CbytesOutputAndBuffer_obsolete, file);
-        newXS("cpp::CBytesCppRead", XS_cpp_CBytesCppRead, file);
+        newXS("cpp::CbytesCppRead", XS_cpp_CbytesCppRead, file);
         newXS("cpp::FExpandingMacros", XS_cpp_FExpandingMacros, file);
     ST(0) = &sv_yes;
     XSRETURN(1);
