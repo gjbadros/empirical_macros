@@ -77,7 +77,7 @@ typedef bc_struct *bc_num;
 
 #undef bar
 
-MAX(x,y);
+MAX    (x,y);
 
 __FILE__
 

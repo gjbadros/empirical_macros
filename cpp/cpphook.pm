@@ -1,5 +1,7 @@
 #!/uns/bin/perl -w -I/tmp/gjb/cpp/xs/cpp/blib/arch -I/tmp/gjb/cpp/xs/cpp/blib/lib -I/tmp/gjb/cpp
 #$Id$
+# Requirements:
+#   filter-for-file-prefix   --- used for demuxing the textprops output
 use English;
 #use strict;
 
@@ -22,6 +24,7 @@ sub Startup {
   open(CHOUT,">chout.listing") || die "Could not open output file: $!";
   open(TOKEN,">token.listing") || die "Could not open output file: $!";
   open(TP,">textprops.el") || die "Could not open output file: $!";
+  open(TPSOURCE,">textprops-source.el") || die "Could not open output file: $!";
 #  select CHOUT;
   select STDERR;
   $| = 1; # Turn on autoflush
@@ -84,6 +87,7 @@ sub create_predef {
 
 sub cpp_out {
   my ($sz) = @_;
+  print "OUTED: $sz\n";
 #  print "$sz\n";
 #  print "|"; # just print separator
 }
@@ -103,18 +107,65 @@ sub delete_def {
   print "delete_def $keyword, $fExists\n";
 }
 
+
+sub macro_arg_exp  {
+  my ($mname,$raw,$number) = @_;
+  print "macro_arg_exp $mname of $raw (arg $number)\n";
+}
+
+$lastdoc = "";
+$s_start = 0;
+$s_end = 0;
 sub expand_macro {
-  my ($mname,$expansion,$length,$fInText) = @_;
-  my $start = cpp::CBytesOutput()+1;
-  my $end = $start + $length - 3; # Subtract off for the @ @, and it's an inclusive range
-  print "Lookup = ", cpp::lookup($mname), "\n";
-  print "expand_macro $mname => $expansion (length $length:offset $start - $end)\n";
-  print TP "(put-text-property $start $end \'doc \"Expansion of $mname\")\n";
-  print TP "(put-text-property $start $end \'face \'italic)\n";
+  my ($mname,$expansion,$length,$raw_call,$has_escapes,$cbuffersDeep,$cargs,@args) = @_;
+  my ($exp_offset, $cbb) = cpp::SumCchExpansionOffset();
+  my $cBytesOutput = cpp::CBytesOutput();
+  my $start = $cBytesOutput + 1 + $exp_offset - ($cbb > 0? $length - 1:0);
+  my $end = $start + $length;
+  my $call_length = length("$mname$raw_call");
+  my $cbuffersBack;
+  my $fname = cpp::Fname();
+
+  if ($has_escapes == 0) {
+    ($s_end, $cbuffersBack) = cpp::CchOffset();
+    die if $cbb != $cbuffersBack;
+    $s_end++;
+    $s_start = $s_end - $call_length;
+  }
+
+  print "\nexpand_macro $mname = ", cpp::lookup($mname), ", source offset: $s_start - $s_end, $cbuffersDeep [$has_escapes]; ", 
+      cpp::FExpandingMacros(), " in $fname\n";
+  print " : expansion of $mname => $expansion (length $length:offset $start - $end [$cBytesOutput + $exp_offset + 1])\n";
+  chomp $raw_call;
+  print " : was \"$mname$raw_call\" with $cargs args, length = ", $call_length, "\n";
+  my $iarg = 0;
+# Return values here that look like "@-BAZ" are escape macros (they've been expanded)
+  while ($#args > 0) {
+    print " :$iarg: ", join(",",splice(@args,0,6)), "\n";
+    my $uses = shift @args;
+    print " :$iarg used $uses times: ", join(";",splice(@args,0,2*$uses)), "\n";
+    $iarg++;
+  }
+  if ($has_escapes == 0) {
+    # top level expansion
+    print TPSOURCE "#$fname:(put-face-property-if-none $s_start $s_end \'italic)\n";
+    print TPSOURCE "#$fname:(put-mouse-face-property-if-none $s_start $s_end \'highlight)\n";
+    $lastdoc = 0;
+  }
+  print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'doc \"$mname expands to $expansion\")\n";
+  if ($has_escapes == 0) {
+    print TP "#out:(put-face-property-if-none $start $end \'italic)\n";
+    print TP "#out:(put-mouse-face-property-if-none $start $end \'highlight)\n";
+  } else {
+    print TP "#out:(put-face-property-if-none $start $end \'bold)\n";
+    print TP "#out:(put-mouse-face-property-if-none $start $end \'secondary-selection)\n";
+  }
+  print TP "#out:(add-text-property $start $end \'doc \"Expansion of $mname\")\n";
+  $lastdoc++;
 }
 
 sub ifdef_macro {
-  my ($mname,$expansion,$length,$fInText) = @_;
+  my ($mname,$expansion,$length,$raw_call,$cargs) = @_;
   my $start = cpp::CBytesOutput()+1;
   my $end = $start + $length - 3; # Subtract off for the @ @, and it's an inclusive range
   print "ifdef_macro $mname => $expansion (offset $start - $end)\n";
@@ -125,10 +176,11 @@ sub special_symbol {
   print "special_symbol $symbol => $node_type_name[$enum_node_type]\n";
 }
 
+# FIX: this lines wrong is wrong
 sub comment {
   my ($comment,$how_term,$lines) = @_;
   print "\n-----------------\n";
-  print "COMMENT ($lines lines in @{[cpp::fname()]}) ending w/ $how_term: $comment\n";
+  print "COMMENT ($lines lines in @{[cpp::Fname()]}) ending w/ $how_term: $comment\n";
   print "-----------------\n";
 }
 
@@ -140,7 +192,7 @@ sub string_constant {
 sub do_include {
   my ($keyword, $file, $flags) = @_;
   print "do_include $keyword -> ", simplify_path_name($file),";  $flags\n";
-#  print "Was working on: ", cpp::fname(), "\n";
+#  print "Was working on: ", cpp::Fname(), "\n";
 }
 
 sub do_if {
@@ -198,7 +250,8 @@ sub done_include_file {
 # Token's come a lot, so redirect this output somewhere else
 sub Got_token {
   my ($token,$sz) = @_;
-  print TOKEN substr($token,4),", FExpandingMacros = ",cpp::FExpandingMacros(),"\n";
+  print  "TOKEN: $sz;", substr($token,4),", FExpandingMacros = ",cpp::FExpandingMacros(),
+   ", CchOffset = ", cpp::CchOffset(), "\n";
 }
 
 sub do_function {
@@ -223,6 +276,7 @@ AddHook("DELETE_DEF",\&delete_def);
 AddHook("CPP_ERROR",\&cpp_error);
 AddHook("CPP_OUT",\&cpp_out);
 AddHook("EXPAND_MACRO",\&expand_macro);
+AddHook("MACARG_EXP",\&macro_arg_exp);
 AddHook("IFDEF_MACRO",\&ifdef_macro);
 AddHook("SPECIAL_SYMBOL",\&special_symbol);
 AddHook("COMMENT",\&comment);

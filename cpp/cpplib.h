@@ -638,6 +638,22 @@ struct if_stack {
 };
 typedef struct if_stack IF_STACK_FRAME;
 
+#define MAX_USES_TRACKED 16
+
+struct argdata {
+  /* Strings relative to pfile->token_buffer */
+  long raw, expanded, stringified;
+  int raw_length, expand_length;
+  int stringified_length;
+  char newlines;
+  char use_count;
+  char iuse;  /* this counts up the uses as an index into dcUses as we are making that
+		 array during the final expansion of the macro */
+  long dchUsesStart[16];  /* beginning offset of each successive use */
+  long dchUsesEnd[16];    /* ending offset of each successive use */
+};
+
+
 extern void cpp_buf_line_and_col PARAMS((cpp_buffer*, long*, long*));
 extern cpp_buffer* cpp_file_buffer PARAMS((cpp_reader*));
 extern void cpp_define PARAMS ((cpp_reader*, U_CHAR*));

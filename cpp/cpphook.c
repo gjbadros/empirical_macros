@@ -206,6 +206,85 @@ gjb_call_hooks_sz_szl_i_i(struct cpp_options *opts, HOOK_INDEX ih,
 }
 
 void
+gjb_call_hooks_sz_szl_i_szl_i(struct cpp_options *opts, HOOK_INDEX ih,
+			      char *sz1, char *sz2, int cch2, int i1, 
+			      char *sz3, int cch3, int i2)
+{
+  SV *psvFunc = NULL;
+
+  dSP;
+  
+  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+    return;
+
+  PUSHMARK(sp);
+  XPUSHs(sv_2mortal(newSVpv(sz1, 0)));
+  XPUSHs(sv_2mortal(newSVpvlen(sz2, cch2)));
+  XPUSHs(sv_2mortal(newSViv(i1)));
+  XPUSHs(sv_2mortal(newSVpvlen(sz3, cch3)));
+  XPUSHs(sv_2mortal(newSViv(i2)));
+  PUTBACK ;
+     
+  perl_call_sv(psvFunc, G_DISCARD);
+}
+
+void
+gjb_call_hooks_expansion(struct cpp_reader *pfile, HOOK_INDEX ih,
+			 char *sz1, char *sz2, int cch2, int i1, 
+			 char *sz3, int cch3, int has_escapes, int cbuffersDeep,
+			 int nargs, struct argdata *args)
+{
+  SV *psvFunc = NULL;
+  int iarg = 0;
+  int iuse = 0;
+  int offset = 0;
+  struct cpp_options *opts = CPP_OPTIONS(pfile);
+
+  dSP;
+  
+  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+    return;
+
+  PUSHMARK(sp);
+  XPUSHs(sv_2mortal(newSVpv(sz1, 0)));
+  XPUSHs(sv_2mortal(newSVpvlen(sz2, cch2)));
+  XPUSHs(sv_2mortal(newSViv(i1)));
+  XPUSHs(sv_2mortal(newSVpvlen(sz3, cch3)));
+  XPUSHs(sv_2mortal(newSViv(has_escapes)));
+  XPUSHs(sv_2mortal(newSViv(cbuffersDeep)));
+  XPUSHs(sv_2mortal(newSViv(nargs)));
+  for (iarg = 0; iarg < nargs; iarg++)
+    {
+    int len = args[iarg].raw_length;
+    XPUSHs(sv_2mortal(newSVpvlen(pfile->token_buffer+args[iarg].raw,
+				 len)));
+    XPUSHs(sv_2mortal(newSViv(len<0?-1:args[iarg].raw)));
+
+    len = args[iarg].expand_length;
+    XPUSHs(sv_2mortal(newSVpvlen(pfile->token_buffer+args[iarg].expanded,
+				 len)));
+    XPUSHs(sv_2mortal(newSViv(len<0?-1:args[iarg].expanded)));
+
+    len = args[iarg].stringified_length;
+    XPUSHs(sv_2mortal(newSVpvlen(pfile->token_buffer+args[iarg].stringified,
+				 len)));
+    XPUSHs(sv_2mortal(newSViv(len<0?-1:args[iarg].stringified)));
+
+    XPUSHs(sv_2mortal(newSViv(args[iarg].use_count)));
+    for (iuse = 0; iuse < args[iarg].use_count; iuse++) 
+      {
+      XPUSHs(sv_2mortal(newSViv(args[iarg].dchUsesStart[iuse])));
+      XPUSHs(sv_2mortal(newSViv(args[iarg].dchUsesEnd[iuse])));
+      }
+
+    }
+  PUTBACK ;
+     
+  perl_call_sv(psvFunc, G_DISCARD);
+}
+
+
+void
 gjb_call_hooks_sz_szl_szl(struct cpp_options *opts, HOOK_INDEX ih,
 			  char *sz, char *sz1, int cch1, char *sz2, int cch2)
 {

@@ -28,6 +28,7 @@ typedef enum hook_index_constants {
   HI_DELETE_DEF,
   HI_SPECIAL_SYMBOL,
   HI_EXPAND_MACRO,
+  HI_MACARG_EXP,
   HI_IFDEF_MACRO,
   HI_COMMENT,
   HI_STRING_CONSTANT,
@@ -60,6 +61,14 @@ void gjb_call_hooks_sz_szl(struct cpp_options *, HOOK_INDEX, char *, char *, int
 void gjb_call_hooks_sz_szl_i(struct cpp_options *, HOOK_INDEX, char *, char *, int, int);
 
 void gjb_call_hooks_sz_szl_i_i(struct cpp_options *, HOOK_INDEX, char *, char *, int, int, int);
+
+void gjb_call_hooks_sz_szl_i_szl_i(struct cpp_options *, HOOK_INDEX, 
+				   char *, char *, int, int, char *, int, int);
+
+void gjb_call_hooks_expansion(struct cpp_reader *pfile, HOOK_INDEX ih,
+			      char *sz1, char *sz2, int cch2, int i1, 
+			      char *sz3, int cch3, int has_escapes, int cbuffersDeep,
+			      int nargs, struct argdata *args);
 
 void gjb_call_hooks_sz_szl_szl(struct cpp_options *, HOOK_INDEX, 
 			       char *, char *, int, char *, int);

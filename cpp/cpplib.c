@@ -24,6 +24,7 @@ Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include <string.h>
 #include <unistd.h>
+#include <assert.h>
 
 #ifdef EMACS
 #define NO_SHORTNAMES
@@ -1907,20 +1908,11 @@ nope:
    `stringified_length' is the length the argument would have
    if stringified.
    `use_count' is the number of times this macro arg is substituted
-   into the macro.  If the actual use count exceeds 10, 
-   the value stored is 10. */
+   into the macro. [ If the actual use count exceeds 10, 
+   the value stored is 10. --obsoleted -- I let this grow w/o bound --09/18/97 gjb ] */
 
 /* raw and expanded are relative to ARG_BASE */
 #define ARG_BASE ((pfile)->token_buffer)
-
-struct argdata {
-  /* Strings relative to pfile->token_buffer */
-  long raw, expanded, stringified;
-  int raw_length, expand_length;
-  int stringified_length;
-  char newlines;
-  char use_count;
-};
 
 
 cpp_buffer*
@@ -2674,6 +2666,25 @@ unsafe_chars (c1, c2)
   return 0;
 }
 
+
+int
+CbuffersDeep(cpp_reader *pfile)
+{
+  cpp_buffer *buffer = pfile->buffer;
+  int cbuffersDeep = 0;
+  while (buffer != CPP_NULL_BUFFER(pfile)) 
+    {
+    if (buffer->nominal_fname) 
+      break;
+    else
+      {
+      cbuffersDeep++;
+      buffer = CPP_PREV_BUFFER(buffer);
+      }
+    }
+  return cbuffersDeep;
+}
+
 /* Expand a macro call.
    HP points to the symbol that is the macro being called.
    Put the result of expansion onto the input stack
@@ -2683,11 +2694,10 @@ unsafe_chars (c1, c2)
    an argument list follows; arguments come from the input stack.  */
 
 static void
-macroexpand (pfile, hp)
-     cpp_reader *pfile;
-     HASHNODE *hp;
+macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchMacroNameStart)
 {
   int nargs;
+  unsigned char *pchRawCall;
   DEFINITION *defn = hp->value.defn;
   register U_CHAR *xbuf;
   long start_line, start_column;
@@ -2698,7 +2708,7 @@ macroexpand (pfile, hp)
   int start_line = instack[indepth].lineno;
 #endif
   int rest_args, rest_zero;
-      register int i;
+  register int i;
 
 #if 0
   CHECK_DEPTH (return;);
@@ -2715,6 +2725,7 @@ macroexpand (pfile, hp)
   cpp_buf_line_and_col (cpp_file_buffer (pfile), &start_line, &start_column);
 
   nargs = defn->nargs;
+  pchRawCall = CPP_BUFFER(pfile)->cur;
 
   if (nargs >= 0)
     {
@@ -2728,6 +2739,7 @@ macroexpand (pfile, hp)
 	  args[i].raw_length = 0; 
 	  args[i].expand_length = args[i].stringified_length = -1;
 	  args[i].use_count = 0;
+	  args[i].iuse = 0;
 	}
 
       /* Parse all the macro args that are supplied.  I counts them.
@@ -2752,8 +2764,11 @@ macroexpand (pfile, hp)
 	      args[i].raw_length = CPP_WRITTEN (pfile) - args[i].raw;
 	      args[i].newlines = 0; /* FIXME */
 	    }
-	  else
+	  else {
+
+	    assert(rest_args==0);
 	    token = macarg (pfile, 0);
+	  }
 	  if (token == CPP_EOF || token == CPP_POP)
 	    {
 	      cpp_error_with_line (pfile, start_line, start_column,
@@ -2845,8 +2860,9 @@ macroexpand (pfile, hp)
 		  int need_space = -1;
 		  i = 0;
 		  arg->stringified = CPP_WRITTEN (pfile);
-		  if (!CPP_TRADITIONAL (pfile))
+		  if (!CPP_TRADITIONAL (pfile)) {
 		    CPP_PUTC (pfile, '\"'); /* insert beginning quote */
+		  }
 		  for (; i < arglen; i++)
 		    {
 		      c = (ARG_BASE + arg->raw)[i];
@@ -2909,9 +2925,11 @@ macroexpand (pfile, hp)
 	      xbuf_len += args[ap->argno].stringified_length;
 	    }
 	  else if (ap->raw_before || ap->raw_after || CPP_TRADITIONAL (pfile))
+	    {
 	    /* Add 4 for two newline-space markers to prevent
 	       token concatenation.  */
 	    xbuf_len += args[ap->argno].raw_length + 4;
+	    }
 	  else
 	    {
 	      /* We have an ordinary (expanded) occurrence of the arg.
@@ -2931,8 +2949,7 @@ macroexpand (pfile, hp)
 		 token concatenation.  */
 	      xbuf_len += args[ap->argno].expand_length + 4;
 	    }
-	  if (args[ap->argno].use_count < 10)
-	    args[ap->argno].use_count++;
+	  args[ap->argno].use_count++;
 	}
 
       xbuf = (U_CHAR *) xmalloc (xbuf_len + 1);
@@ -2952,6 +2969,8 @@ macroexpand (pfile, hp)
 	  /* Add chars to XBUF.  */
 	  for (i = 0; i < ap->nchars; i++, offset++)
 	    xbuf[totlen++] = exp[offset];
+
+	  args[ap->argno].dchUsesStart[args[ap->argno].iuse] = totlen;
 
 	  /* If followed by an empty rest arg with concatenation,
 	     delete the last run of nonwhite chars.  */
@@ -3046,6 +3065,7 @@ macroexpand (pfile, hp)
 		}
 	    }
 
+	  args[ap->argno].dchUsesEnd[args[ap->argno].iuse++] = totlen;
 	  if (totlen > xbuf_len)
 	    abort ();
       }
@@ -3069,17 +3089,32 @@ macroexpand (pfile, hp)
     }
 
   pfile->output_escapes--;
+  {
+  int cchRawCall = CPP_BUFFER(pfile)->cur - pchMacroNameStart;
+  int cbuffersDeep = CbuffersDeep(pfile);
 
-  if (pfile->fGettingDirective) 
+  if (cbuffersDeep == 0 || CPP_BUFFER(pfile)->has_escapes) 
     {
-    gjb_call_hooks_sz_szl_i_i(CPP_OPTIONS(pfile),HI_IFDEF_MACRO,
-			      hp->name,xbuf,xbuf_len,xbuf_len-1,nargs);
+    if (pfile->fGettingDirective) 
+      {
+      gjb_call_hooks_expansion(pfile,HI_IFDEF_MACRO,
+			       hp->name,xbuf+2,xbuf_len-4,xbuf_len-4,
+			       pchMacroNameStart,cchRawCall,
+			       CPP_BUFFER(pfile)->has_escapes,cbuffersDeep,
+			       nargs<0?0:nargs,
+			       args);
+      }
+    else
+      {
+      gjb_call_hooks_expansion(pfile,HI_EXPAND_MACRO,
+			       hp->name,xbuf+2,xbuf_len-4,xbuf_len-4,
+			       pchMacroNameStart,cchRawCall,
+			       CPP_BUFFER(pfile)->has_escapes,cbuffersDeep,
+			       nargs<0?0:nargs,
+			       args);
+      }
     }
-  else
-    {
-    gjb_call_hooks_sz_szl_i_i(CPP_OPTIONS(pfile),HI_EXPAND_MACRO,
-			      hp->name,xbuf,xbuf_len,xbuf_len-1,nargs);
-    }
+  }
 
   /* Now put the expansion on the input stack
      so our caller will commence reading from it.  */
@@ -4802,6 +4837,7 @@ cpp_get_token (pfile)
   long start_line, start_column;
   enum cpp_token token;
   struct cpp_options *opts = CPP_OPTIONS (pfile);
+  unsigned char *pchMacroNameStart;
   CPP_BUFFER (pfile)->prev = CPP_BUFFER (pfile)->cur;
  get_next:
   c = GETC();
@@ -5344,6 +5380,7 @@ cpp_get_token (pfile)
 	       first skip all whitespace, copying it to the output
 	       after the macro name.  Then, if there is no '(',
 	       decide this is not a macro call and leave things that way.  */
+	    pchMacroNameStart = CPP_BUFFER(pfile)->cur;
 	    if (hp->type == T_MACRO && hp->value.defn->nargs >= 0)
 	    {
 	      struct parse_marker macro_mark;
@@ -5391,7 +5428,7 @@ cpp_get_token (pfile)
 	      {
 		/* Expand the macro, reading arguments as needed,
 		   and push the expansion on the input stack.  */
-		macroexpand (pfile, hp);
+		macroexpand (pfile, hp, pchMacroNameStart);
 		CPP_SET_WRITTEN (pfile, before_name_written);
 	      }
 

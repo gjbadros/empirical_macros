@@ -237,8 +237,10 @@ pcppct: $(NON_GRAMMAR_OBJECTS) $(CT_GRAMMAR_OBJECTS) hook_index_constants.pm
 	rm -f $@
 	$(CC) $(ALL_CFLAGS) $(LDFLAGS) -o $@ $(filter-out hook_index_constants.pm,$^) $(LIBS) $(PERLLIBS)
 
+pcpp.o: cpphook.h
+
 # This target is obsolete -- 
-pcpp: $(OBJECTS) hook_index_constants.pm
+pcpp: $(OBJECTS) cpphook.h
 	rm -f $@
 	$(CC) $(ALL_CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS) $(LIBS) $(PERLLIBS)
 
@@ -286,7 +288,7 @@ cccp.o: cccp.c $(CONFIG_H) pcp.h version.c config.status cpphook.h
 	  -DTOOL_INCLUDE_DIR=\"$(tooldir)/include\" \
 	  -c `echo $(srcdir)/cccp.c | sed 's,^\./,,'`
 
-cpplib.o: cpplib.c $(CONFIG_H) cpplib.h cpphash.h config.status cpphook.h
+cpplib.o: cpplib.c $(CONFIG_H) cpplib.h cpphash.h config.status cpphook.h cpphook.h
 	$(CC) $(ALL_CFLAGS) $(ALL_CPPFLAGS) $(INCLUDES) \
 	  -DGCC_INCLUDE_DIR=\"$(libsubdir)/include\" \
 	  -DGPLUSPLUS_INCLUDE_DIR=\"$(gxx_include_dir)\" \
@@ -295,18 +297,18 @@ cpplib.o: cpplib.c $(CONFIG_H) cpplib.h cpphash.h config.status cpphook.h
 	  -DTOOL_INCLUDE_DIR=\"$(tooldir)/include\" \
 	  -c `echo $(srcdir)/cpplib.c | sed 's,^\./,,'`
 
-cpperror.o: cpperror.c $(CONFIG_H) cpplib.h
+cpperror.o: cpperror.c $(CONFIG_H) cpplib.h cpphook.h
 
-cppexp.o: cppexp.c $(CONFIG_H) cpplib.h
+cppexp.o: cppexp.c $(CONFIG_H) cpplib.h cpphook.h
 
-cpphash.o: cpphash.c cpplib.h cpphash.h
+cpphash.o: cpphash.c cpplib.h cpphash.h cpphook.h
 
-cppalloc.o: cppalloc.c $(CONFIG_H)
+cppalloc.o: cppalloc.c $(CONFIG_H) cpphook.h
 
 cpphook.o: cpphook_names.h cpphook.h
 
 # Could use "-typemap typemap" w/ typemap file "typemap"
-backcalls.c: backcalls.xs
+backcalls.c: backcalls.xs cpphook.h
 	$(PERL-XSUBPP) $< > $@
 
 backcalls.o: backcalls.c cppmain.h
@@ -340,6 +342,10 @@ ansi-c.tab.c ansi-c.tab.h: ansi-c.y
 ## The C Grammar used by CTree 0.05
 lexer.c: lexer.l
 	flex -Pct_yy -o$@ $^
+
+lexer.o: lexer.c cpphook.h
+
+gram.tab.o: gram.tab.c cpphook.h
 
 gram.tab.c gram.tab.h: gram.y
 	bison -pct_yy -d $^

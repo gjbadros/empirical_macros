@@ -1,3 +1,7 @@
+o Multiple hooks per event
+o ability to remove hooks
+o add type documentations for variables
+
 Options:
 
 o -P<filename.pl>
