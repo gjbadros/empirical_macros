@@ -13,6 +13,7 @@
 \newcommand{\pkg}[1]{\textsf{#1}}
 
 \newcommand{\file}[1]{\texttt{#1}}
+\newcommand{\vs}{vs}
 
 % the "fullpage" package does almost the same thing
 % as the below lines-- it doesn't make things quite as
@@ -1562,10 +1563,10 @@ when testing which character set is being used on the compiling machine.)
 % * understanding tools such as Emacs hideif mode
 % * other?
 
-We could find no other empirical study of the use of the C
-preprocessor nor any other macro processor.  However, we did find some
-guidance on using C macros effectively, tools for checking macro
-usage, and techniques for better understanding C source code which uses the
+We could find no other empirical study of the use of the C preprocessor
+nor any other macro processor.  However, we did find some guidance on
+using C macros effectively, tools for checking macro usage, and
+techniques for understanding and exploring C source code which uses the
 preprocessor.
 
 A number of organizations provide hints about effective ways to the use
@@ -1599,9 +1600,11 @@ conditional compilation structure of code~\cite{Krone94}.  They determine,
 for each line, which preprocessor macros it depends upon, and display that
 information in a lattice.  They do not determine how macros depend upon one
 another directly, only by their nesting in {\tt \#if}, and the information
-conveyed is about the program as a whole.  [[Compare to our CCD work, which
-also tries to find such mismtches; and talk a bit more about what they
-discovered and how it compares to what we discovered.]]
+conveyed is about the program as a whole.  
+
+%[[Compare to our CCD work, which
+%also tries to find such mismtches; and talk a bit more about what they
+%discovered and how it compares to what we discovered.]]
 
 %Greg:  describe LCLint methodology and results.  Say exactly what you did
 %(i.e., how hard you tried), and what the results were.  Also, that you tried
@@ -1618,7 +1621,7 @@ assignments, for statements playing the role of expressions, and for
 consistent return types.  LCLint's approach is prescriptive: programmers
 are encouraged not to use constructs that might be dangerous, or to
 change code that contains such constructs.  Our macro lint work notices
-a similar but broader set of subtle or potentionally dangerous constructs.
+a similar but broader set of subtle or potentially dangerous constructs.
 
 %LCLint considers assignment to a macro argument dangerous but does not
 %appear to check for assignments to local variables.~\cite[\S
@@ -1656,7 +1659,7 @@ language construct ``tagging'' mechanisms (e.g., \texttt{etags},
 to move easily from a macro expansion to the various definitions of
 that macro name.
 
-%[[ What debugger does this? ]] Debuggers exist that can
+%[[ What debugger does this? --11/21/97 gjb]] Debuggers exist that can
 %call {\tt \#define}d functions.
 
 \section{Conclusions}
@@ -1667,44 +1670,39 @@ symbols is not numerically frequent; even more importantly, the definitions
 of a symbol tend to be compatible, as shown in
 section~\ref{sec:inconsistent}.]]
 
-
-[[This is the place to recap the various sections, giving the highlights of
-each.  (I think.)]]
-
 % \subsection{Who cares?}
 \subsection{Relevance of the results}
 
 The results of this research are of interest to language designers, tool
-writers, programmers, and software engineers.
+writers, programmers and software engineers.
 
-Language designers can examine uses of the macro system's extra-linguistic
-capabilities to determine what programmers consider missing from the
-language.  Future language specifications can support (or prevent!)\ such
-practices in a more disciplined, structured way.
+Language designers can examine how programmers use the macro system's
+extra-linguistic capabilities.  Future language specifications can
+directly support (or prevent!)\ such practices thus imposing greater
+discipline and structure.
 
 % [[[Think more about this:  Also, how do language choices lead to more/less
 % tightly integrated (as opposed to open, component-based) environments?
 % E.G., no need for \verb|__LINE__| in Java?]]]
 
-Programming tool writers, too, need to understand how Cpp is used, for that
-sheds insight on the sorts of inputs that will be provided to the tool.  By
-coping with the most common constructs, the tool can provide relatively
-good coverage for low effort.  By identifying problematic uses, much better
-feedback can be given to the programmer, who can be more effective as a
-result.  The analysis results also indicate the difficulty of processing [[wc]]
-preprocessor directives; before these analyses, we did not know whether the
-task was so trivial as to be uninteresting, so difficult as to be not worth
-attempting, or somewhere in between.
+Programming tool writers can choose to cope only with common uses of the
+preprocessor.  By partial preprocessing (or embedded understanding of
+some Cpp constructs), a parser can maintain the
+programmer-oriented abstractions provided by preprocessor directives and
+macro names while not getting confused by non-syntactic programs.
 
-The analyses are of interest to programmers who wish to make their code
-cleaner and more portable, and can help them to avoid constructs that cause
-tools (such as test frameworks and program understanding tools)
-to give incomplete or incorrect results.
+Our analyses are of interest to programmers who wish to make their code
+cleaner and more portable.  By recognizing the widely-used Cpp idioms,
+programmers can choose to limit their use of the preprocessor to
+constructs that other tools are most likely to cope with easily.  They
+can choose to avoid constructs that cause tools (such as test frameworks
+and program understanding tools) to give incomplete or incorrect
+results.
 
 % Also, learn weird new Cpp tricks!
 
 Finally, our results are of interest to software engineers for all of the
-above reasons and more.  Since this is the first Cpp usage study of which
+above reasons and more.  Since this is the first study of Cpp usage of which
 we are aware, it is worth performing simply to determine whether the
 results were predictable a priori; we did in fact discover a number of
 interesting features of our suite of programs.
@@ -1712,13 +1710,15 @@ interesting features of our suite of programs.
 
 \subsection{Making C programs easier to understand}
 
-The combination of C and Cpp makes a source text unnecessarily difficult to
-understand.  A good first step is to eliminate Cpp uses where an equivalent
-C or C++ construct exists, and to apply tools to explicate the remaining
-uses.  Here we discuss a few approaches to solving this problem by
-eliminating the source of confusion rather than applying tools.  We do not
-seriously consider simply eliminating the preprocessor, for it provides
-conveniences and functionality not present in the base language.
+The combination of C and Cpp makes a source text unnecessarily difficult
+to understand.  A good first step is to eliminate Cpp uses where an
+equivalent C or C++ construct exists, and to apply tools to explicate
+the remaining uses.  Here we discuss a few approaches to reducing the
+need for the preprocessor by better changing the state of the art in C
+programming, rather than applying tools to a specific source code
+artifact.  We do not seriously consider simply eliminating the
+preprocessor, for it provides conveniences and functionality not present
+in the base language.
 
 Since many of the most problematic uses of Cpp provide portability across
 different language dialects or different operating environments,
@@ -1728,20 +1728,19 @@ necessary and incidentally makes all programs more portable, even those
 which have not gone to special effort to achieve portability.  This
 proposal moves the responsibility for portability (really, conformance to a
 specification) from the application program into the library or operating
-system, which is a reasonable design choice since many application programs
-rely on a much smaller number of libraries and run on relatively few
-operating systems.
+system.  
 
-Likewise, the most common single cause [[Really?  I'm not sure I believe
-that without qualification]] for Cpp directives would be eliminated if the
-C language and its dialects had only a single declaration syntax.  Because
-most C compilers, and all C++ compilers, accept ANSI-style declarations,
-much support for multiple declaration style may have outlived its
-usefulness.  [[On the other hand, K\&R support was just *added* to some
-mature, popular package (zsh?) recently.]]  We are investigating the effect
-on our statistics (and program understandability) of ``partially
-evaluating'' a program source by specifying the definedness and values of
-some Cpp identifiers.
+Likewise, one of the most common uses of Cpp macros could be eliminated
+if the C language and its dialects had only a single declaration syntax.
+Because most C compilers, and all C++ compilers, accept ANSI-style
+declarations, much support for multiple declaration style may have
+outlived its usefulness.  The ``ansi2knr'' tool~\cite{Deutsch90}
+translates a C program using ANSI style function declarations into one
+using classical function declarations.  By ubiquitous use of this
+transformation tool, we can free the primary source code artifact from
+the need to maintain two commonly required configurations.  This would
+dramatically reduce the use of a large class of preprocessor constructs
+in packages which support both declaration styles.
 
 Some Cpp directives, such as {\tt \#include}, can be moved into the
 language proper; this would also eliminate the need for Cpp constructs that
@@ -1768,28 +1767,26 @@ approach is the introduction of a new syntax or new library functions which
 may not simplify the program text and which cannot cover all cases, only a
 few specified ones.
 
-[[Add a hygienic macros reference somewhere.]]
+%% FIXGJB: [[Add a hygienic macros reference somewhere.]]  
+%% What is this? --gjb
 
-An alternative approach which avoids the clumsiness of a separate language
-of limited expressiveness is to make the macro language more
+An alternative approach which avoids the clumsiness of a separate
+language of limited expressiveness is to make the macro language more
 powerful\,---\,perhaps even using the language itself via constructs
 evaluated at compile time rather than run time.  (The macro systems of
 Common Lisp and Scheme, and their descendants~\cite{WeiseC93}, take this
-approach.)  An extreme example would be to provide a full-fledged
-reflection capability.  Such an approach is highly general, powerful, and
+approach.)  An extreme example is to provide a full-fledged reflection
+capability.  Such an approach is highly general, powerful, and
 theoretically clean; it circumvents many of the limitations of Cpp,
 though it does not necessarily support all of Cpp's low-level features.
-However, this approach may degrade rather than improve programs
-understanding.  As difficult as it may be to determine what output a
-macroless program produces, it can be just as difficult simply to determine
-the text of a program which uses such macros.  (This is also a problem with
-meta-object protocols, aspect-oriented programming, and intentional
-programming, all of which permit the programmer to specify transformations
-on other parts of the source code.  In practice, such systems are used in
-fairly restricted ways, perhaps because other uses would be too
-complicated.)  A dialog among users, compiler writers, tool writers, and
-language theorists is necessary when introducing a feature in order to
-prevent unforeseen consequences from turning it into a burden.
+Such a syntactic approach does eliminate the problem of mis-parsing due
+to macro expansion, but the added generality seems likely to degrade a
+tool's ability to reason about the source code.  In practice, such
+systems are used in fairly restricted ways, perhaps because other uses
+would be too complicated.  A dialog among users, compiler writers, tool
+writers, and language theorists is necessary when introducing a feature
+in order to prevent unforeseen consequences from turning it into a
+burden.
 
 
 %% See slide 15 and its notes from Mike's quals talk.
@@ -1799,64 +1796,47 @@ These results suggest a wide variety of future avenues for research, both
 in terms of expanding our understanding of uses of the preprocessor in
 practice and in addressing the issues identified by this study.
 
-[[Cut the repetition here.]]
-In this work  we are concerned with how it {\em could} be used, not just how it {\em
-  happens} to be used.  That's why we can't take the easy out.  But it
-  would be interesting to look at uses, which would let us infer the {\em
-  intended} use (if not all {\em possible} uses).  We are actively pursing
-  this line of research.
-A straightforward refinement that we are pursuing examines macro uses to
-aid this categorization.  (For example, a macro used where a type should
-appear can be inferred to expand to a type; a macro used before a function
-body is probably expanding to a declarator.)
-        We didn't examine every use.  Besides, the point isn't just the
-          current uses, but also future uses:  we want these to be easy for
-          programmers to use.
+We did not analyze any reusable libraries (e.g., \pkg{glibc}) for their
+macro use patterns.  Comparing how Cpp is used in libraries in contrast
+to application code may yield insights into the different needs of
+library authors.  Other dimensions to the packages may be beneficial to
+analyze independently and contrast.  For example, cross-platform
+packages \vs{} Unix-only \vs{} Microsoft Windows\footnote{Windows is a
+  trademark of Microsoft Corporation.} packages, or GNU-project packages
+\vs{} non-GNU packages.
 
-Further analysis of the conditional
-compilation structure (in the style of Krone and Snelting~\cite{Krone94})
-and of the macros with free variables (essentially achieving dynamic
-scoping) is needed to see which of the roughly 29\% of expression macros
-should be easy to convert to C++ language features such as constants or
-enumerated values.
-  [[We didn't analyze whether the free variables are globals or locals,
-          which could substantially impact understanding/translation.]]
+Similarly, we did not formally analyze any C++ source code.  Preliminary
+results indicate that many C++ packages rely heavily on Cpp, even when
+C++ supports a nearly identical language construct.  This unfortunate
+situation probably stems from a combination of trivial translations from
+C to C++ and of C programmers becoming C++ programmers without changing
+their habits.  A useful analysis of C++ packages would consider the code
+in the context of both the history of the package and the background of
+its authors.
 
+Further analysis of the macros with free variables is needed to see
+which of the roughly 32\% of expression macros should be easy to convert
+to inline functions.  In particular, we did not investigate whether the
+free variables in macro definitions referred to local or global
+variables.  The former achieve dynamic scoping which is impossible using
+the C language proper, while the latter could likely be converted to an
+inline function.
 
-No libraries (e.g., \pkg{glibc}), as they're too different than applications.
-No C++.\footnote{Preliminary results indicate that many
-  C++ packages rely heavily on Cpp, even when C++ supports a nearly
-  identical language construct, probably due to a combination of trivial
-  translations from C to C++ and of C programmers becoming C++ programmers
-  without changing their habits.}
+Our framework currently does not benefit from analyzing the context of
+macro expansions in determining a macro's category.  For example, a
+macro used where a type should appear can be inferred to expand to a
+type; a macro used before a function body is probably expanding to a
+declarator.  We are actively pursuing this extension.
 
-``As with all benchmarks, there is the question of how representative this is.''
-Variations among packages:
- * The C language has changed.  How do newer packages compare with older ones?
-   [[Language changes are likely to make things worse, not better, in the
-   short term, as code tries to compile under both while taking advantage
-   of the new.]]
- * How do PC packages compare with Unix packages?  Less pressure to make it
-   work on many platforms, because there aren't as many?
- * Correlate human perceptions of good or bad preprocessor use with what my
-   tool says.
- * What's special about GNU programs?  Compare GNU to non-GNU?
- * Applications vs. libraries?  Get more libraries, or eliminate the current
-   ones.
-
-
-
-
-          
-Reaching definitions for macros (``flow-sensitive'' due to
-dependences on other macros).
-
-Rather than storing information about a macro name, it's better to
-recompute it (memoizing, perhaps) for each use so that I only refer to the
-potentially applicable definitions (based on current must inclusion) -- but
-still computing the must inclusion, expansion, and may inclusion from the
-potentially relevant definitions.  
-
+Additionally, the framework is overly conservative with respect to
+conflicting definitions.  We assume that every occurrence (except in
+strings and comments) of any name that is \texttt{\#define}d is a macro
+use and could correspond to any of the definitions of that same name.
+This pessimism provides an upper bound on the preprocessor complexity of
+the source code, but is too inaccurate when considering code
+transformations.  We currently are experimenting with a different
+framework that accurately tracks macro definitions and uses to provide
+support for more sophisticated reasoning and code transformations.
 
 \section*{Acknowledgment}
 
