@@ -705,7 +705,6 @@ my @mdef_file;
 my @mdef_line;
 my @mdef_physical_lines;
 my @mdef_physical_ncnb_lines;
-my %mdef_freevars;
 my @mdef_freefuns;
 my @mdef_direct_inclusion_dependenton;		# cpp conditions, not just symbols
 my @mdef_direct_expansion_uses;	# direct expansion uses (symbols in expansion)
@@ -1496,7 +1495,7 @@ sub find_close_paren_read ($;$)
 { my ($exp, $pos) = check_args_range(1, 2, @_);
   if (!defined($pos))
     { $pos = 0; }
-  my $index = find_close_delimiter('\(', $exp, $pos);
+  my $index = find_close_delimiter('(', $exp, $pos);
   while ($index eq $false)
     { my $nextline = get_fulltoken_line($true);
       $exp .= $nextline;
@@ -4915,7 +4914,9 @@ sub get_macro_properties ($)
 	    || exists($functions{$var})
 	    || exists($typedefs{$var})
 	    || ($var =~ /^$reserved_word_re$/)
-	    || ($body =~ /(\.|->)\s*$var\b/))
+	    || ($body =~ /(\.|->|\bstruct|\bunion)\s*$var\b/)
+	    || ($body =~ /\b$var\s*\*\s*\)/)
+	    || ($body =~ /\b$var\s*\(/))
 	  { delete $vars{$var}; } }
     if (scalar(keys %vars) > 0)
       { my $body_remaining = $body;
@@ -4927,6 +4928,7 @@ sub get_macro_properties ($)
 		for my $var (keys %vars)
 		  { if ($name_types{$local_var} =~ /\b$var\b/) # no /o
 		      { delete $vars{$var}; } } } } }
+
     $mdef_free_vars[$index] = join(",", keys %vars);
     if ($mdef_free_vars[$index])
       { $result |= $propFREE_VAR; } }
@@ -6234,7 +6236,7 @@ sub SaveMacroAnalysisState
     @mdef_physical_ncnb_lines @mdef_freefuns
     @mdef_direct_inclusion_dependenton @mdef_direct_expansion_uses
     @mdef_type @mdef_category @mdef_properties @mdef_free_vars
-    @mdef_evilness %mdef_freevars
+    @mdef_evilness
     %mntype %mncategory
     @rg_cppcmdcounts @rg_category_counts
     @rg_physical_lines @rg_ncnb_lines

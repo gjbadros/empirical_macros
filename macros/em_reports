@@ -168,7 +168,7 @@ use vars qw($getopts_option_letters $c_reserved_type_word_alternatives
     %macros_c_undefs %macros_uses %macros_file_line_uses
     %macros_used_in_functions @mdef_name @mdef_formals @mdef_body
     @mdef_file @mdef_line @mdef_physical_lines
-    @mdef_physical_ncnb_lines %mdef_freevars @mdef_freefuns
+    @mdef_physical_ncnb_lines @mdef_freefuns
     @mdef_dependenton @mdef_direct_expansion_uses @mdef_type
     @mdef_category @mdef_properties @mdef_free_vars
     @mdef_evilness %mntype %mncategory %fun_decl_arg_macros
