@@ -451,12 +451,45 @@ sub output_stats ()
   if ($opt_p)
     { if ($opt_v) { print STDOUT "properties..."; }
       select PROP;
-      print "#Macro definition property info\n";
+      print "#Macro definition property histogram\n";
       my %prop_histogram = HistogramNumericFromList(@mdef_properties);
       foreach my $prop (sort {$prop_histogram{$b} <=> $prop_histogram{$a}}
 			keys %prop_histogram) {
 	print "$prop_histogram{$prop} ", string_from_prop($prop) . "\n";
       }
+      print "#Macro definition property percentages\n";
+      my $i = 0;
+      my $cASSIGN = 0;
+      my $cFREE_VAR = 0;
+      my $cINVOKES_MACRO = 0;
+      my $cPASSES_TYPE_AS_ARG = 0;
+      my $cUSES_MACRO_AS_TYPE = 0;
+      my $cUSES_ARG_AS_TYPE = 0;
+      my $cASSEMBLY_CODE = 0;
+      my $cPASTING = 0;
+      my $cSTRINGIZE = 0;
+      my $cMacrosInTables = $#mdef_properties + 1;
+      while ($i < $cMacrosInTables) {
+	$cASSIGN++ if ($mdef_properties[$i] & $propASSIGN);
+	$cFREE_VAR++ if ($mdef_properties[$i] & $propFREE_VAR);
+	$cINVOKES_MACRO++ if ($mdef_properties[$i] & $propINVOKES_MACRO);
+	$cPASSES_TYPE_AS_ARG++ if ($mdef_properties[$i] & $propPASSES_TYPE_AS_ARG);
+	$cUSES_MACRO_AS_TYPE++ if ($mdef_properties[$i] & $propUSES_MACRO_AS_TYPE);
+	$cUSES_ARG_AS_TYPE++ if ($mdef_properties[$i] & $propUSES_ARG_AS_TYPE);
+	$cASSEMBLY_CODE++ if ($mdef_properties[$i] & $propASSEMBLY_CODE);
+	$cPASTING++ if ($mdef_properties[$i] & $propPASTING);
+	$cSTRINGIZE++ if ($mdef_properties[$i] & $propSTRINGIZE);
+	$i++;
+      }
+      printf "%2.2g${OFS}assign\n", 100*$cASSIGN/$cMacrosInTables;
+      printf "%2.2g${OFS}free_var\n", 100*$cFREE_VAR/$cMacrosInTables;
+      printf "%2.2g${OFS}invokes_macro\n", 100*$cINVOKES_MACRO/$cMacrosInTables;
+      printf "%2.2g${OFS}passes_type_as_arg\n", 100*$cPASSES_TYPE_AS_ARG/$cMacrosInTables;
+      printf "%2.2g${OFS}uses_macro_as_type\n", 100*$cUSES_MACRO_AS_TYPE/$cMacrosInTables;
+      printf "%2.2g${OFS}uses_arg_as_type\n", 100*$cUSES_ARG_AS_TYPE/$cMacrosInTables;
+      printf "%2.2g${OFS}assembly_code\n", 100*$cASSEMBLY_CODE/$cMacrosInTables;
+      printf "%2.2g${OFS}pasting\n", 100*$cPASTING/$cMacrosInTables;
+      printf "%2.2g${OFS}stringize\n", 100*$cSTRINGIZE/$cMacrosInTables;
     }
 
   if ($opt_P)
