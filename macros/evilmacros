@@ -1106,7 +1106,9 @@ sub process_macro_undefinition {
 sub macro_dependenton
 {
   my ($macro_name, @dependenton) = check_args_at_least(1, @_);
-  my @indices = @{$macros{$macro_name}};
+  # FIX: This seems wrong, but other retlated uses fail if it
+  # is changed to @{$macros{$macro_name}}, like it probably should be
+  my @indices = @macros{$macro_name};
   shift(@indices);		# eliminate the count of size
   my @result = ($false);
   # scratch indices, since I must pass in at least one index.
