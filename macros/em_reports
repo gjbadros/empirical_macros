@@ -167,7 +167,9 @@ use vars qw($getopts_option_letters $c_reserved_type_word_alternatives
     %inclusion_dependenton %inclusion_dependees %inclusion_dependee_lines
     %expansion_dependenton %expansion_dependees %expansion_dependee_lines
     %either_dependee_lines
+    @mdef_direct_inclusion_dependenton
     @rg_ccd_cat_counts
+    %macros_used_by_cpp
 );
 
 
@@ -615,7 +617,7 @@ sub compute_freq_use_info () {
   check_args(0, @_);
   $macros_c_most_uses = 0;
   # sum of slice @{$macros_uses{$name}}[@i_usage_all] is the total no. uses for macro
-  foreach my p$name (keys %macros) {
+  foreach my $name (keys %macros) {
     next if MacroNotDefinedInsidePackage($name);
     my $index = $macros{$name}[0]; #FIXGJB: do not just look at first definition
     my $category = $mdef_category[$index];
@@ -745,7 +747,7 @@ sub ReadMacroAnalysisState {
   open(INPUTSTATE,"<$file") or die "Couldn't open $file: $!";
   $INPUT_RECORD_SEPARATOR = ");\n"; #FIX: this separator could blow up
   my $in;
-  while ($in = <INPUTSTATE>)
+  while (defined($in = <INPUTSTATE>))
   {
 #    print "$in\n----------------\n\n";
     eval $in;
