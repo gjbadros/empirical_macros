@@ -19,6 +19,9 @@
 
 int main (char *argv, int argc)
 {
+ TEST3:
+  MAX   (FOO,LONG_BAR);
+  MAX(LONG_BAR,FOO);
  NEWTEST:
   /* MULTI -> HELLO -> LONG_BAR LONG_BAR -> bar bar */
   /* Need: (source_start, source_end, expansion, expansion_derivation) */ 
@@ -37,9 +40,6 @@ int main (char *argv, int argc)
  TEST2:
   MACRO_ALPHA;
   MACRO_ECHO;
- TEST3:
-  MAX(FOO,LONG_BAR);
-  MAX(LONG_BAR,FOO);
  TEST4:
   MAX(MACRO_ALPHA,MACRO_ECHO);
  TEST5:
