@@ -1,0 +1,357 @@
+Received: from exchsrv1.cs.washington.edu (exchsrv1.cs.washington.edu [128.95.3.128])
+	by june.cs.washington.edu (8.9.3/8.9.3/0.3j) with ESMTP id LAA23143
+	for <gjb@cs.washington.edu>; Thu, 11 Nov 1999 11:03:03 -0800
+	(envelope-from notkin@cs.washington.edu)
+Received: by exchsrv1.cs.washington.edu with Internet Mail Service (5.5.2650.21)
+	id <4NKXW5XS>; Thu, 11 Nov 1999 11:03:03 -0800
+Message-ID: <055A195871E5D1119F8100A0C9499B5FE990A6@exchsrv1.cs.washington.edu>
+From: David Notkin <notkin@cs.washington.edu>
+To: Greg Badros <gjb@cs.washington.edu>
+Subject: FW: Your paper submitted to SPE
+Date: Thu, 11 Nov 1999 11:03:02 -0800
+MIME-Version: 1.0
+X-Mailer: Internet Mail Service (5.5.2650.21)
+Content-Type: text/plain;
+	charset="ISO-8859-1"
+Lines: 339
+Xref: clavicle.cs.washington.edu inbox:13418
+
+Cool!  I have zero time to look at the details until next week (papers due
+today and tomorrow).  Let's get this out ASAP!  Congrats, Greg.
+
+David
+
+-----Original Message-----
+From: sdn@cs.purdue.edu [mailto:sdn@cs.purdue.edu]
+Sent: Thursday, November 11, 1999 10:23 AM
+To: notkin@cs.washington.edu
+Cc: sdn@cs.purdue.edu
+Subject: Your paper submitted to SPE
+
+
+Dear Prof. Notkin:
+
+Enclosed are two referees' reports for your paper 
+"A Framework for Preprocessor-Aware C Source Code Analyses"
+which you submitted for publication in Software-Practice & Experience.
+
+As you can see, the referees recommend publication and
+suggest several revisions. If you will incorporate the revisions
+according to the referees' suggestions into a final copy, I will accept 
+it for publication.
+
+Please note these considerations when submitting a final revised
+copy of your paper.
+
+1) Enclose a cover letter detailing your corrections.
+
+2) Send a high-quality (600 dpi or comparable) copy of
+your final paper, with all figures printed on separate pages
+from the text. The quality of this copy is essential
+as it will serve the publisher as the master copy of your paper.
+
+Additionally, it would be helpful to the publisher if you would include
+two clearly labelled disks containing your paper as
+double-spaced plain text files with the electronic figures
+placed on separate pages from the text. Please indicate which
+package was used to create them. LaTeX files can also be used.
+Please set programs as figures, ready to scan.
+
+3) Include a signed copy of the Publishing Agreement. 
+For a copy of the Publishing Agreement, please see
+http://www.interscience.wiley.com/jpages/0038-0644/info.html
+and select "Copyright Transfer Agreement."
+
+4) Please follow the suggestions listed in the Notes for
+Contributors at
+http://www.interscience.wiley.com/jpages/0038-0644/authors.html
+as well as in the Manuscript Preparation Guidelines which are
+included below. 
+
+I look forward to receiving the final copy of your
+paper.
+
+Sincerely yours,
+
+Douglas E. Comer
+Editor
+
+DEC:sdn
+
+Enclosures: Referee Reports, Manuscript Preparation
+Guidelines, Referee Guidelines
+
+
+****************************************************************
+Referee A report:
+
+Title: A Framework for Preprocessor-Aware C Source Code Analyses
+	
+	Authors: Greg J. Badros and David Notkin
+	
+	The authors have answered almost all of my minor questions.  In some
+	cases, I would like to have seen their answers woven more smoothly
+	into the text, as opposed to just starting a new paragraph.  But, I
+	feel that they have satisfactorily addressed my points.
+	
+	The greatest issue that I had with the paper was its overall
+audience
+	and for whom exactly the tool was intended.  The authors have
+	addressed that issue by stating what their framework is (and what it
+	is not), and its intended audience.
+	
+	One minor complaint: In the restructuring of the paper, the tool
+name
+	PCp3 is now mentioned in Section 2.3 for the first time without the
+	reader knowing the PCp3 is the name of the authors tool.
+	
+
+****************************************************************
+Referee B report:
+
+"A Framework for Preprocessor-Aware C Source Code Analyses".
+	
+	The revised version fixes most of the problems with the original
+	submission.  In particular, it does a much better job of motivating
+the
+	work.  I think some changes are still necessary before it is ready
+for
+	publication, though.
+	
+	o PCP^3 should be made available for download.  I'm not sure if it
+is or
+	not, but there should be a clear pointer in the paper to where the
+	(hopefully source code) of PCP^3 can be found.  Since the paper is
+	primarily relevant for describing this artifact, it seems important
+for
+	it to be available, and the paper makes it seem like a useful tool
+for
+	researchers and practitioners.
+	
+	o I still feel the paper lacks a compelling example.  Since they are
+	presenting their work as a "framework", it is important to show that
+	this framework is actually useful.  I would like to see an example
+that
+	does this.  For example, can they duplicate some of the ASTLog
+analyses
+	(such as the unicode type checking) that proved to be useful and
+show
+	how their work could be used to improve these analyses.
+	
+	o Section 3.4 seems outside the scope of the paper and not
+particularily
+	interesting.  I'd much prefer this be replaced with a fuller
+example.
+	
+****************************************************************
+Software - Practice & Experience
+
+Manuscript Preparation Guidelines
+
+
+Proper preparation of papers submitted to SPE facilitates
+processing and reduces publication delays. Editors, referees,
+and publishers typically operate on a "easiest job next" basis.
+
+Delays can be minimized by making papers "easy" to process. After
+acceptance, papers that conform to the style of the journal will be
+processed before those that do not. Please take into consideration the
+"Notes for Contributors" given on the inside back cover of every issue
+(also found at
+http://www.interscience.wiley.com/jpages/0038-0644/authors.html)
+,
+as well as the following suggestions when preparing a paper.
+
+
+1. Double-space the paper. If the paper is prepared using a
+type-setting system, such as troff or TeX, 10-point type on 16-point
+baselines or 12-point type on 18-point baselines is sufficient.
+
+2. Give references in the order of appearance, numbered
+consecutively.
+
+3. Use unnumbered section headings. Restrict headings to
+two levels (major and minor), and clearly distinguish between
+major and minor headings. Use short section headings and
+avoid repeating parts of the paper's title, e.g., in a paper
+entitled "A Fast Pascal Compiler," use "Experience" instead of
+"Experience with the Compiler."
+
+4. Include a summary and up to six keywords.
+
+5. Give complete mailing addresses of all authors including zip
+codes or other postal codes. If authors have email addresses,
+please include these.
+
+6. Number figures and tables separately using Roman numerals.
+Make legends brief.
+
+7. Omit introductory "road maps" that simply echo the titles of
+subsequent sections. For example, omit passages such as "Section 1
+describes the gross structure of the compiler, and Section 2
+describes the code generator. The performance of the compiler
+is outlined in Section 3, and conclusions and future work
+are discussed in Section 4." Road maps are necessary only if they
+say something important about the rest of the paper, e.g.,
+"The following sections describe the compiler's
+gross structure, code generator, and performance. Code optimization
+is described in both the code generator and performance
+sections."
+
+8. Avoid unnecessary detail; strive for high "technical density."
+Include details that illustrate the important aspects of the
+work and omit the rest. Do not include details just for the sake of
+completeness; relegate those to a technical report and reference
+it. A ten-page paper in which every paragraph contains inter-
+esting and useful material is preferable to a twenty-page paper
+in which the reader must search for the interesting material.
+Edit the paper ruthlessly; omit paragraphs, figures, tables, programs,
+and sections that do not make contributions commensurate with their
+size.
+
+9. Avoid appendices. Absorb the interesting material into the body of
+the paper; omit the rest.
+
+10. Do not cite inaccessible references. Avoid citations to technical
+reports (except as explained above), unpublished manuscripts,
+or personal communications. Cite only the most accessible and
+most recent references, e.g., cite a published paper, but not its
+predecessor technical report. References to Ph.D. dissertations
+and M.S. theses are preferable to references to the correspond-
+ing technical reports. References must be complete. Include all
+information needed to find the reference.
+
+11. Avoid the use of names in citations. For example, use "Empirical
+studies of Fortran programs suggest most statements are
+simple1" instead of "Empirical studies of Fortran programs by
+Knuth1 suggest...," and use "Ingres2 uses several files..."
+instead of "Stonebraker's Ingres2 uses several files...."
+
+12. Use correct grammar in direct citations, e.g., use "Complete
+specifications are given in Reference 4" instead of "Complete
+specifications are given in [4]."
+
+13. Make the "Conclusions" contribute worthwhile material; do
+not simply restate the paper's substance.
+
+14. Avoid lengthy or overly general acknowledgments, e.g., use
+"C. Smith wrote the code generator and compiler test suite" instead
+of "My thanks to C. Smith for his assistance."
+
+15. Avoid parenthetical remarks. If they are really important, elevate
+them to non-restrictive clauses or to separate sentences.
+For example, use "The translator, a 6,570-line C program, is a
+conventional two-pass compiler," "The translator is a conven-
+tional two-pass compiler. It consists of 6,570 lines of C and
+requires 34 Kilobytes of memory," or simply "The translator is
+a conventional two-pass compiler," instead of "The compiler
+(written in 6,570 lines of C) is a conventional two-pass compiler."
+
+16. Use the active voice instead of the passive voice, e.g., use
+"The first phase does lexical analysis" instead of "Lexical analysis
+is done by the first phase."
+
+17. Avoid numbered lists (e.g., these suggestions) unless explicit
+reference is made to the items. Rewrite short unnumbered lists
+as paragraphs.
+
+18. Avoid the pronouns "his" and "her"; rewrite sentences in
+which they appear or use the plural "their." Avoid using "I" or
+"we."
+
+19. Do not use the future tense unnecessarily, e.g., use "The
+compiler emits triples" instead of "The compiler will emit
+triples." Also, do not use the future tense to refer to subsequent
+material in the paper, e.g., use "The algorithm, detailed below, is qua-
+dratic" instead of "The algorithm, which will be given in detail
+below, is quadratic."
+
+20. Use "which" and "that" correctly. "That" introduces restrictive
+clauses; "which" introduces non-restrictive clauses and is
+always set off by commas. Restrictive clauses are essential and
+nonremovable. Non-restrictive clauses are parenthetical and
+optional. For example, use "Interior nodes that represent binary
+operators have an additional type field" instead of "Interior
+nodes which represent binary operators have an additional
+type field," and "The code generator, which is written in C, is
+table-driven" instead of "The code generator that is written in
+C is table-driven."
+
+21. Give the referent of "this" explicitly, e.g., use "A major
+problem is the performance of the compiler. This problem is..." instead
+of "A major problem is the performance of the compiler. This
+is...."
+
+22. For program material, use a style that is consistent with
+the following conventions. Programs are set in 11-point Univers Light
+using the case and indentation given by the author. For Algol
+68, reserved words are set in Univers Bold. For Ada, reserved
+words are set in Univers Bold unless the author uses uppercase
+for reserved words. Program variables appearing in running
+text are set in Univers Light. Program material for which spac-
+ing and typography are essential to the technical content
+should be identified by marginal notes.
+
+23. Additional suggestions concerning style and usage can be
+found in The Chicago Manual of Style, The U. of Chicago Press,
+Chicago, 1969; Mary-Claire van Leunen, A Handbook for Schol-
+ars, Knopf, New York, 1978; and W. Strunk, Jr. and E.B. White,
+The Elements of Style, 2nd edition, McMillan, New York, 1972.
+
+
+*********************************************************************
+Software - Practice & Experience
+
+Refereeing Guidelines
+
+
+The purpose of Software-Practice & Experience is to convey the
+results of practical experience (whether successful or not) that
+might benefit the computing community. The key criterion for a paper is
+that it make a contribution from which other persons engaged in software
+design
+and implementation might benefit. Originality, although important,
+is secondary, especially in cases where apparently well known techniques do
+not appear in the readily available literature.
+
+Papers describing both "systems" and "applications" software in
+any computing environment are acceptable. Typical topics include
+software design and implementation, case studies, studies describing the
+evolution of software systems, critical appraisals of systems, and the
+practical aspects of software engineering. Theoretical discussions can be
+included, but should illuminate the practical aspects of the work, or
+indicate
+directions that might lead to better practical systems. Papers may be of any
+length, ranging from a short note (perhaps a page) to a full treatment of
+a substantial software system (say 40 pages).
+Good writing is imperative for the effective explanation of software
+systems. It is important that details be given where they enhance the
+paper's contribution and be suppressed where they simply add bulk.
+
+Referees' recommendations usually fall into one of the following
+categories:
+
+ACCEPTABLE. The paper's contribution warrants publication in SPE.
+Minor editorial suggestions or errors should be noted and will
+be handled by the Editor.
+
+ACCEPTABLE AFTER MINOR REVISION. The paper's contribution
+warrants publication, but requires minor revisions that cannot be handled
+by the Editor. The referee's report should detail the suggested revisions as
+specifically and clearly as possible. It should also indicate clearly those
+revisions the referee considers mandatory. In most cases, papers in this
+category are returned to the author for revision and further refereeing is
+done by the Editor. 
+
+ACCEPTABLE AFTER MAJOR REVISION. The paper's contribution may
+warrant publication, but major revisions are necessary. As
+with the previous category, the suggested revisions should be detailed
+as specifically and clearly as possible with an indication of those that
+the referee considers mandatory. Papers in this category are usually
+returned to the author for revision and sent back to the original referees
+for further review.
+
+UNACCEPTABLE. The paper's contribution does not warrant publication.
+For papers in this category, specific reasons for rejection should be
+stated.
+
