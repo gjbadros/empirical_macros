@@ -66,7 +66,7 @@ case for expression macros with arguments).
     semicolon (see section~\ref{sec:lint}).
     
     To reduce the number of categories in this presentation, the statement
-    categogry aggregates single statements (comprising 47\% of the category),
+    category aggregates single statements (comprising 47\% of the category),
     statements missing their final semicolon (as in {\tt \#define QUIT if
     (\verb|interrupt_state|) \verb|throw_to_top_level|()}; these account
   for 45\%), multiple statements (3.0\%), multiple statements where the
@@ -134,7 +134,7 @@ understand, and cannot be eliminated via straightforward translation
   or in any library header files included by the package.  The symbol may
   be defined by compiler command arguments or may be used only inside an
   appropriate conditional compilation guard because it is only meaningful
-  with a particular architecure, system, or library (for which we did not
+  with a particular architecture, system, or library (for which we did not
   have header files available).
   
   Unknown symbols can also be variables or functions that we failed to
@@ -184,7 +184,7 @@ understand, and cannot be eliminated via straightforward translation
   extensions.  Handling of partial entities is incomplete, so case labels
   and parts of structure declarations, and partial expressions are left
   unclassified.  Heuristics for recognizing operating system command lines
-  or flags occasionally faied.  Additional failures result from macro
+  or flags occasionally fail.  Additional failures result from macro
   bodies which cannot be unambiguously assigned to another category because
   their syntactic class depends on their arguments\,---\,such as {\tt
   \#define EXFUN(name, proto) name proto} and {\tt \#define
