@@ -202,7 +202,7 @@ if ((not defined($categoryname[$catLast]))
 ####   for the given meta categories.  Use:
 ####   map { $categoryname[$mcat_FAILURE[$_]] } @mcat_FAILURE
 @mcat_FAILURE = qw( catNOT_YET catIN_PROCESS catNO_DEF catFAILURE 
-		       catMULTIPLE catSYMBOL_UNKNOWN);
+		       catMULTIPLE );
 @mcat_NULL = qw( catNULL_DEFINE );
 @mcat_LITERAL = qw( catCONSTANT catLITERAL catSOME_CONSTANT );
 @mcat_NONLITERAL_EXPRESSION = qw( catEXP );
