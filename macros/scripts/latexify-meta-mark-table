@@ -55,7 +55,7 @@ while (<>) {
       print "$count &";
     } else {
       # Should use two_significant_digits from em_util.pm
-      my $pct_string = sprintf "%6.02g%% &", 100*$count/$sum;
+      my $pct_string = sprintf "%6.02g\\%% &", 100*$count/$sum;
       # If only one significant digit, fix.
       $pct_string =~ s/^(\s*)  (\d)(\\%)/$1$2.0$3/;
       $pct_string =~ s/^(\s*) (0\.0*\d)(\\%)/$1${2}0$3/;
