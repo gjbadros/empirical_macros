@@ -214,37 +214,37 @@ sub print_lint_summary ( $$$$$$$$$$$$$;$ )
   print "Excluding libraries, $macros macros defined $defs times"
     , (defined($packages) ? " in $packages packages" : ""), "\n";
   print "$different_arity\t("
-    . sprintf("%2.2f",percent2($different_arity,$macros))
+    . sprintf("%2.4f",percent2($different_arity,$macros))
       . "%) inconsistent arity\n";
   print "$null_body\t("
-    . sprintf("%2.2f",percent2($null_body,$defs))
+    . sprintf("%2.4f",percent2($null_body,$defs))
       . "%) null body with args\n";
   print "$newline_body\t("
-    . sprintf("%2.2f",percent2($newline_body,$defs))
+    . sprintf("%2.4f",percent2($newline_body,$defs))
       . "%) contains newline\n";
   print "$unparen_body\t("
-    . sprintf("%2.2f",percent2($unparen_body,$defs))
+    . sprintf("%2.4f",percent2($unparen_body,$defs))
       . "%) unparenthesized body\n";
   print "$swallow_semi\t("
-    . sprintf("%2.2f",percent2($swallow_semi,$defs))
+    . sprintf("%2.4f",percent2($swallow_semi,$defs))
       . "%) doesn't swallow semicolon\n";
   print "$free_var\t("
-    . sprintf("%2.2f",percent2($free_var,$defs))
+    . sprintf("%2.4f",percent2($free_var,$defs))
       . "%) free variables\n";
   print "$formal_name\t("
-    . sprintf("%2.2f",percent2($formal_name,$defs))
+    . sprintf("%2.4f",percent2($formal_name,$defs))
       . "%) bad formal name\n";
   print "$formal_mult_use\t("
-    . sprintf("%2.2f",percent2($formal_mult_use,$defs))
+    . sprintf("%2.4f",percent2($formal_mult_use,$defs))
       . "%) multiple formal uses\n";
   print "$formal_adjacent_use\t("
-    . sprintf("%2.2f",percent2($formal_adjacent_use,$defs))
+    . sprintf("%2.4f",percent2($formal_adjacent_use,$defs))
       . "%) adjacent formal uses\n";
   print "$formal_unparen_use\t("
-    . sprintf("%2.2f",percent2($formal_unparen_use,$defs))
+    . sprintf("%2.4f",percent2($formal_unparen_use,$defs))
       . "%) unparenthesized formal uses\n";
   print "$formal_modified\t("
-    . sprintf("%2.2f",percent2($formal_modified,$defs))
+    . sprintf("%2.4f",percent2($formal_modified,$defs))
       . "%) side-effected formal\n";
 }
 
