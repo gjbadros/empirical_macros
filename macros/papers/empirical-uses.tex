@@ -252,78 +252,6 @@ of C++ constructs.
 %gjb thinks this is more for the next paper-- we don't need to get into
 %it here]
 
-\section{Related Work}
-\label{sec:related}
-
-We could find no other empirical study of the use of the C preprocessor nor
-any other macro processor.  However, a number of other efforts provide
-guidance on how to use C macros effectively, provide tools for
-checking macro usage for given programs, etc.
-
-Carroll and Ellis state that ``almost all uses of macros can be
-eliminated from C++ libraries''~\cite[p.~146]{Carroll95}. 
-They list eight categories of macro usage and explain how to convert
-them into C++ mechanisms.  They do not
-discuss automatic conversion, but  focus on instructing the
-software engineer on better ways to do Cpp-like things.
-
-Similarly, a number of organizations provide hints about effective
-ways to the use the C preprocessor.  The GNU documentation, for example,
-discusses a set of techniques including simple macros, argument
-macros, predefined macros, stringification macros, concatenation
-macros, undefining and redefining
-macros.
-It also identifies a set of ``pitfalls and subtleties of
-macros''; these are much like some of the problems our analysis tool
-identifies, as discussed below.  Our effort not only categorizes
-problems, but it also determines the frequency of appearance of those
-problems and discovers other idiosyncratic uses.
-
-A number of tools check whether specific C programs
-satisfy particular constraints.  The lint program checker, distributed
-with most Unix systems, checks for potentially problematic uses of C\@.
-The implementation of lint is complicated by the fact
-that it tries to replicate significant functions of both the C
-compiler and the preprocessor.
-
-LCLint performs many of lint's checks and also
-allows the programmer to add annotations which enable additional
-checks~\cite{Evans-pldi96,Evans-fse94}.
-LCLint's  optionally checks  on function-like
-macros---that is, those which take arguments---include checking for
-macro arguments on the left hand side of assignments, checking for statements
-playing the role of expressions, and checking for consistent return types.
-%\begin{quote}
-%$\ldots$ a parameter to a macro may not be used as the left hand side
-%of an assignment expression $\ldots$, a macro definition must be
-%syntactically equivalent to a statement when it is invoked followed by
-%a semicolon $\ldots$, the type of the macro body must match the return
-%type of the corresponding function $\ldots$\footnote{From Section 8 of
-%David Evan's LCLint User's Guide, Version 2.2 (August 1996); larch-www.lcs.mit.edu:8001/\discretionary{}{}{}larch/\discretionary{}{}{}lclint/\discretionary{}{}{}guide/\discretionary{}{}{}guide.html}
-%[FIX: That footnote should really be a reference instead.]
-%\end{quote}
-%[Fix: that quotation is really easy to nitpick:
-% 1) assignment parameters is fine (just turn into a reference argument) but
-%    assignment of non-parameters that aren't at global scope is quite bad.
-% 2) in x=foo(); we do NOT want foo() to be a statement
-% 3) a macro doesn't have a single type, but may have many polymorphic types
-%Should we mention these things?  I don't want to seem nitpicky or petty.]
-LCLint's approach is prescriptive: programmers are encouraged not to use
-constructs that might be dangerous, or to change code that contains such
-constructs.  We are more interested in analyzing, describing, and
-automatically removing such uses so that tools can better process existing
-code without requiring human interaction or producing misleading results.
-
-%% FIX: If we could also list the platforms for which each can compile,
-%% that would be great, but I doubt the benefit is worth the effort for now
-
-Krone and Snelting use mathematical foundations analysis to determine the
-conditional compilation structure of code~\cite{Krone94}.  They determine,
-for each line, which preprocessor macros it depends upon, and display that
-information in a lattice.  They do not determine how macros depend upon one
-another directly, only by their nesting in {\tt \#if}, and the information
-conveyed is about the program as a whole.
-
 
 \section{Occurrence of Preprocessor Directives}
 \label{sec:directives}
@@ -535,12 +463,13 @@ macros with 10 or fewer uses covers approximately 75-80\% of the cases.
 %  \setlength{\tabcolsep}{.25em}
 %  \input{where_uses-tbl.tex}%
 %}
-\caption{Where Macro Uses Occur}
+\caption{Where macros are used.  This figure includes uses of
+  system-defined macros as well as those defined in the package.}
 \label{fig:define_usage}
 \end{figure}
 
 Figure~\ref{fig:define_usage} shows the percentage of defined macros
-that are used in C code, in Cpp code, in both, or in neither (i.e. no
+that are used in C code, in Cpp code, in both, or in neither (i.e., no
 uses).  No package expanded all of its defined macros; two did not
 expand as many as 40\% of the defined macros.  The dominant usage was
 in C code only; these uses don't, therefore, have any affect on
@@ -723,7 +652,81 @@ be easy to handle in a conversion process.
 % symbolic information to the debugger]
 
 %[FIX: Should this also include Mike's manual breakdown into categories
-%for gzip.  --not tonight!]
+%for gzip.]
+
+
+\section{Related Work}
+\label{sec:related}
+
+We could find no other empirical study of the use of the C preprocessor nor
+any other macro processor.  However, a number of other efforts provide
+guidance on how to use C macros effectively, provide tools for
+checking macro usage for given programs, etc.
+
+Carroll and Ellis state that ``almost all uses of macros can be
+eliminated from C++ libraries''~\cite[p.~146]{Carroll95}. 
+They list eight categories of macro usage and explain how to convert
+them into C++ mechanisms.  They do not
+discuss automatic conversion, but  focus on instructing the
+software engineer on better ways to do Cpp-like things.
+
+Similarly, a number of organizations provide hints about effective
+ways to the use the C preprocessor.  The GNU documentation, for example,
+discusses a set of techniques including simple macros, argument
+macros, predefined macros, stringification macros, concatenation
+macros, undefining and redefining
+macros.
+It also identifies a set of ``pitfalls and subtleties of
+macros''; these are much like some of the problems our analysis tool
+identifies, as discussed below.  Our effort not only categorizes
+problems, but it also determines the frequency of appearance of those
+problems and discovers other idiosyncratic uses.
+
+A number of tools check whether specific C programs
+satisfy particular constraints.  The lint program checker, distributed
+with most Unix systems, checks for potentially problematic uses of C\@.
+The implementation of lint is complicated by the fact
+that it tries to replicate significant functions of both the C
+compiler and the preprocessor.
+
+LCLint performs many of lint's checks and also
+allows the programmer to add annotations which enable additional
+checks~\cite{Evans-pldi96,Evans-fse94}.
+LCLint's  optionally checks  on function-like
+macros---that is, those which take arguments---include checking for
+macro arguments on the left hand side of assignments, checking for statements
+playing the role of expressions, and checking for consistent return types.
+%\begin{quote}
+%$\ldots$ a parameter to a macro may not be used as the left hand side
+%of an assignment expression $\ldots$, a macro definition must be
+%syntactically equivalent to a statement when it is invoked followed by
+%a semicolon $\ldots$, the type of the macro body must match the return
+%type of the corresponding function $\ldots$\footnote{From Section 8 of
+%David Evan's LCLint User's Guide, Version 2.2 (August 1996); larch-www.lcs.mit.edu:8001/\discretionary{}{}{}larch/\discretionary{}{}{}lclint/\discretionary{}{}{}guide/\discretionary{}{}{}guide.html}
+%[FIX: That footnote should really be a reference instead.]
+%\end{quote}
+%[Fix: that quotation is really easy to nitpick:
+% 1) assignment parameters is fine (just turn into a reference argument) but
+%    assignment of non-parameters that aren't at global scope is quite bad.
+% 2) in x=foo(); we do NOT want foo() to be a statement
+% 3) a macro doesn't have a single type, but may have many polymorphic types
+%Should we mention these things?  I don't want to seem nitpicky or petty.]
+LCLint's approach is prescriptive: programmers are encouraged not to use
+constructs that might be dangerous, or to change code that contains such
+constructs.  We are more interested in analyzing, describing, and
+automatically removing such uses so that tools can better process existing
+code without requiring human interaction or producing misleading results.
+
+%% FIX: If we could also list the platforms for which each can compile,
+%% that would be great, but I doubt the benefit is worth the effort for now
+
+Krone and Snelting use mathematical foundations analysis to determine the
+conditional compilation structure of code~\cite{Krone94}.  They determine,
+for each line, which preprocessor macros it depends upon, and display that
+information in a lattice.  They do not determine how macros depend upon one
+another directly, only by their nesting in {\tt \#if}, and the information
+conveyed is about the program as a whole.
+
 
 \section{Conclusion}
 \label{sec:discussion}
