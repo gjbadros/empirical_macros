@@ -310,12 +310,22 @@ sub category_lub ( $$ )
 	 && (($c2 == $catLITERAL) || ($c2 == $catCONSTANT)
 	     || ($c2 == $catSOME_CONSTANT)))
      { return $catSOME_CONSTANT; }
+
+  my $c1_is_exp = (($c1 == $catLITERAL) || ($c1 == $catCONSTANT)
+		   || ($c1 == $catSOME_CONSTANT) || ($c1 == $catEXP));
+  my $c2_is_exp = (($c2 == $catLITERAL) || ($c2 == $catCONSTANT)
+		   || ($c2 == $catSOME_CONSTANT) || ($c2 == $catEXP));
+
   # If both are constants or expressions, return expression
-  elsif ((($c1 == $catLITERAL) || ($c1 == $catCONSTANT)
-	  || ($c1 == $catSOME_CONSTANT) || ($c1 == $catEXP))
-	 && (($c2 == $catLITERAL) || ($c2 == $catCONSTANT)
-	     || ($c2 == $catSOME_CONSTANT) || ($c2 == $catEXP)))
+  if ($c1_is_exp && $c2_is_exp)
     { return $catEXP; }
+  # If expression and semicolonless statements(s), return statement(s)
+  elsif ($c1_is_exp && (($c2 == $catSTATEMENT_SANS_SEMI)
+			|| ($c2 == $catSTATEMENTS_SANS_SEMI)))
+    { return $c2; }
+  elsif ($c2_is_exp && (($c1 == $catSTATEMENT_SANS_SEMI)
+			|| ($c1 == $catSTATEMENTS_SANS_SEMI)))
+    { return $c1; }
 #   # if one is symbolunknown, chose the other if it's a known symbol, type,
 #   # constant, or expression
 #   elsif (($c1 == $catSYMBOL_UNKNOWN)
