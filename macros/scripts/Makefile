@@ -15,14 +15,14 @@ COMMON_DIR := $(shell dirname $$(ls -l Makefile | awk '{print $$NF}'))
 #COMMON_DIR := /homes/gws/mernst/research/notkin/macros/scripts
 #COMMON_DIR := /homes/gws/gjb/macros/scripts
 
-EXTRA_ANALYZE_FLAGS := "-v"
+EXTRA_ANALYZE_FLAGS := -v
 #EXTRA_ANALYZE_FLAGS := -g14
 
 PAPER_DIR := $(USER_PREFIX)/papers
 PAPER_CPPP_DIR := $(USER_PREFIX)/papers/cppp
 PAPER_ORIG_DIR := $(USER_PREFIX)/papers/orig
 
-include makefile.user
+include Makefile.user
 
 PKGS := $(shell zsh -c "echo $(PKG_DIR)/*(/:t) | sed -e 's/-[^ ]*//g'")
 
@@ -88,10 +88,11 @@ data_reports:
 clean_reports:
 	macros-clean-reports
 
-%.state:
+# Could also depend on $(PKG_DIR)/$(ANALYZE_OUTPUT_DIR)*/c-files-listing
+%.state: $(COMMON_DIR)/../em_analyze
 	em_make_state_file $(PKG_DIR) $(ANALYZE_OUTPUT_DIR) $@ $(EXTRA_ANALYZE_FLAGS) || echo $< >> $(ANALYZE_OUTPUT_DIR)/failures
 
-%.stat: %.state
+%.stat: %.state $(COMMON_DIR)/../em_reports
 	em_reports -s $< -t -d $(ANALYZE_OUTPUT_DIR):`echo $@ | sed -e 's/\.stat$$//'`
 
 ###########################################################################
