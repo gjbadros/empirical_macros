@@ -15,9 +15,9 @@ use File::Path;
 
 ######## Customization parameters
 
-# this suffix will be added to identifiers
+# this prefix will be added to identifiers
 # that are macros that are expanded
-my $expansion_suffix = "_EXPANDED_GJB_MDE";
+my $expansion_prefix = "EXPANDED_GJB_MDE_";
 
 # this directory hierarchy will out the processed
 # files with all expansions of macros denoted by
@@ -84,11 +84,14 @@ while (<IN>) {
   }
 #  print OUT "$mname, $ichStart, $ichEnd\n";
   my $ichLast = tell INFILE;
-  my $cchToRead = $ichEnd - $ichLast -1;
+  my $cchToRead = $ichStart - $ichLast -1;
   my $source_data;
   # read through to the end of the next expansion
   read INFILE, $source_data, $cchToRead;
-  print OUT $source_data, $expansion_suffix;
+  print OUT $source_data;
+  my $macro_expansion;
+  read INFILE, $macro_expansion, ($ichEnd - $ichStart + 1);
+  print OUT $expansion_prefix, $macro_expansion;
 }
 
 flush_to_end_of_file();
