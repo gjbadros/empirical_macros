@@ -1926,28 +1926,28 @@ sub getline_handle_preprocessor_command ($$$$$)
 	  if (!defined($complete_filename))
 	    { # FIX:  make complete_include_pathname work when $angled_include
 	      # is false, and then restore this (and eliminate the "else"...)
-	      mdie("Can't resolve include file $include_file");
-	    }
+	      parse_error("Can't resolve include file $include_file");
+	    } else {
+	      # ***** Add file dependence here *****
 
-	  # ***** Add file dependence here *****
 
-
-	  # Check to see if we're already reading this file anyway
-	  # if we resolved the filename to a real file,
-	  # and we've not already added the file to our list we need to parse
-	  if (scalar(grep($_ eq $complete_filename, @files_included)) == 0) {
-	    # FIX: may want to insert this where we are
-	    # or do some sort of recursive reading of *all* included files
-	    # WEIRD: Why does this cause a problem in parsing a macro argument
-	    #      when I use @files instead of @files_included
-	    if (!forbidden_file($complete_filename))
-	      { push @files, $complete_filename;
-		push @files_included, $complete_filename;
-		$file_inclusion_method{$complete_filename} = "FromInclude" .
-		  ($angled_include? "<>" : '""');
-		# print STDERR "Adding \"$complete_filename\" as $file_inclusion_method{$complete_filename}\n";
+	      # Check to see if we're already reading this file anyway
+	      # if we resolved the filename to a real file,
+	      # and we've not already added the file to our list we need to parse
+	      if (scalar(grep($_ eq $complete_filename, @files_included)) == 0) {
+		# FIX: may want to insert this where we are
+		# or do some sort of recursive reading of *all* included files
+		# WEIRD: Why does this cause a problem in parsing a macro argument
+		#      when I use @files instead of @files_included
+		if (!forbidden_file($complete_filename))
+		  { push @files, $complete_filename;
+		    push @files_included, $complete_filename;
+		    $file_inclusion_method{$complete_filename} = "FromInclude" .
+		      ($angled_include? "<>" : '""');
+		    # print STDERR "Adding \"$complete_filename\" as $file_inclusion_method{$complete_filename}\n";
+		  }
 	      }
-	  }
+	    }
 	}
       }
     }
