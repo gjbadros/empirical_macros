@@ -31,8 +31,8 @@ require Exporter;
  $ccatDEBUG $ccatPORT_LANLIB $ccatPORT_FEATURE $ccatPORT_MACHINE 
  $ccatCOMMENTING $ccatMI_PREVENTION
  $ccatREDEF_SUPPRESION $ccatMISC_SYSTEM
-#End of @EXPORT
 );
+#End of @EXPORT
 
 ###########################################################################
 ### Constants
