@@ -2769,6 +2769,39 @@ CbuffersDeep(cpp_reader *pfile)
 }
 
 int
+CchBufferOffset(cpp_reader *pfile)
+{
+  cpp_buffer *buffer = CPP_BUFFER(pfile);
+  int cbuffersDeep = 0;
+  int retval = 0;
+  while (buffer != CPP_NULL_BUFFER(pfile)) 
+    {
+    if (buffer->nominal_fname) 
+      break;
+    else
+      {
+      cbuffersDeep++;
+      buffer = CPP_PREV_BUFFER(buffer);
+      }
+    }
+  if (buffer->fFromPerl)
+    retval += buffer->ichSourceStart - 1;
+  return retval;
+}
+
+
+int 
+CchSumPceiOffsets(cpp_expand_info *pcei)
+{
+  int cch = 0;
+  while (pcei) {
+    cch += pcei->offset;
+    pcei=pcei->pceiPrior;
+  }
+  return cch;
+}
+
+int
 CchOffset_internal(cpp_reader *pfile)
 {
   cpp_buffer *buffer = CPP_BUFFER(pfile);
@@ -2785,8 +2818,8 @@ CchOffset_internal(cpp_reader *pfile)
       }
     }
   retval = buffer->cur - buffer->buf;
-  if (CPP_BUFFER(pfile)->fFromPerl)
-    retval += CPP_BUFFER(pfile)->ichSourceStart - 1;
+  if (buffer->fFromPerl)
+    retval += buffer->ichSourceStart - 1;
   return retval;
 }
 
@@ -2831,6 +2864,7 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
   register int i;
   int ichSourceStart = 0;
   int cchRawCall = 0;
+  int cchOffsetInternal = 0;
   cpp_buffer *pbuf = NULL;
 
 #if 0
@@ -2851,9 +2885,12 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
   pbuf = CPP_BUFFER(pfile);
   pchRawCall = pbuf->cur;
   cchRawCall = pbuf->cur - pchAfterMacroName;
-  ichSourceStart = pcei?(pcei->offset + pbuf->cur - pbuf->buf - 2):
-    (CchOffset_internal(pfile) - cchRawCall - strlen(hp->name) + 1);
-  /* FIXGJBNOW  CPP_BUFFER(pfile)->ichSourceStart = ichSourceStart;  */
+  cchOffsetInternal = CchOffset_internal(pfile);
+  if (pcei) {
+    ichSourceStart = CchBufferOffset(pfile) + CchSumPceiOffsets(pcei) + pbuf->cur - pbuf->buf - 2;
+  } else {
+    ichSourceStart = cchOffsetInternal - cchRawCall - strlen(hp->name) + 1;
+  }
 
   if (nargs >= 0)
     {
