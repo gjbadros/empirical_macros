@@ -1456,7 +1456,7 @@ sub transitive_closure_dependences ( )
     { my $elt = shift(@local_dependence_worklist);
       $worklist_shifts++;
       if ($worklist_shifts % 100 == 0)
-	{ print STDERR "Removed $worklist_shifts worklist elements (last $elt), ", scalar(@local_dependence_worklist), " remaining.\n"; }
+	{ if ($opt_v) {print STDERR "Removed $worklist_shifts worklist elements (last $elt), ", scalar(@local_dependence_worklist), " remaining.\n"; } }
       if (!defined($local_dependence_worklist_members{$elt}))
 	{ print "@local_dependence_worklist\n";
 	  print (sort keys %local_dependence_worklist_members); print "\n";
@@ -6184,7 +6184,28 @@ sub get_include_path ( ) {
   return;
 }
 
-# fix: If $system is true, look only for a system include file.
+sub look_in_path_for_filename ( $ ) {
+  my ($file) = check_args(1, @_);
+
+  my $complete_file_try;
+  my $complete_file = undef;
+  foreach my $dir (@include_path) {
+    $complete_file_try = "$dir/$file";
+    if (-f $complete_file_try) {
+      $complete_file = $complete_file_try;
+      last;
+    }
+  }
+  return $complete_file
+}
+
+
+sub CPathComponentsOfFile ( $ ) {
+  my ($fname) = check_args(1,@_);
+  $fname =~ s%/%/%g;
+}
+
+# fix: If $system is true, look first for system include file.
 # Otherwise, look in package and system directories.
 # Search through @include_path's directories and find the first
 # directory that has $file in it.
@@ -6198,6 +6219,18 @@ sub complete_include_pathname ( $$$ ) {
     $local_name = "$dirname/$file";
     $local_name = simplify_path_name($local_name);
   }
+
+
+  my $complete_file = undef;
+  # NOTE: this is just like a if (!$system) block, below; only
+  # one or the other gets run, depending on whether include was <> or ""
+  if ($system) {
+    $complete_file = look_in_path_for_filename( $file );
+    if (defined($complete_file)) {
+      return ($false,$complete_file);
+    }
+  }
+
   # This doesn't actually check the local directory on the theory that the
   # file should have been included on the standard input.
   #DBG print STDERR "Trying $local_name...";
@@ -6208,17 +6241,28 @@ sub complete_include_pathname ( $$$ ) {
   }
   #DBG print STDERR "\n";
 
-  my $complete_file_try;
-  my $complete_file = undef;
-  foreach my $dir (@include_path) {
-    $complete_file_try = "$dir/$file";
-    if (-f $complete_file_try) {
-      $complete_file = $complete_file_try;
-      last;
+
+  # This just grabs the first file name that has the right trailing path
+  # component (
+  if (grep {/^(.*$file)$/ && ($complete_file = $1);} 
+      sort { CPathComponentsOfFile($a) <=> CPathComponentsOfFile($b) }  
+      @files )  {
+    $complete_file = $1;
+    return ($true,$complete_file);
+  }
+    
+
+  # NOTE: this is just like a if ($system) block, above
+  if (!$system) {
+    $complete_file = look_in_path_for_filename( $file );
+    if (defined($complete_file)) {
+      return ($false,$complete_file);
     }
   }
+
   #DBG print STDERR "Found $file to be ", (defined($complete_file) ? $complete_file : "<<UNDEFINED>>"), \n";
   # returns undefined if never set
+  
   return ($false,$complete_file);
 }
 
@@ -6777,7 +6821,7 @@ sub SaveMacroAnalysisState ( $ )
     # buffered output.  It doesn't seem to do that any more, though...
     $es = "Data::Dumper->DumpxsFd(fileno OUTSTATE,[\\$v],[\"$g\"]);\n";
 #    $es = "print OUTSTATE Data::Dumper->Dumpxs([\\$v],[\"$g\"]);\n";
-    print STDERR $es;
+    print STDERR $es if $opt_v;
     eval $es;
     $es = "undef $v;\n";
     eval $es;
@@ -6825,6 +6869,17 @@ if ($opt_a && ($opt_u || $opt_1)) {
 
 my $statename = "state";
 
+# TESTING of CPathComponentsOfFile of searching @files for a filename trailer
+#print CPathComponentsOfFile("./foo/bar"), "\n";
+#print CPathComponentsOfFile("./foo"), "\n";
+#print CPathComponentsOfFile("./foo/bar/testing"), "\n";
+#my $file = "readline/readline.h";
+#my $complete_file = undef;
+#if (grep {/^(.*$file)$/ && ($complete_file = $1);} sort { CPathComponentsOfFile($a) <=> CPathComponentsOfFile($b) }  @files )  {
+#    print $complete_file, "\n";
+#}
+#print join("\n",sort { CPathComponentsOfFile($a) <=> CPathComponentsOfFile($b) }  @files);
+#exit 0;
 
 # Clunky, but faster than editing and saving the file over NFS.
 if ($opt_g)
