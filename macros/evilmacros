@@ -9,7 +9,7 @@
 # Also permits it to be piped file names via standard in. (added by gjb)
 
 #Complex execution (use zsh):
-# ext=all; p=~/505/data; for i in *(/); do pushd $i; find-c | evilmacros -i -D$p/$i.def.$ext -e$p/$i.em.$ext -c$p/$i.cat.$exit -S$p/$i.stat.$ext > $p/$i.out.$ext 2> $p/$i.err.$ext; popd; done
+# ext=all; p=~/505/data; for i in *(/); do pushd $i; find-c | nice evilmacros -i -D$p/$i.def.$ext -e$p/$i.em.$ext -c$p/$i.cat.$ext -S$p/$i.stat.$ext > $p/$i.out.$ext 2> $p/$i.err.$ext; popd; done
 #
 
 # Report "evil" CPP macros:
