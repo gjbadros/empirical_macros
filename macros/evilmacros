@@ -278,21 +278,23 @@ my $catCONSTANT = 8;		# need to also specify the particular value, if possible
 my $catSOMECONSTANT = 9;	# a constant, but not known which (e.g., multiple #defines)
 # Non-expressions
 my $catFAILURE = 10;		# shouldn't have just one, should have many
-my $catTYPEARG = 11;		# macro argument has a type
+my $catHASTYPEARG = 11;		# macro argument has a type
 # These shouldn't be failures
 my $catMACROFUN = 12;
 my $catMACROTYPE = 13;
+my $catUSESTYPEARG = 14;
 
 # New categories -- higher numbers take precedence over lower ones
 # Be sure to keep in sync w/ strings of @categoryname
-my $catASM = 14;
-my $catSYNTAX = 15;		# this goes along with MISMATCH, sort of
-my $catTYPE = 16;
-my $catRESDWORD  = 17;
-my $catSTATEMENT = 18;  # STATEMENT-s likely contain reserved words, but are more specific
-my $catMISMATCH  = 19;
-my $catPASTING   = 20;
-my $catSTRINGIZE = 21;
+my $catASM = 15;
+my $catSYNTAX = 16;		# this goes along with MISMATCH, sort of
+my $catTYPE = 17;
+my $catRESDWORD  = 18;
+my $catSTATEMENT = 19;  # STATEMENT-s likely contain reserved words, but are more specific
+my $catRECURSIVE = 20;
+my $catMISMATCH  = 21;
+my $catPASTING   = 22;
+my $catSTRINGIZE = 23;
 
 
 my @categoryname = (
@@ -303,9 +305,11 @@ my @categoryname = (
 		    'literal', 'constant', 'some_constant',
 		    'failed_categorization', 'has_type_argument',
 		    'macro_as_function', 'macro_as_type',
+                    'uses_type_argument',
 		    'assembly_code', 'syntax_tokens',
 		    'expands_to_type', 'expands_to_reserved_word',
 		    'statement',
+                    'recursive',
 		    'mismatched_entities',
 		    'token_pasting',
 		    'stringization',
@@ -347,10 +351,21 @@ sub category_lub ($$)
 ### Reserved words
 
 # can appear in a type
-my $c_reserved_type_word_re = '\b(char|const|double|enum|extern|float|int|long|register|short|signed|static|struct|union|unsigned|void|volatile)\b';
+my $c_reserved_type_word_alternatives = 'char|const|double|enum|extern|float|int|long|register|short|signed|static|struct|union|unsigned|void|volatile';
 # can't appear in a type
-my $c_reserved_nontype_word_re = '\b(asm|auto|break|case|continue|default|do|else|entry|for|fortran|goto|if|return|sizeof|switch|typedef|while)\b';
-my $c_plus_plus_reserved_word_re = '\b(asm|bool|catch|class|const_cast|delete|dynamic_cast|false|friend|inline|mutable|namespace|new|operator|private|protected|public|reinterpret_cast|static_cast|template|this|throw|true|try|typeid|using|virtual)\b';
+my $c_reserved_nontype_word_alternatives = 'asm|auto|break|case|continue|default|do|else|entry|for|fortran|goto|if|return|sizeof|switch|typedef|while';
+my $c_plus_plus_reserved_type_word_alternatives = 'bool|class|friend|inline|private|protected|public|virtual';
+my $c_plus_plus_reserved_nontype_word_alternatives = 'asm|catch|const_cast|delete|dynamic_cast|false|mutable|namespace|new|operator|reinterpret_cast|static_cast|template|this|throw|true|try|typeid|using';
+
+my $reserved_type_word_re = '\b(' . $c_reserved_type_word_alternatives
+  . '|' . $c_plus_plus_reserved_type_word_alternatives . ')\b';
+my $reserved_nontype_word_re = '\b(' . $c_reserved_nontype_word_alternatives
+  . '|' . $c_plus_plus_reserved_nontype_word_alternatives . ')\b';
+my $reserved_word_re ='\b(' . $c_reserved_type_word_alternatives
+  . '|' . $c_plus_plus_reserved_type_word_alternatives
+  . '|' . $c_reserved_nontype_word_alternatives
+  . '|' . $c_plus_plus_reserved_nontype_word_alternatives . ')\b';
+
 
 ### Literals
 
@@ -439,11 +454,11 @@ my $type_declarator_arglist_re = $type_declarator_re . '\s*(' . $simple_arglist_
 # $declarator_re = '(' . $pointer_declarator_re . '|' . $direct_declarator_re . ')';
 # type plus identifier:  $1 = type, $5 = identifier
 
-# Does not handle enum, struct, union, and function types
+# Does not handle function types
 my $numeric_type_word_re = '\b(short|signed|unsigned|long|int|char|float|double)\b';
 my $numeric_type_re = $numeric_type_word_re . '(\s+' . $numeric_type_word_re . ')*';
 my $non_numeric_type_re = '\b(void)\b';
-my $builtin_type_base_re = "($numeric_type_re|$non_numeric_type_re)";
+my $builtin_type_base_re = "($numeric_type_re|$non_numeric_type_re|" . '\b(struct|union|enum)\s+' . "$identifier_re)";
 my $builtin_type_re = $builtin_type_base_re . $type_suffix_re . '*';
 
 ## Binary operators
@@ -2408,13 +2423,15 @@ sub getline_handle_preprocessor_command ($$$)
 	    if (scalar(grep($_ eq $complete_filename, @files_included)) == 0) {
 	      # FIX: may want to insert this where we are
 	      # or do some sort of recursive reading of *all* included files
-	      # WIERD: Why does this cause a problem in parsing a macro argument
+	      # WEIRD: Why does this cause a problem in parsing a macro argument
 	      #      when I use @files instead of @files_included
-	      push @files, $complete_filename;
-	      push @files_included, $complete_filename;
-	      $file_inclusion_method{$complete_filename} = "FromInclude" .
-		($angled_include? "<>" : '""');
-	      # print STDERR "Adding \"$complete_filename\" as $file_inclusion_method{$complete_filename}\n";
+	      if (!forbidden_file($complete_filename))
+		{ push @files, $complete_filename;
+		  push @files_included, $complete_filename;
+		  $file_inclusion_method{$complete_filename} = "FromInclude" .
+		    ($angled_include? "<>" : '""');
+		  # print STDERR "Adding \"$complete_filename\" as $file_inclusion_method{$complete_filename}\n";
+		}
 	    }
 	  }
 	}
@@ -2946,7 +2963,8 @@ sub parse_exp ($;$)
   my ($exp, $ignoretypes) = check_args_range(1, 2, @_);
   if (!defined($ignoretypes))
     { $ignoretypes = $false; }
-  if ($debug_parse_expression) { print "parse_exp: '$exp' '$ignoretypes'\n"; }
+  if ($debug_parse_expression)
+    { print "parse_exp", ($ignoretypes ? " (ignore types)" : ""), ": '$exp'\n"; }
   # If ignoretypes is set, then we don't try to infer types, look up types
   # of unknown functions, or set symbol tables.  We do still compute types
   # for literals and return a type, I think.
@@ -2972,7 +2990,7 @@ sub parse_exp ($;$)
   # Type in parens followed by (what looks like) paren, number, identifier, or
   # unary operator (without a binary counterpart: no +-!&*)
   if (($exp =~ /^\(\s*($type_re)\s*\)\s*([0-9a-zA-Z_\(~])/)
-      || ($exp =~ /^\(\s*($type_re\s*\*+)\s*\)\s*(.)/) # ends with *: pointer
+      || ($exp =~ /^\(\s*($type_re\s*$type_suffix_re+)\s*\)\s*(.)/o) # ends with *: pointer
       # identifier ending with _t: type
       || ($exp =~ /^\(\s*([a-zA-Z_\$][a-zA-Z0-9_\$]*_t)\s*\)\s*(.)/)
       # identifier which expands to reserved word: type
@@ -3020,7 +3038,7 @@ sub parse_exp ($;$)
 	{ # $remaining is already set
 	  # fix: add this type to the list of those seen.
 	  # (It might be an expression that looks like a type; what to do?
-	  # Can check $c_reserved_type_word_re...
+	  # Can check $reserved_type_word_re...
 	}
       else
 	{ ($sizeof_arg_type, $remaining) = parse_exp($sizeof_follower, $ignoretypes);
@@ -3429,7 +3447,7 @@ sub parse_exp_follower ($$)
 	{ return ($typeSTRING, $followfollow); } }
 
   if ($debug_parse_expression)
-    { print "parse_exp_follower returning ", type_name($type), "; found nothing in '$follow'\n"; }
+    { print "parse_exp_follower returning ", type_name($type), "; found no follower in '$follow'\n"; }
   return ($type, $follow);
 }
 
@@ -3608,7 +3626,7 @@ PROCESSLINE:
 		     # Dispense with this test, and instead check indentedness.
 		     # If unindented, matches type, and next line nonblank,
 		     # what else could it be?
-# 		     && (($line =~ /$c_reserved_type_word_re/o) # no anchoring
+# 		     && (($line =~ /$reserved_type_word_re/o) # no anchoring
 # 			 ||
 #                        # Note peek_fulltoken_line doesn't update @dependenton
 #                        # or do branch merging, so this isn't perfect in many
@@ -3673,11 +3691,11 @@ PROCESSLINE:
 		      # don't want to mdie here).
 		      # print "rejected special case";
 		    }
-		  elsif ($typespec =~ /$c_reserved_nontype_word_re/o)
+		  elsif ($typespec =~ /$reserved_nontype_word_re/o)
 		    { # "else if (...)", "return foo;", "sizeof(buf)", etc.
 		      # print "rejected typespec $typespec\n";
 		    }
-		  elsif ($declarator =~ /$c_reserved_nontype_word_re/o)
+		  elsif ($declarator =~ /$reserved_nontype_word_re/o)
 		    {
 		      # print "rejected declarator $declarator\n";
 		    }
@@ -3796,6 +3814,8 @@ PROCESSLINE:
 			    for $follow (1..7)
 			      { my $next = peek_fulltoken_line($follow);
 				# What if this is a preprocessor directive or comment?
+				if (!defined($next))
+				  { last; }
 				if ($next =~ /^[^\s]/)
 				  { $proper_follows = $true;
 				    last; }
@@ -4649,20 +4669,30 @@ sub categorize_macro_def ($)
       $type = $typeCHAR; }
   # Being a statement has precedence over having a reserved word,
   # but this body is just a single word.
-  elsif ($body =~ /^$c_reserved_nontype_word_re$/)
+  elsif ($body =~ /^$reserved_nontype_word_re$/)
     { # $failure_type = "expands_to_reserved_word";
       $category = $catRESDWORD;
       # evilprint("expands to reserved word: $body\n");
     }
   elsif ( # like $type_re, but unconditional suffix
 	 ($body =~ /^$type_specifier_re$type_suffix_re+$/o)
-	 || ($body =~ /^($c_reserved_type_word_re[ \t\*\[\]]*)+$/))
+	 || ($body =~ /^($reserved_type_word_re[ \t\*\[\]]*)+$/)
+	 || ($body =~ /^struct\s*$identifier_re$/))
     { $category = $catTYPE; }
   elsif (($body =~ /^$identifier_re$/)
 	 && (categorize_macro_name($body) || $true) # for side effect
 	 && (defined($mncategory{$body})))
     { $category = $mncategory{$body};
       $type = $mntype{$body}; }
+  elsif ($body =~ /\b\Q$mdef_name[$index]\E\b/)
+    { $category = $catRECURSIVE; }
+  elsif (($body =~ /,\s*$builtin_type_re\s*[,\)]/o)
+	 || ($body =~ /\(\s*$builtin_type_re\s*(,|\)$)/o)
+	 || ($body =~ /,\s*($type_re\s*$type_suffix_re+)\s*[,\)]/o) # ends with *: pointer
+	 || ($body =~ /\(\s*($type_re\s*$type_suffix_re+)\s*(,|\)$)/o)
+	 || ($body =~ /,\s*([a-zA-Z_\$][a-zA-Z0-9_\$]*_t)\s*[,\)]/o) # identifier ending with _t
+	 || ($body =~ /\(\s*([a-zA-Z_\$][a-zA-Z0-9_\$]*_t)\s*(,|\)$)/o))
+    { $category = $catUSESTYPEARG; }
   else
     { my $remaining;
       reset_parse_vars();
@@ -4689,7 +4719,7 @@ sub categorize_macro_def ($)
 	    foreach $arg (split(/[\(, \t\)]+/, $mdef_args[$index]))
 	      { delete $parsevars{$arg};
 		if (defined($parsetypes{$arg}))
-		  { $category = $catTYPEARG;
+		  { $category = $catHASTYPEARG;
 		    goto CATEGORIZED; }
 		delete $parsefuns{$arg}; } }
 	  # print "category postargs = $category\n";
@@ -5028,21 +5058,39 @@ sub check_macro_body ($) {
   my $category = $catFAILURE;
   my $full_body = $body;
 
-  if ($body =~ /^if\s*(?=\()/)
+  if ($body =~ /^return\b\s*/)
     { my ($type, $remaining) = parse_expression($POSTMATCH);
-      ($type, $remaining) = parse_expression($body);
       # print "type = $type; remaining = $remaining\n";
       # $type was ($type != $typeFAIL)
-      if ($type && ($remaining !~ /\s*\{/))
-	{ ($type, $remaining) = parse_expression($remaining);
-	  if ($type && ($remaining =~ /^\s*$/))
-	    { $category = $catSTATEMENT;
-	      $failure_type = "semicolonless, braceless if";
-	      return ($result,$failure_type,$category); } } }
+      if ($type && ($remaining =~ /^\s*$/))
+	{ $category = $catSTATEMENT;
+	  $failure_type = "semicolonless return";
+	  return ($result,$failure_type,$category); } }
+  if ($body =~ /^(if|while)\s*\(/)
+    { # Don't try to parse the open paren, as it might look like a cast.
+      my ($type, $remaining) = parse_expression($POSTMATCH);
+      # print "type = $type; remaining = $remaining\n";
+      # $type was ($type != $typeFAIL)
+      if ($type && ($remaining =~ /^\s*\)/))
+	{ $remaining = $POSTMATCH;
+	  if ($remaining !~ /\s*\{/)
+	    { if ($remaining =~ /^\s*(return|goto)\b\s*/)
+		# "goto" was a hack
+		{ $remaining = $POSTMATCH; }
+	      ($type, $remaining) = parse_expression($remaining);
+	      # print "2nd type = $type; remaining = $remaining\n";
+	      if ($type && ($remaining =~ /^\s*$/))
+		{ $category = $catSTATEMENT;
+		  $failure_type = "semicolonless, braceless if";
+		  return ($result,$failure_type,$category); } } } }
+  if ($body =~ /^goto\s*$identifier_re$/)
+    { $category = $catSTATEMENT;
+      $failure_type = "semicolonless goto";
+      return ($result,$failure_type,$category); }
 
   #print "BODY: $body\n";
-  # Used to include '$c_reserved_nontype_word_re|$c_reserved_type_word_re'
-  while ($body =~ m%[\]\[(){}\"\'\#]|//|/\*|\*/|__asm__|;%o) #'HACKCOLOR
+  # Used to include '$reserved_word_re'
+  while ($body =~ m%[\]\[(){}\"\'\#]|//|/\*|\*/|(__)?asm(__)?|;%o) #'HACKCOLOR
     # Found paren, quote, cpp directive, or comment
     { my $match = $MATCH;
       $body = $POSTMATCH;
@@ -5058,17 +5106,17 @@ sub check_macro_body ($) {
 	  $category = harder_category($category,$catSTATEMENT);
 	  # evilprint("expands to statement: $full_body\n");
 	}
-      elsif ($match =~ /^__asm__$/)
+      elsif ($match =~ /^(__)?asm(__)?$/)
 	{ $failure_type = "assembly_code";
 	  $category = harder_category($category,$catASM);
 	}
-      #  elsif ($match =~ /^$c_reserved_type_word_re$/o)
+      #  elsif ($match =~ /^$reserved_type_word_re$/o)
       #  {
       #    $failure_type = "expands_to_type";
       #    $category = harder_category($category,$catTYPE);
       #    # evilprint("expands to type '$MATCH': $full_body\n");
       #  }
-      #  elsif ($match =~ /^$c_reserved_nontype_word_re$/o)
+      #  elsif ($match =~ /^$reserved_nontype_word_re$/o)
       #  {
       #    $failure_type = "expands_to_reserved_word";
       #    $category = harder_category($category,$catRESDWORD);
@@ -5197,9 +5245,9 @@ sub check_macro_body ($) {
       $failure_type = "assembly_code";
     }
 
-  if ($failure_type eq "unknown") {
-    evilprint("unknown failed categorization:\n    $full_body\n");
-  }
+  #   if ($failure_type eq "unknown") {
+  #     evilprint("unknown failed categorization:\n    $full_body\n");
+  #   }
   return ($result,$failure_type,$category);
 }
 
@@ -5278,10 +5326,12 @@ sub current_line_no () {
 sub forbidden_file ($)
 { my ($filename) = check_args(1, @_);
   # bash/machines.h is for use by the makefile, not C code
+  # /usr/include/linux/linkage.h is assembly, not C code
   # glibc/asm-syntax.h and glibc/sysdep.h are assembly, not C code
+  # print "Checking '$filename'\n";
   return ((($opt_d =~ /bash/) && ($filename eq "./machines.h"))
-	  || (($opt_d =~ /glibc/) && (($filename eq "/usr/include/linux/linkage.h")
-				      || ($filename =~ /\/asm-syntax\.h$/)
+	  || ($filename eq "/usr/include/linux/linkage.h")
+	  || (($opt_d =~ /glibc/) && (($filename =~ /\/asm-syntax\.h$/)
 				      || ($filename =~ /\/sysdep\.h$/))));
 }
 
@@ -5881,6 +5931,8 @@ sub remove_newline ($)
 # Don't bother checking type; we test expression types elsewhere.
 sub test_categorize_macro_def ($$)
 { my ($category,$body) = check_args(2, @_);
+  if (is_number($category))
+    { $category = $categoryname[$category]; }
   $mdef_body[1000] = $body;
   $mdef_body_noc[1000] = $body;
   $mdef_name[1000] = "dummy";
@@ -5888,13 +5940,16 @@ sub test_categorize_macro_def ($$)
   undef $mdef_category[1000];
   categorize_macro_def(1000);
   if ($category ne $categoryname[$mdef_category[1000]])
-    { print "Category $category should have been $categoryname[$mdef_category[1000]] for $body\n"; }
+    { print "Category $categoryname[$mdef_category[1000]] should have been $category for $body\n"; }
 }
 
 sub test_categorize_macro_defs ()
 {
   $current_file = "testing";	# hack, for input_file_and_line
   $current_ftype_index = 1;	# hack, for update_categories_for
+
+  test_categorize_macro_def("literal", "\"\\037\\235\"");
+  test_categorize_macro_def("literal", "\"\037\235\"");
   test_categorize_macro_def("expression", "(uch)get_byte()");
   test_categorize_macro_def("expression", "memset ((voidp)(s), 0, (n))");
   test_categorize_macro_def("expression", "((char_type *)(&d_buf[DIST_BUFSIZE-1]))");
@@ -5902,10 +5957,22 @@ sub test_categorize_macro_defs ()
   test_categorize_macro_def("expression", "((ulg)(SH(p)) | ((ulg)(SH((p)+2)) << 16))");
   test_categorize_macro_def("expression", "malloc((size_t)(items)*(size_t)(size))");
   test_categorize_macro_def("expression", "(inptr < insize ? inbuf[inptr++] : fill_inbuf(0))");
-  test_categorize_macro_def("literal", "\"\\037\\235\"");
-  test_categorize_macro_def("literal", "\"\037\235\"");
+  test_categorize_macro_def($catTYPE, "struct bsdtty");
+  test_categorize_macro_def($catTYPE, "extern inline");
   test_categorize_macro_def("statement", "if (status < 0) { perror(name); error=1; }");
   test_categorize_macro_def("statement", "if (foo) bar(baz)");
+  test_categorize_macro_def("statement", "while (b - bufp->buffer + (n) > bufp->allocated)  EXTEND_BUFFER ()");
+  test_categorize_macro_def("statement", "goto yyerrlab1");
+  test_categorize_macro_def("statement", "return 0");
+  test_categorize_macro_def("statement", "return err__fl((int)f,m,s)");
+  test_categorize_macro_def("statement", "if (auth != mach_task_self () && ! __USEPORT (AUTH, port == auth))  return EPERM");
+  test_categorize_macro_def("statement", "if (x == NULL) goto error");
+  test_categorize_macro_def("recursive", "foo(dummy)");
+
+  test_categorize_macro_def($catUSESTYPEARG, "((d)->d_reclen - offsetof (struct direct, d_name) - 1)");
+  test_categorize_macro_def($catUSESTYPEARG, "_IOR('m', 2, struct mtget)");
+  # I think this one fails.
+  test_categorize_macro_def($catUSESTYPEARG, "__BITS(char*)");
 }
 
 
@@ -6005,6 +6072,10 @@ sub test_parse_expressions ()
   test_parse_expression("__sighandler_t", "((__sighandler_t)-1)");
   test_parse_expression("size_t", "((size_t) &((TYPE *)0)->MEMBER)");
   test_parse_expression("Dimension", "((Dimension)~0)");
+  test_parse_expression("struct __va_regs", "((struct __va_regs) foo)");
+  test_parse_expression("struct __va_regs", "((struct __va_regs) { 1 })");
+  test_parse_expression("struct __va_regs", "((struct __va_regs) {  &(_AP.__pr0), (void*)&__builtin_va_alist, (void*)0,  __va0,__va1,__va2,__va3,__va4,__va5,  __va6,__va7,__va8,__va9,__va10,__va11})");
+  test_parse_expression("struct __va_regs", "_AP =  ((struct __va_regs) {  &(_AP.__pr0), (void*)&__builtin_va_alist, (void*)0,  __va0,__va1,__va2,__va3,__va4,__va5,  __va6,__va7,__va8,__va9,__va10,__va11})");
 
   # Characters
   test_parse_expression("char", "'\\'");
@@ -6060,6 +6131,7 @@ sub test_parse_expressions ()
   test_parse_expression($typeUNKNOWN, "(size1 == 0 || startpos >= size1 ? string2[startpos - size1]  : string1[startpos])");
   test_parse_expression($typeUNKNOWN, '$$PsectAttributes_NOSHR$$environ');
   test_parse_expression($typeUNKNOWN, "pthread_run->error_p =(x)");
+  test_parse_expression("typeUNKNOWN", "{  &(_AP.__pr0), (void*)&__builtin_va_alist, (void*)0,  __va0,__va1,__va2,__va3,__va4,__va5,  __va6,__va7,__va8,__va9,__va10,__va11}");
 }
 
 sub test_parse_expression ($$)
