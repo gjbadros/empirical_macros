@@ -3,14 +3,9 @@
 
 %% TODO:
 % package and put code up at ftp site
-% add personal.sty package
-% --11/13/99 gjb get references in the right order
-% any grants to add?
-% new astlog-example-inspired section?  see FIXME
 % floppies
 % see authors notes
 % sign publishing agreement
-
 
 %\documentclass[twocolumn]{article}
 \documentclass{article}
@@ -534,7 +529,7 @@ an analysis tool can manage these complexities and expose the full source to
 the analysis.  This template code is included with \pcp{}.
 
 Other related backcalls provide additional support for querying and
-interacting with the parser.  \texttt{ParseStateStack} returns the
+interacting with the parser.  \texttt{Parse\-State\-Stack} returns the
 list of states in the parser's stack; this exposes information about what
 constructs might be legal at the current location (for example,
 determining whether declarations may be permitted).
@@ -654,11 +649,11 @@ expanded.
 \begin{figure}[p]
   \begin{center}
     \leavevmode
-    \includegraphics[width=0.45\linewidth]{tree-expn.eps}
+    \includegraphics[width=0.60\linewidth]{tree-expn.eps}
     \caption{An example macro expansion and the related
       hooks that are called. Numbers indicate the order in which the
       hooks are called (corresponding to post-order traversal of the
-      tree). Blue numbers are \texttt{EXPAND\_MACRO} actions, green
+      tree). Uncircled numbers are \texttt{EXPAND\_MACRO} actions, circled
       numbers are \texttt{MACRO\_CLEANUP} actions; \eg{} the fifth hook
       \pcp{} invokes is \texttt{MACRO\_CLEANUP} for ``\texttt{FOO}''.
       The ``cleanup'' means that the macro has been fully expanded and
@@ -674,12 +669,12 @@ expanded.
 \begin{figure}[p]
   \begin{center}
     \leavevmode
-    \includegraphics[width=0.45\linewidth]{text-expn.eps}
+    \includegraphics[width=0.65\linewidth]{text-expn.eps}
     \caption{Another view of an example macro expansion and the hooks
-    that are called.  Red dotted lines are the nestings of macro
-    expansions as the algorithm recurses.  Blue lines are
+    that are called.  Dotted lines are the nestings of macro
+    expansions as the algorithm recurses.  Dark solid lines are
     \texttt{EXPAND\_MACRO} actions on the underlined macro invocation,
-    green lines are \texttt{MACRO\_CLEANUP}s.}
+    light solid lines are \texttt{MACRO\_CLEANUP}s.}
     \label{fig:text-expn}
   \end{center}
 \end{figure}
@@ -699,12 +694,12 @@ macro \texttt{TA4}.  The \texttt{MacroExpansionHistory()} backcall
 provides the remaining information about this expansion: that the
 expansion came from the body of the earlier expansion of macro
 \texttt{PA2}.  From \figref{fig:text-expn}, the \texttt{@nests} list
-for a given expansion corresponds to the sequence of red dotted lines
-directly above and completely overlapping the blue line representing
+for a given expansion corresponds to the sequence of dotted lines
+directly above and completely overlapping the dark solid line representing
 that expansion.  Similarly, the list \texttt{MacroExpansionHistory()}
-returns can be visualized as the stack of blue expansion
+returns can be visualized as the stack of dark solid expansion
 lines directly above the expansion in question (those that have not
-already been paired with a green line representing the completion of
+already been paired with a light solid line representing the completion of
 their expansion).  
 
 %% Emacs support
@@ -726,7 +721,7 @@ the annotations made to the current character. See
 \begin{figure}[p]
   \begin{center}
     \leavevmode
-    \includegraphics{emacs-xform-view.eps}
+    \includegraphics[width=0.55\linewidth]{emacs-xform-view.eps}
     \caption{A view of Emacs using the authors' ``doc-property-display''
       feature to dynamically view textual annotations of results of the
       analyses of \pcp{}.  The outline box in the top frame
@@ -786,12 +781,6 @@ defined for a segment of code and subsequently undefined.
 Our improved analysis using the framework is written in under 90 lines
 of code, most of which is the boiler-plate for handling all
 conditionally-included code.
-
-%% GJB:FIXME::
-\subsection*{An ASTLog-inspired analysis}
-\label{ssec:other_analysis}
-\nopagebreak
-Foo bar baz.
 
 \subsection*{Other Possibilities}
 \label{ssec:other_poss}
@@ -1088,13 +1077,9 @@ re-implementing \Cpp{} for each desired analysis.
 \section*{Acknowledgments}
 \label{sec:ack}
 This paper was supported by a National Science Foundation Graduate
-Fellowship. Any opinions, findings, conclusions, or recommendations
-expressed in this publication are those of the author, and do not
-necessarily reflect the views of the National Science Foundation.
-
-Thanks to Michael Ernst, Craig Kaplan, Brian Michalowski, Gail Murphy, and Douglas
-Zongker for their thoughtful comments on earlier revisions of this
-paper.
+Fellowship and by NSF Grant CCR-9506779. Thanks to Michael Ernst, Craig
+Kaplan, Brian Michalowski, Gail Murphy, and Douglas Zongker for their
+thoughtful comments on earlier revisions of this paper.
 
 \appendix
 
@@ -1154,7 +1139,7 @@ information, and the arguments of the current expansion, respectively.
   Expansion of a macro inside a conditional compilation
   directive, or test for definedness.  \shook{IFDEF\_MACRO} is invoked
   with the same arguments as \shook{EXPAND\_\-MACRO} when, e.g., an
-  \ppd{if FOO} is encountered.  \shook{IFDEF\_LOOKUP\_MACRO} is invoked
+  \ppd{if FOO} is encountered.  \shook{IFDEF\_\-LOOKUP\_\-MACRO} is invoked
   instead when a macro is simply tested for definedness, e.g., by an
   \ppd{ifdef FOO}.
 
