@@ -204,4 +204,8 @@ fast:	$(SCRIPTSPATH)
 	for i in $(SCRIPTSPATH); do bn=$(FAST_DIR)/`basename $$i`; remove_check_args $$i > $$bn; chmod +x $$bn; done
 	@echo "Ensure $(FAST_DIR) is first on your path, and rehash if you changed it!"
 
+# This tells make not to remove *.state files created en route to making, e.g., a
+# *.stat file
+.PRECIOUS: %.state
+
 .PHONY: all clean showvars text_tables data_analyze data_reports raw copy fast
