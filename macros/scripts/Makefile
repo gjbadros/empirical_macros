@@ -192,10 +192,12 @@ tbl-def-categories: $(STAT)
 	macros-make-categories-tbl-from-stat.pl -t -p $^ > $@
 
 tbl-subset-categories: $(MAC)
-	macros-make-subset-metacateg-from-mac -m $^ | sort | uniq -c | sort -nr > $@
+	macros-make-subset-metacateg-from-mac -m $^ | sort | uniq -c -w21 | sort -nr > $@
 
 tbl-subset-categories.tex: tbl-subset-categories
-	latexify-meta-mark-table `sum-column 1 <$^`  < $^ > $@
+	cat $< | latexify-meta-mark-table `sum-column 1 <$^` > $@
+#	head -50 $< | latexify-meta-mark-table `sum-column 1 <$^` > $@
+# the head -50 chooses how many lines to include in the latex table
 
 tbl-subset-properties.tex: tbl-properties-percents tbl-properties-subset
 	macros-make-subset-prop-tbl > $@
