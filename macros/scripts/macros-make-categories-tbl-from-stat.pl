@@ -109,7 +109,7 @@ END {
   if (!$nolatex) { print "\\hline\n" };
   if ($fFoundLine) {
     $totLine = $sNull + $sConst + $sExp + $sStm + $sSyntax + $sType +
-      $sNonC + $sFail + $sSymbol;
+      $sNonC + $sFail + $sSymbol + $sSymUnknown;
     print "Total", map {sprintf $FORMAT, $_ } ( pct($sNull), pct($sConst), pct($sExp), pct($sStm), pct($sSyntax), pct($sType),
       pct($sNonC), pct($sSymbol), pct($sSymUnknown), pct($sFail) );
     print "Total-raw", map {sprintf "%2.0f", $_} ($sNull, $sConst, $sExp, $sStm, $sSyntax, $sType,
