@@ -6,26 +6,28 @@ print '
 %\usepackage{graphics}
 %\newcommand{\black}{\ensuremath{\blacksquare}}
 \newcommand{\black}{\vrule height5.5pt depth0.5pt width6pt}
+{\small
+\addtolength{\columnsep}{-.5\columnsep}
 \begin{tabular}{|r|*{22}{c|}}\hline
 \rotatebox{90}{\# Occurrences} &
 \rotatebox{90}{failed categorization} &
 \rotatebox{90}{null define} &
 \rotatebox{90}{expression} &
 \rotatebox{90}{expression with assignment} &
-\rotatebox{90}{expression with free variables} &
+\rotatebox{90}{expression with free variables~} &
 \rotatebox{90}{literal} &
 \rotatebox{90}{constant} &
 \rotatebox{90}{some constant} &
 \rotatebox{90}{has type argument} &
-\rotatebox{90}{macro as function} &
-\rotatebox{90}{macro as type} &
+\rotatebox{90}{uses macro as function} &
+\rotatebox{90}{uses macro as type} &
 \rotatebox{90}{uses type argument} &
 \rotatebox{90}{expands to type} &
 \rotatebox{90}{expands to reserved word} &
 \rotatebox{90}{statement} &
 \rotatebox{90}{recursive} &
 \rotatebox{90}{assembly code} &
-\rotatebox{90}{syntax tokens} &
+\rotatebox{90}{expands to syntax tokens} &
 \rotatebox{90}{mismatched entities} &
 \rotatebox{90}{token pasting} &
 \rotatebox{90}{stringization}
@@ -35,7 +37,7 @@ print '
 
 END {
 print '
-\end{tabular}
+\end{tabular}}
 ';
 }
 
