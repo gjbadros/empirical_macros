@@ -159,7 +159,6 @@ sub usage {
 -i use files listed on stdin [one per line] in addition to any on cmd line
 -h display this help message
 -v be verbose and list files as they are processed to stderr
--s suppress the summary statistics
 -D [file] dump the names of the macros upon conclusion
 -S [file] Output the per directive statistics to file
 -c [file] Show categorizations to file
@@ -173,14 +172,14 @@ sub usage {
 ###
 
 use Getopt::Std;
-use vars qw( $opt_i $opt_h $opt_v $opt_D $opt_s $opt_S $opt_c $opt_e);
+use vars qw( $opt_i $opt_h $opt_v $opt_D $opt_S $opt_c $opt_e);
 $fDebugCmdProcessing = 0;
 $fDebugCommentRemoval = 0;
 
 # use strict;
 # use English;
 
-getopts('ihvsD:S:c:e:');
+getopts('ihvD:S:c:e:');
 usage() if ($opt_h);
 
 $fShowCategorization = $opt_c;
@@ -290,9 +289,7 @@ if ($lines == 0) {
       printf STATS "%2.2f ", (100*$$v/$lines);
     }
     print STATS "\n";
-  }
 
-  if (!$opt_s) {
     printf STATS "GLOBAL: $macrodefs define-s (%2.2f%) , $cpp_cmds other (%2.2f%) , $lines lines (%2.2f%) , %d files\n", 
     100*$macrodefs/$lines, 100*$cpp_cmds/$lines, 
       100*($macrodefs+$cpp_cmds)/$lines, $#ARGV+1;
