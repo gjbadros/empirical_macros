@@ -664,7 +664,8 @@ sub output_stats ()
 		      # Check uses of each formal
 		      for my $arg (@args)
 			{ my @formal_complaints = ();
-			  if ($arg !~ /^$identifier_re$/o)
+			  if (($arg !~ /^$identifier_re(\.\.\.)?$/o)
+			      && ($arg ne "..."))
 			    { push(@formal_complaints, "not an identifier");
 			      $this_warn_formal_non_identifier = $true; }
 			  elsif ($arg =~ /^$reserved_word_re$/o)

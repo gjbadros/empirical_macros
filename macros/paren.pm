@@ -77,7 +77,7 @@ sub brace_change ($)
 # found before parens balance).
 sub paren_change ($)
 { my ($line) = check_args(1, @_);
-  if ($debug_paren) { print "paren_change $line"; }
+  if ($debug_paren) { print "paren_change <= $line\n"; }
   my $result_num = 0;
   my $result_chars = "";
   while ($line =~ /[\(\)]/g)

@@ -2875,6 +2875,8 @@ sub parse_declarations ($)
   my $warnings = [];
   # if ($debug_parse_declaration)
   #   { print "type_declarator_re = '$type_declarator_re'\n"; }
+  if ($debug_parse_declaration)
+    { print "parse_declararions $decls\n"; }
   while ($decls =~ /^\s*$type_declarator_re\s*([,;\(=])/o)
     { my $typespec = $1;
       my $declarator = $2;
@@ -3345,8 +3347,13 @@ PROCESSLINE:
 		{ mdie("PROCESSLINE: line undefined."); }
 	      # print "PROCESSLINE $line\n";
 	      my $line_orig = $line;
-	      $line = simple_macro_substitute($line);
-	      $line = simple_macro_substitute_2($line);
+	      { my $unsimp_line;
+		my $repeat = $true;
+		while ($repeat)
+		  { $unsimp_line = $line;
+		    $line = simple_macro_substitute($line);
+		    $line = simple_macro_substitute_2($line);
+		    $repeat = ($unsimp_line ne $line); } }
 	      if ($line =~ /^\s*$/)
 		{ # do nothing; maybe this was a preprocessor directive
 		  # print "empty line ", current_line_no(), ":\n";
@@ -3356,7 +3363,10 @@ PROCESSLINE:
 		  # print "typedef line ", current_line_no(), ": $line\n";
 		  if ($line !~ /;/)
 		    { my $success;
-		      ($success, $line) = get_fulltoken_lines_to(';', $line, 5); }
+		      # print "No semicolon in typedef line, so looking at subsequent lines.\n";
+		      ($success, $line) = get_fulltoken_lines_to(';', $line, 5);
+		      # print "Looked for semicolon ($success): $line\n";
+		    }
 		  while ($line =~ /[\{;]/)
 		    { $line = $POSTMATCH;
 		      # print "found '$MATCH'; set line to $line = $POSTMATCH\n";
@@ -3378,7 +3388,9 @@ PROCESSLINE:
 
 		  # Should store all the typedefs somewhere so we don't
 		  # consider them free variables.
-		  $line = $POSTMATCH;
+
+		  # What was the point of this line?  It looks wrong to me.
+		  # $line = $POSTMATCH;
 # This is wrong because typedefs can have semicolons inside braces.
 #		  my $semi_pos;
 # 		  # use index(), because ($line =~ /;/) gave trouble here
@@ -3388,7 +3400,7 @@ PROCESSLINE:
 # 		  my $typedef = substr($line, 0, $semi_pos-1); # omits "typedef", ";"
 # 		  # process_typedef($typedef);
 # 		  $line = substr($line, $semi_pos+1);
-# 		  print "after typedef $PREMATCH, set line to $line\n";
+# 		  print "after typedef `$PREMATCH', set line to $line\n";
 		  goto PROCESSLINE;
 		}
 	      # not $type_specifier_re, because want to catch trailing *
@@ -4049,6 +4061,7 @@ sub simple_macro_substitute ($)
     { if ($text =~ /\b$fdmacro\s*\(/)	# no /o
 	{ my $prematch = $PREMATCH;
 	  my $postmatch = $POSTMATCH;
+	  # print "Found fun_decl_arg_macro $fdmacro in $text\n";
 	  my $close_paren_pos;
 	  ($close_paren_pos, $postmatch) = find_close_paren_read($postmatch);
 	  # print "close paren at $close_paren_pos in $postmatch\n";
@@ -4067,6 +4080,8 @@ sub simple_macro_substitute_2 ($)
   if ($text !~ /^($identifier_re)\s*\(/)
     { return $text; }
 
+  # print "simple_macro_substitute_2: $text\n";
+
   $text =~ /^($identifier_re)\s*\(/; # is this necessary?
   my $name = $1;
   my $args = "\($POSTMATCH";
@@ -4078,11 +4093,18 @@ sub simple_macro_substitute_2 ($)
       ))
     { return $text; }
 
+  if (!defined($macros{$name}))
+    { mdie("Undefined macros{$name}"); }
+
+  if (scalar(@{$macros{$name}}) == 0)
+    { return $text; }
   if (scalar(@{$macros{$name}}) > 1)
     { return $text; }
 
   my $mdef_index = $macros{$name}[0];
 
+  if ($mdef_index eq "")
+    { mdie("Empty index for $name, while processing $text"); }
   if (!defined($mdef_formals[$mdef_index]))
     { mdie("Undefined formals for $name, def \#$mdef_index, while processing $text"); }
 
@@ -4094,13 +4116,14 @@ sub simple_macro_substitute_2 ($)
 
   my $close_pos = find_close_paren($args, 1);
   if (!$close_pos)
-    { print "couldn't find close paren for macro invocation $name $args";
+    { parse_error("couldn't find close paren for macro invocation $name $args\n");
       return $text; }
   my @actuals = actuals_array(substr($args, 0, $close_pos+1));
 
   if (scalar(@formals) != scalar(@actuals))
-    { mdie("formals-actuals mismatch for $name, def \#mdef_index, while processing $text\n" . scalar(@formals) . <<" . join(",", @formals)
-	   . ">> " . scalar(@actuals) . "<<" . join(",", @actuals) . ">>"); }
+    { parse_error("formals-actuals mismatch for $name, def \#$mdef_index, while processing $text\n" . scalar(@formals) . "<<" . join(",", @formals)
+	   . ">> " . scalar(@actuals) . "<<" . join(",", @actuals) . ">>\nbody: $mdef_formals[$mdef_index] $mdef_body[$mdef_index]");
+      return $text; }
 
   my $result = $mdef_body_simple[$mdef_index];
   for my $i (0 .. $#formals)
@@ -4890,7 +4913,7 @@ sub get_macro_properties ($)
 	    || ($var =~ /^$reserved_word_re$/)
 	    || ($body =~ /(\.|->)\s*$var\b/))
 	  { delete $vars{$var}; } }
-    if ((scalar(keys %vars) == 0) || ($body !~ /\{/))
+    if (scalar(keys %vars) > 0)
       { my $body_remaining = $body;
 	while ($body_remaining =~ /\{/)
 	  { my ($post_decls, $warnings, %name_types) = parse_declarations($POSTMATCH);
@@ -6421,10 +6444,10 @@ for my $name (keys %macros)
 
 # Print number of definitions for each macro
 # for my $name (sort keys %macros)
-#   { print "$name $#{$macros{$name}}\n"; }
+#   { print "$name ", scalar(@{$macros{$name}}), " ", join(" ",@{$macros{$name}}), "\n"; }
 # Print body (less comments) for each macro definition.
-# for my $body (@mdef_body_noc)
-#   { print "$body\n"; }
+# for my $i (0..$cMacrosInTables)
+#   { print "$i $mdef_formals[$i] $mdef_body_noc[$i]\n"; }
 
 if (!$opt_1)
 { if ($opt_v) { print STDERR "done with that loop; now finding macro uses...\n"; }
