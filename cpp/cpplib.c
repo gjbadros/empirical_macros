@@ -4831,10 +4831,7 @@ do_else (pfile, keyword, buf, limit)
  */
 
 static int
-do_endif (pfile, keyword, buf, limit)
-     cpp_reader *pfile;
-     struct directive *keyword;
-     U_CHAR *buf, *limit;
+do_endif (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *limit)
 {
   cpp_buffer *ip = CPP_BUFFER (pfile);
   U_CHAR *pchStartGarbage = ip->cur+1;
@@ -4853,7 +4850,7 @@ do_endif (pfile, keyword, buf, limit)
   else
     {
       IF_STACK_FRAME *temp = pfile->if_stack;
-      if (temp->control_macro != NULL) 
+      if (temp->szConditionalClause != NULL) 
 	{
 	szConditionalClause = xmalloc(strlen(temp->szConditionalClause)+1);
 	strcpy(szConditionalClause,temp->control_macro);
