@@ -1,0 +1,4 @@
+#!/bin/sh
+# GCC was configured as follows:
+./configure --build=i586-unknown-linux
+echo host=i586-unknown-linux target=i586-unknown-linux build=i586-unknown-linux
