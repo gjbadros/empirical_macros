@@ -597,12 +597,13 @@ my @rg_cpp_cmds = (0) x $c_ftype;
 # (much like @rg_cpp_cmds list of hashes)
 my @rg_category_counts;
 
-# These get computed using ft_ slices
-my %category_counts_ni = ();
-my %category_counts_c_ni = ();
-my %category_counts_hdr_ni = ();
+# Conditional Compilation Directive category counts
+# $rg_ccd_cat_counts[$ft_index][$ccatType] ==
+# the number of type a CCD of type $ccatType was used in files of type $ft_index
+my @rg_ccd_cat_counts;
 
 my @rg_cppcmdcounts;
+
 
 #my $physical_lines = 0;		# as they appear to tools
 #my $ncnb_physical_lines = 0;	# non-comment, non-blank lines
@@ -792,6 +793,7 @@ my $debug_getline = $false;	# a LOT of output; use only on small inputs
 my $debug_categorize_macro = $false;
 my $debug_cpp_if_comments = $false;
 my $debug_dependences = $false;
+my $debug_ccd_categories = $false;
 
 ## Command-line processing
 # Are these in any order?
@@ -1645,7 +1647,73 @@ sub find_close_brace ($;$$)
 }
 
 
+sub update_for_cond_comp_directive ($$) {
+  my ($cpp_cmd,$args) = check_args(2, @_);
 
+  my @words = ();
+
+  # Note: macros_appearing_in can only be used on the second pass
+  if ($cpp_cmd eq "if" || $cpp_cmd eq "elif") {
+    @words = macros_appearing_in(cline_simplify($args));
+  } else {
+    @words = ($args);
+  }
+  my $ccdCategory;
+  my $word;
+  foreach $word (@words) {
+    my $curr_ccdCategory = ccd_lexical_category($word);
+    if ($debug_ccd_categories) {
+      print STDERR "CCD_LEXICAL_CATEGORY: $word in ",
+                   $cond_category_name[$curr_ccdCategory], "\n";
+    }
+    if (defined($ccdCategory) && $curr_ccdCategory != $ccdCategory) {
+      $ccdCategory = $ccatMIXED;
+      last;
+    }
+    $ccdCategory = $curr_ccdCategory;
+  }
+  $rg_ccd_cat_counts[$current_ftype_index][$ccdCategory]++;
+}
+
+
+sub ccd_lexical_category ($) {
+  my ($mname) = check_args(1, @_);
+
+  my $orig_mname = $mname;
+  $mname =~ s/^_*(.*?)_*$/$1/;
+
+#  print STDERR "Trying '$mname'\n";
+
+  if ($mname =~ /^.*DEBUG.*$/) {
+    return $ccatDEBUG;
+  }
+  if ($mname =~ /^(VAXC|TURBOC|BORLANDC|MSC_VER|cplusplus|STDC|GNUC|GNU_LIBRARY|MWERKS|MSC|ZTC|PUREC|applec|THINK_C|SC|STDC|STDC_HEADERS|HAVE_GCC|lint|LINT|NeedFunctionPrototypes|FUNCPROTO|NO_PROTO|HAVE_PROTOS|DJGPP|KR_headers|NON_UNIX_STDIO|DECC|DECCXX)$/) {
+    return $ccatPORT_LANLIB;
+  }
+  if ($mname =~ /^(STACK_DIRECTION|STACK_GROWS_DOWNWARD|STACK_GROWTH_DOWN|arch_is_big_endian|arch_is_little_endian|arch_ints_are_short|arch_arith_rshift|BYTEORDER|HAVE_.+|NO_(STDLIB|UNISTD|LIMITS)|.+_MISSING|BROKEN_.+|NO_FCNTL|_POSIX_VERSION|READLINE_LIBRARY|BSD_SIGNALS|POSIX_SIGNALS|SYSTYPE_SYSV|SYSTYPE_BSD|ELF|COFF|.+_BUG)$/) {
+    return $ccatPORT_FEATURE;
+  }
+
+  $mname =~ tr/[A-Z]/[a-z]/;
+
+  if ($mname =~ /^(hpux|.*sun_fpa.*|32bit|386bsd|m_xenix|aix(rt|370|3_2|_13|esa|pc)?|alliant(_2800)?|alpha|amiga(dos|_ac_5|_sc_6_1)?|apollo|atari(st)?|att(386|3b)|bfly1|bsd(i|4_[1234])?|butterfly|cadmus|clipper|convex|cray([12]|[xy]mp|_stack)?|cx_ux|dgux|dos_nt|drs6000|gmicro|hp(2648|26|76|gl|300|9000|s[2345678]00|_osf|osf1|pa|ux(_[156789])?)?|i370|i386|i860|i960|ibm(032|esa|r2|rt)?|interdata|iris[234567]d?|is68k|linux|luna88k|lynx|.*kbcs_target|m68k|m88(k|000)|m_unix|mac_tcl|macintosh|macos|maxport|mc680[01234]0|mc68k32|minix|mips(_sysv|eb|el)|motorola|msdos|multimax|netbsd|newsos5|next|os2|osf(1|_alpha|_os)|pa_risc1_1|paragon|pdp11|powerpc|pyr|qnx|risc6000|sequent|sgi|sparc(v9)?|sun([23])?|sun386i|sunos[45]|svr4_2|sysv(3|68|_ext)|tandem|tek(4132|4300)|tops20|tower32|u370|ultrix|umaxv|unix(pc)?|usg(5_4|4_2)?|vax|vms|vms_posix|win(dows(nt|95)?|32|16)?|xenix(_2[23]|286)?|z8000)$/) {
+    return $ccatPORT_MACHINE;
+  }
+
+  if (substr($orig_mname,0,2) eq "__") {
+    return $ccatMISC_SYSTEM;
+  }
+
+  # also ccatCOMMENTING, ccatMI_PREVENTION, ccatREDEF_SUPPRESION,
+  # but these are not strictly based on name
+
+  #give MI_PREVENTION a rough go
+  if ($mname =~ /_H$/) {
+    return $ccatMI_PREVENTION;
+  }
+
+  return $ccatOTHER;
+}
 
 # Argument is a simplified line.
 # Returns the line that should be the get_fulltoken_line result, usually "\n";
@@ -1714,6 +1782,16 @@ sub getline_handle_preprocessor_command ($$$$$)
 	# Call to cline_simplify is to get rid of character constants
 	for $word (words_in(cline_simplify($cpp_cmd_arg_noc)))
 	  { add_macro_used_by_cpp($word); } }
+  }
+
+  
+  if (!$finding_macro_defs) { # only on second pass
+    if ($cpp_cmd eq "ifdef" || $cpp_cmd eq "ifndef" || 
+	$cpp_cmd eq "if" || $cpp_cmd eq "elif" &&
+	!cpp_trivially_false_condition($cpp_cmd_arg_noc)) {
+      # get the category of this #if based solely on the macro name checked
+      my $ccCategory = update_for_cond_comp_directive($cpp_cmd,$cpp_cmd_arg_noc);
+    }
   }
 
   if ($cpp_cmd eq "if")
@@ -1865,7 +1943,11 @@ sub add_macro_used_by_cpp ($)
       if (!$word)
 	{ croak "Empty word"; }
       if ($word !~ /^$identifier_re$/)
-	{ die "non-identifier word $word"; }
+	{ warn "non-identifier word $word"; # FIXMERNST
+	  # stuff like "#undef ADDR_CORRECT(x) in emacs-19.34/src/m/gec63.h"
+	  $word =~ s/\(.*//; # remove suffix of argument list with parens
+	  # this should be a macro lint, since it's improper use of #undef
+	}
       if ($debug_dependences && !defined($macros_used_by_cpp{$word}))
 	{ # No newline; $cpp_cmd_arg already has one
 	  print "Adding macro $word due to $current_file:", current_line_no(), "\n"; }
@@ -4860,11 +4942,14 @@ sub initialize_lists_of_hashes () {
     foreach $j (@categoryname) {
       $rg_category_counts[$i]->{$j} = 0;
     }
+    foreach $j (0..$#cond_category_name) {
+      $rg_ccd_cat_counts[$i][$j] = 0;
+    }
   }
 }
 
 
-# GJBFIX: Put these in the correct lists; each should only appear once, probably.
+# FIXGJB: Put these in the correct lists; each should only appear once, probably.
 
 # Initialize the macros structures for the builtin macros of gcc
 # FIX: Should generalize so that it works for non-gcc compilers
@@ -5104,6 +5189,9 @@ sub words_in ($)
 sub macros_appearing_in ($)
 {
   my ($text) = check_args(1, @_);
+  if ($finding_macro_defs) {
+    warn "subroutine macros_appearing_in is used on first pass";
+  }
   return grep { defined($macros{$_}) } words_in($text);
 }
 
@@ -5681,6 +5769,7 @@ sub SaveMacroAnalysisState
     or (open(OUTSTATE, ">state" && printf STDERR "Couldn't open $output_filename, using \"state\" instead\n"))
       or die "Failed opening output file: $!";
 
+  # "export" these vars through the state file to em_reports
   my @vars_list = qw(
     %macros %macros_c_undefs %macros_uses
     %macros_file_line_uses %macros_used_in_functions
@@ -5698,6 +5787,7 @@ sub SaveMacroAnalysisState
     %files_function_lines %function_to_locs
     %inclusion_dependenton %inclusion_dependees %inclusion_dependee_lines
     %expansion_dependenton %expansion_dependees %expansion_dependee_lines
+    @rg_ccd_cat_counts	     
 		     );
 
   my $i = 0;
@@ -5804,7 +5894,9 @@ if ($opt_g)
       $debug_getline = $false;
       $debug_categorize_macro = $false;
       $debug_cpp_if_comments = $false;
-      $debug_dependences = $false; }
+      $debug_dependences = $false; 
+      $debug_ccd_categories = $false;
+    }
   elsif ($opt_g == 1) { $fDebugCmdProcessing = $true; }
   elsif ($opt_g == 2) { $fDebugCommentRemoval = $true; }
   elsif ($opt_g == 3) { $debug_scopes = $true; }
@@ -5818,6 +5910,7 @@ if ($opt_g)
   elsif ($opt_g == 11) { $debug_categorize_macro = $true; }
   elsif ($opt_g == 12) { $debug_cpp_if_comments = $true; }
   elsif ($opt_g == 13) { $debug_dependences = $true; }
+  elsif ($opt_g == 14) { $debug_ccd_categories = $true; }
   else { die "Bad -g option $opt_g"; }
 }
 
@@ -5854,7 +5947,7 @@ find_macro_definitions();	# also counts other preprocessor usage
   for $word (keys %macros_used_by_cpp)
     { if (!defined($macros{$word}))
 	{ # It would be nice to say where it was used; maybe compute that info.
-	  print EVIL "macro $word used by CPP but never defined";
+	  print EVIL "macro $word used by CPP but never defined\n";
 	  introduce_new_macro($word); } } }
 
 # Kind of a hack
