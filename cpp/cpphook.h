@@ -383,10 +383,13 @@ typedef enum hook_index_constants {
 ///% deep the stack is.  In particular, when that number is 0, 
 ///% the parser is not parsing a macro expansion any longer.
 
-  HI_FUNC_SPEC
+  HI_FUNC_SPEC,
 ///% {}
 ///% Called 
 
+  HI_CMD_LINE_DEF
+///% {$definition}
+///% Called once for each -D command line option
 } HOOK_INDEX;
 // end hook_index_constants
 
