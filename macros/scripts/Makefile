@@ -104,6 +104,7 @@ TEXT_TABLES :=	tbl-package-sizes \
 		tbl-def-categories \
 		tbl-directives-breakdown \
 		tbl-lint \
+		tbl-dep-byline \
 		tbl-cat-numargs
 
 RAW_TABLES := tbl-directives-hist tbl-subset-categories
@@ -268,6 +269,9 @@ tbl-any-dependences-by-line: $(SDEPEND)
 
 tbl-expansion-dependences-by-line: $(SDEPEND)
 	macros-make-dependences-by-line Expansion `only-non-empty-files $^` > $@
+
+tbl-dep-byline: tbl-inclusion-dependences-by-line tbl-expansion-dependences-by-line tbl-any-dependences-by-line
+	macros-make-dep-byline $^ > $@
 
 %.numarg: %.catg
 	macros-make-numarg-from-catg $< >$@
