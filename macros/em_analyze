@@ -791,7 +791,7 @@ my $debug_peek = $false;
 my $debug_getline = $false;	# a LOT of output; use only on small inputs
 my $debug_categorize_macro = $false;
 my $debug_cpp_if_comments = $false;
-my $debug_dependences = $true;
+my $debug_dependences = $false;
 
 ## Command-line processing
 # Are these in any order?
@@ -1141,7 +1141,9 @@ sub add_inclusion_dependence ($$)
   if ((!$dependent) || (!$controller))
     { croak "Empty argument: <$dependent> <$controller>"; }
   if ($debug_dependences)
-    { check_dependence_invariants(); }
+    { print "Adding dependence: $dependent dependent on $controller\n"; }
+  # if ($debug_dependences)
+  #   { check_dependence_invariants(); }
   if (!defined($inclusion_dependenton{$dependent}{$controller}))
     { if (defined($inclusion_dependees{$controller}{$dependent}))
 	{ die "This can't happen: $dependent $controller"; }
@@ -1149,16 +1151,16 @@ sub add_inclusion_dependence ($$)
       if (!defined($dependence_worklist_members{$dependent}))
 	{ push(@dependence_worklist, $dependent);
 	  $dependence_worklist_members{$dependent} = $true; } }
-  if ($debug_dependences)
-    { check_dependence_invariants(); }
+  # if ($debug_dependences)
+  #   { check_dependence_invariants(); }
 }
 
 sub add_expansion_dependence ($$)
 { my ($dependent, $controller) = check_args(2, @_);
   if ((!$dependent) || (!$controller))
     { croak "Empty argument: <$dependent> <$controller>"; }
-  if ($debug_dependences)
-    { check_dependence_invariants(); }
+  # if ($debug_dependences)
+  #   { check_dependence_invariants(); }
   if (!defined($expansion_dependenton{$dependent}{$controller}))
     { if (defined($expansion_dependees{$controller}{$dependent}))
 	{ die "This can't happen: $dependent $controller"; }
@@ -1166,8 +1168,8 @@ sub add_expansion_dependence ($$)
       if (!defined($dependence_worklist_members{$dependent}))
 	{ push(@dependence_worklist, $dependent);
 	  $dependence_worklist_members{$dependent} = $true; } }
-  if ($debug_dependences)
-    { check_dependence_invariants(); }
+  # if ($debug_dependences)
+  #   { check_dependence_invariants(); }
 }
 
 
@@ -1406,7 +1408,11 @@ sub get_fulltoken_line (;$)
 
   # print "Called get_fulltoken_line; cline_simplify = $cline_simplify_strings\n";
 
-  my ($raw_result, $simple_result, $phys_lines, $ncnb_lines) = get_fulltoken_cline(\*INPUT);
+  my ($raw_result, $simple_result, $phys_lines, $ncnb_lines, $warnings)
+    = get_fulltoken_cline(\*INPUT);
+  { my $warning;
+    for $warning (@{$warnings})
+      { evilprint($warning); } }
 
   # don't check $simple_result, which might be simplified to "" (= false)
   if (not ($raw_result))
@@ -1483,7 +1489,7 @@ sub get_fulltoken_lines_to ($$$)
 sub peek_fulltoken_line ($)
 {
   my ($arg) = check_args(1, @_);
-  my ($raw, $simple, $phys, $ncnb) = peek_fulltoken_cline(\*INPUT, $arg);
+  my ($raw, $simple, $phys, $ncnb, $warnings) = peek_fulltoken_cline(\*INPUT, $arg);
   return($simple);
 }
 
@@ -1697,6 +1703,11 @@ sub getline_handle_preprocessor_command ($$$$$)
     if (($cpp_cmd eq "ifdef") || ($cpp_cmd eq "ifndef") || ($cpp_cmd eq "undef"))
       { if ($cpp_cmd_arg_noc =~ /\s/)
 	  { die "Shouldn't see whitespace in <<$cpp_cmd_arg_noc>>"; }
+	if ($cpp_cmd_arg_noc !~ /^$identifier_re$/)
+	  { evilprint("argument should be a symbol: \#" . "$cpp_cmd $cpp_cmd_arg");
+	    # This happens in Emacs somewhere for an #undef, I think.
+	    if ($cpp_cmd_arg_noc !~ /^($identifier_re)\(/)
+	      { $cpp_cmd_arg_noc = $1; } }
 	add_macro_used_by_cpp($cpp_cmd_arg_noc); }
     elsif (($cpp_cmd eq "if") || ($cpp_cmd eq "elif"))
       { my $word;
@@ -1874,7 +1885,11 @@ sub discard_to_endif ()
   my $line;
   while ($if0depth > 0)
     # Don't use get_spliced_cline(); the getline lookahead cache might not be empty.
-    { my ($raw_line, $simple_line, $phys, $ncnb) = get_spliced_cline_maybe_ungot(\*INPUT, $true);
+    { my ($raw_line, $simple_line, $phys, $ncnb, $warnings)
+	= get_spliced_cline_maybe_ungot(\*INPUT, $true);
+      { my $warning;
+	for $warning (@{$warnings})
+	  { evilprint($warning); } }
       if (not $raw_line)
 	{ mdie("File ends in \#if 0"); }
       cline_resetinvars();		# Abandon changes by get_spliced_cline
@@ -1904,7 +1919,11 @@ sub discard_to_endif_or_else ()
   my $if0depth = 1;
   while ($if0depth > 0)
     # Don't use get_spliced_cline(); the getline lookahead cache might not be empty.
-    { my ($raw_line, $simple_line, $phys, $ncnb) = get_spliced_cline_maybe_ungot(\*INPUT, $true);
+    { my ($raw_line, $simple_line, $phys, $ncnb, $warnings)
+	= get_spliced_cline_maybe_ungot(\*INPUT, $true);
+      { my $warning;
+	for $warning (@{$warnings})
+	  { evilprint($warning); } }
       if (not $raw_line)
 	{ mdie("File ends in \#if 0"); }
       cline_resetinvars();		# Abandon changes by get_spliced_cline
@@ -5059,7 +5078,7 @@ sub analyze_for_macro_use ($) {
 	      { $incl_deps{$exp_dep} = $true; } } } }
 
   if ($debug_dependences)
-    { print "$current_file:",current_line_no(),":\n";
+    { print "$current_file:",current_line_no(),": $line";
       print "  incl_dep: ", join(" ",(keys %incl_deps)), "\n";
       print "  exp_dep: ", join(" ",(keys %exp_deps)), "\n"; }
 
@@ -5327,7 +5346,6 @@ sub complete_include_pathname ($$) {
 ### Utilities
 ###
 
-
 # Add newline to end of string; return string unchanged if it already has one.
 sub add_newline ($)
 { my ($string) = check_args(1, @_);
@@ -5336,6 +5354,7 @@ sub add_newline ($)
   else
     { return $string . "\n"; }
 }
+
 
 ###########################################################################
 ### Testing
@@ -5748,11 +5767,11 @@ if ($opt_d) {
   $statename = "$dir/${basename}state";
 
   if (!$opt_E) {
-    open(EVIL,">$dir/${basename}evil") || die "Failed opening $!";
+    open(EVIL,">$dir/${basename}evil") || die "Failed opening $dir/${basename}evil: $!";
   }
 
   if (!$opt_P) {
-    open(PARSE_ERRS,">$dir/${basename}perr") || die "Failed opening $!";
+    open(PARSE_ERRS,">$dir/${basename}perr") || die "Failed opening $dir/${basename}perr: $!";
   }
 }
 
