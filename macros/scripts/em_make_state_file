@@ -6,11 +6,13 @@ TARGET=${1%%.state}; shift
 FLAGS=($*)
 #echo $PKG_DIR $TM $TARGET
 pushd $PKG_DIR/$TARGET*(/)
+pushd munged
 pwd
 echo "em_analyze $FLAGS -i -t -d $TM:$TARGET > $TM/$TARGET.out 2> $TM/$TARGET.err"
 ( grep -v '^#' c-files-listing || find-c ) \
      | em_analyze $FLAGS -i -t -d $TM:$TARGET > $TM/$TARGET.out 2> $TM/$TARGET.err
 RESULT=$?
+popd
 popd
 # propagate the em_analyze return value
 exit $RESULT

@@ -20,6 +20,8 @@ PKG_DIR := /scratch/gjb/packages
 # Use only packages that start with these chars 
 PKG_PREFIX :=   
 # DO NOT USE "" for a null var, since that becomes a space
+# Leave MUNGED_DIR blank or set to "munged/"
+MUNGED_DIR := "/munged/"
 ANALYZE_OUTPUT_DIR := $(shell pwd)
 COMMON_DIR := $(shell dirname `ls -l Makefile | awk '{print $$NF}'`)
 #COMMON_DIR := /homes/gws/mernst/research/notkin/macros/scripts
@@ -49,9 +51,11 @@ SCRIPTS := em_analyze em_reports em_constants.pm em_depend.pm em_util.pm cline.p
 SCRIPTSPATH := $(addprefix $(USER_PREFIX)/,$(SCRIPTS))
 SCRIPTSFAST := $(addprefix $(FAST_DIR)/,$(SCRIPTS))
 
-PKG_DIRS := $(shell zsh -c "setopt extendedglob; echo $(USER_PREFIX)/packages/$(PKG_PREFIX)*~*\~(.:t)")
-# Should make this use PKG_DIRS, not recompute from scratch.
-PKGS := $(shell zsh -c "setopt extendedglob; echo $(USER_PREFIX)/packages/$(PKG_PREFIX)*~*\~(.:t) | sed -e 's/-[^ ]*//g' | uniq")
+PKG_DIRS_NOMUNGE := $(shell zsh -c "setopt extendedglob; echo $(PKG_DIR)/$(PKG_PREFIX)*~*\~(/:t)")
+PKG_DIRS := $(addsuffix $(MUNGED_DIR),$(PKG_DIRS_NOMUNGE))
+
+# Should make this use PKG_DIRS_NOMUNGE, not recompute from scratch.
+PKGS := $(shell zsh -c "setopt extendedglob; echo $(PKG_DIR)/$(PKG_PREFIX)*~*\~(/:t) | sed -e 's/-[^ ]*//g' | uniq")
 
 STATE := $(addsuffix .state,$(PKGS))
 STAT := $(addsuffix .stat,$(PKGS))
@@ -248,7 +252,7 @@ tbl-properties-percents: $(PROP)
 # to the current files, or that both gjb and mernst are cvs-updated after
 # changes get made to a c-files-listing files
 package_num_files:
-	cd $(USER_PREFIX)/packages; \
+	cd $(PKG_DIR); \
 	(for i in *c-files-listing; do echo -n $${i%%-*} && grep -v '^\#' < $$i | wc -l; done ) | awk '{print $$1 "\t" $$2; sum += $$2} END {print "zzz<total>\t" sum}' > $(ANALYZE_OUTPUT_DIR)/$@
 
 
@@ -310,6 +314,8 @@ tbl-cat-numargs: catnumarg-Mean $(CATNUMARGS)
 showvars:
 	@echo USER_PREFIX = $(USER_PREFIX)
 	@echo PKG_DIR = $(PKG_DIR)
+	@echo PKG_DIRS = $(PKG_DIRS)
+	@echo PKG_DIRS_NOMUNGE = $(PKG_DIRS_NOMUNGE)
 	@echo PKG_PREFIX = =$(PKG_PREFIX)=
 	@echo PKGS = $(PKGS)
 	@echo STAT = $(STAT)
