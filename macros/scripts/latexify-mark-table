@@ -47,8 +47,6 @@ print '
 \rotatebox{90}{has type argument} &
 \rotatebox{90}{uses macro as type} &
 \rotatebox{90}{uses type argument} &
-
-\rotatebox{90}{recursive}
 \\\\\\hline
 ';
 }
