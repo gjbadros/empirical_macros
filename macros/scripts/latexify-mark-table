@@ -1,4 +1,4 @@
-#!/uns/bin/perl
+#!/uns/bin/perl -w
 
 ###########################################################################
 ### WARNING: not currently used.  see latexify-meta-mark-table

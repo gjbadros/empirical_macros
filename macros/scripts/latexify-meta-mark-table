@@ -1,4 +1,4 @@
-#!/uns/bin/perl
+#!/uns/bin/perl -w
 BEGIN {
 # FIX: These table headings need to be kept
 # in synch w/ macros-make-subset-metacateg-from-mac script
