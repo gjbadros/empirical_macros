@@ -153,7 +153,7 @@ static void PopStackState()
 {
   if (isss < 0)
     {
-    fprintf(stderr,"****WARNING: PopStackState called with isss < 0!");
+    fprintf(stderr,"****WARNING: PopStackState called with isss < 0!\n");
     return;
     }
   assert(isss >= 0);
