@@ -33,6 +33,16 @@ my @state_stacks_decl_allowable = ( [],
 				    [0],
 				    [0,26] );
 
+# From The C++ Programming Language, 3rd Edition, p. 817
+my @new_cpp_keywords = 
+  qw(
+     and and_eq asm bitand bitor bool catch class compl const_cast
+     delete dynamic_cast explicit false friend inline mutable namespace 
+     new not not_eq operator or or_eq private protected public reinterpret_cast
+     static_cast template this throw true try typeid typename using virtual wchar_t
+     xor xor_eq );
+			
+
 sub FIsDeclAllowable {
   my @state_stack;
   if (@_) {
@@ -94,42 +104,50 @@ sub do_define {
 }
 
 
-sub add_defn {
-  my ($mname,$fname, $s_start, $s_end) = @_;
-  if (!defined($c_definitions{$mname})) {
-    $c_definitions{$mname} = 0;
-  }
-  my $i = $c_definitions{$mname}++;
-  $macro_definitions{$mname}[$i]{'fname'} = $fname;
-  $macro_definitions{$mname}[$i]{'s_start'} = $s_start;
-  $macro_definitions{$mname}[$i]{'s_end'} = $s_end;
-}
-
 sub add_use {
   my ($mname,$fname, $s_start, $s_end, $expansion) = @_;
-  if (!defined($c_uses{$mname})) {
-    $c_uses{$mname} = 0;
-  }
-  my $i = $c_uses{$mname}++;
-  $macro_uses{$mname}[$i]{'fname'} = $fname;
-  $macro_uses{$mname}[$i]{'s_start'} = $s_start;
-  $macro_uses{$mname}[$i]{'s_end'} = $s_end;
-  $macro_uses{$mname}[$i]{'expn'} = $expansion;
+  push @{$macro_uses{$mname}}, [$fname, $s_start, $s_end, $expansion];
+  print STDERR "add_use for $mname, now at ", $#{$macro_uses{$mname}} + 1, "\n";
 }
 
 
 sub dump_uses {
-  foreach my $mname (sort keys %macro_definitions) {
-    my $cUses = $c_uses{$mname};
-    $cUses = 0 if !defined($cUses);
+  foreach my $mname (sort keys %macro_name) {
+    $cUses = scalar(@{$macro_uses{$mname}}) || 0;
     print "$mname has $cUses uses\n";
+    my $expansion = undef;
+    my $all_same_expansions = TRUE;
     for (my $i = 0; $i < $cUses; $i++ ) {
-      my $hashref = $macro_uses{$mname}[$i];
-      my $fname = $hashref->{'fname'};
-      my $s_start = $hashref->{'s_start'};
-      my $s_end = $hashref->{'s_end'};
-      my $expn = $hashref->{'expn'};
+      my $aref = $macro_uses{$mname}[$i];
+      my ($fname,$s_start,$s_end,$expn) = @$aref;
       print "$i : $fname:[$s_start:$s_end] -> $expn\n";
+      if (defined($expansion) && $expansion ne $expn) {
+	$all_same_expansions = FALSE;
+      } elsif (!defined($expansion)) {
+	$expansion = $expn;
+      }
+    }
+    # Note that undef-s are not an insurmountable problem,
+    # they could be handled by using a new, non-conflicting name
+    # and removing the undef-s
+    if ($all_same_expansions == FALSE) {
+      annotate_definition('xform',"Expansions vary, not a constant",$mname,
+			  cpp::InFname(),undef,undef);
+    } elsif ($cUses > 0) {
+      annotate_definition('expsumm',"Expansions all go to $expansion",$mname,
+			  cpp::InFname(),undef,undef);
+      if (scalar(@$macro_name{$mname}) > 1) {
+	annotate_definition_message('text','xform',"Multiple definitions!",$mname);
+      } elsif ($expansion =~ m/^(0x)?\d+$/) {
+	my $new_var = $mname;
+	$new_var =~ tr/[A-Z]/[a-z]/;
+	#FIXGJB: must avoid name conflicts here
+	annotate_definition_message('text','subst',"enum {$new_var = $expansion};",$mname);
+	annotate_definition_message('text','substexpn',"$new_var /* $expansion */",$mname);
+      }
+    } else {
+      annotate_definition('expsumm',"No uses",$mname,
+			  cpp::InFname(),undef,undef);
     }
   }
 }
@@ -159,9 +177,8 @@ sub create_def {
     print "$argnames[$currpat[0]], $currpat[1], $currpat[2]\n";
     splice(@currpat,0,3);
   }
-  print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'doc \"$mname defined\")\n";
+  print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'def \"$mname defined [$s_start:$s_end]\")\n";
   push @{$macro_name{$mname}{defs}}, [ $fname, $s_start,$s_end ];
-  add_defn($mname,$fname,$s_start,$s_end);
   @{$macro_name{$mname}{currdef}} = ( $fname, $s_start,$s_end );
   if (!FIsDeclAllowable()) {
     annotate_definition('xform',"Parse stack may not be appropriate for a declaration",$mname,$fname,$s_start,$s_end);
@@ -259,21 +276,33 @@ sub macro_arg_exp  {
   print "macro_arg_exp $mname of $raw (arg $number)\n";
 }
 
+sub annotate_definition_message {
+  my ($kind,$prop, $message, $mname) = @_;
+  my ($fnamedef, $s_start, $s_end) = @{$macro_name{$mname}{currdef}};
+  print TPSOURCE "#$fnamedef:(add-$kind-property $s_start $s_end \'$prop \"$message\")\n";
+}
+
 sub annotate_definition {
   my ($prop, $message, $mname, $fname, $s, $e) = @_;
   my ($fnamedef, $s_start, $s_end) = @{$macro_name{$mname}{currdef}};
   print STDERR "\"$mname\" from $fnamedef, $s_start:$s_end\n";
-  print TPSOURCE "#$fnamedef:(add-text-property $s_start $s_end \'$prop \"$message at $fname:$s,$e\")\n";
+  my $kind = "text";
+  $kind = "list" if ($prop eq "use");
+  if (!defined($s) && !defined($e)) {
+    annotate_definition_message($kind,$prop,"$message at $fname",$mname);
+  } else {
+    annotate_definition_message($kind,$prop,"$message at $fname:$s,$e",$mname);
+  }
 }
 
 
 sub annotate_definition_with_use {
   my $expansion = shift @_;
-  annotate_definition('use',"Use ($expansion)",@_);
+  annotate_definition('use',"$expansion",@_);
 }
 
 sub annotate_definition_with_undef {
-  annotate_definition('doc',"Undef-fed",@_);
+  annotate_definition('xform',"Undef-fed",@_);
 }
 
 sub expand_macro {
