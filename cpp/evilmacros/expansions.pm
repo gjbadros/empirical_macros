@@ -338,7 +338,9 @@ sub handle_unincluded_block {
   # need separate symbol tables and hash tables for the different configuration
   # (versioning) structures, but that's quite a bit harder!!
   my $old_skipped = $skipped;
-  $skipped =~ s/^\s*\#\s*include .*$//mg;
+  # be careful not to change the size of the text that we push back -- just
+  # turn the include into a comment
+  $skipped =~ s/^(\s*\#\s*)include (.*)$/\/\*$1inc $2\*\//mg;
   if ($skipped ne $old_skipped) {
     print CPP "Removed some #include-s from speculative branch\n";
   }
