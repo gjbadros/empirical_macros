@@ -1,2 +1,2 @@
-^macros rsh forbidden zwrite gjb mernst
 ALL rsh forbidden zwrite gjb mernst
+ALL mail gjb mernst -s "CVS Checkin"
