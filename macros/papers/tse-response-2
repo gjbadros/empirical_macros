@@ -1,0 +1,996 @@
+[We haven't put all the answers into the text because you asked a specific
+set of questions about a specific set of comments.  You could as easily
+have asked us to expand on a different half of the text.  Pedantically
+drawing out every argument will make the paper cumbersome and difficult to
+read.  We have clarified some points you asked about.  For points that we
+chose not to expand on in detail, all our other readers of the paper found
+the original text clear; if any did not, we went ahead and modified it to
+address the lack of clarity.
+
+
+
+
+> We are not really
+> shown the development of this taxonomy, and no effort is made to
+> convince us that this is a good taxonomy or to show us that this
+> taxonomy can be put to some practical use.  The paper pounds away at
+> the reader with experimental measurements, which are not organized in
+> a way that helps the reader to draw any conclusions.  Too much of the
+> paper simply counts things, without adding analysis that develops the
+> reader's understanding.  The presentation of the experimental
+> measurements suffers from inconsistent presentations (e.g., frequency
+> distributions in one place vs cumulative counts in another) and from
+> lack of precision in the explanation of exactly what is being
+> measured.  Finally, the concluding sections (8 and 9) are not
+> supported by the empirical work; they seem disconnected from the rest
+> of the paper.
+
+
+> 
+> 
+>             OVERALL COMMENTS AND SUGGESTIONS FOR REVISION
+> 
+> It may be that the most valuable contribution of your work will come
+> not from your measurements but from your taxonomy.  Certainly the
+> relevance of the taxonomy is crucial to the significance of the work.
+> It is not enough to put together a taxonomy based on what you think
+> you see in the data; your taxonomy must serve a practical purpose or
+> improve understanding---preferably both.  In other words, to divide
+> macros into taxonomic categories is not much of a contribution unless
+> the categories are well chosen.  How did you develop your taxonomy?
+> Is it useful for solving any particular problems?  Does it communicate
+> something to tool builders?  To programmers?  To language designers?
+> How do taxons relate to the analyses that are used in typical tools?
+> What criteria did you use to prune your taxonomy for this paper?  Was
+> there anything useful in the elaboration of some taxons?  Did you do
+> some pruning on the basis of experimental measurement?  If so, it may
+> be worth saying ``a priori, we though taxon X would be significant,
+> but measurements showed otherwise, so we consider X only as it forms
+> part of Y.''
+> 
+> It's hard to tell from your paper if your taxonomy is flat.  For
+> example, is ``extra-linguistic'' a taxon that is divided into other
+> taxons?
+> 
+> Don't measure just for the sake of measuring; convince us that what
+> you are measuring is meaningful.  For example, you might
+> 
+>   1) Argue that it is useful to replace macros with C linguistic
+>      constructs.  If you can make this case, then show that your
+>      taxonomy helps identify macros that can be replaced with C.
+>      Could this be done automatically?
+> 
+>   2) Show which macros can be handled by which different kinds of
+>      software tools (e.g., test-coverage analysis, program
+>      understanding, program restructuring, debugging, ``lint'', etc),
+>      and *why*.
+> 
+> In other words, convince us why these taxons are important and to what
+> use your taxonomy might be put.  
+> 
+> (Aside: I suspect that a discussion of the taxonomy will show that it
+> does not make sense to lump Makefiles and other non-C code in with the
+> C programs in the experimental measurements.)
+> 
+> 
+> A serious weakness of your paper is that your taxons are not defined
+> precisely.  You do not explain exactly what your analyzer computes or
+> how it works.  The existence of 11,000 lines of perl does not give me
+> confidence that you are computing something well-defined and
+> reproducible.  This weakness must be corrected in order to make your
+> paper acceptable for publication.  A good place to begin would be a
+> precise characterization of the raw data on which the graphs in the
+> paper are based.  For example, I guess that your analyzer might produce:
+>   - List of (macro name, classification, package) triples
+>   - For each macro name (or definition?), 
+>        .  a list of the number of lines of C code causing that macro
+>           to be expanded (per package)
+>        .  a list of the number of lines of C code on which that macro
+>           appears
+>        .  a list of the number of lines of C code that are included in
+>           or excluded from the preprocessed source based on the value
+>           or definedness of that macro
+> Be sure to distinguish carefully between macro names and macro
+> definitions.
+> 
+> Explain exactly how the classifications are determined.  There are
+> several hints in your paper that the analysis is not very precise in
+> spots.  Two of these imprecisions must be corrected before I can
+> recommend the paper for publication:
+>   - You must refine your analysis so you can tell the difference
+>     between macros that refer to global variables and macros that
+>     refer to local variables or parameters.  
+>   - You must distinguish ordinary variables and built-in keywords from
+>     uses of similarly named macros.  A modified cpp might help with
+>     this analysis.
+> In general, tell us exactly how well or how badly you are doing in
+> your analyses.
+> 
+> You might want to consider beginning the paper with the taxonomy,
+> giving it the full and careful treatment it deserves, before moving on
+> to the experimental data.  This will help readers manage the sheer
+> quantity of data, and those readers who fail to do so will at least
+> have learned your taxonomy.
+> 
+> When you present your taxonomy, give an example for every taxon---the
+> examples are very helpful.  Try to do something typographically to
+> make the examples easy for the reader to find.  A table of taxons with
+> short definitions (and examples if they'll fit) might be helpful.
+> Give readers every aid in understanding and remembering your taxonomy.
+> 
+> You claim on page 3 that your taxonomy identifies innocuous and
+> problematic macro usages.  I don't see this claim borne out in the
+> paper.  This identification should be part of a clearer presentation
+> of your taxonomy.  Who decides what is innocuous and what is
+> problematic?  By what criteria?  Will you use your taxonomy to
+> promulgate usage guidelines?  Are there usages that are innocuous for
+> some purposes but problematic for others?  How many features of GNU C
+> or C++ would enable you to eliminate problematic usages that couldn't
+> be eliminated from ANSI C?  Support your answers with arguments or
+> evidence.
+> 
+> 
+> 
+> 
+> You've taken a lot of measurements, but I didn't learn much.  What are
+> readers to *do* differently, or to *understand* better as a result of
+> your analysis?  What conclusions do you want us to draw from the data?
+> Are there other conclusions that we might have hoped to draw but that
+> are not in fact supported by the data?  In other words, is anything in
+> the paper surprising?
+> 
+> 
+> You don't seem to exploit the fact that you have data from many
+> different packages.  It seems to me you're missing an opportunity to
+> correlate your measurements and classifications with things people
+> actually care about.  You have version numbers.  Do you have other
+> independent information (even guesses) about the packages?  Bug rates?
+> Number of users?  Can your analysis of usage within a package tell us
+> anything about that package?
+> 
+> 
+> 
+> 
+> 
+> Regarding related work, is it possible that work on software metrics
+> (complexity metrics) has completely ignored the C preprocessor?  I
+> don't know this literature at all, but I hope you can find either some
+> studies or some published evidence that the metrics community has
+> overlooked Cpp.
+> 
+> I would also like to know how your analysis relates to the analysis
+> performed by sophisticated tools like Gimpel's FlexeLint (aka
+> PC-Lint).  FlexeLint undoubtedly has a taxonomy of deprecated macro
+> constructs, and it would be useful to compare this taxonomy with your
+> taxonomy.  Such a comparison would help you make the case that your
+> taxonomy is relevant.  Gimpel supplies this tool in obfuscated source
+> form, so it might be possible to grep error messages, or they might be
+> willing to supply code that tickles the error messages, so you could
+> identify which had to do with macros.
+> 
+> 
+> 
+> 
+> 
+> The writing of your paper needs improvement, especially in the
+> introduction.  By page 6, there is no coherent story about what you
+> are doing in this paper.  What is the problem you are trying to solve?
+> The first clear indication of the goals of the work comes on page
+> 26, at the beginning of section 8.  This material should appear on
+> page 1.
+> 
+> The abstract is frustrating to read.  Instead of distilling the
+> essential results of the paper, the abstract lists the problems you
+> worked on.  I recommend consulting the following short paper for
+> advice on writing a better abstract:
+> 
+>    Landes, Kenneth K. 1966 (September). A scrutiny of the abstract.
+>    _Bulletin of the American Association of Petroleum Geologists_,
+>    50(9):1992--1993.
+> 
+> 
+> It might help your readers' understanding to pick one or two tools or
+> applications (e.g., a debugger, a test-coverage analyzer), and as you
+> go through both the taxonomy and the experimental data, to show how
+> the taxonomy and the data relate to the construction or use of such
+> tools.
+> 
+> This paper presents lots of data in the form of graphs and tables, so
+> you must make extraordinary efforts to help your readers comprehend
+> it.  Figures with their captions should be meaningful on their own and
+> should not require extensive explanation in the text.  Moreover,
+> because you use so many different kinds of figures, you must lead the
+> reader by the hand, explaining both the significance of the data in
+> the figures and the conclusions that may or may not be drawn.
+> Specific suggestions for a few graphs are given below, but almost
+> every graph in the paper needs work.  Finally, get the figures on the
+> same page as the text that discusses them---at least in a submission,
+> large chunks of white space are preferable to forcing the reader to
+> jump around.
+> 
+> 
+> 
+> 
+>                           DETAILED COMMENTS
+> 
+> 
+> 
+
+
+> Page 1:
+> 
+> The abstract claims an analysis taking cpp into account is
+> preferable.  Why?  Make your case or withdraw the claim.
+
+This is discussed in section 2 ("Background").  The abstract is long
+already, and we did not feel that we could justify a detailed argument.
+
+> What does it mean to say cpp can define new syntax?
+
+Cpp can create operators (macros) which differ from any pre-existing
+language constructs -- say, by taking types as arguments.
+
+> What does it mean to say cpp permits system dependencies to be made
+> explicit and tested?
+
+An explicit #if is superior to, say, instructions in a README file about
+different ways to build a program on different platforms.  The Cpp macros
+and tests reify those system dependences.
+
+> What is `disciplined' use of the preprocessor?  Who decides?  Which of
+> the usages in the paper are disciplined?  Connect the usages with
+> programmer effort and portability.
+
+
+
+> Page 2:
+> 
+> What is ``attempting to emulate the preprocessor''?
+
+Expanded to "attempt to emulate the preprocessor by tracking macro
+definitions and the value of conditional compilation tests."
+
+> What evidence is there that preprocessing may limit the readability
+> and reusability of the C++ templates inferred by Siff and Reps?
+
+Expansion of macros can result in code that will perform incorrectly when
+it is compiled into a system with different settings for those macros.
+More prosaically, it can convert code that was terse and high-level, with
+reasonable names, into verbose, low-level gibberish.
+
+> And
+> could this problem be solved by limiting macro usage to certain of
+> your taxons?  If so, explain how (and which taxons).
+
+No.
+
+> What is a non-syntactic program?
+
+Changed to "ill-formed programs that will not compile without errors".
+
+> What is the relationship of your list of pitfalls to your taxonomy?
+> How do your pitfalls compare with others' pitfalls (e.g., Koenig's C
+> Traps and Pitfalls)?  I'm not very convinced by your list.  It's all
+> too vague and general.  Try to improve or prune the list.  Definitely
+> give a concrete example of each.
+> 
+
+> Why is high total use problematic?  Computers are good at doing
+> the same thing over and over.
+
+People are not, however; the text referred to humans as well as tools.
+More directly to your point, one might hypothesize that the approach chosen
+by most tools -- to ignore macros -- would work well if there are few
+macros.  (The problems with such approaches -- for instance, the tool
+reports errors if the tool tries to treat macros as variables or functions,
+or discrepancies between the tool's input and the actual source coce if the
+code is preprocessed before being analyzed by the tool -- are discussed
+immediately above.  A small amount of such problems might be acceptable to
+a user; a large amount is likely not to.)  The quantity of preprocessor use
+is directly relevant to that hypothesis.
+
+> What's a complicated body?  Does your analysis tell you which bodies
+> are complicated?  How do you measure complexity?
+> Explain stringization, pasting, and free variables.
+
+We have added references to the relevant sections, where more substantial
+discussion occurs.  We don't have room for, and it is not appropriate to
+include, such detailed explanations in this outline.
+
+> Some of the value of macros comes from multiple definitions (e.g., for
+> portability or dialects).  Why is this a problem?  Make your case.
+
+The problem, as noted in the text, is when the definitions are incompatible.
+They apparently have different intended uses, and such name clashes can
+lead to either bugs or difficulties in understanding the code.
+
+> Page 3:
+> 
+> Exactly what is ``numerically significant?''  Give me the numbers, and
+> if it's not immediately obvious why they are significant, argue why
+> they are---don't just make the claim.  In general, when you make a
+> claim, make it as precise as possible and provide supporting evidence.
+
+This paragraph (which has been moved to page 2 in the new draft, keeping it
+in the introduction) has been rewritten to avoid the offensive terms.  It
+also explains the broad outlines of the results a bit more, but at this
+point it is premature to try to introduce long definitions and explanations
+which appear later in the paper.  Here were are merely presenting intuition
+and flavor; the more precise results belong in the body proper.
+
+> Begin Section 2 by saying how the analysis was done.  At this point
+> I'm still wondering if it was done by hand.
+
+We will convert "We analyzed" to "We used programs we wrote to analyze".
+
+The bulk of section 3 (in the new draft; was section 2 in the original
+draft) is about how the analysis was done.
+
+> If it's important that some applications are graphical, interactive,
+> etc., identify the applications in Figure 1.
+
+We made an effort to analyze a mix of packages so that our results are more
+likely to be generally applicable.  We are merely pointing this out to the
+reader.  Readers may examine the graphs for programs of interest to them to
+see whether a particular style of program has a particular property.  We
+haven't identified many particular such subsets; where they are relevant,
+we do so in the text.  (For instance, see section 4.2.)
+
+> Did you remove non-C files by hand?
+
+No.  This is discussed in section 3.
+
+> Disclaimer about library macros should be more prominent.
+
+This is a feature, not a disclaimer.  However, per your suggestion, we have
+moved it to a paragraph of its own.
+
+
+> Page 4:
+> 
+> Comments about your packages:
+>   1) Very heavy on GNU -- suggest you relate your taxonomy to GNU
+>      Coding Standards
+
+
+>   2) Where does one get these packages?
+
+Added on page 4 (in caption) and page 5 (end of section 3).
+
+>   3) There are almost no small programs.
+
+Yes!  That's a feature.  Small programs are amenable to hand-analysis or to
+ad hoc techniques.  A small program can be successfully written in almost
+any style.  Since small programs may have different properties than large
+programs -- which are the only ones that are hard to deal with, so are the
+only ones of interest to any software researcher -- we have omitted them.
+
+>   4) Interesting codes possibly worth adding include:
+>        - the Linux kernel or parts thereof
+>        - BSD sources
+>        - Runtime system from SML/NJ or Objective CAML
+>        - tcl implementation
+>        - Hanson's C Interfaces and Implementations
+
+Thank you for the suggestions.  We had many of other candidates as well,
+but with well over a million lines of code already under analysis, we
+decided that we didn't need any more programs.
+
+> I found I didn't learn anything from the fact that different packages
+> had different profiles.  I was disappointed.  Did you learn anything?
+
+
+> How much of your 11,000 lines of perl might be useful for other kinds
+> of analyses?
+
+It depends on the analysis; anywhere from nearly all of it it nearly none
+of it, I would guess.  Much of the code is an approximate, Cpp-aware parser
+which others might find useful.
+
+> Explain precisely what it means to attribute a line of code to a
+> directive.
+
+Moved into the figure caption, and changed to "Each group of bars
+represents the percentage of NCNB lines containing a specific directive."
+
+> Page 5:
+> 
+> Label a few of the most obvious outliers, especially remind, which you
+> discuss later, and the #line outlier.
+
+
+> Show actual directives in caption, e.g., #line, #if/#else/#endif,
+> #include, #undef, #define.
+
+Done, except that we use "conditional" instead of
+"#if/#ifdef/#ifndef/#else/#elif/#endif", which would be too long to fit.
+
+> Page 6:
+> 
+> How many is `most uses' of #undef?  Be precise whenever possible.
+
+32%.  Throughout the text, we have been precise and eliminated elegant
+variation, per your suggestions.
+
+> HAVE_PROTO is worth discussing.  You may want to compare the
+> HAVE_PROTO technique to this technique:
+>   #ifdef __STDC__
+>   #define ARGS(list) list
+>   #else
+>   #define ARGS(list) ()
+>   #endif
+> and its use as
+>   extern void  *allocate ARGS((unsigned long n, unsigned a));
+> in order to make the point that it is not necessary to have so much
+> conditional compilation.
+> 
+> 
+
+> When presenting numbers, this paper suffers from what Fowler (A
+> Dictionary of Modern English Usage) calls `elegant variation'.  Don't
+> make me compare 98%, three quarters, one sixth, and one quarter---use
+> a consistent notation throughout.  In this case, percentages are good.
+
+Agreed.  We've made these changes throughout.
+
+> You say 25% of macro definitions contain latent bugs.  Compare this
+> number to the number found by other tools, e.g., FlexeLint, LClint.
+
+LCLint is not usable (it crashed most times we tried to run it).  FlexeLint
+doesn't check nearly as many conditions as we did.  We chose not to include
+a competitive analysis of FlexeLint in this paper; see point 9 of our cover
+letter.
+
+> Page 7:
+> 
+> In figure 3 and similar graphs, don't make me read across by
+> rows.  Fix the graph so the legend is read down by columns.  In this
+> case, as in Figure 2, you have room for a single column to one side of
+> the figure.  This is the easiest to read and improves consistency.
+
+Done.
+
+> Also, there is so much data in this graph that I want you to tell me
+> explicitly what is interesting and what conclusions can and cannot be
+> drawn.  If you can't do that, omit the graph.
+
+We don't believe that there is only one interesting thing to be learned
+from the graph, or that we can know the one thing that every reader is
+looking for.  That's why we have included the data for readers to peruse
+for themselves.  We hope others with other problems or interests will take
+from it something that might not have caught our attention.
+
+> Page 8:
+> 
+> Exactly what is a partial type?  What makes type macros tricky to
+> understand?  Why can't they be eliminated with typedefs?
+
+Page 9 now gives an example of the inadequacy of "typedef void *__ptr_t".
+
+> Why the name `syntactic'?
+
+Added "They act like punctuation, or syntax, in the programming language."
+
+> Page 9:
+> 
+> Your tool failed to classify 900 macros.  I hope you studied these
+> carefully by hand.  Please try to characterize them, and please give
+> us some samples.
+
+The new draft contains a paragraph describing these in detail (at the top
+of page 10).
+
+
+> Remind us what stringization and pasting are.  
+
+We will add brief descriptions here.
+
+> Page 10:
+> 
+> Figure 4 is a failure.  It is hard to read, and I have no idea what it
+> is telling me.  Such small percentages are meaningless, because they
+> don't really tell us the probability of rare events.  Certainly
+> add absolute numbers, and possibly drop the percentages (except for
+> the first three).  Slant the headings to make them readable (The
+> LaTeX Companion shows how if you are using LaTeX).  Even with these
+> improvements, however, I can make no sense of this table.
+
+We've added absolute numbers, slanted the headings, and added a bit more
+explanation.
+
+> Page 11:
+> 
+> Why can't you measure pasting accurately?  Which is more significant,
+> direct pasting or indirect pasting, or are they both equally
+> significant (for tool building and understanding)?  Your paper
+> suggests they are equivalent.  If that's so, how much use is your
+> measurement really?
+
+We now note in the draft that the few macros that use pasting have fewer
+uses on average than macros that do not use pasting.
+
+> Shouldn't the extra-linguistic category include Syntactic macros?
+
+
+
+> How did you develop your list of macro pitfalls?  Aren't these
+> well known in the C literature?  How does your work relate?
+> Your contribution would be more valuable if you were identifying the
+> incidence of well understood problems instead of problems of your own
+> invention. 
+
+Section 8.3 compares other lists to our list.
+
+
+> Page 12:
+> 
+> Add absolute numbers to Figure 5.
+
+Done.
+
+> Page 13:
+> 
+> How few uses of do { ... } while (0) ?
+
+The text now states, "only 276 macros (20\% of statement macros) use this
+standard, widely-recommended construct."  This is on page 14 of the new
+draft.
+
+> How many statement macros followed by semicolons?
+
+The text now states, "39\% of statement macros contain the error".  This is
+on page 14 of the new draft.
+
+> Page 14:
+> 
+> Be more careful about the whole issue of swallowing semicolons and the
+> difference between statements and partial statements.  I'm quite
+> familiar with the issues, but still the thought of wrapping statements
+> in { ... } made me gasp.  I gasped because, as a matter of policy, I
+> never, ever define a macro that is equivalent to a statement.  Macros
+> look like function calls, which are partial statements, so I always
+> use do { ... } while(0).   Explain this issue thoroughly, and
+> early in the game.
+
+Not all macros look like function calls; in particular, argumentless macros
+do not.  
+
+I'm glad this made you gasp!  This is just one of the facts that startled
+some readers while coming as no surprise to other readers with a different
+background.  It's impossible for us to predict what will be interesting or
+boring to different audiences; as we note in our cover letter, responses
+have been quite varied.
+
+While you never define a macro that is equivalent to a statement, the
+explanatory text about the "statement" category on page 8 shows that over
+42% of the macros in the "statement" category were either complete
+statements or multiple complete statements.  In other words, across 26
+software packages by a variety of authors, there were nearly as many of the
+complete statements as there were of the partial statements which you favor
+(which made up 56% of the "statement" category).
+
+> Explain /**/-style pasting.
+
+This is described on page 15 of the new draft (and page 14 of the old
+draft).  We will add one more expanatory sentence: "For instance, in K&R C,
+to/**/ken is interpreted as a single token, and macros might be expanded on
+either side of the comment as well."
+
+> Can't you do a simple reaching-definitions analysis on the cpp code to
+> see which macro definitions could be used at which sites?  Isn't this
+> straightforward?
+
+
+
+> You can't postpone discussion of macro-name classification to section
+> 4.6 or appendix A.  Make it clear what is going on: your scheme
+> classifies definitions, and the problem is to classify names that have
+> more than one definition.  The whole folding business seems bogus.
+> Why not just count bodies?  Explain why it might be interesting or
+> important to classify macro names.
+
+
+> ``Failed classification'' seems an artifact of your classification
+> scheme.  Does this indicate a flaw in your work or a genuine problem
+> in the data?  
+
+Per page 10 (new draft; in the old draft, page 9), these are oddities that
+our classifier couldn't classify into one of the other categories.  Also as
+noted on those pages, there are so few of them that they don't affect the
+broad outlines of our results.  Their existence is at most a second-order
+effect.
+
+> What is `supporting variant declaration styles'?
+
+Added "(such as ANSI~C declarations and K\&R~C declarations)".
+
+> Page 15:
+> 
+> Again, lead your reader by the hand.  What does it mean for a curve to
+> be at the top of the graph?  At the bottom?
+
+We dropped this figure from the current draft but follow your suggestion on
+all other figures.
+
+> Page 16:
+> 
+> Figure 7 is another mystery.  On average, you have 1.8 definitions per
+> what?
+
+We expanded this caption threefold; it should be easier to understand now.
+
+> I don't follow section 4.5 at all.
+
+This is partially rewritten; along with the changes to the figure, you
+should find it more comprehensible.
+
+> The first paragraph of section 4.6 is another mystery.
+
+As is your comment.
+
+> Give examples of places where you've identified changes that should be
+> made to package code.  Exactly how did you identify these places?
+> Would these places have been identified with a commercial lint tool or
+> other lint-like tool?
+
+We do so on page 17 of the old draft.  This is now on page 18 of the new
+draft, along with one more example.  We also now state (more concretely
+than in the first draft) of one row in figure 8:
+
+  those twelve macro names are categorized as ``other'' and, with one
+  exception, represent bugs in the packages.
+
+and of another row:
+
+  All seven of these are bugs
+
+See page 18 for details.
+
+> Page 17:
+> 
+> What is `participation of statements in incompatibly-defined macros?'
+
+Reworded to "The number of statements is lower, largely because
+some macros names with statement definitions have other, incompatible
+definitions, so the macro name is categorized as ``other''."  This is now
+on page 17.
+
+> How many classification failures (bad mixes) represent bugs?  If you
+> can't look at them all, how about a random sample?
+
+We examined two of the bad mix categories and found that for 18 of the 19
+macro names, these bad mixes represented bugs.  (Also see the response to
+your previous comment but one.)
+
+> In Section 5, more elegant variation.  Give frequencies as macros per
+> thousand lines.  Give fractions as percentages.
+
+Done.  We now give per-line frequencies and fractions as percentages.
+
+> What does it mean for two macros to represent different categories of
+> information?  How are these categories determined or measured?  How do
+> they fit into your taxonomy?
+
+
+> Page 18:
+> 
+> Figure 8 is a total loss.  Omit it.
+
+We truncated it, added absolute numbers, and expanded the caption.
+
+> Page 19:
+> 
+> How accurate is ``very accurate in practice''?  How do you know?  What
+> would constitute perfect accuracy?  How many instances did you spot
+> check?  How did you select them?
+
+
+> Page 20:
+> 
+> I don't like the games you are playing with X axes.  How about putting
+> the uses=0 data as separate blots, not connected to the rest of the
+> graph, and using a true logarithmic scale for the rest of the data?
+
+We now use a true logarithmic axis, with the addition of 0.  We have
+connected the uses=0 lines to the rest of the graph because otherwise it is
+too hard to puzzle out which of the (closely spaced) blots for uses=0 is
+associated with which curve.
+
+> Again, explain the significance of the graph, e.g., macros that are
+> frequently expanded are at the bottom of the graph.  Do this for
+> *every* graph in the paper.
+
+Done (for this graph and every graph).
+
+
+> Page 21:
+> 
+> I see no need to abbreviate ``conditional'' in Figure 11.
+
+We feel the figure looks better when the numbers are not so widely
+separated from the labels as they would be by triplicing the length of
+"cond."
+
+> *What* fraction of uses are accounted for by uses in macro bodies?
+
+We didn't compute this exactly, because it is vanishingly small.  It would
+likely be about another 6% of the 5% of macros appearing in macro
+definition bodies.
+
+> Include mean percentages with each of the categories in section 5.3.
+
+This appears in figure 12 (as it did in the original draft).
+
+> Page 22:
+> 
+> In Figure 12, no reading across by rows.  Explain the significance of
+> the data.  Could the categories be reordered to make the significance
+> clearer?
+
+We reformatted the legend into one column.
+
+
+> Page 23:
+> 
+> The classifications of macros are used to classify conditionals.  Are
+> these the classifications of the macro names or of the reaching macro
+> definitions?
+
+The name.  We've reworded to clarify this.
+
+> Define inclusion dependence precisely and clearly, e.g., a line l is
+> inclusion-dependent on a macro name M (macro definition?) if and only
+> if ...
+
+Done.
+
+> I'm lost in the second paragraph, section 6.
+
+We've rewritten the introduction to this section (now called section 7),
+which should address your problem.
+
+> What was the size of the virtual memory that was exceeded trying to
+> analyze emacs and mosaic?
+
+Added (on antepenultimate line of page 23).
+
+> In Section 6.1, are we talking multiple macros on one line or macros
+> invoking macros?  Wouldn't it be useful to distinguish those cases?
+
+This section is about dependences, which include invocations (which we call
+expansion-dependene) but are not restricted to them.  Our data give
+transitive dependences.  We hoped this was clear from our remark that the
+LEGITIMIZE_ADDRESS line, which contains five tokens (and only one macro) is
+dependent on hundreds of macros.
+
+> Explain what LEGITIMIZE_ADDRESS does.  You have discovered an
+> interesting tidbit---let the rest of us in on it.
+
+Added "which creates a valid memory address for a memory operand of a given
+mode,".
+
+> ``One in twenty'' --> 5%.
+
+Done (here and elsewhere).
+
+> Page 24:
+> 
+> Can you justify the violence you do to the X axis in Figure 13?  How
+> about just presenting 0 separately and using a true logarithmic scale
+> for the other data?
+
+Done.
+
+> It's hard to tell what's maximum and minimum in Figure 13.  Again,
+> help the reader interpret the data.
+
+Done.
+
+> On a linear-log plot, I would expect exponential decay to be a
+> straight line.  Figure 14 is not a straight line.  One of us is wrong
+> about this; how about a more formal statement of what is exponentially
+> dependent on what?  And tell us *how* closely the figure approximates
+> an exponential.
+
+You're right:  a logarithmic-looking decay on a log-scale plot is a  Zipf
+distribution.  We've corrected the text and given some supporting numbers.
+
+> I read the third paragraph in section 6.2 as saying, ``Of the ten most
+> interesting macros our analyzer found, it got four of them wrong.''
+> My confidence plummets.  You must re-do your analyses to distinguish
+> ordinary variables and built-in keywords from uses of similarly named
+> macros.
+
+Done.  Now we report on the 20 most frequently used macros.  This is on
+page 25 of the new draft.
+
+> Page 25:
+> 
+> Figure 14: After a paper full of cumulative data, you suddenly take
+> the derivative of the curve and present us with a frequency
+> distribution.  This distribution may actually be easier to understand
+> than the cumulative data, but consistency is also important.  I
+> suggest you revise the other graphs to use the frequency-distribution
+> form and see how that works.
+
+Thanks for this suggestion.  We decided upon reflection to keep the current
+forms of the graphs, which we have chosen in each case to be easiest to
+read.  (This figure would be harder to read with cumulative data, but we
+found other charts harder to read with frequency distributions.)
+
+> Figure 14 needs work.  The labels are too small.  The numbers on the X
+> axis should label the boundaries between bars, not the bars
+> themselves.  This relabeling will eliminate the need for the epsilon
+> bar (called e in the figure).  It is probably worth putting both Y
+> axes on the same scale, even if you must increase the amount of
+> vertical space devoted to the figure.
+
+With respect to label size, the size of pages in the journal will determine
+whether the plots can be laid out horizontally or vertically; it seems wise
+to defer fine-tuning until then.  Our cover letter addresses the other
+comments.
+
+> The preprocessor is commonly used to support multiple dialects of
+> *which* languages?  How commonly?  On what evidence do you make this
+> statement?
+
+This is obvious from any examination of real code, is commonly held among
+programmers, and certainly achieves the status of folk theorem.  However,
+the bottom of page 25 now presents statistics about the packages in our
+sample.
+
+> Exactly how much of a decline is a `not substantial' decline?
+
+We added numbers to back this up.
+
+> The conclusion at the end of section 6.3 is not supported by the
+> evidence.
+
+We have added a more concrete assertion about the results over the
+partially-evaluated programs and how (little) they differ from the original
+data.  We don't have room to replicate all the data and discussion of the
+rest of the paper (though we did generate all that data).
+
+> If organizations provide hints about using the preprocessor, you
+> should be able to relate those hints to your taxonomy.  Do so.
+
+We've tripled the related work in size and believe we have addressed this
+issue, among others.
+
+> How might your empirical data help refine suggestions?  I don't see
+> it.
+
+
+
+> 
+> 
+> Page 26:
+> 
+> Are Spencer and Collyer's recommendations consistent with your
+> taxonomy?  Or does your taxonomy identify usages that can't be
+> converted according to their recommendations?  If so, how frequent are
+> those usages according to your data?  Does the frequency vary by
+> package?  Can the variation be correlated to maturity?  Bug reports?
+> Age relative to the ANSI standard?
+> 
+
+> Please do a better job explaining Krone and Snelting.  It seems
+> interesting, but I can't follow your explanation.
+
+Expanded; this is the first paragraph of section 8.3.  (Other people were
+interested in other pieces of related work; we couldn't devote large
+amounts of space to each.)
+
+> As noted above, I think much more extensive comparison with lint-like
+> tools is called for.  You are, after all, claiming to identify
+> problematic usages.
+
+> Please explain the significance of parse errors and internal bugs in
+> LCLint.  It sounds as if LCLint is nearly unusable for your
+> application suite.  How many of the packages (or source files) could
+> it handle without crashing?
+
+Yes, LCLint is essentially useless.  We didn't want to make too big a deal
+of this, however:  our primary goal is not to criticize others.  We have
+slightly expanded the text to answer your question, however (on page 28 of
+the new draft).
+
+> You criticize Spuler and Sajeev for not justifying tradeoffs between
+> techniques that perform parsing and those that do not.  I see no such
+> justification in your paper.  You barely even explain your techniques
+> for identifying and classifying potential errors.
+
+Those tradeoffs are a major theme of the Spuler and Sageev paper, which
+contains frequent comments like "The extra cost is hardly justified, since
+incorrect warnings appear rarely," and "This technique will rarely find
+extra errors and the simpler algorithm is quite adequate."  Absolutely no
+justification is provided.  Those tradeoffs in techniques are not the major
+theme of our paper, though perhaps the community would welcome followon
+work that examined this issue more rigorously.  We can add information to
+this effect if you feel it would be helpful.
+
+> Page 27:
+> 
+> Define `problematic' uses.
+
+
+
+> Your argument about standardization might apply to new code.  It
+> certainly doesn't apply to legacy code.  Does that matter?
+
+
+
+
+> Are function declarations the only declarations at issue?
+
+> I'm skeptical about moving directives into the language proper.
+> 
+> I don't buy the argument about replacing common constructs with
+> special-purpose syntax.  If you have a proposal, make it, and say what
+> it would gain.  The general argument isn't convincing by itself; there
+> must be an example.
+> 
+> Use your empirical data to argue the points in section 8---connect
+> this section to the rest of the paper.
+> 
+> How are the good practices in section 8 different from recommendations
+> made by others?  The benefits you list are very abstract.  Make a case
+> for concrete benefits; show the real problems that are created by
+> ``problematic'' macros.
+> 
+> In section 9, I'm not convinced language designers will learn much
+> from this paper in its present form.  Distill the information from the
+> rest of the paper that you believe to be relevant to language design.
+> 
+> Elaborate on the third paragraph of section 9.
+> 
+> 
+> Page 28:
+> 
+> Your paper doesn't identify ``constructs that cause tools to give
+> incomplete or incorrect results.''  This information is very important
+> and should be included in the development of your taxonomy.
+
+
+
+> You claim to have found interesting and surprising features.  I'm not
+> convinced---identify the most important such features.
+
+See point 10 of our cover letter (pages 2-3 of that letter).
+
+> As noted above, the problems identified in the last and third from
+> last paragraphs must be corrected.  You must not assume that all
+> lexical occurrences of macro names are macros uses.  You must
+> distinguish use of global variables from use of local variables and
+> parameters.
+
+Done.
+
+> Page 29:
+> 
+> References like [SC92] are unnecessarily cryptic.  Writing out
+> [Spencer and Collyer 1992] makes it easier for the reader to identify
+> or remember the work.  LaTeX provides a 'chicago bibliography style',
+> which puts references in this format.
+
+This is a question of style.  While some prefer Chicago-style, others find
+them wordy, cumbersome, and unnecessarily distracting to readers.  This
+point is moot, however, since the journal will impose its own bibliography
+style on the final version of the paper.
+
+> Page 30:
+> 
+> This algorithm seems simple, and it could probably be clearly and
+> concisely explained in a figure or table in the main text.  I see no
+> reason to relegate it to an appendix.
+
+Moved to figure 7 (page 17).
+
+> What is a `statement-related' macro?  What is a plural form?  These
+> questions are not answered on page 8.
+
+We reworded this to:
+  If one is a statement or partial statement, and the other is the
+  corresponding plural form (i.e., if the other consists of some number of
+  complete statements followed by a statement or partial statement,
+  respectively), then use the latter.

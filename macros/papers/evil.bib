@@ -291,8 +291,10 @@ macro and code versioning are rendered obsolete in C++."
   OPTaddress = 	 {},
   year =	 1996,
   month =	 Aug,
-  note =	 {\relax{}Version 2.2.  http://larch-www.lcs.mit.edu:8001/\discretionary{}{}{}larch/\discretionary{}{}{}lclint/\discretionary{}{}{}guide/\discretionary{}{}{}guide.html}
+  note =         {\relax{}http://www.sds.lcs.mit.edu/\discretionary{}{}{}lclint/\discretionary{}{}{}guide/}
 }
+Used to be:
+  note =	 {\relax{}Version 2.2.  http://larch-www.lcs.mit.edu:8001/\discretionary{}{}{}larch/\discretionary{}{}{}lclint/\discretionary{}{}{}guide/\discretionary{}{}{}guide.html}
 
 
 @InProceedings{Krone94,
@@ -690,16 +692,22 @@ Describes a series of errors in macro definitions or use:
  * side effects to macro calls
  * operator precedence errors
 "Many" of the checks have been implemented in a tool called Check.
-Except for operator precedence errors, everything is at the lexical level:
+  Much of the paper discusses precedence work:  a parse-free technique on
+definitions, and a version with parsing which examines invocations to show
+uses which actually trigger the problem.  Most of the paper (sections 4.7
+and 4.8 comprise more than half the text) is about operator precedence
+errors.  Section 4.8 gives 9 rules for parse trees with precedence errors
+based on whether each operator appears in a macro parameter, macro body, or
+outside macros.
+  Except for operator precedence errors, everything is at the lexical level:
 no parsing, lots of approximations (eg, suppress certain errors if any
-statement-like token appears in a macro).  Unsubstantiated claims about
-what extra work (parsing, etc.) is worthwhile and what isn't.  Much of the
-paper discusses precedence work:  a parse-free technique on definitions,
-and a version with parsing which examines invocations to show uses which
-actually trigger the problem.  No reports about running it on actual code
-(except an implication that it's being used for a programming class).
-[[Also see David A. Spuler, Check: A Better Checker for C, B Sc (Honours)
-Thesis, James Cook Universaity, Townsville, Australia (1990).]]
+statement-like token appears in a macro).  Througout, unsubstantiated
+claims about what extra work (parsing, etc.) is worthwhile and what isn't;
+this is a major theme of the paper, but no evidence is provided.  No
+reports about running it on actual code (except an implication that it's
+being used for a programming class).
+  Also see David A. Spuler, Check: A Better Checker for C, B Sc (Honours)
+Thesis, James Cook Universaity, Townsville, Australia (1990).
 
 
 @Unpublished{Lindig98:dagstuhl,

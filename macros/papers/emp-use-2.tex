@@ -69,7 +69,7 @@
 
 \author{Michael D. Ernst \and Greg J. Badros \and David Notkin}
 
-\date{% Technical Report UW-CSE-97-04-06 \\
+\date{Revision of Technical Report UW-CSE-97-04-06 (original date April 22, 1997) \\
 Department of Computer Science and Engineering \\
 University of Washington \\
 Box 352350, Seattle, WA  98195-2350  USA \\
@@ -461,7 +461,8 @@ and they more accurately reflect actual use, than previous work.
 %%Numbers: .9% computed 1/28/99, from a run with a bug that didn't count
 %% those at all.
 
-We analyzed {\numpackages} publicly-available C software packages that
+We used programs we wrote to analyze {\numpackages} publicly-available C
+software packages that
 represent a mix of application domains, user interface styles (graphical vs.\ 
 text-based, command-line vs.\ batch), authors, programming styles, and
 sizes.  We intentionally omitted language-support libraries such as \pkg{libc}, for they
@@ -909,7 +910,7 @@ ASSERT(p) if (!(p)) botch(\verb|__STRING|(p)); else}).
   Partial types cannot be eliminated via straightforward translation
   (though C++ templates may provide some hope).  Typedefs may be able to
   replace full types; for instance, {\tt typedef void \verb|*__ptr_t|} could
-  almost replace the first example above. (Adding a \verb|const| prefix
+  almost replace the first example above.  (Adding a \verb|const| prefix
   to a use of \verb|__ptr_t| would declare a constant pointer if the typedef
   version were used, instead of a pointer to constant memory.)
 
@@ -964,7 +965,8 @@ ASSERT(p) if (!(p)) botch(\verb|__STRING|(p)); else}).
   
   Unknown symbols can also be local variables, or variables or functions that we failed to
   parse.  Our approximate parser can succeed where an exact parse would not
-  (as for non-syntactic code or entities interrupted by preprocessor
+  (as for non-syntactic code that deviates from the language grammar
+  or for entities interrupted by preprocessor
   directives), but occasionally it fails to recognize declarations or
   definitions.
 
@@ -1018,8 +1020,9 @@ ASSERT(p) if (!(p)) botch(\verb|__STRING|(p)); else}).
   unambiguously categorized itself).
   
   Some categorization failures resulted from limitations of our parser, which does not
-  handle pasting and stringization (3\% of failures).  Handling of partial
-  entities is incomplete, so case labels (4\%), partial expressions (6\%),
+  handle pasting (token concatenation) and stringization (converting a macro
+  argument to a C string); together, these represent 3\% of failures.  Handling of partial
+  entities is incomplete, so case labels (4\% of failures), partial expressions (6\%),
   and some declarations (14\%) are left uncategorized, as are bodies that
   pass a non-first-class object (such as a type or operator) to another
   macro (7\%).  The biggest problem is macros with adjacent symbols, which
@@ -1038,7 +1041,7 @@ ASSERT(p) if (!(p)) botch(\verb|__STRING|(p)); else}).
   Our categorization is conservative:
   we categorize a macro body as (for example) a statement only if it can be
   definitively parsed as such, not merely if it has some tokens that
-  predominantly appear in symbols or if some arguments passed to it will
+  predominantly appear in statements or if some arguments passed to it will
   result in a statement.  As a result, our ``other'' category contains
   macros that might otherwise have been heuristically placed in some other category, at
   increased risk of miscategorizations of other macros.  Because the number
@@ -1243,7 +1246,7 @@ Figure~\ref{fig:subset-properties}.
 \item[Self-referential]
   The body refers to its own name, as in {\tt \#define LBIT vcat(LBIT)}.
   This feature can build a wrapper around an existing function or variable.
-  Since the ANSI C preprocessor performs only one level of expansion on
+  Since the ANSI~C preprocessor performs only one level of expansion on
   recursively defined macros, the expanded macro contains a reference to
   the original name.  (Pre-ANSI implementations could loop forever when
   expanding self-referential macros.)
@@ -1357,7 +1360,8 @@ described below.
     else \ldots
 \end{alltt}
         because {\tt ABORT();} expands to two statements (the second a null
-        statement), which is non-syntactic between the {\tt if} condition and
+        statement), which is non-syntactic\,---\,disobeys the language
+        grammar\,---\,between the {\tt if} condition and
         {\tt else}.
         
 %%Numbers: 17% = (/ (- 1350 1123) 1350.0), computed from
@@ -1468,9 +1472,11 @@ is not a meaningful Cpp directive) and {\tt \#undef
 \verb|GO_IF_INDEXABLE_BASE|(X, ADDR)} ({\tt \#undef} takes a macro name,
 not the arguments as they appeared in the {\tt \#define} directive).
   
-While ANSI C uses {\tt \#\#} for pasting, in K\&R C one abuts two symbols,
+While ANSI~C uses {\tt \#\#} for pasting, in K\&R~C one abuts two symbols,
 with an empty comment in between, so that their expansions form a new
-identifier when the compiler removes the comment.  This construct does not
+identifier when the compiler removes the comment.  For instance, in K\&R~C,
+{\tt to/**/ken} is interpreted as a single token, and macros might be
+expanded on either side of the comment as well.  This construct does not
 perform merging in newer implementations, so we warn users of its
 appearance.  We do not report it in our statistics because use of {\tt
 /**/}-style pasting is rarely a bug and is not uncommon, especially in {\tt
@@ -1538,7 +1544,7 @@ definitions a macro has, the more likely it is that one of those
 definitions cannot be categorized, or is miscategorized, by our system,
 resulting in a failure to categorize the macro name.  Syntactic macros
 include those expanding only to punctuation.  These are frequently used to
-support variant declaration styles (such as ANSI C declarations and K\&R C
+support variant declaration styles (such as ANSI~C declarations and K\&R~C
 declarations); as such, they require a definition for each variety, and
 they are frequently redefined to ensure that their
 settings are correct.
@@ -2547,9 +2553,9 @@ header file inclusion.
 %
 % I think workman was the only package which saw no code size reduction.
 
-Support for multiple dialects of a language, such as ANSI C and K\&R C, is
+Support for multiple dialects of a language, such as ANSI~C and K\&R~C, is
 a common use of the preprocessor:  3 of the {\numpackages} packages support
-only ANSI C, 4 support only K\&R C, 13 use the preprocessor to fully
+only ANSI~C, 4 support only K\&R~C, 13 use the preprocessor to fully
 support both dialects, and 6 prefer one dialect but partially support
 another (for instance, part of the package supports both dialects or a
 substantial number of functions have both varieties of prototype).  Such
@@ -2659,7 +2665,7 @@ ones in effect at the definition site), and newlines in macro invocations
 
 The GNU coding standards~\cite{Stallman97} mention Cpp only to recommend
 upper case for macros and use of macros to provide meanings for standard
-symbols on platforms that don't support ANSI C\@.
+symbols on platforms that don't support ANSI~C\@.
 The Ellemtel coding standards~\cite{ellemtel92} recommend that inline
 definitions appear in separate files of their own (not in \file{.h} header
 files) that never include other files, that inline functions and {\tt
@@ -2845,7 +2851,7 @@ macro errors and problematic uses identified by our tool, PC-Lint/FlexeLint
 warns about unparenthesized bodies, multiple macro definitions (classifying
 them as either ``identical'' or ``inconsistent''), unreferenced defined macros, and
 macros that could probably be replaced by a const variable.  It also warns
-of non-syntactic arguments to the {\tt \#include} directive, header files
+of illegal arguments to the {\tt \#include} directive, header files
 none of whose declarations are used in a module, and names defined as both
 C variables and macros.  At macro definitions, it warns of multiple formals
 with the same name, use of {\tt defined} as a macro name, and formal names
@@ -3168,7 +3174,7 @@ Programming tool writers can choose to cope only with common uses of
 the preprocessor.  By partial preprocessing (or embedded understanding
 of some Cpp constructs), a parser can maintain the programmer-oriented
 abstractions provided by preprocessor directives and macro names without
-getting confused by non-syntactic programs.  
+getting confused by programs containing syntax errors.
 
 Programmers who wish to make their code cleaner and more portable can
 choose to limit their use of the preprocessor to the most widely-used

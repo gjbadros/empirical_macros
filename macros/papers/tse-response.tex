@@ -1,0 +1,177 @@
+% -*- Mode: Tex -*-
+% for LaTeX
+\documentclass[11pt]{letter}
+\usepackage{fullpage}
+
+\begin{document}
+
+\signature{\mbox{Michael Ernst, Greg Badros, and David Notkin}}
+
+
+\begin{letter}{Jens Palsberg \\
+    1398 Computer Science Building \\
+    West Lafayette, Indiana, 47907-1398}
+
+\opening{Dear Jens,}
+
+At long last, here is a major revision of TSE \#105066, ``An empirical
+analysis of C preprocessor use,'' by Ernst, Badros, and Notkin.  We are
+grateful for the detailed, thoughtful, and very extensive comments by the
+reviewers.  We apologize for the long delay in revising the paper, but the
+new version has been substantially improved to account for those comments,
+including developing a new framework to support the analyses, re-analyzing
+the data using this framework, and adding new analyses.  Every part of the
+paper has been rewritten for clarity, style, and to present additional
+information.  We feel that this major modification is an improvement over
+the original submission; we hope that the improvements further satisfy the
+reviewers about the publishable quality of the paper.
+
+Because the reviewer comments ran to 16 single-spaced pages, we will not
+attempt to discuss each one in detail here.  Instead, we focus in this note
+on what we believe are the most critical and crucial aspects of the
+reviews.
+
+\begin{enumerate}
+
+\item
+  Most notably, we have performed some research that was originally
+  relegated to future work.  Our free variable analysis correctly
+  distinguishes between between macros that refer to global variables and
+  macros that refer to local variables or parameters.  We also accurately
+  distinguish macro uses from references to other symbols (such as
+  variables) with the same name.  While our results are not substantially
+  altered by this change, we could not have known that in advance and it
+  was also valuable to improve precision in these respects.
+
+\item
+  Another change to our analysis is that we only analyze one hardware and
+  operating system configuration rather than all such configurations.  This
+  reduces the amount of code we analyze and the number of multiple
+  definitions of macros, especially system-dependent ones.  This makes our
+  analysis even more compelling, for it removes a potential criticism (not
+  raised by any of the reviewers) that our numbers are inflated by system
+  dependences.
+
+\item
+  We more precisely explain the exact process we followed, both in the
+  methodology description of section 3 and elsewhere in the paper as
+  appropriate.  (For instance, the descriptions of macro dependences are
+  more extensive and formal.)  This should address the reviewers' concerns
+  about what data we gathered, how we gathered it, and why readers should
+  believe we've done it properly.
+
+\item
+  We have rewritten the paper to avoid the use of words such as ``innocuous''
+  and ``problematic'', and to justify why certain practices are likely, or
+  unlikely, to present difficulties to program understanding by humans or
+  by tools.  (Some uses of these words remain, changed to ``potentially
+  problematic uses'', indicating that this issue is not cut-and-dried.)
+
+\item
+  Reviewers 1 and 3 were also concerned with how we determined the taxonomy
+  that we present.  We have rewritten substantial pieces of the paper to
+  clarify this.  Additionally, when we introduce our taxonomies, we have
+  added more examples to ensure that at least one example illustrates each
+  taxon.
+
+\item
+  We have also substantially expanded the related work to fully summarize
+  the taxonomies and suggestions of previous work.  This makes it easier to
+  compare our taxonomy, which is generally finer than theirs but not always
+  perfectly comparable.  We decided that a tabular presentation of the
+  comparison was not particularly illuminating.
+
+\item
+  We also expanded other aspects of related work.  (However, we were still
+  unable to find any work in the software complexity metrics literature
+  about the C preprocessor.)
+
+\item
+  We have revised every figure in the paper based on specific comments of
+  the reviewers.  Several figures have been removed on the advice of the
+  reviewers.  We have used more standard log-scale axes in two cases, and we
+  have ensured that each caption gives examples of how to read or interpret
+  the figure.  (The labels for the x axis of Figure 14 still need to be
+  moved to the left, so they mark boundaries rather than bars; we will
+  correct this in the copy-editing phase.  However, it is not possible to
+  omit or merge the two left bars, as reviewer 3 suggested, without losing
+  information.)
+
+\item
+  The reviewers suggested a number of additional avenues to explore;
+  examples included comparisons to FlexLint/PC-Lint, correlating to version
+  numbers, bug rates, etc.  Given the length of the paper (the current
+  version is somewhat larger than the originally submitted version, to
+  accommodate the collective suggestions of the reviewers) and given the
+  extensive work (not only in rewriting) required by the revision, we chose
+  not to extend the scope of the paper further.  Although these suggestions
+  (and others we have developed on our own and through discussions with
+  others) are excellent, they can reasonably be deferred to later research.
+  As Reviewer 1 noted: ``Maybe the authors can convince colleagues to
+  perform a similar study for a different set of source texts, and compare
+  the results.''  Perhaps one such study could extend the results in these
+  suggested dimensions.
+
+\item
+  Reviewer 3 said: ``You've taken a lot of measurements, but I didn't learn
+  much.  What are readers to *do* differently, or to *understand* better as
+  a result of your analysis?  What conclusions do you want us to draw from
+  the data?  Are there other conclusions that we might have hoped to draw
+  but that are not in fact supported by the data?  In other words, is
+  anything in the paper surprising?''  This is a reasonable comment that is
+  extremely difficult to address directly.
+
+  \begin{itemize}
+   \item
+     We have tried to address this more directly in the paper
+     (especially in the introduction and the conclusion); as one example,
+     these data could help a tool writer apply the 90-10 rule more easily,
+     addressing the relatively small number of preprocessor constructs that
+     are used most of the time.  We cannot anticipate all the uses to which
+     our data will be put, however.  We do not believe there is one set of
+     definitive conclusions to be drawn from the data, but they can be used in
+     different ways to support different tasks.
+   \item
+     The plethora of C code in the world now comprises a natural
+     phenomenon; this initial study shows how a key piece of that phenomenon,
+     the use of the preprocessor, holds in practice.
+   \item
+     Even if the data are consistent with what we might have expected,
+     confirming this is a useful result (and, as Reviewer 1 indicates, only a
+     single data point).
+   \item
+     The data turn out not to be consistent with readers' assumptions
+     about C preprocessor use in real programs; we have provided concrete
+     results to explode such assumptions.  What was obvious or intuitive to
+     one reader was surprising to another, even among seasoned programmers and
+     researchers.  Somewhat to our surprise, each reader has found a different
+     aspect of our data and analyses most valuable.  There isn't a single
+     element of our analysis that at least one reader hasn't asked for more
+     detail about.  (Of course, we cannot hope to extend the paper in every
+     direction suggested, but we do welcome followup work.)
+   \item
+     Many other people who have read the read the paper or heard
+     the results have found the results to be of interest and, in some
+     respects, surprising.  (This is an admittedly weak argument, but it is
+     indeed accurate.)
+  \end{itemize}
+
+\item
+  For similar reasons to the above, it is difficult to give a succinct
+  summary of this mass of data or to describe, in a few words, the
+  ``essential results'' that will be of interest to all readers.  We do
+  provide some summary information at the beginnings of sections 4, 5, and
+  6, but we do not wish to claim that those one-paragraph summaries capture
+  everything that is interesting about our analysis.
+\end{enumerate}
+
+
+As a final note, we'd like to thank the reviewers again for their
+thoughtful and extensive comments.  And to thank them in advance for
+reviewing the extended paper once again.
+
+\closing{Regards,}
+
+\end{letter}
+
+\end{document}
