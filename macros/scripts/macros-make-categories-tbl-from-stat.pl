@@ -5,6 +5,7 @@ BEGIN {
   use English;
   use strict;
   use em_constants;
+  use em_util;
   use Carp;
   use vars qw($ORS $OFS $FORMAT);
   $FORMAT="%2.3f";
@@ -59,9 +60,9 @@ BEGIN {
   print "Package", "define", "Constant", "Expression", "Statement", "Syntactic","related","C code", "Other", "symbol",	"classification";
 
   my ($cNull, $cConst, $cExp, $cStm, $cSyntax, $cType,
-      $cNonC, $cOther, $cFail, @rest) = 0 x 40;
+      $cNonC, $cSymbol, $cFail, @rest) = 0 x 40;
   my ($sNull, $sConst, $sExp, $sStm, $sSyntax, $sType,
-      $sNonC, $sOther, $sFail, @rest2) = 0 x 40;
+      $sNonC, $sSymbol, $sFail, @rest2) = 0 x 40;
 
 }
 
@@ -76,17 +77,17 @@ if (/^CATEGORIES_NI:/) {
   $cSyntax = sum_meta_category(@mcat_SYNTAX); $sSyntax += $cSyntax;
   $cType = sum_meta_category(@mcat_TYPE); $sType += $cType;
   $cNonC = sum_meta_category(@mcat_NON_C_CODE); $sNonC += $cNonC;
-  $cOther = sum_meta_category(@mcat_OTHER); $sOther += $cOther;
+  $cSymbol = sum_meta_category(@mcat_SYMBOL); $sSymbol += $cSymbol;
   $cSymUknown = sum_meta_category(@mcat_SYMBOL_UNKNOWN); $sSymUnknown += $cSymUknown;
   $cFail = sum_meta_category(@mcat_FAILURE); $sFail += $cFail;
   $totLine = $cNull + $cConst + $cExp + $cStm + $cSyntax +
-    $cType + $cNonC + $cSymUknown + $cFail + $cOther;
+    $cType + $cNonC + $cSymUknown + $cFail + $cSymbol;
 
   my $filename = $ARGV;
   $filename =~ s/\..*$//;
 
   print $filename, map {sprintf $FORMAT, $_ } pct($cNull), pct($cConst), pct($cExp), pct($cStm), pct($cSyntax),
-    pct($cType), pct($cNonC), pct($cOther), pct($cSymUknown), pct($cFail);
+    pct($cType), pct($cNonC), pct($cSymbol), pct($cSymUknown), pct($cFail);
 
   $totLine = 0;
 } elsif ($fInitializedHeadings == 0 && /^\#CATEGORIES_NI\#:/ ) {
@@ -108,11 +109,11 @@ END {
   if (!$nolatex) { print "\\hline\n" };
   if ($fFoundLine) {
     $totLine = $sNull + $sConst + $sExp + $sStm + $sSyntax + $sType +
-      $sNonC + $sFail + $sOther;
+      $sNonC + $sFail + $sSymbol;
     print "Total", map {sprintf $FORMAT, $_ } ( pct($sNull), pct($sConst), pct($sExp), pct($sStm), pct($sSyntax), pct($sType),
-      pct($sNonC), pct($sOther), pct($sSymUnknown), pct($sFail) );
+      pct($sNonC), pct($sSymbol), pct($sSymUnknown), pct($sFail) );
     print "Total-raw", map {sprintf "%2.0f", $_} ($sNull, $sConst, $sExp, $sStm, $sSyntax, $sType,
-      $sNonC, $sOther, $sSymUnknown, $sFail );
+      $sNonC, $sSymbol, $sSymUnknown, $sFail );
   }
   $ORS="";
   if (!$nolatex) {print "\\end{tabular}\n"; }
@@ -120,26 +121,10 @@ END {
 
 ########### Utility subroutines
 
-# pct2(x) returns a percentage (not a fraction) which corresponds to arg1/arg2.
-sub pct2 ( $$ ) {
-  my ($x,$w) = @_;
-  if ($w <= 0) {
-    if ($x > 0) {
-      croak "pct2: Bad divisor: $x / $w";
-      return 0;
-    }
-    $w = 1;
-  }
-  if ($x < 0 || $x > $w) {
-    croak "pct2: Percentage out of range: $x / $w\n";
-  }
-  return (100*$x/$w);
-}
-
 # pct(x) returns a percentage using totline as the divisor
 sub pct ( $ ) {
   my ($x) = @_;
-  return pct2($x,$totLine);
+  return percent2($x,$totLine);
 }
 
 sub sum_meta_category {

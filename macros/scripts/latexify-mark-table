@@ -1,4 +1,9 @@
 #!/uns/bin/perl
+
+###########################################################################
+### WARNING: not currently used.  see latexify-meta-mark-table
+###########################################################################
+
 BEGIN {
 # FIX: These table headings need to be kept
 # in synch w/ macros-make-subset-categorizations-from-mac script
@@ -13,7 +18,7 @@ print '
 & % failed
 & % null define
 \multicolumn{3}{c|}{Constants} &
-\multicolumn{4}{c|}{Expressions} & 
+\multicolumn{4}{c|}{Expressions} &
 \multicolumn{2}{c|}{{\tiny Statements}} &
 \multicolumn{2}{c|}{} & % stringization and pasting
 \multicolumn{3}{c|}{Syntactic} &

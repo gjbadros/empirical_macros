@@ -78,7 +78,9 @@ TEXT_TABLES :=	tbl-package-sizes \
 
 RAW_TABLES := tbl-directives-hist tbl-subset-categories
 
-LATEX_TABLES :=	tbl-subset-categories.tex
+LATEX_TABLES := tbl-package-sizes.tex \
+		tbl-subset-categories.tex \
+		tbl-subset-properties.tex
 
 ALL_TABLES := $(TEXT_TABLES) $(RAW_TABLES) $(LATEX_TABLES)
 
@@ -174,10 +176,13 @@ tbl-def-categories: $(STAT)
 	macros-make-categories-tbl-from-stat.pl -t -p $^ > $@
 
 tbl-subset-categories: $(MAC)
-	macros-make-subset-metacateg-from-mac -m $^ | sort | uniq -c | sort -nr >$@
+	macros-make-subset-metacateg-from-mac -m $^ | sort | uniq -c | sort -nr > $@
 
 tbl-subset-categories.tex: tbl-subset-categories
 	latexify-meta-mark-table `sum-column 1 <$^`  < $^ > $@
+
+tbl-subset-properties.tex: tbl-properties-percents tbl-properties-subset
+	macros-make-subset-prop-tbl > $@
 
 tbl-lint-warnings: $(LINT)
 	combine-histogram -p'\) ' -s '^Total.*: (.*)' $^ > $@

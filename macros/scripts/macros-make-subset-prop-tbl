@@ -1,0 +1,175 @@
+#!/uns/bin/perl -w
+
+use strict;
+use em_util;
+
+# Don't bother to be subtle:  just use brute force.
+# Inputs are tbl-properties-percents and tbl-properties-subset
+
+my $total;
+my @prop_names;
+my %prop_nums;
+my %prop_name_pretty = (
+			'free_var' => 'Free variables',
+			'assign' => 'Assignment',
+			'uses_macro_as_type' => 'Use macro as type',
+			'passes_type_as_arg' => 'Pass type as argument',
+			'pasting' => 'Pasting',
+			'uses_arg_as_type' => 'Use argument as type',
+			'self_referential' => 'Self-referential',
+			'stringize' => 'Stringization');
+
+{ my $filename = "tbl-properties-percents";
+  open(INPUT, $filename) or die "Couldn't open $filename";
+  my $line = <INPUT>;
+  if ($line !~ /^TOTAL = (\d+)$/)
+    { die "Didn't find TOTAL line in $filename; instead saw: $line"; }
+  $total = $1;
+  while (defined($line = <INPUT>))
+    { if ($line !~ /^(\d+)\s+\(\d+\.\d+%\)\s*(\w+)$/)
+	{ die "Malformed line in $filename: $line"; }
+      if ($1)
+	{ push @prop_names, $2;
+	  $prop_nums{$2} = $1; }
+    }
+  close(INPUT);
+}
+
+print '
+%\usepackage{graphics}
+%\newcommand{\black}{\ensuremath{\blacksquare}}
+\newcommand{\black}{\vrule height5.5pt depth0.5pt width6pt}
+{\small
+\addtolength{\columnsep}{-.5\columnsep}
+% The *{n}{c|} below creates n duplicate columns of that type (centered, here)
+\begin{tabular}{|r|*{', scalar(@prop_names), '}{c|}}\hline
+\rotatebox{90}{\parbox{1in}{Percentage of~ \\\\ ', $total, ' macro \\\\ definitions}~}';
+for my $prop_name (@prop_names)
+  { print " &\n\\rotatebox{90}{$prop_name_pretty{$prop_name}~(",
+       two_significant_digits(100*$prop_nums{$prop_name}/$total),
+       "\\%)~}"; }
+print "\n\\\\ \\hline\n";
+
+
+{ my $filename = "tbl-properties-subset";
+  open(INPUT, $filename) or die "Couldn't open $filename";
+  my $line = <INPUT>;
+  if ($line !~ /^TOTAL = $total$/)
+    { die "Didn't find TOTAL line ($total) in $filename; instead saw: $line"; }
+
+  while (defined($line = <INPUT>))
+    { if ($line !~ /^(\d+)\s+\(\d+\.\d+%\)\s*([\w,]+)$/)
+	{ die "Malformed line in $filename: $line"; }
+      if ($2 ne "NONE")
+	{ print two_significant_digits(100*$1/$total), "\\% ";
+
+	  my @this_prop_names = split(/,/, $2);
+	  for my $prop_name (@this_prop_names)
+	    { if (!grep(/^$prop_name$/, @prop_names))
+		{ die "Bad property name $prop_name in $line"; } }
+	  for my $prop_name (@prop_names)
+	    { if (grep(/^$prop_name$/, @this_prop_names))
+		{ print "&\\black"; }
+	      else
+		{ print "& "; } }
+	  print "\\\\ \\hline\n"; } }
+}
+
+print '
+\end{tabular}}
+';
+
+
+
+
+
+
+# 
+# 
+# BEGIN {
+#   my $getopts_option_letters = 'hamd:';
+# 
+#   use Getopt::Std;
+#   use em_constants;
+# 
+#   getopts($getopts_option_letters);
+# 
+#   sub usage () {
+#     die "@_\nUsage: $0 [-$getopts_option_letters]
+# -h usage message
+# -d <num> set the minimum number of defs before outputting a row for that name
+# -a print all lines, even ones which do not have the minimum number of defs
+# -m Only print data for macros w/ multiple definitions (>1)
+# ";
+#   }
+# 
+#   usage() if ($opt_h);
+# 
+#   use vars qw($opt_d $opt_a $opt_h $opt_m %categoryname $cCategoryNames);
+# 
+#   my $i = -1;
+# # we need to use $i+0, or else the value pointed to
+# # by the first handful keeps getting incremented, and
+# # we get uncategorized => 21, or whatever
+# # The postincrement returns a temporary which gets
+# # stored as the value in the hash
+# 
+# # FIX: this table must be kept in sync with the table
+# # headings in latexify-meta-mark-table
+#   %categoryname = ("NoDefinitions" => $i++ );
+# 
+#   # The order here is the left->right order in the table
+#   make_mapping_for($i++,@mcat_NULL);
+#   make_mapping_for($i++,@mcat_CONSTANT);
+#   make_mapping_for($i++,@mcat_NONCONSTANT_EXPRESSION);
+#   make_mapping_for($i++,@mcat_STATEMENT);
+#   make_mapping_for($i++,@mcat_TYPE);
+#   make_mapping_for($i++,@mcat_SYNTAX);
+#   make_mapping_for($i++,@mcat_SYMBOL);
+#   make_mapping_for($i++,@mcat_SYMBOL_UNKNOWN);
+#   make_mapping_for($i++,@mcat_NON_C_CODE);
+#   make_mapping_for($i++,@mcat_FAILURE);
+#   $cCategoryNames = $i;
+# 
+#   sub make_mapping_for {
+#     my ($j,@vars) = @_;
+#     foreach my $varname (@vars) {
+#       my $catname = $categoryname[$$varname];
+#       $categoryname{$catname} = $j;
+# #DBG      print STDERR "Setting $catname to $j\n";
+#     }
+#   }
+# }
+# 
+# my $cdefs_min_filter = $opt_d || 0;   # only output stats with more than this many defintions
+# sub marks_for_categories {
+#   $listref = $_[0];
+#   my $c;
+#   my $str = " " x $cCategoryNames;
+#   if (scalar(@$listref) > $cdefs_min_filter) {
+#     foreach $c (@$listref) {
+#       my $offset = $categoryname{$c};
+#       if (!defined($offset)) {
+# 	die "Couldn't map category \"$c\" to a meta category!";
+#       }
+#       if ($offset >= 0 ) {
+# 	substr($str,$offset,1) = "*";
+#       }
+#     }
+#   }
+#   return $str;
+# }
+# 
+# use English;
+# next if /^[\#%]/;
+# next unless $F[9] =~ /FromStdin/;
+# next if !defined($F[8]) || $F[8] eq "NoDefinitions";
+# next if ($opt_m && $F[1] <= 1); # skip those w/o multiple definitions
+#  # the categories are not listed for cond comp directive only macros
+# #i.e. macros that are used in ccd-s, but not #define-d anywhere
+# my @cat = split(/,/,$F[8]);
+# my $row = marks_for_categories(\@cat);
+# if ($opt_a || $row =~ m/\*/) {
+#   print $row;
+# }
+# print "\n";

@@ -60,7 +60,7 @@ my @categories = \(
   @nm_mcat_SYNTAX,
   @nm_mcat_NON_C_CODE,
   @nm_mcat_SYMBOL_UNKNOWN,
-  @nm_mcat_OTHER );
+  @nm_mcat_SYMBOL );
 
 {
   @nm_mcat_FAILURE = map {$categoryname[${$_}]} @mcat_FAILURE;
@@ -73,7 +73,7 @@ my @categories = \(
   @nm_mcat_SYNTAX = map {$categoryname[${$_}]} @mcat_SYNTAX;
   @nm_mcat_NON_C_CODE = map {$categoryname[${$_}]} @mcat_NON_C_CODE;
   @nm_mcat_SYMBOL_UNKNOWN = map {$categoryname[${$_}]} @mcat_SYMBOL_UNKNOWN;
-  @nm_mcat_OTHER = map {$categoryname[${$_}]} @mcat_OTHER;
+  @nm_mcat_SYMBOL = map {$categoryname[${$_}]} @mcat_SYMBOL;
 }
 
 
