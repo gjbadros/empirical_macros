@@ -73,6 +73,7 @@ sub Startup {
 sub Exit {
   my ($retval) = @_;
   output_functions_listing();
+  system("touch $prefix.o");
 }
 
 sub add_use {

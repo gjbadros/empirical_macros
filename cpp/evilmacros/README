@@ -39,6 +39,7 @@ How To Use Pcp3 To Preprocess A Package
    # check that for every .c file, a .exps file exists
 6b) For each file remaining, create the .exps file by making that .o file
     (may need to touch-oldify the .o file first).
+    Do this in its own directory, not from the top-level directory.
 
 7) pcp3-combine-expansions to create 
    # To create expansions.lst
@@ -46,18 +47,17 @@ How To Use Pcp3 To Preprocess A Package
 8) denote-expansions expansions.lst 2>denote-expansions.err
    # create munged/* directory hierarchy with preprocessed files
 
-9) cd into munged, and create a new c-files-list and
-compare to the old c-files-listings:
-cd munged && find-c-no-usr >c-files-listing
-diff =(sort c-files-listing) =(sort ../c-files-listing)    #zsh-syntax
+9) cd munged && find-c-no-usr >c-files-listing
+   # cd into munged, and create a new c-files-list
+   diff =(sort c-files-listing) =(sort ../c-files-listing)
+   # compare to the old c-files-listings (zsh syntax)
 
-"Do the right thing" with header files
--- either copy the header file into munged/ (if it's included but has no expansions), or
--- do nothing (if it is not included by any source file)
+   "Do the right thing" with header files
+   -- either copy the header file into munged/ (if it's included but has no expansions), or
+   -- do nothing (if it is not included by any source file)
 
-Regenerate c-files-listing:
-find-c-no-usr >c-files-listing
-
+   find-c-no-usr >c-files-listing
+   # Regenerate c-files-listing
 
 10) rm -fr munged/usr munged/uns
     rm -f **/*.o(.) #find . -type f -name "*.o" -exec rm \; 
