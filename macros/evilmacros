@@ -699,7 +699,6 @@ my %fun_decl_arg_macros;
 ## Debugging; should add more
 my $fDebugCmdProcessing = $false;
 my $fDebugCommentRemoval = $false;
-my $fShowCategorization = $false;
 my $debug_scopes = $false;
 my $debug_type_match = $false;
 my $debug_parse_function = $false;
@@ -3351,7 +3350,7 @@ sub categorize_macro
 
  CATEGORIZED:
   # print "categorized as $category = $categoryname[$category]\n";
-  if ($fShowCategorization)
+  if ($opt_C)
     { # print defined($index), " ", defined($mfile[$index]), " ", defined($mline[$index]), " ", defined($category), " ", defined($categoryname[$category]), " ", defined($mname[$index]), " ", defined($margs[$index]), " ", defined($mbody[$index]), "\n";
      # print "$mfile[$index]:$mline[$index]: $category = $categoryname[$category]: $mname[$index]$margs[$index] $mbody[$index]\n";
 #      if (!defined($mfile[$index])) {
@@ -4253,8 +4252,6 @@ getopts($getopts_option_letters);
 
 usage() if ($opt_h);
 
-$fShowCategorization = $opt_C;
-
 if ($opt_i) {
   while (<STDIN>) {
     next if /^-.*$/;
@@ -4307,7 +4304,6 @@ if ($opt_d) {
   }
 }
 
-
 if ($opt_E) { open(EVIL,">$opt_E") || die "Failed opening $opt_E"; }
   else { open(EVIL,">-") || die "Failed opening stdout!"; }
 if ($opt_S) { open(STATS,">$opt_S") || die "Failed opening $opt_S"; }
@@ -4316,6 +4312,14 @@ if ($opt_D) { open(DEFINES,">$opt_D") || die "Failed opening $opt_D"; }
 if ($opt_C) { open(CATEG,">$opt_C") || die "Failed opening $opt_C"; }
 if ($opt_I) { $fIgnoreIncludes = $true; }
 if ($opt_t) { $outOFS = "	"; } # use tab for OFS
+
+# Now set these so we'll actually do the output
+# (output_stats uses $opt_X as a guard for printing)
+$opt_E = $true;
+$opt_S = $true;
+$opt_D = $true;
+$opt_F = $true;
+$opt_C = $true;
 
 
 $fDebugCmdProcessing && print "@ARGV";
