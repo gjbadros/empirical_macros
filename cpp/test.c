@@ -1,4 +1,4 @@
-int foo(int a) {
+int FnFoo(int a) {
   return a+1;
 }
 
