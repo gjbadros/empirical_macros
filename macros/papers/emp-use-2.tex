@@ -796,8 +796,22 @@ statements may be handled relatively easily by people and tools.  Other
 macros, especially those that do not expand to a complete syntactic
 construct, are more problematic.
 
+A notable outlier in Figure~\ref{fig:categorization} is the \pkg{perl}
+package's high occurrence of unknown identifiers in macro definitions.
+At almost 31\%, these kinds of macro definitions are over three times
+more prevalent in \pkg{perl} than in \pkg{mosaic}, the package that is
+second in this metric.  This excessiveness results from \pkg{perl} using 
+the preprocessor to conditionally redefine over one thousand global
+symbols to have the prefix ``Perl_'' for avoiding link-time collisions
+when its interpreter is embedding in another application.  Typical
+such macro definitions are:
 
-The ten macro body categories are as follows.  Each example in this 
+\begin{verbatim}
+    #define Sv          Perl_Sv
+    #define Xpv         Perl_Xpv
+\end{verbatim}
+
+The ten macro body categories are as follows. Each example in this 
 {\typeofdocument} comes from the packages studied.
 
 % The examples are chosen for clarity and brevity from the packages studied.
