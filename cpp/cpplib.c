@@ -1099,8 +1099,7 @@ skip_rest_of_line (cpp_reader *pfile)
    '#' has already been read.  */
 
 int
-handle_directive (pfile)
-     cpp_reader *pfile;
+handle_directive (cpp_reader *pfile)
 { int c;
   register struct directive *kt;
   int ident_length;
@@ -1559,10 +1558,7 @@ static char rest_extension[] = "...";
 /* Create a DEFINITION node from a #define directive.  Arguments are 
    as for do_define. */
 static MACRODEF
-create_definition (buf, limit, pfile, predefinition)
-     U_CHAR *buf, *limit;
-     cpp_reader *pfile;
-     int predefinition;
+create_definition (U_CHAR *buf, U_CHAR *limit, cpp_reader *pfile, int predefinition)
 {
   U_CHAR *bp;			/* temp ptr into input buffer */
   U_CHAR *symname;		/* remember where symbol name starts */
@@ -1574,6 +1570,8 @@ create_definition (buf, limit, pfile, predefinition)
   DEFINITION *defn;
   int arglengths = 0;		/* Accumulate lengths of arg names
 				   plus number of args.  */
+  int cchOffsetStart = pfile->buffer->prev - pfile->buffer->buf + 1;
+  int cchOffsetEnd = pfile->buffer->cur - pfile->buffer->buf + 1;
   MACRODEF mdef;
   cpp_buf_line_and_col (CPP_BUFFER (pfile), &line, &col);
 
@@ -1725,9 +1723,11 @@ create_definition (buf, limit, pfile, predefinition)
   mdef.symlen = sym_length;
 
   if (predefinition)
-    gjb_call_hooks_szl_sz_defn(opts,HI_CREATE_PREDEF,mdef.symnam,mdef.symlen,bp,defn);
+    gjb_call_hooks_i_i_szl_sz_defn(opts,HI_CREATE_PREDEF,cchOffsetStart,cchOffsetEnd,
+				   mdef.symnam,mdef.symlen,bp,defn);
   else
-    gjb_call_hooks_szl_sz_defn(opts,HI_CREATE_DEF,mdef.symnam,mdef.symlen,bp,defn);
+    gjb_call_hooks_i_i_szl_sz_defn(opts,HI_CREATE_DEF,cchOffsetStart,cchOffsetEnd,
+				   mdef.symnam,mdef.symlen,bp,defn);
 
   return mdef;
 
@@ -1847,22 +1847,23 @@ KEYWORD is the keyword-table entry for #define,
 or NULL for a "predefined" macro.  */
 
 static int
-do_define (pfile, keyword, buf, limit)
-     cpp_reader *pfile;
-     struct directive *keyword;
-     U_CHAR *buf, *limit;
+do_define (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *limit)
 {
   int hashcode;
   MACRODEF mdef;
   HASHNODE *hp;
   struct cpp_options *opts = CPP_OPTIONS (pfile);
+  int cchOffsetStart = pfile->buffer->prev - pfile->buffer->buf + 1;
+  int cchOffsetEnd = pfile->buffer->cur - pfile->buffer->buf + 1;
+
 
 #if 0
   /* If this is a precompiler run (with -pcp) pass thru #define commands.  */
   if (pcp_outfile && keyword)
     pass_thru_directive (buf, limit, pfile, keyword);
 #endif
-  gjb_call_hooks_sz(opts,HI_DO_DEFINE,buf);
+  // give ($s_start, $s_end, $name_args_and_body)
+  gjb_call_hooks_i_i_sz(opts,HI_DO_DEFINE,cchOffsetStart,cchOffsetEnd,buf);
 
   mdef = create_definition (buf, limit, pfile, keyword == NULL);
   if (mdef.defn == 0)
@@ -2690,6 +2691,7 @@ int
 IargWithOffset(int ich, int cargs, struct argdata *args)
 {
   int iargdata = 0;
+  if (cargs < 0) return -2;
   while (args && iargdata < cargs)
     {
     int iuse = 0;
@@ -4115,15 +4117,14 @@ do_line (pfile, keyword)
  */
 
 static int
-do_undef (pfile, keyword, buf, limit)
-     cpp_reader *pfile;
-     struct directive *keyword;
-     U_CHAR *buf, *limit;
+do_undef (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *limit)
 {
   int sym_length;
   HASHNODE *hp;
   U_CHAR *orig_buf = buf;
   int cDeletes = 0;
+  int cchOffsetStart = pfile->buffer->prev - pfile->buffer->buf + 1;
+  int cchOffsetEnd = pfile->buffer->cur - pfile->buffer->buf + 1;
 
 #if 0
   /* If this is a precompiler run (with -pcp) pass thru #undef commands.  */
@@ -4145,7 +4146,8 @@ do_undef (pfile, keyword, buf, limit)
       delete_macro (pfile,hp);
       cDeletes++;
     }
-  gjb_call_hooks_szl_i(CPP_OPTIONS(pfile),HI_DO_UNDEF,buf,sym_length,cDeletes);
+  gjb_call_hooks_i_i_szl_i(CPP_OPTIONS(pfile),HI_DO_UNDEF,cchOffsetStart,cchOffsetEnd,
+			   buf,sym_length,cDeletes);
 
 
   if (CPP_PEDANTIC (pfile)) {
@@ -4943,7 +4945,8 @@ AnnotatePcat(cpp_annotated_token *pcat, cpp_reader *pfile, cpp_expand_info *pcei
     HASHNODE *macro = pfile->buffer->data;
     pcat->szMnameFrom = macro->name;
     pcat->from_what = 1 + IargWithOffset(pfile->buffer->cur - pfile->buffer->buf,
-					 macro->value.defn->nargs, pfile->buffer->args);
+					 macro->type==T_MACRO?macro->value.defn->nargs:
+					 -macro->type, pfile->buffer->args);
     pcat->args = pfile->buffer->args;
     }
   else

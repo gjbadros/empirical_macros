@@ -11,6 +11,30 @@ use enum_node_type;
 use em_util;
 use vars qw( *CHOUT @Hooks );
 
+my %macro_name;
+
+my @state_stacks_decl_allowable = ( [],
+				    [0],
+				    [0,26] );
+
+my $TRUE = 1;
+my $FALSE = 0;
+
+
+sub FIsDeclAllowable {
+  my @state_stack;
+  if (@_) {
+    @state_stack = @_;
+  } else {
+    @state_stack = cpp::ParseStateStack();
+  }
+  foreach my $stackref (@state_stacks_decl_allowable) {
+    return $TRUE if "@$stackref" eq "@state_stack";
+  }
+  return $FALSE;
+}
+
+
 sub AddHook {
   my ($indexname,$fnref) = @_;
   if (!defined($$indexname)) {
@@ -20,6 +44,9 @@ sub AddHook {
 }
 
 sub Startup {
+  # Parse debugging (bison's yydebug variable) is on by default,
+  # so turn it off
+  cpp::ResetParseDebugging();
   print STDERR "STARTUP...\n";
 #  open(CPP,">cpp.listing") || die "Could not open output file: $!";
   *CPP = *STDERR;
@@ -47,8 +74,11 @@ sub Exit {
 }
 
 sub do_define {
-  my ($body) = @_;
-  print CPP "In do_define w/ body = $body\n";
+  my ($s_start,$s_end,$name_args_body) = @_;
+  my $fname = cpp::Fname();
+  print CPP "In do_define w/ body = $name_args_body\n";
+  print CPP ": $fname [$s_start,$s_end]\n";
+  print STDERR ": ParseStateStack: ", join(",",cpp::ParseStateStack()), "\n";
 }
 
 sub handle_directive {
@@ -57,12 +87,13 @@ sub handle_directive {
 }
 
 sub create_def {
-  my ($name, $expn, $nargs, $simp_expn, $file, $line, 
+  my ($s_start, $s_end, $mname, $expn, $nargs, $simp_expn, $file, $line,
       $backward_argnames_string, $def_flags,
       @currpat) = @_;
   my $old = select;
+  my $fname = cpp::Fname();
   select CPP;
-  print "Create def for \"$name\": \"$expn\"\n";
+  print "Create def for \"$mname\": \"$expn\" [$s_start,$s_end]\n";
   print "nargs = ", $nargs, "\n";
   print "simp_expn = \"", $simp_expn, "\"", "\n";
   @argnames = reverse split (/, /,$backward_argnames_string);
@@ -74,6 +105,13 @@ sub create_def {
   while ($#currpat >= 2) {
     print "$argnames[$currpat[0]], $currpat[1], $currpat[2]\n";
     splice(@currpat,0,3);
+  }
+  print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'doc \"$mname defined\")\n";
+  push @{$macro_name{$mname}{defs}}, [ $fname, $s_start,$s_end ];
+  @{$macro_name{$mname}{currdef}} = ( $fname, $s_start,$s_end );
+  if (!FIsDeclAllowable()) {
+    annotate_definition("Parse stack may not be appropriate for a declaration",$mname,$s_start,$s_end);
+    print STDERR ":**BETTER NOT CHANGE THIS TO A DECL!\n";
   }
   select $old;
 }
@@ -119,10 +157,10 @@ sub cpp_error {
 }
 
 sub do_undef {
-  my ($keyword, $cDeletes) = @_;
-  print CPP "do_undef of $keyword ($cDeletes deleted)\n";
+  my ($s_start,$s_end,$mname, $cDeletes) = @_;
+  print CPP "do_undef of $mname [$s_start,$s_end] ($cDeletes deleted)\n";
+  annotate_definition_with_undef($mname,$s_start,$s_end);
 }
-
 sub delete_def {
   my ($keyword, $fExists) = @_;
   print CPP "delete_def $keyword, $fExists\n";
@@ -152,6 +190,23 @@ sub macro_arg_exp  {
   print "macro_arg_exp $mname of $raw (arg $number)\n";
 }
 
+sub annotate_definition {
+  my ($message, $mname, $s, $e) = @_;
+  my ($fnamedef, $s_start, $s_end) = @{$macro_name{$mname}{currdef}};
+  my $fname = cpp::Fname();
+  print STDERR "\"$mname\"\n";
+  print TPSOURCE "#$fnamedef:(add-text-property $s_start $s_end \'doc \"$message at $fname:$s,$e\")\n";
+}
+
+
+sub annotate_definition_with_use {
+  annotate_definition("Use",@_);
+}
+
+sub annotate_definition_with_undef {
+  annotate_definition("Undef-fed",@_);
+}
+
 sub expand_macro {
   my ($mname,$expansion,$length,$raw_call,$s_start,$s_end,$has_escapes,$cbuffersDeep,@rest) 
     = @_;
@@ -166,6 +221,7 @@ sub expand_macro {
   my $cbuffersBack;
   my $fname = cpp::Fname();
   my $old = select;
+  annotate_definition_with_use($mname,$s_start,$s_end);
   select CPP;
 
   print "\nexpand_macro $mname = ", cpp::ExpansionLookup($mname), ", source offset: $s_start - $s_end, $cbuffersDeep [$has_escapes]; ", 

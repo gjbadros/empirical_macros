@@ -98,9 +98,11 @@ MacroExpansionHistory()
 		HASHNODE *macro = buffer->data;
 		if (macro) {
 		    int offset = buffer->cur - buffer->buf;
-		    int from_what = 1 + IargWithOffset(offset,
-						       macro->value.defn->nargs,
-						       buffer->args);
+		    int from_what = 1 + 
+			IargWithOffset(offset,
+				       macro->type==T_MACRO?macro->value.defn->nargs:
+				       -macro->type,
+				       buffer->args);
 		    XPUSHs(sv_2mortal(newSVpvf("%s#%d[%d]",macro->name,from_what,
 					       offset)));
 		} else
@@ -120,7 +122,9 @@ ArgOf()
 	CODE:
 	RETVAL = -1;
 	if (args)
-	  RETVAL = IargWithOffset(offset, macro->value.defn->nargs,args) + 1;
+	  RETVAL = IargWithOffset(offset, 
+				  macro->type==T_MACRO?macro->value.defn->nargs:
+				  -macro->type, args) + 1;
 	OUTPUT:
 	RETVAL
 
@@ -227,3 +231,25 @@ FExpandingMacros()
 	RETVAL = !parse_in.no_macro_expand;
 	OUTPUT:
 	RETVAL
+
+
+void
+ParseStateStack()
+	PREINIT:
+	extern short *yyss;
+	extern short *yyssp;
+	PPCODE:
+	short *ssp1 = yyss - 1;
+	while (ssp1+1 != NULL && ssp1 != yyssp)
+	    XPUSHs(sv_2mortal(newSViv(*++ssp1)));
+
+void
+SetParseDebugging()
+	CODE:
+	ct_yydebug = 1;
+
+
+void
+ResetParseDebugging()
+	CODE:
+	ct_yydebug = 0;

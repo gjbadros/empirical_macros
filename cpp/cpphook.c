@@ -234,6 +234,26 @@ gjb_call_hooks_sz_i_i(struct cpp_options *opts, HOOK_INDEX ih,
 }
 
 void
+gjb_call_hooks_i_i_sz(struct cpp_options *opts, HOOK_INDEX ih, int i1, int i2,
+		      char *sz1)
+{
+  SV *psvFunc = NULL;
+
+  dSP;
+  
+  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+    return;
+
+  PUSHMARK(sp);
+  XPUSHs(sv_2mortal(newSViv(i1)));
+  XPUSHs(sv_2mortal(newSViv(i2)));
+  XPUSHs(sv_2mortal(newSVpv(sz1, 0)));
+  PUTBACK ;
+     
+  perl_call_sv(psvFunc, G_DISCARD);
+}
+
+void
 gjb_call_hooks_sz_szl_i_szl_i(struct cpp_options *opts, HOOK_INDEX ih,
 			      char *sz1, char *sz2, int cch2, int i1, 
 			      char *sz3, int cch3, int i2)
@@ -643,10 +663,32 @@ gjb_call_hooks_szl_i(struct cpp_options *opts, HOOK_INDEX ih, char *sz, int cch,
   perl_call_sv(psvFunc, G_DISCARD);
 }
 
+void
+gjb_call_hooks_i_i_szl_i(struct cpp_options *opts, HOOK_INDEX ih, int s, int e,
+			 char *sz, int cch, int i)
+{
+  SV *psvFunc = NULL;
+
+  dSP;
+  
+  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+    return;
+
+  PUSHMARK(sp);
+  XPUSHs(sv_2mortal(newSViv(s)));
+  XPUSHs(sv_2mortal(newSViv(e)));
+  XPUSHs(sv_2mortal(newSVpvlen(sz, cch)));
+  XPUSHs(sv_2mortal(newSViv(i)));
+  PUTBACK ;
+     
+  perl_call_sv(psvFunc, G_DISCARD);
+}
+
 
 void
-gjb_call_hooks_szl_sz_defn(struct cpp_options *opts, HOOK_INDEX ih, 
-			   char *sz, int cch, char *expn, DEFINITION *defn)
+gjb_call_hooks_i_i_szl_sz_defn(struct cpp_options *opts, HOOK_INDEX ih, 
+			       int cchOffsetStart, int cchOffsetEnd,
+			       char *sz, int cch, char *expn, DEFINITION *defn)
 {
   SV *psvFunc = NULL;
   struct reflist *prlCurr = NULL;
@@ -656,6 +698,8 @@ gjb_call_hooks_szl_sz_defn(struct cpp_options *opts, HOOK_INDEX ih,
     return;
 
   PUSHMARK(sp);
+  XPUSHs(sv_2mortal(newSViv(cchOffsetStart)));
+  XPUSHs(sv_2mortal(newSViv(cchOffsetEnd)));
   XPUSHs(sv_2mortal(newSVpvlen(sz, cch)));
   XPUSHs(sv_2mortal(newSVpv(expn, 0)));
   XPUSHs(sv_2mortal(newSViv(defn->nargs)));
