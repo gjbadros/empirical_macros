@@ -1,0 +1,48 @@
+
+%\usepackage{graphics}
+%\newcommand{\black}{\ensuremath{\blacksquare}}
+\newcommand{\black}{\vrule height5.5pt depth0.5pt width6pt}
+{\small
+\addtolength{\columnsep}{-.5\columnsep}
+% The *{n}{c|} below creates n duplicate columns of that type (centered, here)
+\begin{tabular}{|r|*{8}{c|}}\hline
+\rotatebox{90}{\parbox{1in}{Percentage of~ \\ 46462 macro \\ definitions}~} &
+\rotatebox{90}{Free variables~(13\%)~} &
+\rotatebox{90}{Assignment~(6.2\%)~} &
+\rotatebox{90}{Use macro as type~(1.2\%)~} &
+\rotatebox{90}{Pass type as argument~(0.24\%)~} &
+\rotatebox{90}{Pasting~(0.054\%)~} &
+\rotatebox{90}{Use argument as type~(0.041\%)~} &
+\rotatebox{90}{Self-referential~(0.034\%)~} &
+\rotatebox{90}{Stringization~(0.026\%)~}
+\\ \hline
+9.2\% &\black& & & & & & & \\ \hline
+3.6\% &\black&\black& & & & & & \\ \hline
+2.4\% & &\black& & & & & & \\ \hline
+0.99\% & & &\black& & & & & \\ \hline
+0.21\% & & & &\black& & & & \\ \hline
+0.093\% & &\black&\black& & & & & \\ \hline
+0.045\% &\black& &\black& & & & & \\ \hline
+0.026\% & & & & & &\black& & \\ \hline
+0.024\% &\black& & & &\black& & & \\ \hline
+0.015\% &\black& & & & & &\black& \\ \hline
+0.015\% & & & & &\black& & & \\ \hline
+0.015\% &\black&\black&\black& & & & & \\ \hline
+0.015\% &\black&\black& &\black& & & & \\ \hline
+0.015\% & & & & & & & &\black\\ \hline
+0.011\% &\black& & &\black& & & & \\ \hline
+0.0086\% &\black&\black& & &\black& & & \\ \hline
+0.0065\% & &\black& & & & &\black& \\ \hline
+0.0043\% & &\black&\black& & &\black& & \\ \hline
+0.0043\% & &\black&\black& & &\black& &\black\\ \hline
+0.0043\% & & & & & & &\black& \\ \hline
+0.0043\% & &\black&\black& & & &\black& \\ \hline
+0.0043\% & &\black& &\black& & & & \\ \hline
+0.0043\% &\black&\black& & &\black& & &\black\\ \hline
+0.0043\% & & &\black& & & &\black& \\ \hline
+0.0022\% &\black& & & & &\black& & \\ \hline
+0.0022\% & & &\black& & &\black& & \\ \hline
+0.0022\% &\black& & & &\black& & &\black\\ \hline
+0.0022\% &\black&\black& & & &\black& & \\ \hline
+
+\end{tabular}}
