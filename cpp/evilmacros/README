@@ -59,20 +59,16 @@ find . -name "core" -print
       (may need to touch-oldify the .o file first).
       Do this in its own directory, not from the top-level directory.
 
-7) pcp3-combine-expansions
-   # To create expansions.lst
-   
-8) denote-expansions expansions.lst 2> denote-expansions.err
-   # (zsh syntax; capture output so it isn't lost, unnecessary under Emacs)
-   # create munged/* directory hierarchy with preprocessed files
+7) pcp3-combine-and-denote-expansions
+   # To create expansions.lst, and denote-expansions.err
+   # while creating munged/* directory hierarchy with preprocessed files
    # If anything went wrong here, it could be bad news
-   # before re-running, be sure to delete munged/* directory: rm -fr munged/
+   # Also creates munged/c-files-listing
 
+   # before re-running, run pcp3-reset-combine-expansions
+   #  this renames the *.exps.bak files to *.exps, and rm -fr munged/
 
-9) cd munged
-   find-c-no-usr > c-files-listing
-   # cd into munged, and create a new c-files-list
-   diff =(sort c-files-listing) =(sort ../c-files-listing)
+8) cd munged; diff =(sort c-files-listing) =(sort ../c-files-listing)
    # compare to the old c-files-listings (zsh syntax)
 
    "Do the right thing" with header files
@@ -82,12 +78,12 @@ find . -name "core" -print
    find-c-no-usr >! c-files-listing
    # Regenerate c-files-listing
 
-10) Run ~gjb/bin/share/pcp3-bad-expansions from munged/ directory;
+9) Run ~gjb/bin/share/pcp3-bad-expansions from munged/ directory;
 report any problems to Greg
 
-11) # Skip this step for now; we want to see the files in case of trouble.
-    rm -fr munged/usr munged/uns
-    rm -f **/*.o(.) #find . -type f -name "*.o" -exec rm \; 
+10) # Skip this step for now; we want to see the files in case of trouble.
+#    rm -fr munged/usr munged/uns
+#    rm -f **/*.o(.) #find . -type f -name "*.o" -exec rm \; 
     # Save space
 
 12) run em_analyze over the munged directory and pray plentifully!
