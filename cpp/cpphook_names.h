@@ -44,5 +44,6 @@ char *hook_names[] = {
 "POP_BUFFER",
 "POP_PERL_BUFFER",
 "FUNC_SPEC",
+"CMD_LINE_DEF",
 };
 
