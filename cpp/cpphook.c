@@ -365,9 +365,9 @@ void gjb_call_hooks_pcat_szl(struct cpp_options *opts, HOOK_INDEX ih,
 
   PUSHMARK(sp);
   XPUSHs(sv_2mortal(newSVpv(SzFromToken(pcat->id), 0)));
+  XPUSHs(sv_2mortal(newSVpvlen(szRaw, cchRaw)));
   XPUSHs(sv_2mortal(newSVpv_safe(pcat->szMnameFrom,0)));
   XPUSHs(sv_2mortal(newSViv(pcat->from_what)));
-  XPUSHs(sv_2mortal(newSVpvlen(szRaw, cchRaw)));
 
   if (pcat->args && pcat->from_what > 0) 
     {
@@ -458,8 +458,8 @@ gjb_call_hooks_expansion(struct cpp_reader *pfile, HOOK_INDEX ih,
 
 
 void
-gjb_call_hooks_macro_cleanup(struct cpp_options *opts, HOOK_INDEX ih,
-			     int i1, int i2, char *sz1, cpp_expand_info *pcei)
+gjb_call_hooks_macro_cleanup(struct cpp_options *opts, HOOK_INDEX ih, int s, int e,
+			     char *sz1, cpp_expand_info *pcei)
 {
   SV *psvFunc = NULL;
   int cNestedArgExpansions = CNestedArgExpansions(pcei);
@@ -470,9 +470,9 @@ gjb_call_hooks_macro_cleanup(struct cpp_options *opts, HOOK_INDEX ih,
     return;
 
   PUSHMARK(sp);
+  XPUSHs(sv_2mortal(newSViv(s)));
+  XPUSHs(sv_2mortal(newSViv(e)));
   XPUSHs(sv_2mortal(newSVpv(sz1, 0)));
-  XPUSHs(sv_2mortal(newSViv(i1)));
-  XPUSHs(sv_2mortal(newSViv(i2)));
   XPUSHs(sv_2mortal(newSViv(cNestedArgExpansions)));
   while (pcei != NULL) 
     {
