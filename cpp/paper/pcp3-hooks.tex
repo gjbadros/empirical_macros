@@ -3,20 +3,20 @@
 \hook{EXIT}{\$return\_\-exit\_\-code} Called just before the system exit() call.
 \hook{HANDLE\_\-DIRECTIVE}{\$directive\_\-name} Called exactly once for each directive.  \$directive\_\-name is
 the directive as it appeared in the source code with the leading \# removed.
-\hook{DO\_\-DEFINE}{\$s\_\-start,\$s\_\-end,\$name\_\-args\_\-body} Called exactly once for each \#define. 
+\hook{DO\_\-DEFINE}{\$s\_\-start, \$s\_\-end, \$name\_\-args\_\-body} Called exactly once for each \#define. 
 Arguments give the source code character offsets of the line and the 
 unprocessed rest of the line including the name of the macro, its arguments
 and its definition.
-\hook{PRE\_\-DO\_\-UNDEF}{\$s\_\-start,\$s\_\-end,\$mname} Called exactly once for each \#undef.
+\hook{PRE\_\-DO\_\-UNDEF}{\$s\_\-start, \$s\_\-end, \$mname} Called exactly once for each \#undef.
 Arguments give the source code character offsets of the line and the
 name of the macro being undefined.  This hook is called just before
 the macro is undefined, so its definition still exists 
 in the preprocessor's state.
-\hook{DO\_\-UNDEF}{\$s\_\-start,\$s\_\-end,\$mname} Called exactly once for each \#undef.
+\hook{DO\_\-UNDEF}{\$s\_\-start, \$s\_\-end, \$mname} Called exactly once for each \#undef.
 Arguments give the source code character offsets of the line and the
 name of the macro being undefined.  This hook is called immediately after
 the macro is undefined.
-\hook{DO\_\-INCLUDE}{\$s\_\-start,\$s\_\-end,\$filename\_\-given, \$filename\_\-resolved, \$flags} 
+\hook{DO\_\-INCLUDE}{\$s\_\-start, \$s\_\-end, \$filename\_\-given, \$filename\_\-resolved, \$flags} 
 Called exactly once for each \#include,
 \#include\_\-next, or \#import directive.  Source coded character offsets of
 the line are given. Also, \$filename\_\-given is the name of the
@@ -26,7 +26,7 @@ with three relevant masks:  \$ANGLE\_\-BRACKETS, for whether the filename appear
 in angle brackets signifying a system include file; \$SKIP\_\-DIRS, for whether this
 is an \#include\_\-next directive; and \$IMPORTING, for whether this is an \#import
 directive.
-\hook{DO\_\-IF}{\$s\_\-start,\$s\_\-end, \$conditional, \$skipped, \$value} 
+\hook{DO\_\-IF}{\$s\_\-start, \$s\_\-end, \$conditional, \$skipped, \$value} 
 Called exactly once for each \#if 
 (not \#ifdef or \#ifndef) directive seen by the preprocessor. In particular,
 note that normally, nested \#ifXX-s that are ignored will not invoke this hook.
@@ -34,7 +34,7 @@ Arguments give the source code character
 offsets of the directive; \$conditional is the guard checked, \$skipped is
 the literal text that is skipped (conditional was false if this is non-empty), and
 \$value is 1 iff the \$conditional evaluated to true (defined), 0 otherwise.
-\hook{DO\_\-XIFDEF}{\$s\_\-start,\$s\_\-end, \$kind, \$conditional, \$trailing\_\-garbage, \$skipped, \$fSkipping, \$s\_\-branch\_\-start}
+\hook{DO\_\-XIFDEF}{\$s\_\-start, \$s\_\-end, \$kind, \$conditional, \$trailing\_\-garbage, \$skipped, \$fSkipping, \$s\_\-branch\_\-start}
 Called exactly once for each \#ifdef or \#ifndef.
 The arguments are the same as for the DO\_\-IFDEF hook, except \$kind is either
 "IFDEF" or "IFNDEF" depending on the type of conditional; \$fSkipping
@@ -90,8 +90,7 @@ hook does not get called.
 Arguments give the source code character
 offsets of the directive; \$orig\_\-conditional is the guard of the matching
 \#ifXX directive; \$trailer is the text following the \#endif (often empty);
-\hook{CREATE\_\-PREDEF}{\$mname, \$expansion, \$num\_\-args, \$internal\_\-expansion, \$file, \$line, \$r\_\-argnames, \$flags,
-\$internal\_\-expansion\_\-args\_\-uses... }
+\hook{CREATE\_\-PREDEF}{\$mname, \$expansion, \$num\_\-args, \$internal\_\-expansion, \$file, \$line, \$r\_\-argnames, \$flags, \$internal\_\-expansion\_\-args\_\-uses... }
 Called once for each predefined macro CPP installs.
 \$mname is the name of the macro, \$expansion is its expansion [as literal text], 
 \$num\_\-args is the number of arguments it takes, \$internal\_\-expansion is an
@@ -102,8 +101,7 @@ argument names in reversed order, and \$flags is a bitmask of two flags
 \$flags \& \$PREDEFINED is true if this is a predefined macro (always for this hook)
 and \$flags \& \$RESTARGS is true if this macro's last argument swallows 
 remaining arguments (special gcc cpp feature).
-\hook{CREATE\_\-DEF}{\$s\_\-start, \$s\_\-end, \$mname, \$expansion, \$num\_\-args, \$internal\_\-expansion,
-\$file, \$line, \$r\_\-argnames, \$flags, \$internal\_\-expansion\_\-args\_\-uses... }
+\hook{CREATE\_\-DEF}{\$s\_\-start, \$s\_\-end, \$mname, \$expansion, \$num\_\-args, \$internal\_\-expansion, \$file, \$line, \$r\_\-argnames, \$flags, \$internal\_\-expansion\_\-args\_\-uses... }
 Called once for each macro definition read by  CPP.
 \$s\_\-start and \$s\_\-end are the source code character offsets of the definition,
 \$mname is the name of the macro, \$expansion is its expansion [as literal text], 
@@ -122,13 +120,12 @@ a low level hook called when you attempt to remove a macro name from the
 table of macros,
 also HI\_\-DO\_\-UNDEF for the high level hook).  \$mname is the name of the
 macro, and \$fExists is 1 iff that macro name used to be defined.
-\hook{SPECIAL\_\-SYMBOL}{\$symbol,\$enum\_\-node\_\-type}
+\hook{SPECIAL\_\-SYMBOL}{\$symbol, \$enum\_\-node\_\-type}
 Called once for each special symbol (e.g., \_\-\_\-FILE\_\-\_\-) that gets expanded.
 \$symbol is the literal text of the symbol, \$enum\_\-node\_\-type is an index
 into @enum\_\-node\_\-type giving the C constant corresponding to that symbol
 (usually better to just use \$symbol instead).
-\hook{EXPAND\_\-MACRO}{\$s\_\-start,\$s\_\-end,\$mname,\$expansion,\$length,\$raw\_\-call,\$has\_\-escapes,\$cbuffersDeep,
-\$cnested,@nests,\$cargs,@args}
+\hook{EXPAND\_\-MACRO}{\$s\_\-start, \$s\_\-end, \$mname, \$expansion, \$length, \$raw\_\-call, \$has\_\-escapes, \$cbuffersDeep, \$cnested, @nests, \$cargs, @args}
 Called once for each macro expansion in C source (i.e., not for expansions
 in \#ifXX guards). \$s\_\-start and \$s\_\-end are the source code character offsets
 of the macro invocation; \$mname is name of the macro, \$expansion is what
@@ -156,7 +153,7 @@ arguments in the expansion.  For example if argument 1 is used 3 times, there co
 be (3, 5,6, 9,11,  14,18) as the final elements of the @args list.  Note that
 because the third expansion is longer than the first two (4 characters instead of
 just two), it must have been stringified. FIXGJB is this true?
-\hook{MACARG\_\-EXP}{\$mname,\$raw,\$number}
+\hookobsoleted{MACARG\_\-EXP}{\$mname, \$raw, \$number}
 \hook{MACRO\_\-CLEANUP}{\$s\_\-start, \$s\_\-end, \$mname, \$c\_\-nested, @nests}
 Called once for each macro expansion buffer as it is removed 
 from the stack of text buffers.  \$s\_\-start and \$s\_\-end give the source
@@ -168,15 +165,14 @@ track successive strings passed to the CPP\_\-OUT hook, and reset the
 string used to accumulate the expansion when the CbuffersBack backcall
 is 1 in this hook (meaning you are cleaning up a top level macro expansion).
 See cpphook.pm for an example.
-\hook{IFDEF\_\-MACRO}{\$s\_\-start,\$s\_\-end,\$mname,\$expansion,\$length,\$raw\_\-call,\$has\_\-escapes,\$cbuffersDeep,
-\$cnested,@nests,\$cargs,@args}
+\hook{IFDEF\_\-MACRO}{\$s\_\-start, \$s\_\-end, \$mname, \$expansion, \$length, \$raw\_\-call, \$has\_\-escapes, \$cbuffersDeep, \$cnested, @nests, \$cargs, @args}
 Called once for each macro expansion in \#if directives.  The arguments
 passed to the hook are the same as those for the EXPAND\_\-MACRO hook, see its
 documentation for details.  Note, though, that macros are not usually
 expanded in \#ifdef and \#ifndef directives, they are simply tested for
 defined-ness by lookup in the symbol table, thus triggering the IFDEF\_\-LOOKUP\_\-MACRO
 hook, not this one.  A form such as "\#if FOO" will trigger this hook, however.
-\hook{IFDEF\_\-LOOKUP\_\-MACRO}{\$mname,\$f\_\-defined}
+\hook{IFDEF\_\-LOOKUP\_\-MACRO}{\$mname, \$f\_\-defined}
 Called once for each macro name lookup done during conditional compilation
 guard checking.  The arguments are:
 \$mname is the macro name being looked up; \$f\_\-defined is non-zero
@@ -199,19 +195,19 @@ string spans.  \$s\_\-start == \$s\_\-end if the string does not actually appear
 in the top level source code (e.g, \_\-\_\-LINE\_\-\_\- or gcc's \_\-\_\-FUNCTION\_\-\_\-).
 The source code offsets include the string delimiters, the \$string argument
 has them stripped, but has not had backslash sequences replaced.
-\hook{CPP\_\-ERROR}{\$nominal\_\-fname,\$line\_\-number,\$message,@extra\_\-args}
+\hook{CPP\_\-ERROR}{\$nominal\_\-fname, \$line\_\-number, \$message, @extra\_\-args}
 Called once each time CPP issues an error.  The hook does not interfere
 with normal error handling.  Arguments give the current filename and line
 number where the error occurred;  \$message is the string (containing printf
 percent-escapes) to be printed, and @extra\_\-args are the values to be 
 interpolated into the string.
-\hook{CPP\_\-WARN}{\$nominal\_\-fname,\$line\_\-number,\$message,@extra\_\-args}
+\hook{CPP\_\-WARN}{\$nominal\_\-fname, \$line\_\-number, \$message, @extra\_\-args}
 Called once each time CPP issues a warning.  The hook does not interfere
 with normal warning handling.  Arguments give the current filename and line
 number where the warning occurred;  \$message is the string (containing printf
 percent-escapes) to be printed, and @extra\_\-args are the values to be 
 interpolated into the string.
-\hook{CPP\_\-PEDWARN}{\$nominal\_\-fname,\$line\_\-number,\$message,@extra\_\-args}
+\hook{CPP\_\-PEDWARN}{\$nominal\_\-fname, \$line\_\-number, \$message, @extra\_\-args}
 Called once each time CPP issues a pedantic warning.  The hook does not interfere
 with normal pedantic warning handling.  Arguments give the current filename and line
 number where the pedantic warning occurred;  \$message is the string (containing printf
@@ -223,7 +219,7 @@ same text as would go to the output file when using just cpp (as in gcc -E).
 Full tokens and/or whitespace are emitted per each call to the hook.
 Use the CchOutput() and CchOffset() backcalls for output character offset
 and source code character offset, respectively.
-\hook{ADD\_\-IMPORT}{\$filename,\$was\_\-found} FIXGJB: 2nd arg right?
+\hook{ADD\_\-IMPORT}{\$filename, \$was\_\-found} FIXGJB: 2nd arg right?
 Called for each filename that is \#import-ed.  Arguments give that
 file name and \$was\_\-found, which is negative iff the file was not found.
 \hook{INCLUDE\_\-FILE}{\$filename, \$system\_\-include}
@@ -236,7 +232,7 @@ system header file for which C++ should assume extern "C".
 \hook{DONE\_\-INCLUDE\_\-FILE}{\$filename}
 Called upon completion of parsing of an included file.  The filename
 that what just finished being parsed is the only argument.
-\hook{TOKEN}{\$token,\$raw,\$macro\_\-name,\$arg\_\-num,@history}
+\hook{TOKEN}{\$token, \$raw, \$macro\_\-name, \$arg\_\-num, @history}
 Called once for each token CPP reads.  \$token is the type of token,
 with a leading CPP\_\-; \$raw is the raw characters which constitute that
 token; \$macro\_\-name is the name of the macro that expanded to create this token,
@@ -249,7 +245,7 @@ MacroExpansionHistory() backcall instead.  Note that the token "CPP\_\-POP"
 means that an expansion buffer has been popped from the stack of expansions,
 and is not a real lexical token.  This may be removed from future version
 so use the POP\_\-BUFFER hook to handle those events.
-\hook{FUNCTION}{\$name,\$fStatic}
+\hook{FUNCTION}{\$name, \$fStatic}
 Called once after an entire function is parsed.  Arguments
 give the name of the newly defined function, and \$fStatic is non-zero
 iff the function was declared to be static (i.e. not global).
