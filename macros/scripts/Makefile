@@ -16,7 +16,7 @@
 USER_PREFIX = /homes/gws/gjb/macros
 
 # Directories
-PKG_DIR := /tmp/gjb/packages
+PKG_DIR := /scratch/gjb/packages
 # Use only packages that start with these chars 
 PKG_PREFIX :=   
 # DO NOT USE "" for a null var, since that becomes a space
@@ -136,7 +136,7 @@ clean_reports:
 
 # Could also depend on $(PKG_DIR)/$(ANALYZE_OUTPUT_DIR)*/c-files-listing
 %.state: #[REMOVE THIS # TO DEPEND ON SCRIPTS] $(COMMON_DIR)/../em_analyze
-	em_make_state_file $(PKG_DIR) $(ANALYZE_OUTPUT_DIR) $@ $(EXTRA_ANALYZE_FLAGS) || echo $< >> $(ANALYZE_OUTPUT_DIR)/failures
+	em_make_state_file $(PKG_DIR) $(ANALYZE_OUTPUT_DIR) $@ $(EXTRA_ANALYZE_FLAGS) || echo $(basename $@) >> $(ANALYZE_OUTPUT_DIR)/failures
 	stringify-state-file $(basename $@).*state
 	@ -chgrp macros $(basename $@).*
 	@ -chmod g+rw $(basename $@).*
