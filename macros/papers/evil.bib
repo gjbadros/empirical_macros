@@ -224,11 +224,6 @@ PLDI93, SIGPLAN Notices 6:28
 }
 
 
-
-
-
-
-
 @InProceedings{GriswoldAM96,
   author = 	 "W. G. Griswold and D. C. Atkinson and C. McCurdy",
   title = 	 "Fast, Flexible Syntactic Pattern Matching and Processing",
@@ -276,17 +271,17 @@ existing grammar).  Actions are written in C for execution speed, and
 dynamically linked for compilation/loading speed.  Users may specify on the
 command line that certain symbols are typedefs.  An expert user could do a
 lot with this; but after how much overhead and learning curve?
-  Section 6.2 discusses macros at some length; the approach is to try parsing
-the body.  If the macro body parses as a C expression or statement
+  Section 6.2 discusses macros at some length; the approach is to try
+parsing the body.  If the macro body parses as a C expression or statement
 (possibly sans a trailing semicolon), then leave it in the parse tree,
 along with putting it in a global data structure.  (The authors state that
-Scruple makes a similar suggestion for handling macros.)  Otherwise, first
-try parsing assuming that each macro argument (in turn) is a typedef; if
-those parses all fail, then expand the macro.  (A special version of cpp
-does this, and emits pragmas for type arguments and typedefs.)  The claim
-is that this works for the vast majority of macros.  This is somewhat
-plausible, but apparently no testing was done on programs that support
-multiple dialects/languages, etc.
+Scruple [Paul & Prakash 94] makes a similar suggestion for handling
+macros.)  Otherwise, first try parsing assuming that each macro argument
+(in turn) is a typedef; if those parses all fail, then expand the macro.
+(A special version of cpp does this, and emits pragmas for type arguments
+and typedefs.)  The claim is that this works for the vast majority of
+macros.  This is somewhat plausible, but apparently no testing was done on
+programs that support multiple dialects/languages, etc.
   The paper compares the various call graph extraction algorithms; naturally
 tawk wins.  It also discusses how well macros are coped with -- only 4% to
 9% of uses need to be expanded (or is that uses of 4% to 9% of macros need
@@ -296,6 +291,29 @@ of the macros that are expanded have empty bodies.
 Lots of confusion over "cawk" vs "tawk"; was the name recently changed?
 LaTeX spacing:  "C." should be "C\<atsign>."; "\. T" should be ". T".
 
+@Article{PaulP94,
+  title =        "A framework for source code search using program
+                 patterns",
+  author =       "S. Paul and A. Prakash",
+  journal =      "IEEE Transactions on Software Engineering",
+  pages =        "463--475",
+  volume =       "20",
+  number =       "6",
+  year =         "1994",
+  note =         "It is argued that existing solutions to locating
+                 source code fragments that match certain patterns are
+                 insufficient. A framework in which pattern languages
+                 are used to specify interesting code features is
+                 presented. These are obtained by extending the source
+                 programming language with pattern-matching symbols.
+                 This is implemented in a tool called SCRUPLE",
+  sender =       "x@wins.uva.nl",
+  class =        "Reverse_Engineering, Reverse_Design,
+                 Fundamental_Methods_in_Reverse_Design,
+                 Source_Code_Queries",
+}
+The SCRUPLE tool.
+
 Greg Minshall suggests
    Evan Adams: The Old Man and the C. USENIX Summer 1994: 15-26
 I don't see the relevance and didn't get past the second page.  This is an
@@ -304,9 +322,9 @@ switch their project to C++.  It describes what features they used and
 which they avoided.  The audience is programmers with no knowledge of C++.
 
 
-Need to add reference on CCEL.
-Also CodeWizard, which implements the tests in Scott Myers's books:
-     http://www.parasoft.com/wizard/papers/tech.htm
+Need to add reference on CCEL.  Also CodeWizard (http://www.parasoft.com/),
+which implements the tests in Scott Myers's books; but I don't see the
+relevance, except that they are other kinds of lint checkers for style.
 
 
 PC-Lint:

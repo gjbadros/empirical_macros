@@ -68,7 +68,7 @@ Department of Computer Science and Engineering \\
 University of Washington \\
 Box 352350, Seattle, WA  98195-2350  USA \\
 {\small \{{\tt mernst},{\tt gjb},{\tt notkin}\}{\tt @cs.washington.edu}} \\
-1 February 1999}  
+2 February 1999}  
 
 \maketitle
 
@@ -653,7 +653,8 @@ The ten definition categories follow.
 %   \setlength{\tabcolsep}{.25em}
 %   \centerline{\input{categories-tbl.tex}}%
 % }
-\centerline{\epsfig{file=fig/def-categories.eps,height=6in}}
+% \centerline{\epsfig{file=fig/def-categories.eps,height=6in}}
+\centerline{\epsfig{file=fig/def-categories.eps,width=\linewidth}}
 \captionsmall{Categorization of macro definition bodies.  The legend numerically
   represents the information in the top row.  The packages are ordered from
   most preprocessor directives per line to fewest (as in
@@ -833,6 +834,9 @@ ASSERT(p) if (!(p)) botch(\verb|__STRING|(p)); else}).
   however, such macros appeared only in system libraries, not in any of our
   packages, and so does not contribute to this category in our statistics.
   
+  \comment{This is .1\% of definitions, 0\% of names, 0\% of uses; we omit
+  it from all the figures.}
+
   Our tool processes only C source code, not Makefiles or other non-C
   files, but sometimes a header file is used both for code files and for
   Makefiles (during the build process, to customize the
@@ -1746,7 +1750,8 @@ in code.  We didn't verify this.  \comment{Consider checking that.}}
 \label{sec:ccd}
 
 \begin{figure}
-\centerline{\epsfig{file=fig/ccd-categories.eps,height=6in}}
+% \centerline{\epsfig{file=fig/ccd-categories.eps,height=6in}}
+\centerline{\epsfig{file=fig/ccd-categories.eps,width=\linewidth}}
 \captionsmall{Categories for conditional compilation directives.
   The legend indicates what percentage of all Cpp conditionals fall
   into each category, numerically presenting the information in the top row
@@ -2029,9 +2034,9 @@ macros.
 % \centerline{\epsfig{file=fig/exp-dep-bymacro.eps,angle=270,width=.5\linewidth}}
 % \bigskip
 % \centerline{\epsfig{file=fig/incl-dep-bymacro.eps,angle=270,width=.5\linewidth}}
-\centerline{\epsfig{file=fig/exp-dep-bymacro.eps,angle=270,width=.48\linewidth}%
+\centerline{\epsfig{file=fig/exp-dep-bymacro.eps,angle=0,width=.48\linewidth}%
 \ %
-\epsfig{file=fig/incl-dep-bymacro.eps,angle=270,width=.48\linewidth}}
+\epsfig{file=fig/incl-dep-bymacro.eps,angle=0,width=.48\linewidth}}
 \captionsmall{Dependences by macro name for 22648 macro names in 28 packages.
   Each bar represents all macros that control at least as many as the
   labeled percent of the lines in its package (but fewer than the next
@@ -2274,21 +2279,13 @@ authors do not report on the effectiveness of the tool in practice or
 justify their tradeoffs between techniques that perform parsing and those
 that do not.
 
-\comment{\cite{GriswoldAM96}
-  Section 6.2 discusses macros at some length; the approach is to try parsing
-the body.  If the macro body parses as a C expression or statement
-(possibly sans a trailing semicolon), then leave it in the parse tree,
-along with putting it in a global data structure.  (The authors state that
-Scruple makes a similar suggestion for handling macros.)  Otherwise, first
-try parsing assuming that each macro argument (in turn) is a typedef; if
-those parses all fail, then expand the macro.  (A special version of cpp
-does this, and emits pragmas for type arguments and typedefs.)  The claim
-is that this works for the vast majority of macros.  This is somewhat
-plausible, but apparently no testing was done on programs that support
-multiple dialects/languages, etc.
-  It also discusses how well macros are coped with -- only 4% to
-9% of uses need to be expanded (or is that uses of 4% to 9% of macros need
-to be expanded?), but this apparently doesn't include header files.}
+TAWK~\cite{GriswoldAM96}, which permits searches over a program's abstract
+syntax tree, handles some uses of Cpp macros.  Macros whose bodies are
+expressions or statements are left unexpanded and entered into the symbol
+table (Scruple~\cite{PaulP94} takes a similar approach); otherwise, the
+body is reparsed assuming that each macro argument (in turn) is a typedef;
+otherwise, the macro is expanded inline, which is necessary for 4\% of uses
+in non-header files.
 
 A limited number of tools assist software engineers to
 understand code with containing Cpp directives.  Emacs's
