@@ -10,16 +10,16 @@ use hook_datatypes;
 use enum_node_type;
 use em_util;
 use vars qw( *CHOUT @Hooks );
+use Boolean;
 
 my %macro_name;
 
+
+# List of empirically identified "Ok" states for the parsers stack in order
+# to insert a declaration
 my @state_stacks_decl_allowable = ( [],
 				    [0],
 				    [0,26] );
-
-my $TRUE = 1;
-my $FALSE = 0;
-
 
 sub FIsDeclAllowable {
   my @state_stack;
@@ -29,9 +29,11 @@ sub FIsDeclAllowable {
     @state_stack = cpp::ParseStateStack();
   }
   foreach my $stackref (@state_stacks_decl_allowable) {
-    return $TRUE if "@$stackref" eq "@state_stack";
+    # String interpolation of an array works for comparing them
+    # iff the elements are all numeric [otherwise might work if you change $"
+    return TRUE if "@$stackref" eq "@state_stack";
   }
-  return $FALSE;
+  return FALSE;
 }
 
 
@@ -302,6 +304,9 @@ sub do_xifdef {
 sub do_ifdef {
   my ($conditional, $trailing_garbage, $skipped, $value) = @_;
   print CPP "do_ifdef on $conditional [$trailing_garbage] ($skipped) evals to $value\n";
+  cpp::YYPushStackState();
+  @state_stack = cpp::ParseStateStack();
+  print CPP ": Stack: @state_stack\n";
 }
 
 sub do_ifndef {
@@ -312,11 +317,21 @@ sub do_ifndef {
 sub do_else {
   my ($orig_conditional, $trailing_garbage, $skipped) = @_;
   print CPP "do_else (orig conditional was $orig_conditional) [$trailing_garbage] skipped $skipped\n";
+#  cpp::YYSwapStackState();
+  @state_stack = cpp::ParseStateStack();
+  print CPP ": Stack: @state_stack\n";
 }
 
 sub do_endif {
   my ($orig_conditional, $trailing_garbage) = @_;
   print CPP "do_endif (orig conditional was $orig_conditional) [$trailing_garbage]\n";
+  @state_stack = cpp::ParseStateStack();
+  print CPP ": Stack: @state_stack\n";
+  my $fEqual = cpp::YYFCompareTopStackState();
+  if (!$fEqual) {
+    print CPP ": STATE_STACK altered by #ifdef/#endif block\n";
+  }
+  cpp::YYPopAndDiscardStackState();
 }
 
 sub add_import {
@@ -399,8 +414,8 @@ AddHook("DO_INCLUDE",\&do_include);
 AddHook("DO_IF",\&do_if);
 AddHook("DO_ELIF",\&do_elif);
 AddHook("DO_XIFDEF",\&do_xifdef);
-#AddHook("DO_IFDEF",\&do_ifdef);
-#AddHook("DO_IFNDEF",\&do_ifndef);
+AddHook("DO_IFDEF",\&do_ifdef);
+AddHook("DO_IFNDEF",\&do_ifndef);
 AddHook("DO_ELSE",\&do_else);
 AddHook("DO_ENDIF",\&do_endif);
 AddHook("ADD_IMPORT",\&add_import);
