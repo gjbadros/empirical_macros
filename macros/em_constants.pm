@@ -7,30 +7,30 @@ require Exporter;
 # Initially used below line to generate the @EXPORT line
 #perl -ne 'BEGIN {print "\@EXPORT = qw("; } END {print ");\n";} print "$1 " if /([$%@]\w+)\s+/'
 @EXPORT = qw($true $false $OBSOLETE $DANGER $EVIL $ILLEGAL
- $catNOTYET $catINPROCESS $catNODEF $catMULTIPLE $catNULLDEFINE 
+ $catNOTYET $catINPROCESS $catNODEF $catMULTIPLE $catNULLDEFINE
  $catEXP $catEXPASSIGN $catEXPFREE $catLITERAL $catCONSTANT $catSOMECONSTANT
  $catFAILURE $catHASTYPEARG $catMACROFUN $catMACROTYPE $catUSESTYPEARG
- $catASM $catSYNTAX $catTYPE $catRESDWORD $catSTATEMENT $catRECURSIVE 
+ $catASM $catSYNTAX $catTYPE $catRESDWORD $catSTATEMENT $catRECURSIVE
  $catMISMATCH $catPASTING $catSTRINGIZE $catLast
- @categoryname 
- $typeFAIL $typeBOOL $typeCHAR $typeUCHAR $typeSCHAR $typeSHORT 
- $typeUSHORT $typeINT $typeUINT $typeLONG $typeULONG 
- $typeFLOAT $typeDOUBLE $typeLDOUBLE 
+ @categoryname
+ $typeFAIL $typeBOOL $typeCHAR $typeUCHAR $typeSCHAR $typeSHORT
+ $typeUSHORT $typeINT $typeUINT $typeLONG $typeULONG
+ $typeFLOAT $typeDOUBLE $typeLDOUBLE
  $typeSTRING $typeNUMBER $typeUNKNOWN $typeUNSPECIFIED $typeNODEF
- %type_num @type_name_array 
+ %type_num @type_name_array
  $c_ftype
  @ftype_ALL
- %InclusionMethod_to_Index 
- $ftype_HEADER_Start $ftype_NONHEADER_Start 
- @ftype_CODE @ftype_HEAD @ftype_NOT_INCLUDED @ftype_INCLUDED 
- @ftype_NONHEADER_NOT_INCLUDED @ftype_NONHEADER_INCLUDED 
- @ftype_HEADER_NOT_INCLUDED @ftype_HEADER_INCLUDED 
- $built_in_fake_file 
- $i_usage_code $i_usage_macro $i_usage_cond 
+ %InclusionMethod_to_Index
+ $ftype_HEADER_Start $ftype_NONHEADER_Start
+ @ftype_CODE @ftype_HEAD @ftype_NOT_INCLUDED @ftype_INCLUDED
+ @ftype_NONHEADER_NOT_INCLUDED @ftype_NONHEADER_INCLUDED
+ @ftype_HEADER_NOT_INCLUDED @ftype_HEADER_INCLUDED
+ $built_in_fake_file
+ $i_usage_code $i_usage_macro $i_usage_cond
  @i_usage_all
  @cond_category_name
  $ccatDEBUG $ccatPORT_LANLIB $ccatPORT_LANMACRO $ccatPORT_SYSMACRO
- $ccatPORT_FEATURE $ccatPORT_MACHINE 
+ $ccatPORT_FEATURE $ccatPORT_MACHINE
  $ccatCOMMENTING $ccatMI_PREVENTION
  $ccatREDEF_SUPPRESION $ccatMISC_SYSTEM $ccatOTHER $ccatMIXED
 );
@@ -139,7 +139,7 @@ $catLast = 24;
 # Define an enumeration of the various cond compilation directive categories,
 # just use the numbers from 0 on up (is there a less "clever" way to do this?)
 (
-$ccatDEBUG, 
+$ccatDEBUG,
 $ccatPORT_LANLIB,
 $ccatPORT_LANMACRO,  #e.g. inline
 $ccatPORT_SYSMACRO,  #e.g. S_IFIFO, errno
@@ -152,6 +152,7 @@ $ccatMISC_SYSTEM,
 $ccatOTHER,
 $ccatMIXED,
  ) = (0..$#cond_category_name);
+
 
 ###########################################################################
 ### Types

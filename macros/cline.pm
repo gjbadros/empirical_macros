@@ -56,7 +56,6 @@ Michael D. Ernst <F<mernst@cs.washington.edu>>
 ###########################################################################
 ### To do
 ###
-###
 
 # Not sure whether I should export cline_updateinvars.  Maybe have a
 # separate version for simplification; but when should simplification ever
