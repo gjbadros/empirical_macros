@@ -54,15 +54,19 @@ SDEPEND  := $(addsuffix .sdepend,$(PKGS))
 SDEPEND_BY_MACRO  := $(addsuffix .bymacro,$(SDEPEND))
 USECUM  := $(addsuffix .frequse_cum,$(PKGS))
 DEFCUM  := $(addsuffix .freqdef_cum,$(PKGS))
+DDFCUM  := $(addsuffix .freqddf_cum,$(PKGS))
 CATUSECUM  := cat-*.frequse_cum
 CATDEFCUM  := cat-*.freqdef_cum
+CATDDFCUM  := cat-*.freqdef_cum
 
 PERR := $(addsuffix .perr,$(PKGS))
 
 TEXT_TABLES :=	tbl-package-sizes \
 		tbl-def-frequency \
+		tbl-ddf-frequency \
 		tbl-use-frequency \
 		tbl-cat-def-frequency \
+		tbl-cat-ddf-frequency \
 		tbl-cat-use-frequency \
 		tbl-where-used \
 		tbl-ccd-categories \
@@ -133,11 +137,17 @@ tbl-package-sizes.tex: tbl-package-sizes package_num_files
 tbl-def-frequency: $(DEFCUM)
 	macros-make-tbl-frequsedef-from-cum $^ > $@
 
+tbl-ddf-frequency: $(DDFCUM)
+	macros-make-tbl-frequsedef-from-cum $^ > $@
+
 tbl-use-frequency: $(USECUM)
 	macros-make-tbl-frequsedef-from-cum $^ > $@
 
 tbl-cat-def-frequency: made-catdefuse
 	macros-make-tbl-frequsedef-from-cum $(CATDEFCUM) > $@
+
+tbl-cat-ddf-frequency: made-catdefuse
+	macros-make-tbl-frequsedef-from-cum $(CATDDFCUM) > $@
 
 tbl-cat-use-frequency: made-catdefuse
 	macros-make-tbl-frequsedef-from-cum $(CATUSECUM) > $@
@@ -152,7 +162,7 @@ tbl-ccd-categories: $(CCD)
 	( head -1 $< && grep -v '^#' $^ | sed -e 's/:/	/' -e 's/.ccd//' ) > $@
 
 # this file is just a note that we have the cat-* files around, now
-made-catdefuse:	$(DEFCUM) $(USECUM)
+made-catdefuse:	$(DEFCUM) $(DDFCUM) $(USECUM)
 	rm -f *.*-* cat-* # careful w/ what this deletes!
 	macros-extract-defuse-categories $^
 	date > made-catdefuse
