@@ -437,6 +437,11 @@ sub do_xifdef {
   if ($fSkipping) {
     print TPSOURCE "#$fname:(put-face-property-if-none $s_branch_start $s_branch_end \'font-lock-reference-face)\n";
     print TPSOURCE "#$fname:(add-text-property $s_branch_start $s_branch_end \'doc \"Skipped due to $kind $conditional\")\n";
+    print STDERR "Pushing skipped branch\n";
+    print STDERR ": ParseStateStack: ", join(",",cpp::ParseStateStack()), "\n";
+    cpp::YYPushStackState();
+    cpp::EnterScope();
+    cpp::PushBuffer($skipped);
   }
 }
 
@@ -447,12 +452,6 @@ sub do_ifdef {
   cpp::YYPushStackState();
   @state_stack = cpp::ParseStateStack();
   print CPP ": Stack: @state_stack\n";
-  if ($fSkipping) {
-    print STDERR "Pushing skipped branch\n";
-    print STDERR ": ParseStateStack: ", join(",",cpp::ParseStateStack()), "\n";
-    cpp::YYPushStackState();
-    cpp::PushBuffer($skipped);
-  }
 }
 
 sub do_ifndef {
@@ -471,6 +470,7 @@ sub pop_perl_buffer {
   if (cpp::YYFCompareTopStackState()) {
     print STDERR ": Identical!\n";
   }
+  cpp::ExitScope();
   cpp::YYPopAndRestoreStackState();
   print STDERR ": After ParseStateStack: ", join(",",cpp::ParseStateStack()), "\n";
 }
@@ -574,6 +574,17 @@ sub do_func_call {
   print "CallFunction: $szName\n";
 }
 
+sub do_typedef {
+  my ($name) = @_;
+  print "Typedef: $name\n";
+}
+
+sub do_vardecl {
+  my ($name) = @_;
+  print "Vardecl: $name\n";
+}
+
+
 # Add the hooks, now
 
 AddHook("STARTUP",\&Startup);
@@ -613,6 +624,8 @@ AddHook("FUNCTION",\&do_function);
 AddHook("FUNC_CALL",\&do_func_call);
 AddHook("ANNOTATE",\&annotate);
 AddHook("POP_BUFFER",\&pop_buffer);
+AddHook("TYPEDEF",\&do_typedef);
+AddHook("VARDECL",\&do_vardecl);
 AddHook("POP_PERL_BUFFER",\&pop_perl_buffer);
 
 
