@@ -1170,6 +1170,8 @@ my $statename = ($opt_s || "state");
 # Do a quick test early, to avoid blowing away old output files if state
 # file can't be opened.
 open(INPUTSTATE,"<$statename") or die "Couldn't open state file $statename: $!";
+if (-z $statename)
+{ die "State file $statename has zero size:"; }
 close(INPUTSTATE);
 
 # using a default directory-- only open the files that

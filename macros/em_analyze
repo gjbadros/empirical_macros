@@ -949,7 +949,8 @@ sub macros_in_dependentons ( @ )
   for my $dependenton (@dependentons)
     { for my $cond_arr (@{$dependenton})
 	{ for my $condition (@{$cond_arr})
-	    { print "macros in condition $condition: ", macros_in($condition), "\n";
+	    { if ($debug_dependences)
+		{ print "macros in condition $condition: ", macros_in($condition), "\n"; }
 	      for my $macro (macros_in($condition))
 		{ $result_hash{$macro} = $true; } } } }
   return keys(%result_hash);
@@ -1171,7 +1172,8 @@ sub macro_active ( $$ )
   # print "mdid: '$macro_direct_inclusion_dependentons{$macro_name}'";
 
   if (scalar(@{$macro_direct_inclusion_dependentons{$macro_name}}) == 0)
-    { die "Empty macro_direct_inclusion_dependentons for $macro_name"; }
+    { # die "Empty macro_direct_inclusion_dependentons for $macro_name";
+      return $true; }
 
   #   print "macro_active $macro_name\n";
   #   print "  ldep ", scalar(@{$line_inclusion_dependenton}), ": @{$line_inclusion_dependenton}\n";
@@ -1551,7 +1553,8 @@ sub compute_transitive_file_dependences ( )
 
   # Set %file_[direct_]inclusion_dependent_macros
   for my $file (@files)
-    { print "setting file_direct_inclusion_dependent_macros{$file}\n";
+    { if ($debug_dependences)
+	{ print "setting file_direct_inclusion_dependent_macros{$file}\n"; }
       my @macros_depended_on;
       if (!exists($file_direct_inclusion_dependentons{$file}))
 	{ @macros_depended_on = (); }
@@ -1612,18 +1615,21 @@ sub compute_transitive_macro_dependences ( )
     { my %files = ();
       for my $i (@{$macros{$name}})
 	{ my $thisfile = $mdef_file[$i];
-	  print "for macro $name, $thisfile\n";
+	  # print "for macro $name, $thisfile\n";
 	  if (!exists($files{$thisfile}))
 	    { $files{$thisfile} = $true;
 	      for my $includer (keys %{$file_includers{$thisfile}})
 		# No worklist: file_included_by is transitively closed
 		{ $files{$includer} = $true; } } }
-      print "macro $name: transitive files ", (keys %files), "\n";
+      if ($debug_dependences)
+	{ print "macro $name: transitive files ", (keys %files), "\n"; }
       for my $thisfile (keys %files)
-	{ print "file_direct_inclusion_dependent_macros{$thisfile} = @{$file_direct_inclusion_dependent_macros{$thisfile}}\n";
-	  print "file_inclusion_dependent_macros{$thisfile} = @{$file_inclusion_dependent_macros{$thisfile}}\n";
+	{ if ($debug_dependences)
+	    { print "file_direct_inclusion_dependent_macros{$thisfile} = @{$file_direct_inclusion_dependent_macros{$thisfile}}\n";
+	      print "file_inclusion_dependent_macros{$thisfile} = @{$file_inclusion_dependent_macros{$thisfile}}\n"; }
 	  for my $fdep (@{$file_inclusion_dependent_macros{$thisfile}})
-	    { print "adding dependence $name $fdep due to $thisfile\n";
+	    { if ($debug_dependences)
+		{ print "adding dependence $name $fdep due to $thisfile\n"; }
 	      add_inclusion_dependence($name, $fdep); } } }
 
   transitive_closure_dependences();
