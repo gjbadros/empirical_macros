@@ -24,7 +24,7 @@
 BEGIN { if (defined $ENV{"PERLINC"})
 	  { unshift(@INC, split(/[ :]+/, $ENV{"PERLINC"})); } }
 
-my $getopts_option_letters = "ihvtIAau1d:D:S:F:C:E:";
+my $getopts_option_letters = "ihvtIAau1d:D:M:S:F:C:E:";
 
 # Remove the asterisks below when the options
 # are known to the users
@@ -43,6 +43,7 @@ New options marked with *, options with ':', above, take an argument
   -1  do only the first pass (don't do function parsing, usage)
 * -d [directory:prefix]  use standard filenames under the given directory
   -D [file]  output the names of the macros (and number of times defined)
+  -U [file]  output macro usage information
   -S [file]  output the per directive statistics to file
   -F [file]  output the function information to a file
   -C [file]  show categorizations to file
@@ -705,7 +706,7 @@ my $debug_parse_function = $false;
 
 ## Command-line processing
 use vars qw($opt_i $opt_I $opt_h $opt_v $opt_t $opt_d
-	    $opt_D $opt_S $opt_F $opt_C $opt_E 
+	    $opt_D $opt_M $opt_S $opt_F $opt_C $opt_E 
 	    $opt_u $opt_1 $opt_A $opt_a);
 my $fIgnoreIncludes = $false;
 
@@ -1021,37 +1022,37 @@ sub output_stats
   if ($opt_S) {
     my ($h, $v);
     # Dump statistics on frequencies of directives
-    printf STATS "DIRECTIVES#: ";
+    printf STATS "#DIRECTIVESNI#: ";
     while ( ($h,$v) = each(%cppcmdcount_ni) ) {
       print STATS "$h ";
     }
     print STATS "\n";
-    printf STATS "DIRECTIVES: ";
+    printf STATS "DIRECTIVESNI: ";
     while ( ($h,$v) = each(%cppcmdcount_ni) ) {
       print STATS "$v ";
     }
     print STATS "\n";
-    print STATS "DIRECTIVES%LL: ";
+    print STATS "DIRECTIVESNI%LL: ";
     while ( ($h,$v) = each(%cppcmdcount_ni) ) {
       printf STATS "%2.2f ", pct2($v,$logical_lines_ni);
     }
     print STATS "\n";
 
-    print STATS "DIRECTIVES%NCNB: ";
+    print STATS "DIRECTIVESNI%NCNB: ";
     while ( ($h,$v) = each(%cppcmdcount_ni) ) {
       printf STATS "%2.2f ", pct2($v,$ncnb_physical_lines_ni);
     }
     print STATS "\n";
 
-    print STATS "DIRECTIVES%PHYS: ";
+    print STATS "DIRECTIVESNI%PHYS: ";
     while ( ($h,$v) = each(%cppcmdcount_ni) ) {
       printf STATS "%2.2f ", pct2($v,$physical_lines_ni);
     }
     print STATS "\n";
     
-    print STATS "LINES#: physical logical ncnb_phys cpp_phys cpp_phys_code\n";
+    print STATS "#LINES#: physical logical ncnb_phys cpp_phys cpp_phys_code\n";
     print STATS "$physical_lines $logical_lines $ncnb_physical_lines $cpp_physical_lines $cpp_physical_code_lines\n";
-    print STATS "LINESNI#: physical logical ncnb_phys cpp_phys cpp_phys_code\n";
+    print STATS "#LINESNI#: physical logical ncnb_phys cpp_phys cpp_phys_code\n";
     print STATS "$physical_lines_ni $logical_lines_ni $ncnb_physical_lines_ni $cpp_physical_lines_ni $cpp_physical_code_lines_ni\n";
     # printf STATS "EVILSTATS: $cObsoleted obsoleted (%2.2f%), $cDanger dangerous (%2.2f%), $cEvil evil (%2.2f%), $cIllegal illegal (%2.2f%)\n",
     # pct($cObsoleted), pct($cDanger), pct($cEvil), pct($cIllegal);
@@ -1069,12 +1070,12 @@ sub output_stats
     print STATS "\n";
   }
   
-  # -D = dump the defines
-  if ($opt_D) {
+  # -M = dump the macro stats
+  if ($opt_M) {
     my $name;
-    select DEFINES;
+    select MACROS;
     # FIX: add function/global uses
-    print  "#MACROS#: name cDefs cUndefs cCodeUses cCppUses (functionsThatUseIt)\n";
+    print  "#MACROS#: name cDefs cUndefs cCodeUses cCppUses (%functionsThatUseIt)\n";
     foreach $name (sort keys %macros) {
       #print STDERR "MNAME=$name, @{$macros{$name}}\n";
       my $i = $macros{$name}[1];
@@ -1094,11 +1095,15 @@ sub output_stats
         join("\n%",@{$macros_used_in_functions{$name}}),
         "\n";
     }
+  }
 
+  if ($opt_D) {
+    select DEFINES;
+    my $name;
 # don't want extra lines-- harder for postprocessing tools
 #    print  "\n";
     # FIX: add $mncategory, $mntype
-    print "#DEFINITIONS#: name iDef file line args plines pclines (macrosUsedInExpansion)\n";
+    print "#DEFINITIONS#: name iDef file line args plines pclines (%macrosUsedInExpansion)\n";
     foreach $name (sort keys %macros) {
       # Could also print number of times it's defined.
       my $iDef = 1;
@@ -4295,6 +4300,10 @@ if ($opt_d) {
     open(DEFINES,">$dir/${prefix}def") || die "Failed opening $!";
   }
 
+  if (!$opt_M) {
+    open(MACROS,">$dir/${prefix}mac") || die "Failed opening $!";
+  }
+
   if (!$opt_F) {
     open(FUNCTIONS,">$dir/${prefix}func") || die "Failed opening $!";
   }
@@ -4309,6 +4318,7 @@ if ($opt_E) { open(EVIL,">$opt_E") || die "Failed opening $opt_E"; }
 if ($opt_S) { open(STATS,">$opt_S") || die "Failed opening $opt_S"; }
 if ($opt_F) { open(FUNCTIONS,">$opt_F") || die "Failed opening $opt_F"; }
 if ($opt_D) { open(DEFINES,">$opt_D") || die "Failed opening $opt_D"; }
+if ($opt_M) { open(MACROS,">$opt_M") || die "Failed opening $opt_M"; }
 if ($opt_C) { open(CATEG,">$opt_C") || die "Failed opening $opt_C"; }
 if ($opt_I) { $fIgnoreIncludes = $true; }
 if ($opt_t) { $outOFS = "	"; } # use tab for OFS
@@ -4318,6 +4328,7 @@ if ($opt_t) { $outOFS = "	"; } # use tab for OFS
 $opt_E = $true;
 $opt_S = $true;
 $opt_D = $true;
+$opt_M = $true;
 $opt_F = $true;
 $opt_C = $true;
 
