@@ -270,15 +270,16 @@ language.\footnote{Hence its name, \pcppp{}, shortened to \pcp{}.}
 The first major component of \pcp{} is an ANSI \C{} compatible parser.
 Choosing a parser was difficult as there are many freely available
 parsers, often tightly coupled to their back-end, thus complicating
-reuse.  Ultimately, the parser from \texttt{CTree}, a freely available
-\C{} front end which creates an abstract syntax tree from a preprocessed
-input file, was embedded in \pcp{}.  The \texttt{CTree} parser simply
-parses and creates an AST.  Its lexer and parser both are mechanically
-generated from \texttt{flex}~\cite{Flex} and \texttt{bison}~\cite{Bison}
-(freely available implementations of \texttt{lex} and \texttt{yacc},
-respectively) specifications, respectively.  \texttt{CTree} also
-implements a simply, but fully scoped symbol table, relieving \pcp{} of
-another essential duty.
+reuse.  Ultimately, the parser from \texttt{CTree}~\cite{CTree}, a
+freely available \C{} front end which creates an abstract syntax tree
+from a preprocessed input file, was embedded in \pcp{}.  The
+\texttt{CTree} parser simply parses and creates an AST.  Its lexer and
+parser both are mechanically generated from
+\texttt{flex}~\cite{Flex,Levine92} and
+\texttt{bison}~\cite{Bison,Levine92} (freely available implementations
+of \texttt{lex} and \texttt{yacc}, respectively) specifications,
+respectively.  \texttt{CTree} also implements a simply, but fully scoped
+symbol table, relieving \pcp{} of another essential duty.
 
 \subsection{Preprocessor}
 
@@ -311,7 +312,7 @@ Griswold and Atkinson note that using a special-purpose interpreted
 action language helped the scalability of various software tools in
 extracting a call graph~\cite{Griswold96}.  Interpreted languages can
 speed development time, especially when prototyping analyses.  For
-\pcp{}, \Perl{}~\cite{Perl} was chosen because it interfaces
+\pcp{}, \Perl{}~\cite{Perl,Camel} was chosen because it interfaces
 easily with \C{}, it is in widespread use, and the author is comfortable
 with it.\footnote{Additionally, the tools used in the empirical study of
   \Cpp{} use~\cite{EmpCpp-TR}  are written in \Perl{}, thus
@@ -436,9 +437,14 @@ provides the remaining information about this expansion: that the
 expansion came from the body of the earlier expansion of macro
 \texttt{PA2}.
 
+% Emacs support
+\subsection{Textual annotations database in Emacs}
 
-% Benchmarks, results, etc.
-\section{Results}
+\subsection{Interactions among levels}
+
+\subsection{Performance}
+
+\section{Automated removal of \ppd{define}s of constants}
 \label{sec:results}
 
 % Summary & Future work
@@ -451,6 +457,8 @@ expansion came from the body of the earlier expansion of macro
 
 \appendix
 \newpage
+
+%%FIXGJB: order and organize these
 \section{Action hooks called by \pcp}
 \begin{footnotesize}
 \label{sec:hooks}
@@ -462,6 +470,8 @@ expansion came from the body of the earlier expansion of macro
 \end{footnotesize}
 
 \newpage
+
+%%FIXGJB: order and organize these
 \section{Subroutines provided by \pcp}
 \label{sec:backcalls}
 \begin{footnotesize}
@@ -479,6 +489,7 @@ expansion came from the body of the earlier expansion of macro
 \nocite{Dragon}
 \nocite{Glickstein97} % Writing GNU Emacs Ext.
 \nocite{Camel}        % Perl 5
+\nocite{Perl}        % Perl 5
 \nocite{Levine92}     % Lex & Yacc
 \nocite{Harbison91}   % C Ref Man
 \nocite{Stroustrup97} % C++, 3rd
