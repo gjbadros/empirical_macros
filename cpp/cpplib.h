@@ -672,8 +672,8 @@ struct argdata {
   char use_count;
   int iuse;  /* this counts up the uses as an index into dcUses as we are making that
 		 array during the final expansion of the macro */
-  long dchUsesStart[16];  /* beginning offset of each successive use */
-  long dchUsesEnd[16];    /* ending offset of each successive use */
+  long dchUsesStart[MAX_USES_TRACKED];  /* beginning offset of each successive use */
+  long dchUsesEnd[MAX_USES_TRACKED];    /* ending offset of each successive use */
   cpp_expand_info *pcei;
 };
 
