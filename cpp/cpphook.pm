@@ -604,6 +604,8 @@ sub do_typedef {
   print "Typedef: $name\n";
 }
 
+# Note that function prototypes are currently vardecl-s, too
+# --04/01/98 gjb
 sub do_vardecl {
   my ($name) = @_;
   print "Vardecl: $name\n";
