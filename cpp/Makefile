@@ -337,7 +337,7 @@ ansi-c-lex.c: ansi-c.l
 	flex -o$@ $^
 
 ansi-c.tab.c ansi-c.tab.h: ansi-c.y
-	bison -d $^
+	$(BISON) -d $^
 
 bison-stack.o: bison-stack.c bison-stack.h lexer.h
 
@@ -350,7 +350,7 @@ lexer.o: lexer.c cpphook.h
 gram.tab.o: gram.tab.c cpphook.h
 
 gram.tab.c gram.tab.h: gram.y
-	bison -pct_yy -d $^
+	$(BISON) -v -pct_yy -d $^
 
 gram.h: gram.tab.h
 	cp $< $@
