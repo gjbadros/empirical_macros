@@ -3,7 +3,7 @@
 
 PERL_MODULES := $(wildcard *.pm)
 PERL_SCRIPTS := $(wildcard *.pl)
-PERL_SCRIPTS += em_analyze em_reports
+PERL_SCRIPTS += em_analyze em_reports cppp
 PERL_MODULE_TEXI := $(patsubst %.pm,%.texi,$(PERL_MODULES))
 PERL_MODULE_INFO := $(patsubst %.pm,%.info,$(PERL_MODULES))
 PERL_MODULE_MAN := $(patsubst %.pm,%.man,$(PERL_MODULES))

@@ -1,0 +1,556 @@
+#!/uns/bin/perl -w
+# cppp -- Partial CPP (expands specified C preprocessor macros)
+# Michael Ernst <mernst@cs.washington.edu>
+
+# Removes conditional compilation; currently does not replace uses of the
+# macros with their definitions.
+# Takes file names on command line.
+# Backs up foo.c to foo.c.nocppp, then writes output to foo.c.
+
+
+# To do:
+#   Check for {re,un}definition of the specified macros.
+#   Implement -h command-line option
+#   Could use -i.no-cppp flag, but I'm not comfortable with it
+
+# Bugs:
+#  * only copes with conditional compilation; occurrences in code, macro
+#    definitions, etc. are not expanded
+#  * I assume that "defined" isn't the name of a macro (can it be?)
+#  * character constants are always assumed to be positive, never negative
+#    (the standard doesn't specify signedness)
+#  * -D can only define constant-like macros, not function-like ones (true
+#    for cpp also)
+
+# The following cpp flags are recognized:
+# 
+# `-D NAME'
+#      Predefine NAME as a macro, with definition `1'.
+# 
+# `-D NAME=DEFINITION'
+#      Predefine NAME as a macro, with definition DEFINITION.  There are
+#      no restrictions on the contents of DEFINITION, but if you are
+#      invoking the preprocessor from a shell or shell-like program you
+#      may need to use the shell's quoting syntax to protect characters
+#      such as spaces that have a meaning in the shell syntax.  If you
+#      use more than one `-D' for the same NAME, the rightmost definition
+#      takes effect.
+# 
+# `-U NAME'
+#      Do not predefine NAME.  If both `-U' and `-D' are specified for
+#      one name, the `-U' beats the `-D' and the name is not predefined.
+# 
+# 
+# `-A PREDICATE(ANSWER)'
+#      Make an assertion with the predicate PREDICATE and answer ANSWER.
+#      *Note Assertions::.
+# 
+#      You can use `-A-' to disable all predefined assertions; it also
+#      undefines all predefined macros that identify the type of target
+#      system.
+
+
+require 5.000;
+use strict;
+use Carp;
+use English;
+
+use checkargs;
+use cline;
+
+#require Exporter;
+#@ISA = qw(Exporter);
+#@EXPORT = qw();
+
+
+# Should call this somewhere
+sub usage () {
+  die "@_
+Usage: $0 ...
+-h     Help. Display this usage information
+ENTER USAGE INFO HERE
+";
+}
+
+
+###########################################################################
+### Constants
+###
+
+my $debug_cppp
+
+### Boolean
+my $true = (1 == 1);
+my $false = (1 == 0);
+my $unknown = 'unknown';	# maybe use undef instead?  Problem: undef
+				# is a bad arg some places.
+
+# Lifted from em_analyze
+my $char_literal_contents_re = '(\\\\?.|\\\\[0-7]{3})';
+my $char_literal_re = "L?'" . $char_literal_contents_re . "'";
+
+
+###########################################################################
+### Symbol table
+###
+
+# If a symbol does not appear in this hash, we know nothing about it.
+# Otherwise, its value (or undefinedness) in the hash gives its value.
+my %cpp_macros = ();
+
+# Returns one of $true, $false, or $unknown
+sub cpp_macro_definedness ($)
+{ my ($symbol) = check_args(1, @_);
+  return (!exists($cpp_macros{$symbol})) ? $unknown : defined($cpp_macros{$symbol});
+}
+
+sub is_unknown ($)
+{ my ($arg) = check_args(1, @_);
+  return ($arg eq 'unknown');
+}
+
+# Returns a textual substitution for "defined($symbol)", which is one of
+# "1", "0", or "defined($symbol)" itself (if the definedness is unknown).
+sub eval_defined ($)
+{ my ($symbol) = check_args(1, @_);
+  if (!exists($cpp_macros{$symbol}))
+    { return "defined($symbol)"; }
+  elsif ($cpp_macros{$symbol})
+    { return "1"; }
+  else
+    { return "0"; }
+}
+
+sub eval_all_defined ($)
+{ my ($string) = check_args(1, @_);
+  if ($debug_cppp) { print "eval_all_defined <= $string\n"; }
+  $string =~ s/\bdefined\(\w+\)/eval_defined($1)/ge;
+  if ($debug_cppp) { print "eval_all_defined => $string\n"; }
+  return $string;
+}
+
+# Takes the character literal CONTENTS as its argument.
+sub char_literal_as_int ($)
+{ my ($char) = check_args(1, @_);
+  if ($char =~ /^\\/)
+    { return oct($POSTMATCH); }
+  else
+    { return ord($char); }
+}
+
+
+#    EXPRESSION is a C expression of integer type, subject to stringent
+# restrictions.  It may contain
+# 
+#    * Integer constants, which are all regarded as `long' or `unsigned
+#      long'.
+# 
+#    * Character constants, which are interpreted according to the
+#      character set and conventions of the machine and operating system
+#      on which the preprocessor is running.  The GNU C preprocessor uses
+#      the C data type `char' for these character constants; therefore,
+#      whether some character codes are negative is determined by the C
+#      compiler used to compile the preprocessor.  If it treats `char' as
+#      signed, then character codes large enough to set the sign bit will
+#      be considered negative; otherwise, no character code is considered
+#      negative.
+# 
+#    * Arithmetic operators for addition, subtraction, multiplication,
+#      division, bitwise operations, shifts, comparisons, and logical
+#      operations (`&&' and `||').
+# 
+#    * Identifiers that are not macros, which are all treated as zero(!).
+# 
+#    * Macro calls.  All macro calls in the expression are expanded before
+#      actual computation of the expression's value begins.
+# 
+#    Note that `sizeof' operators and `enum'-type values are not allowed.
+# `enum'-type values, like all other identifiers that are not taken as
+# macro calls and expanded, are treated as zero.
+
+
+# The argument is the conditional expression.
+# Each conditional evaluates to one of three values:  $true, $false, or $unknown
+sub evaluate_conditional ($)
+{ my ($exp) = check_args(1, @_);
+
+  # Do the following simplifications:
+  #  * replace defined(macro) by 1 or 0
+  #  * expand macros
+  #  * replace character constants by numeric equivalents
+
+  # This isn't quite right with respect to ordering of
+  # expansion vs. defined, but maybe it's close enough.
+  # It does cope with "defined(FOO)" in macro expansion.
+
+  # Eliminate "defined(FOO)"
+  $exp =~ eval_all_defined($exp);
+  # Expand macros; they're constant-like, not function-like.
+  while (($exp =~ /\b\w+\b/)
+	 && (exists($cpp_macros{$MATCH})))
+    { my $symbol = $MATCH;
+      $exp = eval_all_defined($PREMATCH
+				. (defined($cpp_macros{$symbol})
+				   ? $cpp_macros{$symbol} : "0")
+				. $POSTMATCH); }
+
+  # Convert character, octal, and hexadecimal integer constants into decimal
+  $exp =~ s/$char_literal_re/char_literal_as_int($1)/ge;
+  $exp =~ s/\b0x?[0-9]+\b/oct($MATCH)/ge;
+
+  while ($exp =~ /\b\w+\s*\(/)
+    { my $preexp = $PREMATCH . "UNKNOWNMACRO";
+      my $post = $POSTMATCH;
+      my $close_paren_pos = find_close_paren($post);
+      if (!$close_paren_pos)
+	{ die "No close paren found to match function call in $exp"; }
+      $exp = $preexp . substr($post, $close_paren_pos+1); }
+
+  if ($debug_cppp) { print "conditional expression: $exp\n"; }
+
+  return eval_substituted_conditional($exp);
+}
+
+
+# Expression should contain only numbers, operators, and symbols (= unknown).
+sub eval_substituted_conditional ($)
+{ my ($exp) = check_args(1, @_);
+
+  # This parenthesization will do the wrong thing for function calls.
+  { my $rparen_pos;
+    while (-1 != ($rparen_pos = index($exp, ")")))
+      { my $lparen_pos = rindex($exp, "(", $rparen_pos);
+	if ($lparen_pos == -1)
+	  { die "Right paren at $rparen_pos but no preceding left paren: $exp"; }
+	$exp = substr($exp, 0, $lparen_pos-1)
+	  . eval_substituted_conditional(substr($exp, $lparen_pos+1, $rparen_pos-$lparen_pos-1))
+	    . substr($exp, $rparen_pos+1); } }
+  # No more parentheses; attack operators in order
+
+  if ($exp =~ /\|\|/)
+    { my $left = $PREMATCH;
+      my $right = $POSTMATCH;
+      my $lval = eval_substituted_conditional($left);
+      my $rval = eval_substituted_conditional($right);
+      if (((!is_unknown($lval)) && $lval)
+	  || ((!is_unknown($rval)) && $rval))
+	{ return $true; }
+      elsif (((!is_unknown($lval)) && !$lval)
+	     && ((!is_unknown($rval)) && !$rval))
+	{ return $false; }
+      else
+	{ return $unknown; } }
+  elsif ($exp =~ /\&\&/)
+    { my $left = $PREMATCH;
+      my $right = $POSTMATCH;
+      my $lval = eval_substituted_conditional($left);
+      my $rval = eval_substituted_conditional($right);
+      if (((!is_unknown($lval)) && !$lval)
+	  || ((!is_unknown($rval)) && !$rval))
+	{ return $false; }
+      elsif (((!is_unknown($lval)) && $lval)
+	     && ((!is_unknown($rval)) && $rval))
+	{ return $true; }
+      else
+	{ return $unknown; } }
+  elsif ($exp =~ /\|/)
+    { my $left = $PREMATCH;
+      my $right = $POSTMATCH;
+      my $lval = eval_substituted_conditional($left);
+      my $rval = eval_substituted_conditional($right);
+      if (is_unknown($lval) || is_unknown($rval))
+	{ return $unknown; }
+      else
+	{ return ($lval | $rval); } }
+  elsif ($exp =~ /\^/)
+    { my $left = $PREMATCH;
+      my $right = $POSTMATCH;
+      my $lval = eval_substituted_conditional($left);
+      my $rval = eval_substituted_conditional($right);
+      if (is_unknown($lval) || is_unknown($rval))
+	{ return $unknown; }
+      else
+	{ return ($lval ^ $rval); } }
+  elsif ($exp =~ /\&/)
+    { my $left = $PREMATCH;
+      my $right = $POSTMATCH;
+      my $lval = eval_substituted_conditional($left);
+      my $rval = eval_substituted_conditional($right);
+      if (is_unknown($lval) || is_unknown($rval))
+	{ return $unknown; }
+      else
+	{ return ($lval & $rval); } }
+  elsif ($exp =~ /[!=]=/)
+    { my $left = $PREMATCH;
+      my $op = $MATCH;
+      my $right = $POSTMATCH;
+      my $lval = eval_substituted_conditional($left);
+      my $rval = eval_substituted_conditional($right);
+      if (is_unknown($lval) || is_unknown($rval))
+	{ return $unknown; }
+      elsif ($op eq "==")
+	{ return ($lval == $rval); }
+      elsif ($op eq "!=")
+	{ return ($lval != $rval); }
+      else
+	{ die "impossible"; } }
+  elsif ($exp =~ /\b\s*[<>]=?/)
+    { my $left = $PREMATCH;
+      my $op = $MATCH;
+      my $right = $POSTMATCH;
+      my $lval = eval_substituted_conditional($left);
+      $op =~ s/^\s+//;
+      my $rval = eval_substituted_conditional($right);
+      if (is_unknown($lval) || is_unknown($rval))
+	{ return $unknown; }
+      elsif ($op eq "<")
+	{ return ($lval < $rval); }
+      elsif ($op eq ">")
+	{ return ($lval > $rval); }
+      elsif ($op eq "<=")
+	{ return ($lval <= $rval); }
+      elsif ($op eq ">=")
+	{ return ($lval >= $rval); }
+      else
+	{ die "impossible"; } }
+  elsif ($exp =~ /<<|>>/)
+    { my $left = $PREMATCH;
+      my $op = $MATCH;
+      my $right = $POSTMATCH;
+      my $lval = eval_substituted_conditional($left);
+      my $rval = eval_substituted_conditional($right);
+      if (is_unknown($lval) || is_unknown($rval))
+	{ return $unknown; }
+      elsif ($op eq "<<")
+	{ return ($lval << $rval); }
+      elsif ($op eq ">>")
+	{ return ($lval >> $rval); }
+      else
+	{ die "impossible"; }
+    }
+  # Use \b to avoid capturing unary plus and minus
+  elsif ($exp =~ /\b\s*[-+]\s*\b/)
+    { my $left = $PREMATCH;
+      my $op = $MATCH;
+      my $right = $POSTMATCH;
+      my $lval = eval_substituted_conditional($left);
+      $op =~ s/\s+//g;
+      my $rval = eval_substituted_conditional($right);
+      if (is_unknown($lval) || is_unknown($rval))
+	{ return $unknown; }
+      elsif ($op eq "+")
+	{ return ($lval + $rval); }
+      elsif ($op eq "-")
+	{ return ($lval - $rval); }
+      else
+	{ die "impossible"; }
+    }
+  elsif ($exp =~ /[*\/]/)
+    { my $left = $PREMATCH;
+      my $op = $MATCH;
+      my $right = $POSTMATCH;
+      my $lval = eval_substituted_conditional($left);
+      my $rval = eval_substituted_conditional($right);
+      if (is_unknown($lval) || is_unknown($rval))
+	{ return $unknown; }
+      elsif ($op eq "*")
+	{ return ($lval * $rval); }
+      elsif ($op eq "/")
+	{ return int($lval / $rval); }
+      else
+	{ die "impossible"; }
+    }
+  # Skip unary +,-
+  elsif ($exp =~ /^\s*([~!])/)
+    { my $rand = $POSTMATCH;
+      my $op = $1;
+      my $val = eval_substituted_conditional($rand);
+      if (is_unknown($val))
+	{ return $unknown; }
+      elsif ($op eq "~")
+	{ return ~$val; }
+      elsif ($op eq "!")
+	{ return !$val; }
+      else
+	{ die "impossible"; }
+    }
+  elsif ($exp =~ /[~!]/)
+    { die "Should only find [~!] at beginning of expression: $exp"; }
+  elsif ($exp =~ /^\s*[-+]?[0-9]+\s*$/)
+    { return int($exp); }
+  elsif ($exp =~ /^\s*[_A-Za-z]\w*\s*$/)
+    { return $unknown; }
+  else
+    { die "What expression? $exp"; }
+}
+
+
+# cond1 was the previous condition; cond2 is the new one
+sub combine_conditional ($$)
+{ my ($cond1, $cond2) = check_args(2, @_);
+  return (is_unknown($cond1)) ? $cond2
+    : (is_unknown($cond2)) ? $cond1
+      : ($cond1 && $cond2);
+}
+
+
+###########################################################################
+### Command-line arguments
+###
+
+sub process_command_line_flags ()
+{ check_args(0, @_);
+
+  while (($#ARGV > 0) && ($ARGV[0] =~ /^-./))
+    { my $thisarg = shift(@ARGV);
+      my $thisflag;
+      if ($thisarg =~ /^-([AUD])/)
+	{ $thisflag = $1;
+	  $thisarg = $POSTMATCH;
+	  if ($thisarg eq "")
+	    { if ($#ARGV == 0)
+		{ die "No argument follows $thisarg" }
+	      $thisarg = shift(@ARGV); }
+	}
+      else
+	{ die "Unrecognized command-line arg should be one of -D, -U, -A" }
+
+      if ($thisflag eq "D")
+	{ my ($name,$def) = split(/=/, $thisarg, 2);
+	  if (!defined($def))
+	    { $def = "1"; }
+	  # If it exists but isn't defined, then don't define it now, because
+	  # -U takes precedence over -D.  Don't check whether it's defined,
+	  # because the rightmost -D takes precedence.
+	  if (! (exists($cpp_macros{$name}) && !defined($cpp_macros{$name})))
+	    { $cpp_macros{$name} = $def; } }
+      elsif ($thisflag eq "U")
+	{ $cpp_macros{$thisarg} = undef; }
+      elsif ($thisflag eq "A")
+	{ die "-A flag not yet implemented"; }
+      else
+	{ die "Bad flag should have been one of D, U, or A: $thisflag $thisarg"; } }
+}
+
+
+###########################################################################
+### Main routine
+###
+
+# <> gives all the lines of all the files mentioned on the command line.
+# $ARGV contains the name of the current file when reading from <>.
+# See example
+
+process_command_line_flags();
+
+while (scalar(@ARGV) > 0)
+{ my $file = shift(@ARGV);
+  if ($debug_cppp) { print "processing file $file; remaining args @ARGV\n"; }
+  process_file($file); }
+exit(0);
+
+
+###########################################################################
+### Process one file
+###
+
+# Edits argument in-place after making a backup copy.
+sub process_file ($)
+{ my ($file) = check_args(1, @_);
+  my $backup = $file . ".nocppp";
+  if (-e $backup)
+    { die "Backup file $backup already exists; do something clever here"; }
+  rename($file, $backup);
+  open(INPUT, $backup);
+  open(OUTPUT, ">$file");
+
+  my $prev_spliced = $false;
+  my @condition_stack = ();	# conditions for all #if we are inside
+				# each is $true, $false, or $unknown
+  my @condition_value_stack = ($true); # the AND of @condition_stack
+  my $current_condition_value = $true; # the top of @condition_value_stack
+
+  while ($true)
+    { my ($raw, $simple, $phys_lines, $ncnb_lines) = get_spliced_cline(\*INPUT);
+      if (!$raw)
+	{ last; }
+
+      # For debugging only
+      if (!($current_condition_value == $condition_value_stack[$#condition_value_stack]))
+	{ die "bad current_condition_value, condition_value_stack: $current_condition_value; @condition_value_stack"; }
+
+      if ($simple =~ /^\#\s*(if(n?def)?|el(se|if)|endif)\b/)
+	{ $simple =~ s/^\#\s*//;
+	  if ($debug_cppp)
+	    { print "simple preprocessor line: $simple"; }    # ends in newline
+	  if ($simple =~ /^endif\b/)
+	    { my $thisvalue = pop(@condition_stack);
+	      pop(@condition_value_stack);
+	      $current_condition_value = $condition_value_stack[$#condition_value_stack];
+	      if (is_unknown($thisvalue) && ($current_condition_value ne $false))
+		{ print OUTPUT $raw; }
+	    }
+	  elsif ($simple =~ /^else\b/)
+	    { my $thisvalue = $condition_stack[$#condition_stack];
+	      pop(@condition_value_stack);
+	      $current_condition_value = $condition_value_stack[$#condition_value_stack];
+	      if (is_unknown($thisvalue) && ($current_condition_value ne $false))
+		{ print OUTPUT $raw; }
+	      if (!is_unknown($thisvalue))
+		{ $thisvalue = !$thisvalue;
+		  $condition_stack[$#condition_stack] = $thisvalue; }
+	      $current_condition_value = combine_conditional($current_condition_value, $thisvalue);
+	      push(@condition_value_stack, $current_condition_value); }
+	  elsif ($simple =~ /^elif\b/)
+	    { # do something here
+	      die "elif NYI"; }
+	  elsif ($simple =~ /^if(n?def)?\b/)
+	    { my $iftype = $1;
+	      my $ifarg = $POSTMATCH;
+	      $ifarg =~ s/^\s+//;
+	      $ifarg =~ s/\s+$//;
+	      my $thisvalue;
+	      if (defined($iftype))     # ie, $iftype != ""
+		{ # ifdef or ifndef, not plain if
+		  my $is_ndef = ($iftype eq "ndef");
+		  if ($ifarg =~ /\s/)
+		    { die "Embedded space in if$iftype: $simple"; }
+		  my $definedness = cpp_macro_definedness($ifarg);
+		  $thisvalue = is_unknown($definedness) ? $unknown
+		    : $is_ndef ? !$definedness : $definedness; }
+	      else
+		{ $thisvalue = evaluate_conditional($ifarg);
+		}
+
+	      my $old_condition_value = $current_condition_value;
+	      $current_condition_value
+		= combine_conditional($current_condition_value, $thisvalue);
+	      push(@condition_stack, $thisvalue);
+	      push(@condition_value_stack, $current_condition_value);
+
+	      if ($debug_cppp)
+		{ print "After $ifarg:\n";
+		  print "  condition_stack = @condition_stack\n";
+		  print "  condition_value_stack = @condition_value_stack\n"; }
+
+	      if (is_unknown($thisvalue) && ($old_condition_value ne $false))
+		{ print OUTPUT $raw; }
+	    }
+	  else
+	    { die "What cpp conditional directive? $simple"; } }
+      else
+	{ # Not a cpp conditional directive
+	  if (is_unknown($current_condition_value)
+	      || $current_condition_value)
+	    { print OUTPUT $raw; } }
+    }
+  close(INPUT);
+  close(OUTPUT);
+}
+
+
+
+
+
+
+
