@@ -55,8 +55,8 @@ BEGIN {
     $ORS="\\\\\\hline\n";
     print "\\begin{tabular}{|l|c|c|c|c|c|c|c|c|}\\hline\n"; 
   }
-  print " ",       "Null",   " ",        " ",          " ",         "Syntactic","Type",   " ",        "Not",    " ",     "Unknown",	"Failed";
-  print "Package", "Define", "Constant", "Expression", "Statement", "macros",   "Related","Recursive","C Code", "Other", "Symbol",	"classification";
+  print " ",       "Null",   " ",        " ",          " ",        "",         "Type",   " ",        "Not",    " ",     "Unknown",	"Failed";
+  print "Package", "Define", "Literal", "Expression", "Statement", "Syntactic","related","Recursive","C code", "Other", "symbol",	"classification";
 
   my ($cNull, $cLit, $cExp, $cStm, $cSyntax, $cType, 
       $cRecursive, $cNonC, $cOther, $cFail, @rest) = 0 x 40;
