@@ -337,7 +337,6 @@ PushBuffer($buffer_to_push, $s_start)
 	pbuf->ichSourceStart = ichStart - 1;
 	pbuf->ichSourceEnd = ichStart + length;
         pbuf->nominal_fname = "FromPerl";
-        fprintf(stderr,"cpp_push_buffer: %ld, %ld\n",pbuf->ichSourceStart,pbuf->ichSourceEnd);
 
 
 ###%\backcall{}{EnterScope}{}
