@@ -11,3 +11,22 @@ Think of emacs as a human; give it the information needed to make
 appropriate conservative transformations, and let it apply heuristics to
 perform the changes.
 
+----
+Approaches to name clash problem:
+
+1) Use a second pass, and at expansion use sites that are going to be
+replaced, check the symbol table for no clash
+-> 2nd pass could be done by a separate run, w/ persistent variables
+-> or 2nd pass could be control my backcalls to dump the cpp state
+and/or tree and to start parsing a filename
+**-> or two passes could be the norm, with a hook called to see if the
+second pass is desired; short term easiest, though less flexible
+
+2) On first pass, at each USE of a macro, track a uniquified list of
+clashing identifiers, then don't allow substituting to a clashing
+identifier.
+-> This requires a means of getting a whole symbol table; probably way
+too slow, since there are lots of uses.
+
+3) Don't substitute; just use old macro name as the new identifier.
+
