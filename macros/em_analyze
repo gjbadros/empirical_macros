@@ -6981,6 +6981,7 @@ print STDERR "Categorizing $cMacrosInTables macros\n";
 
 print STDERR "Save macro analysis state\n";
 SaveMacroAnalysisState("$statename");
+print STDERR "Successful completion!\n";
 
 exit();
 
