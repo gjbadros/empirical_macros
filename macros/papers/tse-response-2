@@ -634,7 +634,8 @@ either side of the comment as well."
 > see which macro definitions could be used at which sites?  Isn't this
 > straightforward?
 
-
+We do this now now, conservatively, using our new framework based on PCP^3
+that is described in Section 3, methodology.
 
 > You can't postpone discussion of macro-name classification to section
 > 4.6 or appendix A.  Make it clear what is going on: your scheme
