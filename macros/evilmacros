@@ -78,6 +78,8 @@ $cDanger = 0;			# count of number of dangerous macros
 $cIllegal = 0;			# count of number of illegal macros
 $cpp_cmds = 0;			# total preprocessor commands, including macro defs
 ## Strings: 
+$line = "";			# current line
+$lastline = "";			# the prior line
 $currentfile = 0;
 $mname = 0;
 $margs = 0;
