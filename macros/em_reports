@@ -452,15 +452,23 @@ sub output_stats ()
   if ($opt_p)
     { if ($opt_v) { print STDOUT "properties..."; }
       select PROP;
-      print "#Macro definition property histogram\n";
-      my %prop_histogram = HistogramNumericFromList(@mdef_properties);
+      my $cMacrosInTables = $#mdef_properties + 1;
+      print "#Macro definition property histogram: total defs = $cMacrosInTables\n";
+      my $i = 0;
+      my @mdef_properties_in_package = ();
+      while ($i < $cMacrosInTables) {
+	($i++ and next) if ($file_inclusion_method{$mdef_file[$i]} ne "FromStdin");
+	push @mdef_properties_in_package, $mdef_properties[$i];
+#DBG	print STDERR "Adding $mdef_properties[$i]\n";
+	$i++;
+      }
+      my %prop_histogram = HistogramNumericFromList(@mdef_properties_in_package);
       foreach my $prop (sort {$prop_histogram{$b} <=> $prop_histogram{$a}}
 			keys %prop_histogram) {
 	print "$prop_histogram{$prop} ", string_from_prop($prop) . "\n";
       }
-      my $cMacrosInTables = $#mdef_properties + 1;
-      print "#Macro definition property percentages: total definitions = $cMacrosInTables\n";
-      my $i = 0;
+      print "#Macro definition property percentages: total defs = $cMacrosInTables\n";
+      $i = 0;
       my $cASSIGN = 0;
       my $cFREE_VAR = 0;
       my $cINVOKES_MACRO = 0;
@@ -907,7 +915,7 @@ sub output_stats ()
 # Use to print out the PROP file's output
 sub prop_line_for {
   my ($label,$value,$total) = check_args(3,@_);
-  printf "%d${OFS}%2.2g%%${OFS}%s\n", $value, 100*$value/$total,$label;
+  printf "%d${OFS}(%2.2f%%)${OFS}%s\n", $value, 100*$value/$total,$label;
 }
 
 sub HistogramNumericFromList (@) {
