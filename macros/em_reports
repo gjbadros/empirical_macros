@@ -682,6 +682,10 @@ sub output_lint ( )
   my $warn_formal_use_side_effect = 0;
 
   for my $macro_name (sort keys %macros)
+    # FIX BUG: This "next" is insufficient; we also want to skip over all
+    # definitions that don't appear in the package, even if the macro name
+    # is also defined elsewhere in the package.  (There are five such
+    # definitions in the 30 packages; two appear in dejagnu.)
     { next if MacroNotDefinedInsidePackage($macro_name);
       $num_macros++;
       my $this_warn_macro_name = $false;
