@@ -226,6 +226,8 @@ use strict;
 # Verbose error messages; not sure whether I like it.
 # use diagnostics;
 
+use File::Basename;
+
 # Permit use of $MATCH for $& and so forth.
 use English;
 
@@ -1922,19 +1924,19 @@ sub getline_handle_preprocessor_command ($$$$$)
 	    $angled_include = $false;
 	    $include_file = $2;
 	  }
-	  my $complete_filename = complete_include_pathname($include_file, $angled_include);
+	  my ($fLocallyIncluded,$complete_filename) = 
+	    complete_include_pathname($include_file, $angled_include,$current_file);
 	  if (!defined($complete_filename))
 	    { # FIX:  make complete_include_pathname work when $angled_include
 	      # is false, and then restore this (and eliminate the "else"...)
 	      parse_error("Can't resolve include file $include_file");
 	    } else {
 	      # ***** Add file dependence here *****
-
-
 	      # Check to see if we're already reading this file anyway
 	      # if we resolved the filename to a real file,
 	      # and we've not already added the file to our list we need to parse
-	      if (scalar(grep($_ eq $complete_filename, @files_included)) == 0) {
+	      if ($fLocallyIncluded == $false &&
+	      scalar(grep($_ eq $complete_filename, @files_included)) == 0) {
 		# FIX: may want to insert this where we are
 		# or do some sort of recursive reading of *all* included files
 		# WEIRD: Why does this cause a problem in parsing a macro argument
@@ -1944,7 +1946,7 @@ sub getline_handle_preprocessor_command ($$$$$)
 		    push @files_included, $complete_filename;
 		    $file_inclusion_method{$complete_filename} = "FromInclude" .
 		      ($angled_include? "<>" : '""');
-		    # print STDERR "Adding \"$complete_filename\" as $file_inclusion_method{$complete_filename}\n";
+#DBG		    print STDERR "Adding \"$complete_filename\" as $file_inclusion_method{$complete_filename}\n";
 		  }
 	      }
 	    }
@@ -5783,12 +5785,42 @@ sub get_include_path () {
   return;
 }
 
+# Simplify a directory path by canonicalizing to not contain
+# any ".." or "." components
+# e.g.  simplify_path_name("./bink/baz/foo/../foo2/../../bar") is
+#       "./bink/bar"
+sub simplify_path_name ( $ ) {
+  my ($path) = @_;
+  my $result = $path;
+  while (($result =~ s%/[^/\n]*/\.\./%/%) && $result ne $path) {
+    print "$result\n";
+    $path = $result;
+  }
+  return $result;
+}
+
+
 # fix: If $system is true, look only for a system include file.
 # Otherwise, look in package and system directories.
 # Search through @include_path's directories and find the first
 # directory that has $file in it.
 sub complete_include_pathname ($$) {
-  my ($file, $system) = check_args(2, @_);
+  my ($file, $system, $curr_name) = check_args(3, @_);
+  my $dirname = dirname($curr_name);
+  my $local_name;
+  if ($file =~ m%^/%) {
+    $local_name = $file;
+  } else {
+    $local_name = "$dirname/$file";
+    $local_name = simplify_path_name($local_name);
+  }
+#DBG  print STDERR "Trying $local_name...";
+  if (scalar(grep($_ eq $local_name, @files)) != 0) {
+#DBG    print STDERR "already in list!\n";
+    return ($true,$local_name);
+  }
+#DBG  print STDERR "\n";
+  
   my $complete_file_try;
   my $complete_file = undef;
   foreach my $dir (@include_path) {
@@ -5798,9 +5830,9 @@ sub complete_include_pathname ($$) {
       last;
     }
   }
-  # print STDERR "Found $file to be $complete_file\n";
+#DBG print STDERR "Found $file to be $complete_file\n";
   # returns undefined if never set
-  return $complete_file;
+  return ($false,$complete_file);
 }
 
 
@@ -6299,29 +6331,29 @@ my $statename = "state";
 # using a default directory-- only open the files that
 # aren't explicitly given
 if ($opt_d) {
-  my ($dir,$basename) = split /:/,$opt_d;
+  my ($dir,$base_name) = split /:/,$opt_d;
 
 
-  if (!defined($basename) || $basename eq "") {
-    $basename = "";
+  if (!defined($base_name) || $base_name eq "") {
+    $base_name = "";
   } else {
-    $basename .= ".";
+    $base_name .= ".";
   }
 
   if ($dir !~ /\/$/) {
     $dir .= "/";
   }
 
-  print STDERR "Output to $dir with prefix '$basename'\n";
+  print STDERR "Output to $dir with prefix '$base_name'\n";
 
-  $statename = "$dir/${basename}state";
+  $statename = "$dir/${base_name}state";
 
   if (!$opt_E) {
-    open(EVIL,">$dir/${basename}evil") || die "Failed opening $dir/${basename}evil: $!";
+    open(EVIL,">$dir/${base_name}evil") || die "Failed opening $dir/${base_name}evil: $!";
   }
 
   if (!$opt_P) {
-    open(PARSE_ERRS,">$dir/${basename}perr") || die "Failed opening $dir/${basename}perr: $!";
+    open(PARSE_ERRS,">$dir/${base_name}perr") || die "Failed opening $dir/${base_name}perr: $!";
   }
 }
 
