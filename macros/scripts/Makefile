@@ -4,25 +4,27 @@
 
 # Directories on uni
 PKG_DIR := /tmp/mernst/packages
-ANALYZE_OUTPUT_DIR := /tmp/gjb/splitdata
+ANALYZE_OUTPUT_DIR := /tmp/gjb/data
 COMMON_DIR := $(shell dirname $$(which em_analyze))
+EXTRA_ANALYZE_FLAGS := -g14
 
 PAPER_DIR := /homes/gws/gjb/macros/papers
 
 # FIX: These files should be generated from the directory names under PKG_DIR
 
+PKGS := $(shell zsh -c "echo $(PKG_DIR)/*(:t) | sed -e 's/-[^ ]*//g'")
 # "make data" makes these files.
 # other targets operate on these files.
-STAT := $(wildcard *.stat)
-CATG := $(wildcard *.catg)
-ERR  := $(wildcard *.err)
-EVIL := $(wildcard *.evil)
-FNLN := $(wildcard *.fnln)
-FUNC := $(wildcard *.func)
-MAC  := $(wildcard *.mac)
-USECUM  := $(wildcard *.frequse_cum)
-DEFCUM  := $(wildcard *.freqdef_cum)
-PERR := $(wildcard *.perr)
+STATE := $(addsuffix .state,$(PKGS))
+CATG := $(addsuffix .catg,$(PKGS))
+ERR  := $(addsuffix .err,$(PKGS))
+EVIL := $(addsuffix .evil,$(PKGS))
+FNLN := $(addsuffix .fnln,$(PKGS))
+FUNC := $(addsuffix .func,$(PKGS))
+MAC  := $(addsuffix .mac,$(PKGS))
+USECUM  := $(addsuffix .frequse_cum,$(PKGS))
+DEFCUM  := $(addsuffix .freqdef_cum,$(PKGS))
+PERR := $(addsuffix .perr,$(PKGS))
 
 TEXT_TABLES :=	tbl-package-sizes \
 		tbl-def-frequency \
@@ -64,6 +66,8 @@ data_analyze:
 data_reports:
 	macros-make-data-reports $(ANALYZE_OUTPUT_DIR)
 
+%.state:
+	em_make_state_file $(PKG_DIR) $(ANALYZE_OUTPUT_DIR) $@ $(EXTRA_ANALYZE_FLAGS)
 
 ###########################################################################
 ### Text tables
@@ -71,7 +75,7 @@ data_reports:
 
 text_tables:	$(TEXT_TABLES)
 
-tbl-package-sizes: $(STAT)
+tbl-package-sizes: $(STATE)
 	macros-make-package-sizes-tbl-from-stat $^ > $@
 
 tbl-def-frequency: $(DEFCUM)
@@ -89,13 +93,13 @@ tbl-where-used: $(MAC)
 
 raw: $(RAW_TABLES)
 
-raw-directives-hist: $(STAT)
+raw-directives-hist: $(STATE)
 	macros-make-directives-raw-hist-from-stats $^ > $@
 
 tbl-directives-breakdown: raw-directives-hist
 	macros-bake-raw-directives-hist $^ > $@
 
-package_and_sizes-tbl.txt: $(STAT)
+package_and_sizes-tbl.txt: $(STATE)
 	macros-make-package-sizes-tbl-from-stat $^ > $@
 
 
@@ -103,10 +107,10 @@ package_and_sizes-tbl.txt: $(STAT)
 ### LaTeX tables
 ###
 
-tbl-def-categories.tex: $(STAT)
+tbl-def-categories.tex: $(STATE)
 	macros-make-categories-tbl-from-stat $^ > $@
 
-tbl-def-categories: $(STAT)
+tbl-def-categories: $(STATE)
 	macros-make-categories-tbl-from-stat -t -p $^ > $@
 
 tbl-subset-categories: $(MAC)
@@ -123,6 +127,8 @@ $(CVT_LATEX_TABLES): %.tex: %
 ###
 
 showvars:
+	echo $(PKGS)
+	echo $(STAT)
 	echo $(TEXT_TABLES)
 	echo $(RAW_TABLES)
 	echo $(LATEX_TABLES)
@@ -133,6 +139,6 @@ showvars:
 
 copy:
 	perl -pi.bak -e 's/<total>/Total/g' $(PAPER_TABLES)
-	cp $(PAPER_TABLES) $(PAPER_DIR)	
+	cp $(PAPER_TABLES) $(PAPER_DIR)
 
-.PHONY: all clean showvars text_tables data raw copy
+.PHONY: all clean showvars text_tables data_analyze data_reports raw copy
