@@ -1,0 +1,6 @@
+Example usage (as of 7-May-1998)
+
+pcp3 --hooks /scratch/gjb/cpp/evilmacros/expansions.pm -q --noparse --nooutput -DHAVE_CONFIG_H -I. -I. -I.. -I. -I./../h  -I/uns/include -c number.c 
+
+
+(i.e. CC=pcp3 --hooks ~lgjb/cpp/evilmacros/expansions.pm -q --noparse --nooutput)
