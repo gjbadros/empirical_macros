@@ -78,15 +78,16 @@ if (/^CATEGORIES_NI:/) {
   $cRecursive = sum_meta_category(@mcat_RECURSIVE); $sRecursive += $cRecursive; 
   $cNonC = sum_meta_category(@mcat_NON_C_CODE); $sNonC += $cNonC;
   $cOther = sum_meta_category(@mcat_OTHER); $sOther += $cOther;
+  $cSymUknown = sum_meta_category(@mcat_SYMBOL_UNKNOWN); $sSymUnknown += $cSymUknown;
   $cFail = sum_meta_category(@mcat_FAILURE); $sFail += $cFail;
   $totLine = $cNull + $cLit + $cExp + $cStm + $cSyntax + 
-    $cType + $cRecursive + $cNonC + $cFail + $cOther;
+    $cType + $cRecursive + $cNonC + $cSymUknown + $cFail + $cOther;
 
   my $filename = $ARGV;
   $filename =~ s/\..*$//;
 
   print $filename, map {sprintf $FORMAT, $_ } pct($cNull), pct($cLit), pct($cExp), pct($cStm), pct($cSyntax),
-    pct($cType), pct($cRecursive), pct($cNonC), pct($cOther), pct($cFail);
+    pct($cType), pct($cRecursive), pct($cNonC), pct($cOther), pct($cSymUknown), pct($cFail);
 
   $totLine = 0;
 } elsif ($fInitializedHeadings == 0 && /^\#CATEGORIES_NI\#:/ ) {
@@ -110,9 +111,9 @@ END {
     $totLine = $sNull + $sLit + $sExp + $sStm + $sSyntax + $sType + $sRecursive + 
       $sNonC + $sFail + $sOther;
     print "Total", map {sprintf $FORMAT, $_ } ( pct($sNull), pct($sLit), pct($sExp), pct($sStm), pct($sSyntax), pct($sType), 
-      pct($sRecursive), pct($sNonC), pct($sOther), pct($sFail) );
+      pct($sRecursive), pct($sNonC), pct($sOther), pct($sSymUnknown), pct($sFail) );
     print "Total-raw", map {sprintf "%2.0f", $_} ($sNull, $sLit, $sExp, $sStm, $sSyntax, $sType, 
-      $sRecursive, $sNonC, $sOther, $sFail );
+      $sRecursive, $sNonC, $sOther, $sSymUnknown, $sFail );
   }
   $ORS=""; 
   if (!$nolatex) {print "\\end{tabular}\n"; } 
