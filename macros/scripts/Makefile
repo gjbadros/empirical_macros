@@ -101,7 +101,7 @@ tbl-package-sizes: $(STAT)
 	macros-make-package-sizes-tbl-from-stat $^ > $@
 
 tbl-package-sizes.tex: tbl-package-sizes
-	(echo "Package	Version	Physical lines	NCNB lines	Description"; join -t'	' $(COMMON_DIR)/package_versions tbl-package-sizes | join -t'	' - $(COMMON_DIR)/package_descriptions ) | latexify > $@
+	(echo "Package	Version	Physical lines	NCNB lines	Description"; join -t'	' $(COMMON_DIR)/package_versions tbl-package-sizes | join -t'	' -v2 - $(COMMON_DIR)/package_descriptions ) | latexify > $@
 
 tbl-def-frequency: $(DEFCUM)
 	macros-make-tbl-frequsedef-from-cum $^ > $@

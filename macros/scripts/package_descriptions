@@ -3,10 +3,12 @@ bc	Desktop calculator
 bison	Parser generator 
 cvs	Revision control system 
 dejagnu	Testing framework 
+emacs	Macro text editor
 flex	Scanner generator 
 fvwm	Window manager 
 g77	Fortran compiler 
 gawk	GAWK interpreter 
+gcc	C/C++ compiler
 genscript	Text-to-PostScript converter 
 ghostview	PostScript previewer 
 glibc	C library 
