@@ -39,6 +39,10 @@
 #include "globals.h"
 #include "pcpp.h"
 
+#ifdef USE_DMALLOC
+#include <dmalloc.h>
+#endif
+
 extern int errno;
 extern int err_cnt;
 extern int ct_yylex(YYSTYPE *lvalp);

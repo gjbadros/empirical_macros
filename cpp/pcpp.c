@@ -51,6 +51,9 @@ Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "tree.h"
 
 #include "prnttree.h"
+#ifdef USE_DMALLOC
+#include <dmalloc.h>
+#endif
 
 char  *cur_file;
 int    show_as_code = 1;
