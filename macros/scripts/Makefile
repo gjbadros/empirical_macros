@@ -24,9 +24,9 @@ TEXT_TABLES :=	tbl-package_sizes \
 
 # Maybe "baked" is actually a text table?
 RAW_TABLES := raw-directives-hist baked-directives-hist \
-		tbl-categories
+		tbl-categories tbl-subset-categories
 
-LATEX_TABLES :=	tbl-categories.tex
+LATEX_TABLES :=	tbl-categories.tex tbl-subset-categories.tex
 
 CVT_LATEX_TABLES := $(patsubst %,%.tex,$(TEXT_TABLES))
 
@@ -91,6 +91,12 @@ tbl-categories.tex: $(STAT)
 
 tbl-categories: $(STAT)
 	macros-make-categories-tbl-from-stat -t -p $^ > $@
+
+tbl-subset-categories: $(MAC)
+	macros-make-subset-categorizations-from-mac $^ | sort | uniq -c | sort -nr >$@
+
+tbl-subset-categories.tex: tbl-subset-categories
+	latexify-mark-table `sum-column 1 <$^`  < $^ > $@
 
 $(CVT_LATEX_TABLES): %.tex: %
 	latexify $< > $@
