@@ -1,5 +1,4 @@
-/* #include <stdio.h> */
-/* FOO is a number we use below */
+#include <stdio.h>
 int alpha;
 #ifdef BAR
 #define FOO 5
@@ -18,12 +17,15 @@ int a;
 #define BAZ 2
 #endif
 
+#define BING 8
+
 int
 main(char **argv, 
      int argc)
 {
   int foo = FOO;
-  fprintf(stderr,"Hello World! FOO = %d",FOO,notme);
+  int rgi[BING];
+  fprintf(stderr,"Hello World! FOO = %d\n",FOO);
   return 0;
 }
 
