@@ -14,7 +14,7 @@
 #                  #include-d it
 
 
-# FIX: handle #define /* badly-placed-comment */ MACRONAME  properly
+# FIXMERNST: handle #define /* badly-placed-comment */ MACRONAME  properly
 # FIX: getline should probably always return a simplified and an
 # FIX:   unsimplified version of the line so that if we're not looking
 # FIX:   at simplified lines, we don't have to duplicate the simplification
@@ -29,7 +29,6 @@ my $getopts_option_letters = "ihvtIAau1D:S:F:C:E:";
 # Remove the asterisks below when the options
 # are known to the users
 
-# FIX: implement -a option
 sub usage {
   die "@_\nUsage: $0 [-$getopts_option_letters] <files>
 New options marked with *, options with ':', above, take an argument
@@ -644,7 +643,8 @@ my $outOFS;
 use vars '@include_path';
 
 
-## Arrays
+## Note that the %macrosXXX are annotations per macro,
+## whereas @mXXXX arrays are annotations per macro *definition*
 
 # perhaps make %macros proper just index into other arrays.
 
@@ -670,12 +670,12 @@ my %macros_used_in_functions = (); # hashes macro names to list of
 				# repeatedly if the macro is used more
 				# than once in that function.
 
-
 # Also want to have summary info true about all definitions...
 # FIX: This data structure of parallel arrays needs to be improved
 use vars qw(@mname @margs @mbody @mfile @mline @mplines @mpclines
 	    @mbody_noc %mfreevars @mfreefuns
-	    @mdependenton @mtype @mcategory @mevilness);
+	    @mdependenton @mexpansionuses @mtype @mcategory @mevilness);
+
 # These are for aggregate information.  Keep it for all macros, or just
 # those multiply defined?  Or put it in the other arrays?  (No.)
 use vars qw(%mntype %mncategory);
@@ -812,6 +812,7 @@ sub process_macro_definition
 
   $mplines[$thisnum] = $macro_physical_lines;
   $mpclines[$thisnum] = $macro_physical_code_lines;
+  # FIX: this is a hack
   # @mdependenton[$thisnum] = @dependenton;
   { my $i;
     $mdependenton[$thisnum][0] = @dependenton;
@@ -821,11 +822,13 @@ sub process_macro_definition
     { mdie("undefined current_file"); }
   $mfile[$thisnum] = $current_file;
   $mline[$thisnum] = current_line_no();
+  # PERLNOTE: be careful not to do
+  # $mexpansionuses[$thisnum] = ();  ##WRONG
+  @{$mexpansionuses[$thisnum]} = ();
 }
 
 
 # process_macro_undefinition is called to handle #undef-s
-#FIX: Get stats on number of macros only #undef-d, etc.
 sub process_macro_undefinition {
   my ($cpp_cmd_args) = check_args(1,"process_macro_undefinition",caller,@_);
 
@@ -850,6 +853,7 @@ sub macro_dependenton
   my $extraindexmax = $extraindexmin-1;
   if (@dependenton > 0)
     { $extraindexmax++;
+      # FIX: this is a hack
       # @mdependenton[$extraindexmax] = @dependenton;
       { my $i;
 	$mdependenton[$extraindexmax][0] = @dependenton;
@@ -869,6 +873,7 @@ MDLOOP:
 	    { goto MDDONE; }
 	  else
 	    { $extraindexmax++;
+	      # FIX: this is a hack
 	      # @mdependenton[$extraindexmax] = @merged;
 	      { my $i;
 		$mdependenton[$extraindexmax][0] = @merged;
@@ -898,6 +903,7 @@ sub merge_dependenton
     { return $false; }
   # Return @do1.
   my @do1;
+  # FIX: this is a hack
   # @do1 = @mdependenton[$index];
   { my $i;
     for $i (0..$mdependenton[$index][0])
@@ -910,6 +916,7 @@ sub merge_dependenton
 sub dependenton_single_difference
 { my($index, @do2) = check_args_at_least(1, "merge_dependenton", caller, @_);
   my @do1;
+  # FIX: this is a hack
   # @do1 = @mdependenton[$index];
   { my $i;
     for $i (0..$mdependenton[$index][0])
@@ -964,6 +971,7 @@ sub negate_if_condition
 # Print all the output statistics to the various streams
 # FIX: these sub-parts might better be broken up into functions
 # FIX: use "select" instead of print FILEHANDLE repeatedly
+#FIX: Get stats on number of macros only #undef-d, etc.
 sub output_stats
 {
   check_args(0, "output_stats", caller, @_);
@@ -1052,7 +1060,7 @@ sub output_stats
     my $name;
     select DEFINES;
     # FIX: add function/global uses
-    print  "#MACROS#: name cDefs cUndefs cCodeUses cCppUses ListOfFunctionUses\n";
+    print  "#MACROS#: name cDefs cUndefs cCodeUses cCppUses (functionsThatUseIt)\n";
     foreach $name (sort keys %macros) {
       #print STDERR "MNAME=$name, @{$macros{$name}}\n";
       my $i = $macros{$name}[1];
@@ -1068,15 +1076,15 @@ sub output_stats
 
       print "$name", $macros{$name}[0], $macros_c_undefs{$name},
       $macros_uses{$name}[$i_usage_code], 
-      $macros_uses{$name}[$i_usage_cpp], "\n" .
-        join("\n",@{$macros_used_in_functions{$name}}),
+      $macros_uses{$name}[$i_usage_cpp], "\n%" .
+        join("\n%",@{$macros_used_in_functions{$name}}),
         "\n";
     }
 
 # don't want extra lines-- harder for postprocessing tools
 #    print  "\n";
-    # FIX: add cTimesUsed, $mncategory, $mntype
-    print "#DEFINITIONS#: name iDef file line args plines pclines\n";
+    # FIX: add $mncategory, $mntype
+    print "#DEFINITIONS#: name iDef file line args plines pclines (macrosUsedInExpansion)\n";
     foreach $name (sort keys %macros) {
       # Could also print number of times it's defined.
       my $iDef = 1;
@@ -1085,7 +1093,8 @@ sub output_stats
 	if ($mfile[$i] ne $szBuiltInFakeFile) {
 	  #print STDERR "NAME=$name,", join(", ",@{$macros{$name}}),"\n";
 	  print "$name", $iDef, $i, $mfile[$i], $mline[$i], count_macro_args($margs[$i]),
-	  $mplines[$i], $mpclines[$i], "\n";
+	  $mplines[$i], $mpclines[$i], "\n%" . 
+	    join("\n%",@{$mexpansionuses[$i]}), "\n";
 	}
       }
     }
@@ -1202,8 +1211,9 @@ $commaop = $true;		# whether commas should be operators or not
 #   and not in string or comment.
 # Result ends with newline.
 # With argument, doesn't pop (actually, shift) from getline_ungotlines.
-# FIX: when simplifying (2nd pass), don't we need to remove the chars betwen < & >
-# on a #include line-- they act like quotes
+#
+# FIX: when simplifying (2nd pass), we need to remove the chars betwen < & >
+# on a #include line-- they act like quotes -- MERNST do this in updateinvars
 sub getline
 { my ($dont_pop) = check_args_range(0, 1, "getline", caller, @_);
   if (!defined($dont_pop))
@@ -1295,7 +1305,6 @@ sub getline
     $rg_phys_lines[$current_ft_index] += $getline_physical_lines;
   }
 
-  # FIX: Check for macro uses here
   # FIX: maybe we should have variables $firstPass, $secondPass, or $pass_num
   #      instead of checking $finding_macro_defs, or $getting_macro_call_types
 
@@ -3218,6 +3227,7 @@ sub categorize_macro_name
 }
 
 
+#FIXMERNST: need to fix this code-- I think it's broken (categories are wrong)
 # Takes index into macro arrays as argument
 sub categorize_macro
 { my ($index) = check_args(1, "categorize_macro", caller, @_);
@@ -3319,8 +3329,9 @@ sub categorize_macro
 	# Should do some evilness processing here, to justify the failed
 	# categorization.
 	{ # Not an expression, apparently
-	  # FIX: call check_macro_body here
 	  $category = $catFAILURE;
+	  # FIXMERNST: need to call this
+#	  check_macro_body($body);
 	}
     }
 
@@ -3494,7 +3505,6 @@ sub is_fun_decl_arg_macro
 #       $fShowCategorization &&
 # 	print CATEG "$current_file:@{[ current_line_no() ]}: CastedConstant: $name $fullbody\n";
 #     }
-#   #FIX: these regexps could be better
 #   elsif (FIsNumConst($body) ||
 # 	 $body =~ /^'(\\?.|\\[0-7][0-7][0-7])'$/) { # single character constant 'g'
 #     # is it just a number, possibly like "(4.566)" or "7" or "0x5FaB" or "'g'"
@@ -3510,7 +3520,6 @@ sub is_fun_decl_arg_macro
 #     }
 #   }
 #   elsif ($body =~ /^(L|x|\d|\(|\s|\)|\<|\>|\+|\-|\=|\*|\||\&|\%|\!)*$/) {
-#     # FIX: this regexp is lame-- L,x needed for 0x80 << 3 or 1L << 25
 #     # is it a numeric expression?
 #     $cSimpleExpression++;
 #     $fShowCategorization &&
@@ -3695,8 +3704,8 @@ sub compute_current_ft_index {
 
   my $offset = current_file_is_header()? $ft_HEAD_Start: $ft_CODE_Start;
 
-  # FIXMSG
-  die if !exists $InclusionMethod_to_Index{$files{$filename}};
+  die "compute_current_ft_index can't determine an index for an inclusion method" 
+    if !exists $InclusionMethod_to_Index{$files{$filename}};
 
   return $offset + $InclusionMethod_to_Index{$files{$filename}};
 }
@@ -3843,10 +3852,12 @@ sub analyze_for_macro_use {
   if (substr($line,0,1) eq "#") {
     $cpp_line = $true;
   }
+
   # FIX: does this handle #define /* */ TEST properly?
-  # ie. have comments been removed for us
-  if ($line =~ /^\# *define\b(\w+)\b/) {
+  # ie. have comments been removed for us already by getline
+  if ($line =~ /^\# *define\s+(\w+)\b/) {
     $cpp_defining_macro_name = $1;
+    #print STDERR "Defining $cpp_defining_macro_name\n";
   }
 
   foreach $word (split /\W+/,$line) {
@@ -3859,6 +3870,15 @@ sub analyze_for_macro_use {
       # FIX: do we want to include information about a macro's expansion
       # including another macro?  (like dependent-macros)
       $macros_uses{$word}[$cpp_line? $i_usage_cpp:$i_usage_code ]++;
+
+      if (defined($cpp_defining_macro_name)) {
+	my $mi = mindex_from_name_file_line($cpp_defining_macro_name,
+					    $current_file,
+					    current_line_no());
+	push @{$mexpansionuses[$mi]}, $word;
+	# print STDERR "Macro $cpp_defining_macro_name expands to something with $word-- using index $mi\n";
+      }
+
       # FIX: need to look for if we're in a function now and update that
       my $function_name;
 #      if ($function_name = which_function($current_file,current_line_no())) {
@@ -3875,6 +3895,28 @@ sub analyze_for_macro_use {
     
   # print STDERR "AFMU: $line";
 }
+
+
+# return the index into the @mXXX arrays for the macro definition described
+sub mindex_from_name_file_line {
+  my ($name,$file,$line) = check_args(3,"mindex_from_name_file_line",caller,@_);
+  
+  my $cDefs = $macros{$name}[0];
+  my $i = 0;
+
+  while ( $i <= $cDefs ) {
+    my $mi = $macros{$name}[$i];
+    if ($mfile[$mi] eq $file && $mline[$mi] == $line) {
+      return $mi;
+    }
+    $i++;
+  }
+
+  die "couldn't find mindex for $name $file $line";
+
+  return undef;
+}
+
 
 # Note: which_function can only be used after a complete second parse
 # if you want to be sure you get things right
@@ -4189,7 +4231,6 @@ $fDebugCmdProcessing && print "@ARGV";
 
 # Add the rest of the arguments to the files list
 foreach $_ (@ARGV) {
-  # FIX: should we not count -* as files?
   push @files,$_;
   $files{$_} = "FromCmdLine";
 }
@@ -4223,11 +4264,14 @@ find_macro_definitions();	# also counts other preprocessor usage
 
 get_macro_call_types() if (!$opt_1);
 
+#FIX: should I only print this stuff w/ -v?
+print STDERR "Computing various global statistics...\n";
+
 compute_global_cpp_sums();
 
 ### All the files have been read; now process the macros
 # We initialized $cppcmdcount{"define"}, so it will be defined
-print "Processing " . $cppcmdcount{"define"} . " macros\n";
+print STDERR "Processing " . $cppcmdcount{"define"} . " macros\n";
 { my $i;
   # FIX: throughout coode, use explicit for-loop-s instead-- 
   # this builds an array and has extra overhead in both space and time
