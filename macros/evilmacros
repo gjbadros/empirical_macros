@@ -8,6 +8,10 @@
 # but that wouldn't be too hard.
 # Also permits it to be piped file names via standard in. (added by gjb)
 
+#Complex execution (use zsh):
+# ext=all; p=~/505/data; for i in *(/); do pushd $i; find-c | evilmacros -i -D$p/$i.def.$ext -e$p/$i.em.$ext -c$p/$i.cat.$exit -S$p/$i.stat.$ext > $p/$i.out.$ext 2> $p/$i.err.$ext; popd; done
+#
+
 # Report "evil" CPP macros:
 #  Illegal macros:
 #   Unterminated string
@@ -147,16 +151,18 @@ $cUncategorized=0;
 ### Usage
 ###
 
+# FIX: the options are non-orthogonal ... this is confusing
+
 # Updated by gjb
 sub usage {
    die "@_\nUsage: $0 [-ihvDsS] <files>
 -i use files listed on stdin [one per line] in addition to any on cmd line
 -h display this help message
 -v be verbose and list files as they are processed to stderr
--D dump the names of the macros upon conclusion
 -s suppress the summary statistics
--S show the per directive statistics
--c Show categorizations
+-D [file] dump the names of the macros upon conclusion
+-S [file] Output the per directive statistics to file
+-c [file] Show categorizations to file
 -e [file] Send evil macros to file instead of stdout
 ";
 }
@@ -174,7 +180,7 @@ $fDebugCommentRemoval = 0;
 # use strict;
 # use English;
 
-getopts('ihvDsSce:');
+getopts('ihvsD:S:c:e:');
 usage() if ($opt_h);
 
 $fShowCategorization = $opt_c;
@@ -189,10 +195,22 @@ if ($opt_i) {
 
 if ($opt_e) {
   open(EVIL,">$opt_e") || die "Failed opening $opt_e";
-}
-else {
+} else {
   open(EVIL,">-") || die "Failed opening stdout!";
 }
+
+if ($opt_S) {
+  open(STATS,">$opt_S") || die "Failed opening $opt_S";
+}
+
+if ($opt_D) {
+  open(DEFINES,">$opt_D") || die "Failed opening $opt_D";
+}
+
+if ($opt_c) {
+  open(CATEG,">$opt_c") || die "Failed opening $opt_c";
+}
+
 
 $fDebugCmdProcessing && print "@ARGV";
 
@@ -224,6 +242,12 @@ foreach $file (@ARGV)
 	  # macro has been redefined, or whatever
 	  $macros{$mname}[0] = $margs;
 	  $macros{$mname}[1] = $mdef;
+	  # let [2] count the number of times we've seen this macro define-d
+	  if (defined($macros{$mname}[2])) {
+	    $macros{$mname}[2]++;
+	  } else {
+	    $macros{$mname}[2]=1;
+	  }
 
 	  categorizeMacro($mname,$margs,$mdef);
 
@@ -251,27 +275,41 @@ if ($lines == 0) {
 } else {
   if ($opt_S) {
     # Dump statistics on frequencies of directives
+    printf STATS "DIRECTIVES#: ";
     while ( ($h,$v) = each(%macroCommands) ) {
-      printf "$h = $$v (%2.2f%%)\n", (100*$$v/$lines);
+      print STATS "$h ";
     }
+    print STATS "\n";
+    printf STATS "DIRECTIVES: ";
+    while ( ($h,$v) = each(%macroCommands) ) {
+      print STATS "$$v ";
+    }
+    print STATS "\n";
+    printf STATS "DIRECTIVES%: ";
+    while ( ($h,$v) = each(%macroCommands) ) {
+      printf STATS "%2.2f ", (100*$$v/$lines);
+    }
+    print STATS "\n";
   }
 
   if (!$opt_s) {
-    printf "DIRECTIVES: $macrodefs define-s (%2.2f%) , $cpp_cmds other (%2.2f%) , $lines lines (%2.2f%) , %d files\n", 
+    printf STATS "GLOBAL: $macrodefs define-s (%2.2f%) , $cpp_cmds other (%2.2f%) , $lines lines (%2.2f%) , %d files\n", 
     100*$macrodefs/$lines, 100*$cpp_cmds/$lines, 
       100*($macrodefs+$cpp_cmds)/$lines, $#ARGV+1;
-    printf "EVILSTATS: $cObsoleted obsoleted (%2.2f%) , $cDanger dangerous (%2.2f%) , $cEvil evil (%2.2f%) , $cIllegal illegal (%2.2f%)\n",
-    100*$cObsoleted/$macrodefs, 100*$cDanger/$macrodefs, 100*$cEvil/$macrodefs,
-    100*$cIllegal/$macrodefs;
-    print "# NullDefine PreventMI SimpleConstant SimpleConstantWithDefault SimpleStrConstant CastedConstant SimpleExpression WithNullArgs WithArgs Uncategorized:\n";
-    print "CATEGORIZATION: $cNullDefine $cPreventMI $cSimpleConstant $cSimpleConstantWithDefault $cSimpleStrConstant $cCastedConstant $cSimpleExpression $cWithNullArgs $cWithArgs $cUncategorized\n";
+    printf STATS "EVILSTATS: $cObsoleted obsoleted (%2.2f%) , $cDanger dangerous (%2.2f%) , $cEvil evil (%2.2f%) , $cIllegal illegal (%2.2f%)\n",
+    pct($cObsoleted), pct($cDanger), pct($cEvil), pct($cIllegal);
+    print STATS "CATEGORIZATION#: Total NullDefine PreventMI SimpleConstant SimpleConstantWithDefault SimpleStrConstant CastedConstant SimpleExpression WithNullArgs WithArgs Uncategorized\n";
+    print STATS "CATEGORIZATION: $macrodefs $cNullDefine $cPreventMI $cSimpleConstant $cSimpleConstantWithDefault $cSimpleStrConstant $cCastedConstant $cSimpleExpression $cWithNullArgs $cWithArgs $cUncategorized\n";
+    printf STATS "CATEGORIZATION%: %2.2f %2.2f %2.2f %2.2f %2.2f %2.2f %2.2f %2.2f %2.2f %2.2f %2.2f\n",
+    pct($macrodefs),pct($cNullDefine),pct($cPreventMI),pct($cSimpleConstant),
+    pct($cSimpleConstantWithDefault),pct($cSimpleStrConstant),pct($cCastedConstant),
+    pct($cSimpleExpression),pct($cWithNullArgs),pct($cWithArgs),pct($cUncategorized);
   }
 
   # -D = dump the defines
   if ($opt_D) {
-    print "----\n";
     foreach $mname (keys %macros) {
-      print "$mname\n";
+      print DEFINES "$mname $macros{$mname}[2]\n";
     }
   }
 }
@@ -430,6 +468,15 @@ sub FIsNumConst {
   }
 }
 
+# pct(x) returns a percentage of macros defined
+sub pct {
+  $x = $_[0];
+  if ($x < 0 || $x > $macrodefs) {
+    print STDERR "Percentage out of range: $x / $macrodefs\n";
+  }
+  return (100*$x/$macrodefs);
+}
+
 # Update globals $cXXXX, @lXXXX based on what we can tell about
 # this macro
 # FIX: need to update @l vars
@@ -447,11 +494,11 @@ sub categorizeMacro
     if ($args =~ /^\s*\(\s*\)\s*$/) {
       $cWithNullArgs++;
       $fShowCategorization && 
-	print "$currentfile:$.: WithNullArgs: $name $args $fullbody\n";
+	print CATEG "$currentfile:$.: WithNullArgs: $name $args $fullbody\n";
     } else {
       $cWithArgs++;
       $fShowCategorization && 
-	print "$currentfile:$.: WithRealArgs: $name $args $fullbody\n";
+	print CATEG "$currentfile:$.: WithRealArgs: $name $args $fullbody\n";
     }
   }
   # Must not have had args
@@ -459,38 +506,38 @@ sub categorizeMacro
     if ($lastline =~ /^\#[ \t]*ifndef[ \t]* $name$/) {
       $cPreventMI++;
       $fShowCategorization && 
-	print "$currentfile:$.: PreventMI: $name\n";
+	print CATEG "$currentfile:$.: PreventMI: $name\n";
     }
     else {
       $cNullDefine++;
       $fShowCategorization && 
-	print "$currentfile:$.: NullDefine: $name\n";
+	print CATEG "$currentfile:$.: NullDefine: $name\n";
     }
   }
   # Must have a body
   elsif ($body =~ /^\".*\"$/) {
     $cSimpleStrConstant++;
     $fShowCategorization && 
-      print "$currentfile:$.: SimpleStrConstant: $name $fullbody\n";
+      print CATEG "$currentfile:$.: SimpleStrConstant: $name $fullbody\n";
   }
   elsif ($body =~ /^\(\s*\(\w+(\s+\**)?\)\s*(.*)\)$/ && FIsNumConst($2)) {
       $cCastedConstant++;
       $fShowCategorization && 
-	print "$currentfile:$.: CastedConstant: $name $fullbody\n";
+	print CATEG "$currentfile:$.: CastedConstant: $name $fullbody\n";
     }    
   #FIX: these regexps could be better
   elsif (FIsNumConst($body) ||
-	 $body =~ /^'.'$/) {	           # single character constant 'g'
+	 $body =~ /^'(\\?.|\\\d\d\d)'$/) {	           # single character constant 'g'
     # is it just a number, possibly like "(4.566)" or "7" or "0x5FaB" or 'g'
     if ($lastline =~ /^\#[ \t]*ifndef[ \t]* $name$/) {
       $cSimpleConstantWithDefault++;
       $fShowCategorization && 
-	print "$currentfile:$.: SimpleConstantWithDefault: $name $fullbody\n";
+	print CATEG "$currentfile:$.: SimpleConstantWithDefault: $name $fullbody\n";
     }
     else {
       $cSimpleConstant++;
       $fShowCategorization && 
-	print "$currentfile:$.: SimpleConstant: $name $fullbody\n";
+	print CATEG "$currentfile:$.: SimpleConstant: $name $fullbody\n";
     }
   }
   elsif ($body =~ /^(L|x|\d|\(|\s|\)|\<|\>|\+|\-|\=|\*|\||\&|\%|\!)*$/) {
@@ -498,12 +545,12 @@ sub categorizeMacro
     # is it a numeric expression?
     $cSimpleExpression++;
     $fShowCategorization && 
-      print "$currentfile:$.: SimpleExpression: $name $fullbody\n";
+      print CATEG "$currentfile:$.: SimpleExpression: $name $fullbody\n";
   }
   else {
     $cUncategorized++;
     $fShowCategorization && 
-      print "$currentfile:$.: Uncategorized: $name $fullbody\n";
+      print CATEG "$currentfile:$.: Uncategorized: $name $fullbody\n";
   }
 }
 
