@@ -158,6 +158,9 @@ CchOffset()
 	cpp_buffer *buffer = parse_in.buffer;
 	int cbuffersBack = 0;
 	CODE:
+	RETVAL=0;
+	if (buffer->cur == 0 || buffer->buf == 0)
+     	  goto done;
 	while (buffer != CPP_NULL_BUFFER(&parse_in)) {
 	    if (buffer->nominal_fname) {
 		break;
@@ -167,8 +170,10 @@ CchOffset()
 	    }
 	}
 	RETVAL=buffer->cur - buffer->buf;
+	done:
 	OUTPUT:
 	RETVAL
+	
 
  # When expanding macros inside arguments of another expansion,
  # the STATIC_BUFFERS of parse_in are used.  use "print parse_in" from gdb
@@ -343,6 +348,21 @@ ExitScope()
 	exit_scope(ParseStack->contxt);
 
 
+###%\backcall{}{PushHashTab}{}
+###% Copies the current cpp hash table and begins using the copy;  the copy
+###% can later be thrown out using PopHashTab()
+void
+PushHashTab()
+	PPCODE:
+	cpp_push_hashtab(&parse_in);
+
+###%\backcall{}{PopHashTab}{}
+###% Throw out a previously pushed cpp hash table; revert to the prior
+###% hash table
+void
+PopHashTab()
+	CODE:
+	cpp_pop_hashtab(&parse_in);
 
 ###%\backcall{}{SetParseDebugging}{}
 ###% Set the yydebug flag to TRUE for the underlying parser.
@@ -350,9 +370,9 @@ ExitScope()
 ###% It has no affect if --noparse is used.  Initially, parser debugging is off.
 void
 SetParseDebugging()
-	CODE:
-	ct_yydebug = 1;
-
+ 	CODE:
+ 	ct_yydebug = 1;
+ 
 
 ###%\backcall{}{ResetParseDebugging}{}
 ###% Reset the yydebug flag to FALSE for the underlying parser.  
