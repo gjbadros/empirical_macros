@@ -2,11 +2,19 @@
 # Makefile for post-processing of evilmacros output files
 # (Using the macros-* scripts)
 
-# Directories on uni
+#NOTE: You may need to cp this Makefile into the directory and
+# make some changes (e.g. to the first several settings).  If so
+# be sure to point COMMON_DIR to your scripts directory!
+
+# Directories
 PKG_DIR := /tmp/gjb/packages
 ANALYZE_OUTPUT_DIR := /tmp/gjb/data
-EXTRA_ANALYZE_FLAGS := -g14
 COMMON_DIR := $(shell dirname $$(ls -l Makefile | awk '{print $$NF}'))
+#COMMON_DIR := /homes/gws/mernst/research/notkin/macros/scripts
+#COMMON_DIR := /homes/gws/gjb/macros/scripts
+
+EXTRA_ANALYZE_FLAGS := ""
+#EXTRA_ANALYZE_FLAGS := -g14
 
 PAPER_DIR := /homes/gws/gjb/macros/papers
 
