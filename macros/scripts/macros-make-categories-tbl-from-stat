@@ -39,7 +39,7 @@ else { OFS=" & "; \
 ORS="\\\\\\hline\n"; \
 print "\\begin{tabular}{|l|c|c|c|c|c|c|c|}\\hline"; } \
 print "",        "Null",   "",       "",            "",          "Stringization", "Other syntatic","Failed"; \
-print "Package", "Define", "Literal", "Expression", "Statement", "and pasting",   "macros",        "classification"; } \
+print "Package", "Define", "Constant", "Expression", "Statement", "and pasting",   "macros",        "classification"; } \
 END { \
 if (!nolatex) { print "\\hline" }; \
 totLine = sNull + sLit + sExp + sStm + sStrPast + sSyntax + sFail;
