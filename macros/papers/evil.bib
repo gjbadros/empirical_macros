@@ -236,3 +236,64 @@ which they avoided.  The audience is programmers with no knowledge of C++.
 Need to add reference on CCEL.
 Also CodeWizard, which implements the tests in Scott Myers's books:
      http://www.parasoft.com/wizard/papers/tech.htm
+
+
+
+
+@InProceedings{SpencerC92,
+  author = 	 "Henry Spencer and Geoff Collyer",
+  title = 	 "\#ifdef Considered Harmful, or Portability Experience with C News",
+  booktitle = 	 "Usenix Summer 1992 Technical Conference",
+  year =	 1992,
+  address =	 "San Antonio, Texas",
+  month =	 jun # "~8-12,",
+  pages =	 "185-197",
+  url = 	 "http://9www.x.bell-labs.com/user/geoff/ifdefs.ps.Z",
+}
+Abstract:
+  We believe that a C programmer's impulse to use #ifdef in an attempt at
+  portability is usually a mistake.  Portability is generally the result of
+  advance planning rather than trench warfare involving #ifdef.  In the
+  course of developing C News on different systems, we evolved various
+  tactics for dealing with differences among systems without producing a
+  welter of #ifdefs at points of difference.  We discuss alternatives to,
+  and occasional proper use of, #ifdef.
+While this paper talks a fair amount about #ifdef, it is more about
+portability -- and even just good software engineering, such as advance
+planning.  It makes strong arguments against most uses of #ifdef.  The
+concluding paragraph:
+  In our experience, #ifdef is usually a bad idea (though we do use it in
+  places).  Its legitimate uses are fairly narrow, and it gets abused
+  almost as badly as the notorious goto statement.  Like the goto, the
+  #ifdef often degrades modularity and readability (intentionally or not).
+  Given some advance planning, there are better ways to be portable.
+The authors provide a number of principles to follow, such as
+ * define a portable interface used everywhere, then provide multiple
+   implementations of that interface for different systems.
+ * use #ifdef only in declarations and macro definitions, never at call sites.
+ * choose a standard interface, implementing it if your system's is broken
+   or missing.
+ * write shell scripts or use standard programs (ls, du) instead of C code
+ * abolish arbitrary numeric limits; use dynamically-sized objects instead
+ * choose among including separate files, rather than merging them via #ifdef
+They give some statistics about C News; in 1000 lines of header files and
+20,000 lines of C, they use only 166 #ifdefs.  Apparently #ifndef is
+included in this count; they don't say whether #if defined(X) is included.
+This isn't directly comparable to our statistics, but here's a try:
+  Assume that 30% of lines are comments or code (the average over 30 packages).
+  Assume that 30% of all conditional lines are #if[n]def (also the average).
+  Then they have 14375 = (* (+ 19762 955) (/ 136 196.0)) NCNB lines, of which
+  543 = (* 166 (/ (+ 202  6902  25844  8871  13433  4966 0.0) (+ 13433  4966)))
+  are conditionals, or 3.78% = (/ 54300.0 14375).
+  3.8% is under our average of 4.4%, and for a highly portable program.
+They also break down the 166 uses of #ifdef into categories:
+ * providing defaults (#ifndef X  #define X  default #endif)
+ * commenting
+ * configuration
+ * multiple inclusion prevention
+ * __STDC__
+ * pdp11
+ * lint
+ * sccsid
+ * STATS
+ * other (just one in this category)
