@@ -623,9 +623,9 @@ my $current_function_start_line; # the first line of the current function
 # by putting functions that need them after a "package" declaration
 # to change their scope.  We might then need to access globals explicitly,
 # but it could be worth it-- definitely if we move to separate files
-my $wf_last_filename;
-my $wf_last_line_no;
-my $wf_last_index;
+my $wf_last_filename = "%EMPTY CACHE%";
+my $wf_last_line_no = -1;
+my $wf_last_index = -1;
 
 # @files contains the list of files we want to process
 # %files tells where the file got added
@@ -661,6 +661,12 @@ my ($i_usage_code, $i_usage_cpp) = (0..1);
 my %macros_uses = ();		# hashes macro names to an array
                                 # listing the number of times they are
                                 # used in (code,cpp_directives)
+
+# count of uses is half the number of keys in %macros_file_line_uses
+my %macros_file_line_uses = ();	# hashes macro names to an array
+				# where consecutive elements
+                                # list the filename and line
+				# on which it appears
 
 # can compute the number of uses at global scope with macros_uses and
 # the length of the list in macros_used_in_functions
@@ -783,6 +789,7 @@ sub process_macro_definition
     $macros_c_undefs{$name} = 0;
     $macros_uses{$name} = [0,0];
     $macros_used_in_functions{$name} = [];
+    $macros_file_line_uses{$name} = [];
   }
 
 
@@ -824,6 +831,7 @@ sub process_macro_definition
   $mline[$thisnum] = current_line_no();
   # PERLNOTE: be careful not to do
   # $mexpansionuses[$thisnum] = ();  ##WRONG
+  # you'll get a wierd error message at the point of use
   @{$mexpansionuses[$thisnum]} = ();
 }
 
@@ -2441,6 +2449,9 @@ sub get_macro_call_types
 #  foreach $this_file (@files)
   for (; $ifiles <= $#files; $ifiles++)
     { $current_file = $files[$ifiles];
+      # FIX: don't assert this
+      die if defined($files_lines{$current_file});
+      @{$files_lines{$current_file}} = ();
       $current_ft_index = compute_current_ft_index($current_file);
       if ($opt_v) {
 	print STDERR "file: \"$current_file\" ($files{$current_file})"; 
@@ -2789,10 +2800,6 @@ ATCOMMA:
 			if ($symtab_scopes == 1 && defined($current_function)) {
 			  my $end_line = current_line_no();
 			  # update our per-file list of function locations
-			  if (!defined($files_lines{$current_file})) {
-			    $files_lines{$current_file} = ();
-			  }
-			  # update our per-file list of functions
 			  push @{$files_lines{$current_file}}, 
 			  ($current_function_start_line,"$current_function",
 			   $end_line);
@@ -3878,24 +3885,36 @@ sub analyze_for_macro_use {
 	push @{$mexpansionuses[$mi]}, $word;
 	# print STDERR "Macro $cpp_defining_macro_name expands to something with $word-- using index $mi\n";
       }
+      push @{$macros_file_line_uses{$word}}, ($current_file,current_line_no());
+    }
+  }
+}    
 
-      # FIX: need to look for if we're in a function now and update that
+#FIX: write this
+sub compute_macros_used_in_functions {
+  check_args(0,"compute_macros_used_in_functions",caller,@_);
+
+  my ($macro,$uses_ref);
+
+  while ( ($macro,$uses_ref) = each %macros_file_line_uses) {
+    my $i = 0;
+    # FIX: this is a bit of a hack; we need to empty the cache
+    # when we start looking at a different macro's uses, since
+    # we can't just continue from our last point if the use
+    # happens to be in the same file
+    $wf_last_filename = "%EMPTY CACHE%";
+    # print STDERR "Handling $macro\n";
+    for ( ; $i+1 <= $#{$uses_ref}; $i+=2 ) {
+      my ($file,$line) = @{$uses_ref}[$i,$i+1];
       my $function_name;
-#      if ($function_name = which_function($current_file,current_line_no())) {
-      # FIX: current_function is only an approximation to the analysis
-      # that needs to be done-- it gets set too late
-      if (!($function_name = $current_function)) {
+      if (!($function_name = which_function($file,$line))) {
 	$function_name = "%global%";
       }
       # print STDERR "USEIN: $function_name\n";
-      push @{$macros_used_in_functions{$word}}, "$current_file:" 
-	. current_line_no() . ": $function_name";
+      push @{$macros_used_in_functions{$macro}}, "$file:$line:$function_name";
     }
   }
-    
-  # print STDERR "AFMU: $line";
 }
-
 
 # return the index into the @mXXX arrays for the macro definition described
 sub mindex_from_name_file_line {
@@ -3946,10 +3965,25 @@ sub which_function {
   # we return $$listref[i+1]
 
   # first step through the list to the interesting case
-  while ( $i <= $#{$listref} && $line_no < $$listref[$i]) {
-    $i += 3;
+
+  if (!defined($listref)) {
+    print STDERR "no function information for $filename, $line_no";
+    return undef;
   }
 
+  if ($#{$listref} < $[ || $line_no < $$listref[0]) {
+    return undef;
+  }
+
+  while ( $i <= $#{$listref} && $line_no > $$listref[$i]) {
+    # print STDERR "Looking at fn $$listref[$i+1] ($$listref[$i],$$listref[$i+2]) for line $line_no in $filename\n";
+    $i += 3;
+    }
+
+  if ($i >= 3) {
+    $i -= 3;
+  }
+  
   # three possibilities:
   # 1) $i > $#{$listref} => return undef, since it's past all the fns listed
   # 2) $line_no is in the range $$listref[$i] thru $$listref[$i+2] (inclusive),
@@ -3958,22 +3992,23 @@ sub which_function {
 
   my $fn_name;			# starts out undefined
 
-  if ($i > $#{$listref}) {
-    # undef
-  } elsif ($line_no >= $$listref[$i] && $line_no <= $$listref[$i+2]) {
+  if ($line_no >= $$listref[$i] && $line_no <= $$listref[$i+2]) {
     $fn_name = $$listref[$i+1];
-  } elsif ($line_no > $$listref[$i]) {
+  } elsif ($line_no > $$listref[$i+2]) {
+    # undef
+  } elsif ($line_no < $$listref[$i]) {
     # undef
   } else {
-    die "Uexpected case in which_function";
+    die "Uexpected case in which_function: $filename:$line_no, @$listref[$i,$i+2]:\
+$i $#{$listref}\n";
   }
 
   # FIX: remove these debug messages
-  if (defined($fn_name)) {
-    print STDERR "Checking for the function:$filename:$line_no: got $fn_name\n";
-  } else {
-    print STDERR "$filename:$line_no: No function\n";
-  }
+#  if (defined($fn_name)) {
+#    print STDERR "function at $filename:$line_no => $fn_name\n";
+#  } else {
+#    print STDERR "function at $filename:$line_no => %NONE%";
+#  }
     
 
   ($wf_last_filename, $wf_last_line_no ) = ($filename,$line_no);
@@ -4243,6 +4278,8 @@ initialize_builtin_macros();
 
 # Begin Processing files
 
+print STDERR "Processing at least ", $#files+1, " files (plus possible \#included files)...\n";
+
 find_macro_definitions();	# also counts other preprocessor usage
 
 # Kind of a hack
@@ -4268,6 +4305,7 @@ get_macro_call_types() if (!$opt_1);
 print STDERR "Computing various global statistics...\n";
 
 compute_global_cpp_sums();
+compute_macros_used_in_functions();
 
 ### All the files have been read; now process the macros
 # We initialized $cppcmdcount{"define"}, so it will be defined
