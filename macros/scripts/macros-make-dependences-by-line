@@ -3,4 +3,4 @@ TYPE=$1; shift
 files=($@)
 cmd=("=(awk '/${TYPE} dependence/,/Total:/ { if (f == 0) { NM = ARGV[1]; gsub(/\..*$/,\"\",NM); print NM; f = 1; } else if (/Total:/) { exit} else { print \$2 } }' "${^files}")")
 #print -u2 $cmd
-eval paste $cmd | awk '{printf "%4d:\t%s\n",(NR-2>0?NR-2:0),$0;}'
+eval paste $cmd | awk '{printf "%4d\t%s\n",(NR-2>0?NR-2:0),$0;}'
