@@ -299,11 +299,8 @@ main (int argc, char **argv, char **env)
     fprintf(stderr,"Option --noparse given, just running cpp w/o grammar!\n");
     for (;;)
       {
-      enum cpp_token kind;
-      kind = cpp_get_token (&parse_in);
-      gjb_call_hooks_sz_szl(CPP_OPTIONS(&parse_in),HI_TOKEN,SzFromToken(kind),
-			    parse_in.token_buffer,
-			    CPP_WRITTEN(&parse_in));
+      enum cpp_token token;
+      token = cpp_get_token (&parse_in);
       cBytesCppRead += CPP_WRITTEN(&parse_in);
       if (! opts->no_output)
 	{
@@ -311,9 +308,9 @@ main (int argc, char **argv, char **env)
 	}
       cBytesOutput += CPP_WRITTEN(&parse_in);
       gjb_call_hooks_szl(opts,HI_CPP_OUT,parse_in.token_buffer,CPP_WRITTEN(&parse_in));
-      gjb_call_hooks_sz_szl(opts,HI_TOKEN,SzFromToken(kind),parse_in.token_buffer,
+      gjb_call_hooks_sz_szl(opts,HI_TOKEN,SzFromToken(token),parse_in.token_buffer,
 			    CPP_WRITTEN(&parse_in));
-      if (kind == CPP_EOF)
+      if (token == CPP_EOF)
 	break;
       parse_in.limit = parse_in.token_buffer;
       }
