@@ -1,0 +1,510 @@
+From: David Notkin <notkin@cs.washington.edu>
+Subject: FW: Your paper submitted to SPE
+To: Greg Badros <gjb@cs.washington.edu>
+Date: Wed, 5 May 1999 14:21:10 -0700 
+X-From-Line: notkin@cs.washington.edu  Wed May  5 14:21:21 1999
+Received: from exchsrv1.cs.washington.edu (exchsrv1.cs.washington.edu [128.95.3.128]) by june.cs.washington.edu (8.8.7+CS/7.2ju) with ESMTP id OAA11458 for <gjb@cs.washington.edu>; Wed, 5 May 1999 14:21:20 -0700
+Received: by exchsrv1.cs.washington.edu with Internet Mail Service (5.5.2448.0)
+	id <2YN0PXFW>; Wed, 5 May 1999 14:21:19 -0700
+Message-ID: <055A195871E5D1119F8100A0C9499B5FA48EEA@exchsrv1.cs.washington.edu>
+MIME-Version: 1.0
+X-Mailer: Internet Mail Service (5.5.2448.0)
+Content-Type: text/plain;
+	charset="ISO-8859-1"
+Lines: 494
+Xref: elwha.cs.washington.edu inbox:10367
+
+Haven't read these yet...let's read them and chat.
+
+-----Original Message-----
+From: ss@cs.purdue.edu [mailto:ss@cs.purdue.edu] 
+Sent: Wednesday, May 05, 1999 2:20 PM
+To: notkin@cs.washington.edu
+Cc: ss@cs.purdue.edu
+Subject: Your paper submitted to SPE
+
+
+Greetings!
+
+Please acknowledge receipt of this message.
+
+Thank you,
+
+Sara Steinbrueck
+Editorial Assistant
+
+-----------------------
+Dear Prof. Notkin:
+
+Enclosed are two referees' reports for your paper
+"A Framework for Preprocessor-Aware
+C Source Code Analyses"
+which you submitted for publication in
+Software--Practice & Experience.
+
+As you can see, the referees disagree. If you would
+like to revise the paper incorporating or otherwise
+responding to the referees' comments, I will
+consider the revision for publication. However,
+the revision must satisfy both referees.
+
+The revised paper must be accompanied by a cover
+letter detailing the corrections made to the
+original paper. Further refereeing will be 
+necessary so please send three copies of the manuscript.
+I have enclosed a copy of the guidelines used by
+the referees to judge papers submitted to SPE and a
+copy of the Manuscript Preparation Guidelines that
+should be followed as closely as possible if you decide
+to prepare a revision. 
+
+Whatever your decision, it would be helpful if you
+would inform me of your intentions. I look forward
+to hearing from you.
+
+Sincerely yours,
+
+Douglas E. Comer
+Editor
+
+DEC:ses
+
+Enclosures: Referees' Reports, Manuscript Preparation
+Guidelines, Referee Guidelines
+
+--------------------------
+Referee A:
+
+A Framework for Preprocessor-Aware C Source Code Analyses
+
+AUTHORS : Greg J. Badros and David Notkin
+
+RECOMMENDATION : Acceptable after minor revision
+
+COMMENTS : listed below
+
+SUMMARY : This paper describes a new tool for performing analyses that
+would benefit from both parser-provided and preprocessor-provided
+information.  The tool is flexible as it uses perl as its scripting
+language.  Example analyses include call-graph extraction and tag file
+generation.  The paper provides a brief and thorough motivation for
+its creation and design and a description of the problems of prior
+approaches to the same and similar problems.
+
+---------------------------------------------------------------------
+
+Overall, I liked this paper.  The approach of integrating CPP with a
+YACC-like tool is both simple and novel, and is well-focused for the
+problems that the authors are trying to solve.  I was a little
+disappointed on what I found to be the scope of the paper, namely
+performing analyses that would benefit from both parser-provided and
+preprocessor-provided triggers.  I was hoping that the framework would
+be more general for solving other problems such as mapping AST
+information to source code locations.  (There is a subsection on using
+the tool with Emacs, but I didn't personally find it enlightening.)
+
+Therefore, I did get some sense that this was a ``yet another tool''
+paper, and since I've done similar work in this area I'm always
+looking for a ``this is the tool'' paper.  Perhaps there is no
+``silver bullet'' for these problems?  I'd like to see the authors
+comment on this a little to help put their tool in perspective.  (For
+example, what does this say about LSME, which was also developed by
+one of the coauthors?)
+
+I found the motivation for the paper and explanation of the advantages
+and disadvantages of various prior solutions to be thorough and clear.
+Overall, I think the paper did a good job of presenting its material,
+with just enough emphasis on prior solutions before getting to the
+real ``meat'' of the paper.  There was also a good balance between
+motivation, implementation, limitations, and examples.  I had little
+to no problems with the paper structure and style of writing.
+
+The limitations section of the paper was very good.  The authors
+clearly know what their tool can and cannot do and how it should be
+improved.  A good discussion of related work is in this section and in
+other places.
+
+A few questions that I had (but I could guess to answer to) that I
+would like to see addressed are listed below.  Not one of these questions
+is so important as to keep the paper from being published, but I think
+that their answers would enhance the understanding of the paper.
+
+If 60% of the main implementation has to deal with passing arguments
+between C and perl, do the authors still feel justified in using perl?
+Would using C/C++ and providing higher-order functions through class
+libraries such as STL be acceptable?
+
+Can the tool user add new callbacks/actions or only the tool
+developer?  (And a similar question for backcalls.)  What this say
+about the ``framework''?  Flexible but not extensible?  (No access to
+the raw AST.)
+
+How are backcalls different from inherited attributes?
+
+Sharing information across file-based invocations of the tool is
+important (as the authors state).  Do they have and plans to
+incorporate pointer information (which is inherently global) in their
+approach?  Without pointer information, function pointers are a big
+sticking point for truly accurate and useful call-graph extraction,
+which would seem to be a big motivation for the authors.
+
+Is the tool available?
+
+The buffer-pushing approach to handling ifdef's would seem to be at
+the wrong level of abstraction for the tool user.  Why not encapsulate
+all of the ``boiler-plate'' code in a few functions for the tool user.
+(The approach of looking at all of the various paths mentions in the
+limitations section seems like a good one.)
+
+
+-----------------------------
+Referee B:
+
+A Framework for Preprocessor-Aware C Source Code Analyses
+
+Authors: Greg J. Badros and David Notkin
+	
+	Comments for Author, suggestions for improvement
+	================================================
+	
+	While the work may have some value, the paper fails to motivate its
+	importance.  The paper needs to include a concrete example where the
+	methods introduced demonstrate clear value, and the given example
+are
+	not satisfactory.  The paper is well-written, but should be
+condensed to
+	remove many unnecessary and uninteresting details.
+	
+	Some general comments:
+	
+	Its not clear to me what the motivation of the work is.  You
+complain
+	about the preprocessor leading to misunderstanding for programmers,
+but
+	none of the examples you use seem to help this.
+	
+	Why is the work so closely tied to C and cpp?  I have used the cpp
+	preprocessor on non-C programs (e.g., Java and custom scripts), and
+used
+	different pre-processors on C programs.  A more general discussion
+of
+	the pros and cons of pre-processing and different preprocessing
+systems
+	would be appropriate.
+	
+	Some specific comments:
+	
+	Section 1.1.  Your choice of "unprocessed" and "preprocessed" is
+	confusing.  Both "un-" and "pre-" sound like code that has not been
+	processed.  I don't see why you wouldn't use "unprocessed" and
+	"processed" or "postprocessed" --- traditionally, the "preprocessor"
+	runs before the compiler, but what is produces is not "preprocessed"
+	code.
+	
+	Section 1.2.  Remove footnote 2.
+	
+	Section 1.2.  The description of what Field and LCLint do is either
+	incorrect or worded so unclearly as to be meaningless.
+	
+	The name "PCp^3" is pretty confusing and awkward.  I kept looking
+for
+	footnotes when I read it.  If you want to use PCppP that's okay, but
+not
+	real easy to pronounce either!
+	
+	Section 2.  Why Perl?  (This is touched on in 4.3, but should be
+	justified here.)  I question the choice, since it will make things
+	inaccessible to the majority of C programmers who could potentially
+	benefit from the tool.  Why was C with some good library functions
+	provided not considered a better choice?
+	
+	Section 2.1.  This is an odd choice for a first example.  It has
+nothing
+	to do with the set up relating to preprocessing.
+	
+	Section 2.2.  Does your EXPAND_MACRO treat,
+	
+		#define MAX 32
+		... (use MAX)
+		#define MAX(a,b) ((a > b) ? (a) : (b))
+		... (use MAX)
+	
+	all the same?  If so, the func_calls number will be wrong.  (I don't
+see
+	any mechanism described in the paper that avoids this.)
+	
+	I think using the name along to identify macros is a big mistake.
+There
+	will be multiple macros using the same name in many C programs, and
+it
+	appears that your EXPAND_MACRO hook does not allow them to be easily
+	distinguished.
+	
+	In general, I don't see why this example is compelling or
+interesting.
+	There are lots of ways to extract call graphs, and there are no
+clear
+	advantages of your mechanisms shown by these examples.
+	
+	Section 2.3.  Whats interesting about this?  I'd recommend ignoring
+all
+	the conditional macros completely unless you have something
+interesting
+	to contribute here.  Why are #include's ignored though?  They tend
+to be
+	much more problematic, and difficult to handle in a good way.
+	
+	Section 3.  This section doesn't really provide the "Further
+Examples"
+	as advertised.  There needs to be a clear example of when/if this is
+	useful. 
+	
+	Section 3.1.  How is "the order that they are used in the body of
+the
+	expansion" defined?  Is it syntactic or semantic?  What is the order
+is
+	undefined?
+	
+	Section 4.  Omit --- nothing interesting here, except your choice of
+	Perl which should be earlier and more thoroughly explained.
+	
+	Section 5.  Note that lclint's annotations also direct the parser as
+to
+	how the macro and its expansion should be parsed.  This enables
+support
+	for the kinds of abstractions you mention in Section 1.1.  I'm not
+sure
+	what is meant by "dealing with macro expansions is largely ignored",
+and
+	a citation to a section on macro checking and annotations.
+	
+	Appendix A.  Why are the parameters not shown?  Without them, it is
+	unclear what exactly can be expressed with your hooks.
+	
+	
+--------------------------------------
+Software - Practice & Experience
+
+Manuscript Preparation Guidelines
+
+
+
+Proper preparation of papers submitted to Software facilitates 
+processing and reduces publication delays. Editors, referees, and 
+publishers typically operate on a "easiest job next" basis. Delays can 
+be minimized by making papers "easy" to process. After acceptance, 
+papers that conform to the style of the journal will be processed 
+before those that do not. In addition to the Notes for Contributors 
+given on the inside back cover of every issue, the following 
+suggestions should be considered when preparing a paper.
+
+
+
+1.	Double-space the paper. If the paper is prepared using a type-
+setting system, such as troff or TeX, 10-point type on 16-point 
+baselines or 12-point type on 18-point baselines is sufficient.
+
+2.	Give references in the order of appearance, numbered consecu-
+tively.
+
+3.	Use unnumbered section headings. Restrict headings to two 
+levels (major and minor), and clearly distinguish between 
+major and minor headings. Use short section headings and 
+avoid repeating parts of the paper's title, e.g., in a paper enti-
+tled `A Fast Pascal Compiler', use `Experience' instead of 
+`Experience with the Compiler'.
+
+4.	 Include a summary and up to six keywords.
+
+5.	 Give complete mailing addresses of all authors including zip 
+codes or other postal codes. If authors have email addresses, 
+please include these.
+
+6.	 Number figures and tables separately using roman numerals. 
+Make legends brief.
+
+7.	 Omit introductory "road maps" that simply echo the titles of 
+subsequent sections. For example, omit passages such as `Sec-
+tion 1 describes the gross structure of the compiler, and Section 
+2 describes the code generator. The performance of the com-
+piler is outlined in Section 3, and conclusions and future work 
+are discussed in Section 4'. Road maps are necessary only if 
+they say something important about reading the rest of the 
+paper, e.g., `The following sections describe the compiler's 
+gross structure, code generator, and performance. Code opti-
+mization is described in both the code generator and perfor-
+mance sections'.
+
+8.	Avoid unnecessary detail; strive for high "technical density." 
+Include details that illustrate the important aspects of the work 
+and omit the rest. Do not include details just for the sake of 
+completeness; relegate those to a technical report and reference 
+it. A ten-page paper in which every paragraph contains inter-
+esting and useful material is preferable to a twenty-page paper 
+in which the reader must search for the interesting material. 
+Edit the paper ruthlessly; omit paragraphs, figures, tables, pro-
+grams, and sections that do not make contributions commen-
+surate with their "size."
+
+9.	Avoid appendices. Absorb the interesting material into the 
+body of the paper; omit the rest.
+
+10.	Do not cite inaccessible references. Avoid citations to technical 
+reports (except as explained above), unpublished manuscripts, 
+or personal communications. Cite only the most accessible and 
+most recent references, e.g., cite a published paper, but not its 
+predecessor technical report. References to Ph.D. dissertations 
+and M.S. theses are preferable to references to the correspond-
+ing technical reports. References must be complete. Include all 
+information needed to find the reference.
+
+11.	Avoid the use of names in citations. For example, use `Empiri-
+cal studies of Fortran programs suggest most statements are 
+simple1' instead of `Empirical studies of Fortran programs by 
+Knuth1 suggest...', and use `Ingres2 uses several files...' instead 
+of `Stonebraker's Ingres2 uses several files...'.
+
+12.	Use correct grammar in direct citations, e.g., use `Complete 
+specifications are given in Reference 4' instead of `Complete 
+specifications are given in [4]'.
+
+13.	Make the `Conclusions' contribute worthwhile material; do not 
+simply restate the paper's substance.
+
+14.	Avoid lengthy or overly general acknowledgments, e.g., use `C. 
+Smith wrote the code generator and compiler test suite' instead 
+of `My thanks to C. Smith for his assistance.'
+
+15.	Avoid parenthetical remarks. If they are really important, ele-
+vate them to non-restrictive clauses or to separate sentences. 
+For example, use `The translator, a 6,570-line C program, is a 
+conventional two-pass compiler', `The translator is a conven-
+tional two-pass compiler. It consists of 6,570 lines of C and 
+requires 34 Kilobytes of memory.', or simply `The translator is a 
+conventional two-pass compiler' instead of `The compiler 
+(written in 6,570 lines of C) is a conventional two-pass com-
+piler'. 
+
+16.	Use the active voice instead of the passive voice, e.g., use `The 
+first phase does lexical analysis' instead of `Lexical analysis is 
+done by the first phase'.
+
+17.	Avoid numbered lists (e.g., these suggestions) unless explicit 
+reference is made to the items. Rewrite short unnumbered lists 
+as paragraphs.
+
+18.	Avoid the pronouns `his' and `her'; rewrite sentences in which 
+they appear or use the plural `their'.   Avoid using `I' or `we'.
+
+19.	Do not use the future tense unnecessarily, e.g., use `The com-
+piler emits triples' instead of `The compiler will emit triples'. 
+Also, do not use the future tense to refer to subsequent material 
+in the paper, e.g., use `The algorithm, detailed below, is qua-
+dratic' instead of `The algorithm, which will be given in detail 
+below, is quadratic'.
+
+20.	Use `which' and `that' correctly. `That' introduces restrictive 
+clauses; `which' introduces non-restrictive clauses and is 
+always set off by commas. Restrictive clauses are essential and 
+nonremovable. Non-restrictive clauses are parenthetical and 
+optional. For example, use `Interior nodes that represent binary 
+operators have an additional type field' instead of `Interior 
+nodes which represent binary operators have an additional 
+type field', and `The code generator, which is written in C, is 
+table-driven' instead of `The code generator that is written in C 
+is table-driven'. 
+
+21.	Give the referent of `this' explicitly, e.g., use `A major problem 
+is the performance of the compiler. This problem is...' instead 
+of `A major problem is the performance of the compiler. This 
+is...'.
+
+22.	For program material, use a style that is consistent with the fol-
+lowing conventions. Programs are set in 11-point Univers Light 
+using the case and indentation given by the author. For Algol 
+68, reserved words are set in Univers Bold. For Ada, reserved 
+words are set in Univers Bold unless the author uses uppercase 
+for reserved words. Program variables appearing in running 
+text are set in Univers Light. Program material for which spac-
+ing and typography are essential to the technical content 
+should be identified by marginal notes.
+
+23.	Additional suggestions concerning style and usage can be 
+found in The Chicago Manual of Style, The U. of Chicago Press, 
+Chicago, 1969; Mary-Claire van Leunen, A Handbook for Schol-
+ars, Knopf, New York, 1978; and W. Strunk, Jr. and E.B. White, 
+The Elements of Style, 2nd edition, Mcmillan, New York, 1972.
+
+--------------------------
+Software - Practice & Experience
+
+Refereeing Guidelines
+
+
+The purpose of Software- Practice & Experience  is to convey the 
+results of practical experience (whether successful or not) that might
+benefit 
+the computing community. The key criterion for a paper is that it make a 
+contribution from which other persons engaged in software design and 
+implementation might benefit. Originality, although important, is secondary,
+
+especially in cases where apparently well known techniques do not appear in 
+the readily available literature.
+
+ Papers describing both `systems' and `applications' software in any 
+computing environment are acceptable. Typical topics include software design
+
+and implementation, case studies, studies describing the evolution of
+software 
+systems, critical appraisals of systems, and the practical aspects of
+software 
+engineering. Theoretical discussions can be included, but should illuminate 
+the 
+practical aspects of the work, or indicate directions that might lead to 
+better 
+practical systems.  
+
+Papers may be of any length, ranging from a short note (perhaps a 
+page) to a full treatment of a substantial software system (say 40 pages). 
+Good writing is imperative for the effective explanation of software
+systems. 
+It 
+is important that details be given where they enhance the paper's
+contribution 
+and be suppressed where they simply add bulk.
+
+ Referees' recommendations usually fall into one of the following 
+categories:
+ 
+Acceptable. The paper's contribution warrants publication in Software. 
+Minor editorial suggestions or errors should be noted and will be handled by
+
+the Editor. 
+ 
+Acceptable after minor revision.  The paper's contribution warrants 
+publication, but requires minor revisions that cannot be handled by the 
+Editor. 
+The referee's report should detail the suggested revisions as specifically
+and 
+clearly as possible.  It should also indicate clearly those revisions the 
+referee 
+considers mandatory.  In most cases, papers in this category are returned to
+
+the author for revision and further refereeing is done by the Editor. 
+
+Acceptable after major revision.  The paper's contribution may 
+warrant publication, but major revisions are necessary. As for the previous 
+category, the suggested revisions should be detailed as specifically and 
+clearly 
+as possible with an indication of those that the referee considers
+mandatory. 
+Papers in this category are usually returned to the author for revision and 
+sent 
+back to the original referees for further review. 
+
+Unacceptable.  The paper's contribution does not warrant publication. For 
+papers in 
+this category, specific reasons for rejection should be stated.
+
+
+
