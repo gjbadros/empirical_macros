@@ -53,7 +53,7 @@ close(FILE);
 @lines_sorted = sort { $$a[7] <=> $$b[7] } @lines;
 
 print join("\t", "package", "other", "line", "conditional", "include", "undef", "define", "total"), "\n";
-print "Average";
+print "Mean";
 foreach $val ($tot_other/$tot_lines, $tot_line/$tot_lines, $tot_cond/$tot_lines, $tot_include/$tot_lines, $tot_undef/$tot_lines, $tot_def/$tot_lines, $tot_total/$tot_lines)
 { printf("\t%2.3f", $val); }
 print "\n";
