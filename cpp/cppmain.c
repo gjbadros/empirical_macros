@@ -200,7 +200,7 @@ main (int argc, char **argv, char **env)
   int return_exit_code = SUCCESS_EXIT_CODE;
 
   /* Perl startup code */
-  char *startup_code[] = { "", "-I", "/tmp/gjb/cpp", "-e", "use cpphook" };
+  char *startup_code[] = { "", "-I", "/scratch/gjb/cpp", "-e", "use cpphook" };
   my_perl = perl_alloc();
   perl_construct( my_perl );     
   perl_exit_status = perl_parse(my_perl, cpp_functions_init, 
