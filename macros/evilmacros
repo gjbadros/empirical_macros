@@ -5056,6 +5056,8 @@ sub initialize_lists_of_hashes () {
   my $j;
   foreach $i (0..$c_ftype-1) {
     foreach $j (keys %cppcmdcount) {
+# FIX: gjb thinks these are same      
+#      $rg_cppcmdcounts[$i]->{$j} = 0;
       $ {$rg_cppcmdcounts[$i]}{$j} = 0;
     }
     foreach $j (@categoryname) {
