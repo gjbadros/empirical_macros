@@ -148,7 +148,7 @@ from C to C++.  Two, we wanted to know how difficult it would be to
 produce a tool framework that would simplify the development of tools
 that are knowledgeable about the preprocessor.
 
-Our data and our insights take substantative steps towards answering
+Our data and our insights take substantive steps towards answering
 these two questions; throughout the body of the paper, we use these
 two issues as the primary basis for putting the data into context.  We
 believe, however, that the utility of the data could extend further.
@@ -333,8 +333,8 @@ and they more accurately reflect actual use, than previous work.
 
 
 
-%[[Point reader at conclusion/summary of results, at end of paper (and write
-%that!).]]
+% [[Point reader at conclusion/summary of results, at end of paper (and write
+% that!).]]
 
 % \subsection{Outline}
 % 
@@ -385,7 +385,7 @@ and they more accurately reflect actual use, than previous work.
 %of the added richness and benefits of C++ constructs.
 %
 
-%[[Where does this point go?]]
+% [[Where does this point go?]]
 %
 %Another niche already filled by our tool is that of a ``macro lint''
 %program which warns of potentially dangerous (or non-standard) uses of Cpp.
@@ -451,7 +451,7 @@ often other source files are also automatically generated.\footnote{In a
   instance, the Makefile for \pkg{gs} creates \file{gconfig.h}, compiles
   some packages, and then deletes it once again.  Our tools automatically
   informed us of such problems by detecting a use of a macro
-  without any corresponding defintion (which was in the deleted file).}
+  without any corresponding definition (which was in the deleted file).}
 The second compilation identified global variables.  We made all variables
 non-{\tt static} (by making {\tt static} a preprocessor macro with an empty
 expansion), then recompiled (often the link step failed because of multiple
@@ -982,10 +982,10 @@ ASSERT(p) if (!(p)) botch(\verb|__STRING|(p)); else}).
   definitively parsed as such, not merely if it has some tokens that
   predominantly appear in symbols or if some arguments passed to it will
   result in a statement.  As a result, our ``other'' category contains
-  macrso that might otherwise have been placed in some other category, at
+  macros that might otherwise have been placed in some other category, at
   increased risk of miscategorizations of other macros.  Because the number
   of categorization failures is small overall, and because no variety of
-  failure stands out among these classfication failures, a more extensive
+  failure stands out among these classification failures, a more extensive
   categorization is unlikely to affect our conclusions.
 
 \end{description}
@@ -1000,8 +1000,8 @@ ASSERT(p) if (!(p)) botch(\verb|__STRING|(p)); else}).
 % [FIX: Benefits even from simple literal constant conversion -- exposes
 % symbolic information to the debugger]
 
-%[FIX: Should this also include Mike's manual breakdown into categories
-%for gzip.]
+% [FIX: Should this also include Mike's manual breakdown into categories
+% for gzip.]
 
 
 
@@ -1138,7 +1138,7 @@ Figure~\ref{fig:subset-properties}.
                  (type)reverse_list ((GENERIC_LIST *)list) : (type)(list))
 \end{verbatim}
   Not all uses can be unambiguously identified lexically, because our
-  analysis focusses on macro definitions and potential uses, not only on
+  analysis focuses on macro definitions and potential uses, not only on
   uses that happen to appear in the program.  For instance, the macro {\tt
   \#define \verb|MAKE_DECL|(type, name) type name;} is not identified as
   necessarily using its first argument as a type, for it might be invoked as
@@ -1209,7 +1209,7 @@ undocumented) caveats relating to use of each macro.
   {\small\centerline{\input{tbl-lint.tex}}}
   
   \captionsmall{Macro lint:  the frequency of occurrence of error-prone
-    constructs in macro bodies.  The second column gives abolute numbers
+    constructs in macro bodies.  The second column gives absolute numbers
     and the third column gives percentages.  Except where specifically
     noted, the percentages refer to the number of macro definitions.}
   \label{fig:macro-lint}
@@ -1483,7 +1483,7 @@ settings are correct.
 
 The least frequently redefined macros are those categorized as unknown
 symbol.  This is partially due to our method of coalescing multiple
-definitions:  macro definitions categorized as unknown symbol are overriden
+definitions:  macro definitions categorized as unknown symbol are overridden
 by definitions with any other categorization (see
 Figure~\ref{fig:category-lub}).  Our
 analysis included enough library header files to include some
@@ -1494,7 +1494,7 @@ recognizable definition of most common macros.
 %     (re-search-forward "100\\..*100\\..*100\\..*100\\..*100\\..*100\\..*100\\..*100\\..*100\\..*100\\..*100\\..*100\\..*100\\..*")
 %   and take the line above that.
 % * tails: see tbl-def-frequency, then examine individual .def files for
-% packages of interst.
+% packages of interest.
 % * 10 times:  From old version.  Bug in pcp3 prevents me from verifying as
 %   of 2/8/99.
 
@@ -1655,7 +1655,7 @@ To unify two macro body categories:
   If one is a statement or partial statement, and the other is the
   corresponding plural form (i.e., if the other consists of some number of
   complete statements followed by a statement or partial statement,
-  respecively), then use the latter.
+  respectively), then use the latter.
 % If both are partial statements, select the
 %   more incomplete statement category.  (See
 %   page~\pageref{item:statement-category} for details.)
@@ -1856,7 +1856,7 @@ more than twice.
 \label{fig:freq-use-cat}
 \end{figure}
 
-%[[Double-check all these numbers!]]
+% [[Double-check all these numbers!]]
 %The tail of this distribution is quite long, indicating that some macros
 %are used very heavily.  99\% percent of macros are expanded 147 or fewer
 %times, 99.5\% of macros are expanded 273 or fewer times, 99.9\% are
@@ -1915,7 +1915,7 @@ We split macro uses into three contexts:
 
 
 %%Numbers: read off of tbl-where-used.tex
-%% 48%: from tbl-directivees-breakdown (/ 4.031 8.385)
+%% 48%: from tbl-directives-breakdown (/ 4.031 8.385)
 
 Figure~\ref{fig:where-used} reports in which of these three contexts macro
 names are used.  In general, packages use macros either to direct
@@ -1935,7 +1935,7 @@ line; see Section~\ref{sec:dependence}.
 %        5.4\% that are macro only, to the other categories on a pro rata basis.
 
 
-%[[Move this to the previous section, and reference back to it.]]
+% [[Move this to the previous section, and reference back to it.]]
 %      A surprising number -- nearly 12\% -- of macros defined in a package
 %        are never used at all.  Occasionally [[find a concrete example of
 %        this]] this is a result of shipping a 
@@ -2365,7 +2365,7 @@ machine's character set.
 %% 5.2562       perl    SvANY   type
 %% 2.959        gs      private_        type
 %% 2.9888       gzip    local   type
-%% 2.9751       rcs     P       type declaratrion
+%% 2.9751       rcs     P       type declaration
 %
 %% 4.1285       genscript       AFM_ENC_NONE    constant
 %% 2.9661       perl    SvFLAGS expression
@@ -2398,7 +2398,7 @@ arguments and sometimes as an expression taking arguments ({\tt ISFUNC} in
 because that is meaningful only in x86 dialects of C, and {\tt void} in
 \pkg{perl}, {\tt const} in \pkg{gs} and \pkg{rcs}, and {\tt NULL} in
 \pkg{cvs}, \pkg{fvwm}, \pkg{gawk}, \pkg{m4}, and \pkg{mosaic}.  
-Because we determined which symbaols are macros by running a modified
+Because we determined which symbols are macros by running a modified
 version of the preprocessor, we report such redefinitions only when the
 package may override the built-in version.  Generally, only a few such
 built-in symbols are overridden.
@@ -2429,7 +2429,7 @@ header file inclusion.
 %   bash emacs zephyr
 % Uses __PROTO:  cvs
 % Partially uses HAVE_PROTOTYPES: xfig
-% Partially usees proto: perl
+% Partially uses proto: perl
 % Partially uses __STDC__: mosaic, bison
 % Partially uses NeedFunctionPrototypes: ghostview
 % Uses HAVE_PROTOS:  remind
@@ -2721,7 +2721,7 @@ expansion\,---\,for instance, by generating an empty statement that causes
 lint to issue a warning\,---\,rather than in their own right.  A survey of
 9 C++ static checkers~\cite{MeyersK97} mentions the macro preprocessor only
 in terms of whether such warnings can be turned off in the tools; however,
-that paper focusses on coding style likely to lead to errors rather than
+that paper focuses on coding style likely to lead to errors rather than
 lexical issues.
 
 
@@ -2740,26 +2740,27 @@ tried to run LCLint version 2.3i on our set of packages with its macro diagnosti
 enabled, but LCLint reported either a parse error or an internal bug on
 92\% of the files in our test suite.
 
-%LCLint considers assignment to a macro argument dangerous but does not
-%appear to check for assignments to local variables.~\cite[\S
-%8]{Evans:LCLint} [[Should we mention these things?  I do not want to seem
-%nitpicky or petty, so if we mention this, mention them as differences,
-%not as things LCLint does wrong.
-%\begin{quote}
-%$\ldots$ a parameter to a macro may not be used as the left hand side
-%of an assignment expression $\ldots$, a macro definition must be
-%syntactically equivalent to a statement $\ldots$ when it is invoked followed by
-%a semicolon $\ldots$, the type of the macro body must match the return
-%type of the corresponding function $\ldots$~\cite[\S 8]{Evans:LCLint}
-%\end{quote}
-%That quotation is really easy to nitpick:
-%\begin{enumerate}
-% \item assignment parameters is fine (just turn into a reference argument) but
-%    assignment of non-parameters that are not at global scope is quite bad.
-% \item in x=foo(); we do NOT want foo() to be a statement
-% \item a macro does not have a single type, but may have many polymorphic types
-%\end{enumerate}
-%]]
+% LCLint considers assignment to a macro argument dangerous but does not
+% appear to check for assignments to local variables.~\cite[\S
+% 8]{Evans:LCLint}
+%  [[Should we mention these things?  I do not want to seem
+%  nitpicky or petty, so if we mention this, mention them as differences,
+%  not as things LCLint does wrong.
+%  \begin{quote}
+%  $\ldots$ a parameter to a macro may not be used as the left hand side
+%  of an assignment expression $\ldots$, a macro definition must be
+%  syntactically equivalent to a statement $\ldots$ when it is invoked followed by
+%  a semicolon $\ldots$, the type of the macro body must match the return
+%  type of the corresponding function $\ldots$~\cite[\S 8]{Evans:LCLint}
+%  \end{quote}
+%  That quotation is really easy to nitpick:
+%  \begin{enumerate}
+%   \item assignment parameters is fine (just turn into a reference argument) but
+%      assignment of non-parameters that are not at global scope is quite bad.
+%   \item in x=foo(); we do NOT want foo() to be a statement
+%   \item a macro does not have a single type, but may have many polymorphic types
+%  \end{enumerate}
+%  ]]
 
 %% FIX: If we could also list the platforms for which each can compile,
 %% that would be great, but I doubt the benefit is worth the effort for now.
@@ -2888,7 +2889,7 @@ for 4\% of non-header-file uses.
 
 
 
-%[[ What debugger does this? --11/21/97 gjb]]
+% [[ What debugger does this? --11/21/97 gjb]]
 % [[ I do not remember, and could not find a reference.  -MDE ]]
 % Debuggers exist that can call {\tt \#define}d functions.
 
