@@ -1,15 +1,21 @@
-#include <stdio.h>
-
+/* #include <stdio.h> */
+/* FOO is a number we use below */
+int alpha;
 #ifdef BAR
 #define FOO 5
+typedef int BOOL;
+int a;
 #else
 #define FOO 6
+typedef char BOOL;
+typedef long LONG;
+int a;
 #endif
 
-#ifdef FOO
-#define baz 1
+#ifdef BAR2
+#define BAZ 1
 #else
-#define baz 2
+#define BAZ 2
 #endif
 
 int
