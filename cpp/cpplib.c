@@ -2187,7 +2187,7 @@ output_line_command (pfile, conditional, file_change)
   long line, col;
   cpp_buffer *ip = CPP_BUFFER (pfile);
 
-  if (ip->fname == NULL || CPP_OPTIONS (pfile)->no_output) {
+  if (ip->fname == NULL || ip->nominal_fname == NULL || CPP_OPTIONS (pfile)->no_output) {
     return;
   }
 
@@ -3775,11 +3775,11 @@ do_include (pfile, keyword, unused1, unused2)
     add_import (pfile, f, fname);
     gjb_call_hooks_sz_i(CPP_OPTIONS(pfile),HI_ADD_IMPORT,fname,f);
 
+#if 0
     pcftry = (char *) alloca (strlen (fname) + 30);
     pcfbuf = 0;
     pcfnum = 0;
 
-#if 0
     if (!no_precomp)
       {
 	struct stat stat_f;
@@ -3813,24 +3813,29 @@ do_include (pfile, keyword, unused1, unused2)
 	} while (pcf != -1 && !pcfbuf);
       }
 #endif
-    gjb_call_hooks_i_i_sz_sz_3flags(CPP_OPTIONS(pfile),HI_DO_INCLUDE,
-				    cchOffsetStart,cchOffsetEnd,
-				    fbeg,fname,
-				    angle_brackets,skip_dirs,importing);
-
-    /* Actually process the file */
-    cpp_push_buffer (pfile, NULL, 0, FALSE);
-    gjb_call_hooks_sz_i(CPP_OPTIONS(pfile),HI_INCLUDE_FILE,fname,
-			is_system_include(pfile,fname));
-    if (finclude (pfile, f, fname, is_system_include (pfile, fname),
-		  searchptr != dsp ? searchptr : SELF_DIR_DUMMY))
+    if (gjb_call_hooks_i_i_sz_sz_3flags(CPP_OPTIONS(pfile),HI_DO_INCLUDE,
+                                        cchOffsetStart,cchOffsetEnd,
+                                        fbeg,fname,
+                                        angle_brackets,skip_dirs,importing))
       {
+      /* Actually process the file */
+      cpp_push_buffer (pfile, NULL, 0, FALSE);
+      gjb_call_hooks_sz_i(CPP_OPTIONS(pfile),HI_INCLUDE_FILE,fname,
+                          is_system_include(pfile,fname));
+      if (finclude (pfile, f, fname, is_system_include (pfile, fname),
+                    searchptr != dsp ? searchptr : SELF_DIR_DUMMY))
+        {
 	output_line_command (pfile, 0, enter_file);
 	pfile->only_seen_white = 2;
+        }
+      
+      if (angle_brackets)
+        pfile->system_include_depth--;
       }
-
-    if (angle_brackets)
-      pfile->system_include_depth--;
+    else
+      {
+      fprintf(stderr,"Skipping inclusion of %s, since DO_INCLUDE hook returned 0\n",fname);
+      }
   }
   return 0;
 }
@@ -4190,10 +4195,11 @@ do_undef (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *lim
   cchOffsetEnd = pfile->buffer->cur - pfile->buffer->buf + 1;
   sym_length = check_macro_name (pfile, buf, "macro");
 
-  gjb_call_hooks_i_i_szl(CPP_OPTIONS(pfile),HI_PRE_DO_UNDEF,cchOffsetStart,cchOffsetEnd,
-			 buf,sym_length);
-  while ((hp = cpp_lookup (pfile, buf, sym_length, -1)) != NULL)
+  if (gjb_call_hooks_i_i_szl(CPP_OPTIONS(pfile),HI_PRE_DO_UNDEF,cchOffsetStart,cchOffsetEnd,
+                             buf,sym_length))
     {
+    while ((hp = cpp_lookup (pfile, buf, sym_length, -1)) != NULL)
+      {
       /* If we are generating additional info for debugging (with -g) we
 	 need to pass through all effective #undef commands.  */
       if (CPP_OPTIONS (pfile)->debug_output && keyword)
@@ -4203,15 +4209,16 @@ do_undef (cpp_reader *pfile, struct directive *keyword, U_CHAR *buf, U_CHAR *lim
       delete_macro (pfile,hp);
       cDeletes++;
       break; /* FIXGJB: Why is this in a loop, anyway?
-	       it appears that subsequent redefs of a normal
-	       macro replace that macro in the hash table; they don't
-	       make new entries; so at any given time there is at
-	       most one entry for a given identifier in the hash table
-	       Thus, a single delete is plenty --10/14/97 gjb */
+                it appears that subsequent redefs of a normal
+                macro replace that macro in the hash table; they don't
+                make new entries; so at any given time there is at
+                most one entry for a given identifier in the hash table
+                Thus, a single delete is plenty --10/14/97 gjb */
+      }
+    gjb_call_hooks_i_i_szl_i(CPP_OPTIONS(pfile),HI_DO_UNDEF,cchOffsetStart,cchOffsetEnd,
+                             buf,sym_length,cDeletes);
     }
-  gjb_call_hooks_i_i_szl_i(CPP_OPTIONS(pfile),HI_DO_UNDEF,cchOffsetStart,cchOffsetEnd,
-			   buf,sym_length,cDeletes);
-
+  
 
   if (CPP_PEDANTIC (pfile)) {
     buf += sym_length;
@@ -6817,6 +6824,8 @@ cpp_handle_options (pfile, argc, argv)
 	  ct_yydebug = 0;
 	else if (strcmp(argv[i]+2,"noparse") == 0)
 	  fShouldParse = 0;
+	else if (strcmp(argv[i]+2,"nooutput") == 0)
+	  opts->no_output = 1;
 	else if (strcmp(argv[i]+2,"hooks") == 0)
 	  {
 	  if (i + 1 == argc)

@@ -10,6 +10,8 @@ my %macro_name;
 my %macro_name_to_def_in_filename;
 my %typedefs;
 my %functions;
+my %already_included;
+
 my $fParsingMacro = $false;
 my %vars_declared_in_macro = ();
 my $state_before_parse_body = 0;
@@ -17,6 +19,8 @@ my $node_before_parse_body = 0;
 my $current_macro_name;
 #my $fDebugParse = $true;
 my $fDebugParse = $false;
+
+my $macro_nestings_deep = 0;
 
 sub Startup {
   # Parse debugging (bison's yydebug variable) is on by default,
@@ -184,6 +188,7 @@ sub pre_do_undef {
   my ($s_start,$s_end,$mname) = @_;
   my $fname = pcp3::Fname();
   print CPP "pre_do_undef of $mname [$s_start,$s_end]\n";
+  return 0; # do not do the undef
 }
 
 sub delete_def {
@@ -304,8 +309,12 @@ sub string_constant {
 
 sub do_include {
   my ($s_start,$s_end,$file_as_given, $file_as_resolved, $flags) = @_;
-  print CPP "do_include $file_as_given [$s_start:$s_end] -> ", simplify_path_name($file_as_resolved),";  $flags\n";
+  print STDERR "do_include $file_as_given [$s_start:$s_end] -> ", simplify_path_name($file_as_resolved),";  $flags\n";
 #  print "Was working on: ", pcp3::Fname(), "\n";
+  my $retval = $true;
+  $retval = $false if exists $already_included{$file_as_resolved};
+  $already_included{$file_as_resolved} = $true;
+  return $retval;
 }
 
 sub do_if {
@@ -349,7 +358,8 @@ sub handle_unincluded_block {
   print TRACE ": ParseStateStack: ", join(",",pcp3::ParseStateStack()), "\n";
   pcp3::YYPushStackState();
   pcp3::EnterScope();
-  pcp3::PushHashTab();
+#  pcp3::PushHashTab();
+  $macro_nestings_deep++;
   pcp3::PushBuffer($skipped,$s_branch_start);
 }
 
@@ -388,13 +398,14 @@ sub pop_perl_buffer {
     print TRACE ": NOT Identical!\n";
   }
   pcp3::ExitScope();
-#  pcp3::PopHashTab();   don't do this -- will restore the macro hash table before this definition that we parsed got added
+#  pcp3::PopHashTab();   #don't do this -- will restore the macro hash table before this definition that we parsed got added
+  $macro_nestings_deep--;
   pcp3::YYPopAndRestoreStackState();
   pcp3::YYSetState($state_before_parse_body);
   pcp3::YYSetNode($node_before_parse_body);
-  print "nbpb: $node_before_parse_body\n";
+#  print STDERR "nbpb: $node_before_parse_body\n";
   $fParsingMacro = $false;
-  print ": After ParseStateStack: ", join(",",pcp3::ParseStateStack()), "\n";
+#  print STDERR ": After ParseStateStack: ", join(",",pcp3::ParseStateStack()), "\n";
   $current_macro_name = "";
 }
 
@@ -485,7 +496,7 @@ AddHook("STARTUP",\&Startup);
 #AddHook("CREATE_PREDEF",\&create_predef);
 AddHook("CREATE_DEF",\&create_def);
 AddHook("DO_UNDEF",\&do_undef);
-#AddHook("PRE_DO_UNDEF",\&pre_do_undef);
+AddHook("PRE_DO_UNDEF",\&pre_do_undef);
 #AddHook("DELETE_DEF",\&delete_def);
 #AddHook("CPP_ERROR",\&cpp_error);
 #AddHook("CPP_OUT",\&cpp_out);
@@ -497,7 +508,7 @@ AddHook("EXPAND_MACRO",\&expand_macro);
 #AddHook("SPECIAL_SYMBOL",\&special_symbol);
 #AddHook("COMMENT",\&comment);
 #AddHook("STRING_CONSTANT",\&string_constant);
-#AddHook("DO_INCLUDE",\&do_include);
+AddHook("DO_INCLUDE",\&do_include);
 AddHook("DO_IF",\&do_if);
 AddHook("DO_ELIF",\&do_elif);
 AddHook("DO_XIFDEF",\&do_xifdef);
