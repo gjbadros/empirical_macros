@@ -1942,7 +1942,8 @@ HaveProtos|PROTOTYPE|FUNCPROTO|(NO_)?PROTO|(HAVE|USE)_PROTO(TYPE)?S?
     return $ccatPORT_LANLIB;
   }
   if ($mname =~ /^(const|static|inline|volatile|signed|unsigned)$/) {
-    return $ccatPORT_LANMACRO;
+#    return $ccatPORT_LANMACRO;
+    return $ccatPORT_LANLIB;  # This was too small a category, so merge in with above
   }
   if ($mname =~ /^(STACK_DIRECTION|STACK_GROWS_DOWNWARD|STACK_GROWTH_DOWN|
 arch_.*|
