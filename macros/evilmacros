@@ -64,10 +64,8 @@ find-c | evilmacros -iv -d ~/macros/data/stable
 
 # Invoke like this:   evilmacros `find-c`
 # or like this:  find-c | evilmacros -i
-# Perhaps this should do the searching through subdirectories itself,
-# but that is easy to do from the shell.
 
-#Complex execution (use zsh):
+#Complex execution (use zsh):    (how do I set $TM in zsh?)
 #
 # for i in *(/); do echo $i; pushd $i; find-c | evilmacros -i -d $TM:${i%%-*} >$TM/${i%%-*}.out 2> $TM/${i%%-*}.err; popd; done
 #
@@ -356,17 +354,18 @@ my $c_plus_plus_reserved_word_re = '\b(asm|bool|catch|class|const_cast|delete|dy
 ### Literals
 
 # FIX: this regexp is lame-- L,x,U needed for 0x80 << 1LU
-my $constant_exp_re = '[-LxU0-9() \t<>+=*|&%!]+';	# note this matches whitespace
+# It also matches whitespace and (bad!) the variable x, etc.
+my $constant_exp_re = '[-lLuUxX0-9() \t<>+=*|&%!]+';
 # $like constant_exp_re, but supposed to match macro uses too.
-my $constant_or_upcase_exp_re = '[-A-Z_LxU0-9() \t<>+=*|&%!]+';
+my $constant_or_upcase_exp_re = '[-a-zA-Z_lLuUxX0-9() \t<>+=*|&%!]+';
 
 # Numeric literals
 # floating-point number (two variants): $1 = exponent, $2 = suffix (fFlL)
 my $float_literal_whole_re = '[-+]?\d+\.\d*([eE][-+]?\d+)?([fFlL]?)'; # decimal 2.
 my $float_literal_frac_re = '[-+]?\d*\.\d+([eE][-+]?\d+)?([fFlL]?)'; # fraction .2
-# integer regexp: $1 = number, $2 = suffix (uUlL)
-my $hex_literal_re = '(0x[0-9a-fA-F]+)([uUlL]?[uUlL]?)'; # regexp failed with \d for 0-9
-my $dec_oct_literal_re = '(\d+)([uUlL]?[uUlL]?)';
+# integer regexp: $1 = number, $2 = suffix (uUlL); permit two L's for GNU extension
+my $hex_literal_re = '(0[xX][0-9a-fA-F]+)([uUlL]?[uUlL]?[uUlL]?)'; # regexp failed with \d for 0-9
+my $dec_oct_literal_re = '(\d+)([uUlL]?[uUlL]?[uUlL]?)';
 # Using this is probably ill-advised.
 my $number_literal_re = '((' . join(')|(', $float_literal_whole_re, $float_literal_frac_re, $hex_literal_re, $dec_oct_literal_re) . '))';
 
@@ -629,6 +628,7 @@ sub type_signed ($)
 sub type_longify ($)
 {
   my ($type) = check_args(1, @_);
+  # print "type_longify $type (", type_name($type), ")\n";
   if ($type eq $typeCHAR)
     { return $typeLONG; }
   elsif ($type eq $typeUCHAR)
@@ -1011,7 +1011,6 @@ sub find_macro_definitions ()
 
       print STDERR "file: \"$current_file\"" if $opt_v;
       if (!open(INPUT,$current_file)) {
-	# fix: Shouldn't we print to STDERR unconditionally?
 	# fix: Add quiet option; then this will occur unless that is set.
 	print STDERR " -- failed open\n" if $opt_v;
 	next; # skip to next file if open fails
@@ -1987,15 +1986,19 @@ sub find_close_brace ($;$$)
 
 # Returns (raw_line, simplified_line, num_phys_lines, num_ncnb_lines)
 # Always reads directly from input, never from ungotlines.
-sub get_spliced_line ()
+sub get_spliced_line (;$)
 {
-  check_args(0, @_);
+  check_args_range(0, 1, @_);
+  my ($cpp_comment) = check_args_range(0, 1, @_);
+  if (!defined($cpp_comment))
+    { $cpp_comment = $false; }
 
   my $raw_line = <INPUT>;
   if (not ($raw_line))
     { return ($raw_line, $raw_line, 0, 0); }
   my $num_physical_lines = 1;
-  my ($simple_line, $num_ncnb_lines) = updateinvars($raw_line);
+  my ($simple_line, $num_ncnb_lines)
+    = ($cpp_comment ? ($raw_line, 0) : updateinvars($raw_line));
 
   if ($debug_getline)
     { print "initial simple: $simple_line\ninitial raw: $raw_line"; }
@@ -2028,7 +2031,8 @@ sub get_spliced_line ()
 	{ evilprint("dangerous: file ends with continuation character:\n    $raw_line\n"); }
       else
 	{ $num_physical_lines++;
-	  my ($next_simple_line, $next_ncnb_lines) = updateinvars($next_raw_line);
+	  my ($next_simple_line, $next_ncnb_lines) =
+	    ($cpp_comment ? ($next_raw_line, 0) : updateinvars($next_raw_line));
 	  $num_ncnb_lines += $next_ncnb_lines;
 	  # append_lines trims spaces (if any), prettying the message (but
 	  #   maybe changing string contents).
@@ -2037,9 +2041,8 @@ sub get_spliced_line ()
 	    { print "appending '$simple_line' '$next_simple_line'\n"; }
 	  $simple_line = append_lines($simple_line, $next_simple_line);
 	  if ($next_raw_line =~ m/^\s*$/)
-	    { # $next_raw_line is blank.
-	      # No \n at end of message: $result ends in a newline
-	      evilprint("dangerous: blank line follows continuation character:\n    $raw_line"); }
+	    { # $next_raw_line is blank.  $raw_line has no newline.
+	      evilprint("dangerous: blank line follows continuation character:\n    $raw_line\n"); }
 	} }
 
   # Remove the filename in #include <foo.h>, which act like quotes.
@@ -2052,7 +2055,8 @@ sub get_spliced_line ()
   return ($raw_line, $simple_line, $num_physical_lines, $num_ncnb_lines);
 }
 
-# Like get_spliced_line, but tries the ungotlines cache first.
+# Like get_spliced_line, but tries the ungotlines cache first and never calls
+# updateinvars.
 # This is a bit of a hack.
 sub get_spliced_line_maybe_ungot ()
 {
@@ -2069,7 +2073,7 @@ sub get_spliced_line_maybe_ungot ()
       return ($raw_result, $simple_result, 1, 1);
     }
   else
-    { return get_spliced_line(); }
+    { return get_spliced_line($true); }
 }
 
 
@@ -2090,7 +2094,7 @@ sub resetinvars ()
 #   conceivably be called by others, particularly to aid in removing comments
 #   or string/character literals.
 # Obeys global variable $getline_simplify; see get_fulltoken_line documentation.
-# Returns: (simplified string, num_phys_lines, num_ncnb_lines)
+# Returns: (simplified string, num_ncnb_lines)
 # I hope that always simplifying isn't terribly inefficient...
 sub updateinvars ($)
 {
@@ -2144,7 +2148,7 @@ sub updateinvars ($)
 		  $remaining = $POSTMATCH; }
 	      else
                 # No newline, since $_[0] has one.
-		{ evilprint("illegal: bad character constant $match$postmatch\n    in $_[0]");
+		{ evilprint("illegal: bad character constant $match" . add_newline($postmatch) . "    in $_[0]");
 		  if ($postmatch =~ /\'/)
 		    { if ($getline_simplify)
 			{ $result .= "'a'"; }
@@ -2335,7 +2339,7 @@ sub getline_handle_preprocessor_command ($$$)
 	{ mdie("improperly nested \#else"); }
       my $last = pop(@dependenton);
       if ($debug_cpp_if_comments)
-	{ print "#else testing '$last' for triviality: ", cpp_trivially_true_condition($last), "\n"; }
+	{ print input_file_and_line(), ": #else testing '$last' for triviality: ", cpp_trivially_true_condition($last), "\n"; }
       if (cpp_trivially_true_condition($last))
 	{ if ($finding_macro_defs)
 	    # Count this as a comment, not NCNB, line.
@@ -2438,7 +2442,7 @@ sub discard_to_endif ()
 	{ mdie("File ends in \#if 0"); }
       resetinvars();		# Abandon changes by get_spliced_line
       if ($debug_cpp_if_comments)
-	{ print "discarding (to endif @dependenton) $raw_line"; }
+	{ print input_file_and_line(), ": discarding (to endif @dependenton) $raw_line"; }
       # I'll trust that no comment or string contains anything that looks
       # like a preprocessor command.  Strictly speaking, I should use
       # get_fulltoken_line and/or updateinvars, because anything in an
@@ -2468,7 +2472,7 @@ sub discard_to_endif_or_else ()
 	{ mdie("File ends in \#if 0"); }
       resetinvars();		# Abandon changes by get_spliced_line
       if ($debug_cpp_if_comments)
-	{ print "discarding (to endif or else; dependenton @dependenton) $raw_line"; }
+	{ print input_file_and_line(), ": discarding (to endif or else; dependenton @dependenton) $raw_line"; }
       # I'll trust that no comment or string contains anything that looks
       # like a preprocessor command.  Strictly speaking, I should use
       # get_fulltoken_line and/or updateinvars, because anything in an
@@ -2480,13 +2484,13 @@ sub discard_to_endif_or_else ()
 	{ $if0depth++; }
       elsif (($if0depth == 1) && ($simple_line =~ m/^\s*\#\s*else\b/))
 	{ if ($debug_cpp_if_comments)
-	    { print "returning !0 from discard_to_endif_or_else (dependenton @dependenton)\n"; }
+	    { print input_file_and_line(), ": returning !0 from discard_to_endif_or_else (dependenton @dependenton)\n"; }
 	  return "!0"; }
       elsif (($if0depth == 1) && ($simple_line =~ m/^\s*\#\s*elif\s+/))
 	{ my $cond = $POSTMATCH;
 	  $cond =~ s/\s+$//;
 	  if ($debug_cpp_if_comments)
-	    { print "returning $cond from discard_to_endif_or_else (dependenton @dependenton)\n"; }
+	    { print input_file_and_line(), ": returning $cond from discard_to_endif_or_else (dependenton @dependenton)\n"; }
 	  return $cond; }
       elsif ($simple_line =~ m/^\s*\#\s*endif\b/o)
 	{ $if0depth--; } }
@@ -2843,10 +2847,10 @@ sub is_cpp_command ($)
 sub append_lines ($$)
 {
   my ($arg1, $arg2) = check_args(2, @_);
-  # "+", not "*", so don't introduce spaces where there were none before
-  # Do I need \Z instead of $?  It seems I don't...
-  $arg1 =~ s/[ \t\n]+$/ /;
-  $arg2 =~ s/^[ \t\n]+/ /;
+  # "+" instead of "*" wouldn't introduce spaces where there were none before;
+  # but we want to make sure the two lines don't just run together.
+  $arg1 =~ s/[ \t\n]*$/ /;
+  $arg2 =~ s/^[ \t\n]*/ /;
   return ($arg1 . $arg2);
 }
 
@@ -2962,7 +2966,14 @@ sub parse_exp ($;$)
       return parse_exp_follower($casttypenum, $remaining); }
   # Type in parens followed by (what looks like) paren, number, or identifier
   if (($exp =~ /^\(\s*($type_re)\s*\)\s*([0-9a-zA-Z_\(])/)
-      || ($exp =~ /^\(\s*($type_re\s*\*)\s*\)\s*(.)/))
+      || ($exp =~ /^\(\s*($type_re\s*\*+)\s*\)\s*(.)/) # ends with *: pointer
+      # identifier ending with _t: type
+      || ($exp =~ /^\(\s*([a-zA-Z_\$][a-zA-Z0-9_\$]*_t)\s*\)\s*(.)/)
+      # identifier which expands to reserved word: type
+      || (($exp =~ /^\(\s*($identifier_re)\s*\)\s*(.)/)
+	  && defined($mncategory{$1})
+	  && ($mncategory{$1} eq $catRESDWORD))
+      )
     { my $casttype = parse_type($1);
       my $nextchar = $LAST_PAREN_MATCH;
       # print "non-built-in cast type $casttype (follower $nextchar)\n";
@@ -2985,6 +2996,7 @@ sub parse_exp ($;$)
   if ($exp =~ /^(\+\+|--|[-~!+&*])/)
     { my ($type, $remaining) = parse_exp($POSTMATCH);
       if (!$type) { return($typeFAIL,$exp); }
+      # This isn't right -- eg, & result type differs from argument type
       return parse_exp_follower($type,$remaining); }
   # [^\)] was [ \ta-zA-Z0-9*]
   if ($exp =~ /^sizeof\s*/)
@@ -3008,19 +3020,19 @@ sub parse_exp ($;$)
 	    { return($typeFAIL,$exp); }
 	}
       # actually "size_t", but "int" is understood and that isn't yet.
-      return parse_exp_follower(type_to_num("int"),$remaining); }
+      return parse_exp_follower($typeINT, $remaining); }
 
   # Literals
 
   # Literal string
   # This regular expression is perhaps expensive; split into two tests?
-  # By this point, the literal value is likely to be "" due to simplification.
+  # By this point, the literal value might be "" due to simplification.
   if ($exp =~ /^$string_literal_re/o)
     # String contains no non-escaped double-quote
     # Should look for a following string, to concatenate the two.
     # Perhaps special-case:  look for symbol (which is macro with typeSTRING)
     # or literal string.
-    { return ($typeSTRING, $POSTMATCH); }
+    { return parse_exp_follower($typeSTRING, $POSTMATCH); }
 
   # Literal character
   if ($exp =~ /^$char_literal_re/o)
@@ -3044,19 +3056,32 @@ sub parse_exp ($;$)
       # hex precedes octal/decimal because the "0" looks like a leading integer.
       # (Actually, that's irrelevant here since infer_int_type does the work.
       || ($exp =~ /^$dec_oct_literal_re/o)) # octal or decimal
-    { if ($debug_parse_expression) { print "Found integer $1\n"; }
+    { my $int_literal = $1;
+      my $int_modifiers = $2;
       my $remaining = $POSTMATCH;
-      my $type = infer_int_type($1);
+      if ($debug_parse_expression)
+	{ print "Found integer $int_literal (modifiers $int_modifiers)\n"; }
+      my $type = infer_int_type($int_literal);
       if ($debug_parse_expression) { print "inferred type ", type_name($type), "\n"; }
-      if ($2 =~ /[uU]/)
+      if ($int_modifiers =~ /[uU]/)
 	{ $type = type_unsignify($type); }
-      if ($2 =~ /[lL]/)
-	{ $type = type_longify($type); }
+      if ($int_modifiers =~ /[lL]/)
+	{ $type = type_longify($type);
+	  if ($int_modifiers =~ /[lL][lL]/)
+	    { $type = type_longify($type); } }
       # return parse_exp_follower($type,$remaining);
       my @result = parse_exp_follower($type,$remaining);
       if ($debug_parse_expression)
 	{ print "parse_exp_follower(", type_name($type), ",$remaining) => ", join("||", @result), "\n"; }
       return @result;
+    }
+
+  # Array initializer
+  elsif ($exp =~ /^\{/)
+    { my ($array_init_type, $post_array_init) = parse_array_initializer($POSTMATCH);
+      if (!$array_init_type)
+	{ return($typeFAIL, $exp); }
+      return ($array_init_type, $post_array_init);
     }
 
   # Variable
@@ -3070,15 +3095,19 @@ sub parse_exp ($;$)
       categorize_macro_name($var);
       my $vartype = $mntype{$var};
       my $is_macro = defined($vartype);
-      if (!$is_macro)
+      if ($is_macro)
+	{ # This is kind of a hack; is it the right thing to do?
+	  if ((!$vartype) && defined($mncategory{$var}) && $mncategory{$var})
+	    { $vartype = "category: $mncategory{$var}"; }
+	  if ($debug_parse_expression)
+	    { print "macro $var as variable of type '", type_name($vartype), "'\n"; } }
+      else
 	# This isn't a macro.
 	# Need to do a MUCH better job here; in particular, infer a type.
 	# Perhaps return a negative number, an index into a list of things
 	# whose types need to be inferred.
 	# Also try looking up in global symbol table.
 	{ $vartype = $typeUNKNOWN; }
-      elsif ($debug_parse_expression)
-	{ print "macro $var as variable of type '", type_name($vartype), "'\n"; }
 
       # Perhaps do something different if the categorization was successful.
       # Not sure what this means: "Perhaps get info back here, so we can stash
@@ -3370,6 +3399,19 @@ sub parse_exp_follower ($$)
       # print "ternary operator: lub($thentype, $elsetype) = ", type_lub($thentype, $elsetype), "\n";
       return (type_lub($thentype, $elsetype), $remaining); }
 
+  # print "Checking for contatenated strings: ", type_name($type), ": $follow\n";
+  if (($type eq $typeSTRING)
+      && (($follow =~ /^\"/)
+	  || (($follow =~ /^$identifier_re/)
+	      # Perhaps ought to call categorize_macro_name here.
+	      && defined($mntype{$MATCH})
+	      && ($mntype{$MATCH} eq $typeSTRING))))
+    { my ($followtype, $followfollow) = parse_exp($follow);
+      if ((!$followtype) || ($followtype ne $typeSTRING))
+	{ return ($typeFAIL, $follow); }
+      else
+	{ return ($typeSTRING, $followfollow); } }
+
   if ($debug_parse_expression)
     { print "parse_exp_follower returning ", type_name($type), "; found nothing in '$follow'\n"; }
   return ($type, $follow);
@@ -3502,7 +3544,9 @@ sub process_macro_calls ()
 		  $indented = $true; }
 	      # Checks for any improperly unindented line.  Later, we
 	      # make sure that every properly unindented line was processed.
-	      if ((!$indented) && ($symtab_scopes != 0))
+	      if ((!$indented) && ($symtab_scopes != 0)
+		  # Hack!
+		  && ($current_file !~ /\by\.tab\.c$/))
 		{ parse_error("process_macro_calls: bracedepth $symtab_scopes non-indented line $line "); }
 
 	      # Check for improper indentation later, complaining only
@@ -3760,7 +3804,7 @@ PROCESSLINE:
 			    { parse_error("Didn't find '[;\{=]' in $remaining");
 			      next; }
 			  if ($remaining !~ /[;\{=]/) # MUST succeed
-			    { die "Just succeeded with get_fulltoken_lines_to '[;\{=]': $remaining"; }
+			    { mdie("Just succeeded with get_fulltoken_lines_to '[;\{=]': $remaining"); }
 			  if ($MATCH eq "=")
 			    { # This declares not a function but a variable
 			      # (say, a pointer to a function).
@@ -3837,6 +3881,12 @@ ATCOMMA:
 				  $remaining = $POSTMATCH;
 				  ($type, $identifier) = parse_declarator($typespec, $declarator);
 				  goto PROCESSVARDEF; }
+			      elsif ($remaining =~ /^\s*$type_declarator_re\s*\(/o)
+				# This is a function declaration following
+				# a variable declaration or definition.
+				# I think this code works; does it?
+				{ $line = process_function_definition_or_declaration($type, $identifier, $remaining);
+				  goto PROCESSLINE; }
 			      elsif ($remaining =~ /^\s*$type_declarator_re\s*([,\)])/o)
 				{ # We're accidentally in the argument list of
 				  # a function declarator.
@@ -3906,7 +3956,7 @@ ATCOMMA:
 
 	      # See r.7.4; extern linkage specifications must be at
 	      # file scope but may nest.
-	      if ($line =~ "^\s*extern \"\" {")
+	      if ($line =~ /^\s*extern\s*\"\"\s*\{/)
 		{ if ($symtab_scopes != 0)
 		    { parse_error("extern \"C\" not at top level"); }
 		  if ($in_extern_C != 0)
@@ -3914,6 +3964,17 @@ ATCOMMA:
 		  $line = $POSTMATCH;
 		  $in_extern_C++;
 		}
+	      elsif ($line =~ /^\s*extern\s*\"\"\s*$/)
+		{
+		  # extern "C" split over multiple lines
+		  my $nextline = get_fulltoken_line($true);
+		  if (defined($nextline))
+		    { $line = append_lines($line, $nextline);
+		      goto PROCESSLINE; }
+		}
+	      # elsif ($line =~ /^\s*extern\b/)
+	      #  { parse_error("found extern, what's up in $line"); }
+
 	      while ($line =~ m/[\({}\"\';]/) #'HACKCOLOR
 		# Found brace, open paren, quote, comment, or semicolon
 		{		# print "Found brace, open paren, quote, comment, or semicolon: $MATCH$POSTMATCH\n";
@@ -4067,8 +4128,7 @@ sub process_function_definition_or_declaration ($$$)
   # semicolon or comma, then this is a declaration, else a definition
   if ($remaining =~ /^\s*[;,]/)
     {				# declaration
-      # gzip-1.2.4/sample/sub.c line 51
-      #   puts a prototype in scope 1.
+      # gzip-1.2.4/sample/sub.c line 51 puts a prototype in scope 1.
       if ($symtab_scopes != 0)
 	{ # Print to EVIL, maybe.
 	  # print "Function definition or prototype $MATCH at bracedepth $symtab_scopes.\n";
@@ -4201,7 +4261,8 @@ sub process_function_definition_or_declaration ($$$)
 	  if (!($remaining =~ /^\s*$type_declarator_re\s*([,;])/))
 	    { if (($remaining =~ /^\s*($identifier_re)/)
 		  && exists($macros{$1}))
-		{ parse_error("Skipping macro $1 masquerading as K&R argument declarator"); }
+		{ parse_error("Skipping macro $1 masquerading as K&R argument declarator");
+		  $remaining = $POSTMATCH; }
 	      else
 		{ parse_error("Didn't find first type+declarator in K&R-style $remaining");
 		  # Something went wrong; I have no idea what.
@@ -4289,7 +4350,9 @@ sub process_function_definition_or_declaration ($$$)
 	    if (!defined($name))
 	      { parse_error("Undefined arg $i name in $identifier"); }
 	    if (!defined($type))
-	      { parse_error("Undefined arg $i type in $identifier, using int");
+	      { parse_error("Undefined type for "
+			    . (defined($name) ? "$name (arg $i)" : "arg $i")
+			    . " in $identifier, using int");
 		$type = $typeINT;
 	      }
 	    if (defined($name) && defined($type))
@@ -4568,12 +4631,13 @@ sub categorize_macro_def ($)
   elsif ($body =~ /^$char_literal_re$/)
     { $category = $catLITERAL;
       $type = $typeCHAR; }
-# DON'T DO THIS!  Being a statement has precedence over having a reserved word.
-#   elsif ($body =~ /^$c_reserved_nontype_word_re|$c_reserved_type_word_re$/)
-#     { # $failure_type = "expands_to_reserved_word";
-#       $category = $catRESDWORD;
-#       evilprint("expands to reserved word\n    $body\n");
-#     }
+  # Being a statement has precedence over having a reserved word,
+  # but this body is just a single word.
+  elsif ($body =~ /^($c_reserved_nontype_word_re|$c_reserved_type_word_re)$/)
+    { # $failure_type = "expands_to_reserved_word";
+      $category = $catRESDWORD;
+      evilprint("expands to reserved word: $body\n");
+    }
   else
     { my $remaining;
       reset_parse_vars();
@@ -4583,7 +4647,12 @@ sub categorize_macro_def ($)
       if ($type && ($remaining =~ /^\s*$/))
 	# Expression
 	# Fix: I'm not sure how correct any of this is.
-	{ if ($body =~ /^$constant_exp_re$/)
+	{ if ($type =~ /^category: /)
+	    # Not an expression after all.
+	    { $category = $POSTMATCH; }
+	  elsif ($body =~ /^$constant_exp_re$/)
+	    # This is wrong; it considers (1 << ((x)-1))
+	    # constant because that matches $constant_exp_re.
 	    { $category = $catSOMECONSTANT; }
 	  elsif ($parse_exp_saw_equals)
 	    { $category = $catEXPASSIGN; }
@@ -4613,6 +4682,7 @@ sub categorize_macro_def ($)
 	      { if (defined($macros{$type}))
 		  # This may be fine; fix later.
 		  { $category = $catMACROTYPE;
+		    parse_error("Macro as type: $type");
 		    goto CATEGORIZED; } } }
 	  # print "category posttype = $category\n";
 	  # For each free variable, check its type.
@@ -5064,7 +5134,9 @@ sub check_macro_body ($) {
       $category = harder_category($category,$catMISMATCH);
       evilprint("evil: no match for ", @nesting, ":\n    $full_body\n"); }
   if (($failure_type eq "unknown") && ($full_body =~ /^[\(\);, .]*$/))
-    { $category = harder_category($category,$catSYNTAX);
+    { # Not harder_category, lest ";" be called "statement".
+      # $category = harder_category($category,$catSYNTAX);
+      $category = $catSYNTAX;
       $failure_type = "expansion_into_syntax";
     }
   if (($failure_type eq "unknown") && ($full_body =~ /__asm__/))
@@ -5800,114 +5872,111 @@ sub test_typedecl_regexp ()
 #   if ($argdecls =~ /^\s*$type_declarator_re\s*([,;])/)
 #     { print "$1|$3|$7|$9|$POSTMATCH\n"; } }
 
-sub test_parse_expression ($$)
-{
-  my ($exp, $good_type) = check_args(2, @_);
-  my ($actual_type, $remaining) = parse_expression($exp);
-  $good_type = type_name(type_to_num($good_type));
-  $actual_type = type_name($actual_type);
-  if ($remaining ne "")
-    { print STDERR "Didn't parse all of $good_type '$exp',\n    got $actual_type with remaining = '$remaining'\n"; }
-  elsif ($actual_type ne $good_type)
-    { print STDERR "Got type $actual_type instead of $good_type when parsing '$exp'\n"; }
-}
-
 sub test_parse_expressions ()
 {
   check_args(0, @_);
-  test_parse_expression("(uch)get_byte()", "uch");
-  test_parse_expression("get_byte()", $typeUNKNOWN);
-  test_parse_expression("(uch)get_byte", "uch");
-  test_parse_expression("(strcmp((s1),(s2)) == 0)", "bool");
-  test_parse_expression("strcmp((s1),(s2))", $typeUNKNOWN);
-  test_parse_expression("((s1),(s2))", $typeUNKNOWN);
-  test_parse_expression("(s1),(s2)", $typeUNKNOWN);
-  test_parse_expression("(s1)", $typeUNKNOWN);
-  test_parse_expression("s1,s2", $typeUNKNOWN);
-  test_parse_expression("strcmp(s1,s2)", $typeUNKNOWN);
-  test_parse_expression("'\\'", "char");
-  test_parse_expression("(1L << (n))", $typeUNKNOWN);
-  test_parse_expression("(1 << (n))", $typeUNKNOWN);
-  test_parse_expression("(1 << n)", $typeUNKNOWN);
-  test_parse_expression("(unsigned)(1<<HASH_BITS)", "unsigned");
-  test_parse_expression("(1<<HASH_BITS)", $typeUNKNOWN);
-  test_parse_expression("\"foo\"", "char *");
-  test_parse_expression("(((struct mhead *) mem) - 1) -> mh_index", $typeUNKNOWN);
-  test_parse_expression("8 << (((struct mhead *) mem) - 1) -> mh_index", $typeUNKNOWN);
-  test_parse_expression("(va_list)__builtin_saveregs()", "va_list");
-  test_parse_expression("((AP) = (va_list)__builtin_saveregs())", "va_list");
-  test_parse_expression("O_WRONLY | O_CREAT | O_EXCL | O_BINARY", $typeUNKNOWN);
-  test_parse_expression("(foo ? string2[startpos - size1]  : string1[startpos])", $typeUNKNOWN);
-  test_parse_expression("(size1 == 0)", "bool");
-  test_parse_expression("(startpos >= size1)", "bool");
-  test_parse_expression("(foo || bar)", "bool");
-  test_parse_expression("(size1 == 0 || startpos >= size1)", "bool");
-  test_parse_expression("(size1 == 0 || startpos >= size1 ? string2[startpos - size1]  : string1[startpos])", $typeUNKNOWN);
-  test_parse_expression("(XColormapEvent *)&Event", "XColormapEvent *");
-  test_parse_expression("(state->basic.eax == MACH_RCV_INTERRUPTED && !memcmp (pc, &syscall, sizeof syscall))", "bool");
-}
 
-sub test_parse_type ($$)
-{
-  my ($type, $exp) = check_args(2, @_);
-  if ($debug_parse_expression)
-    { print "test_parse_type: '$type' '$exp'\n"; }
-  my ($parsed_type, $follow) = parse_expression($exp);
-  my $parsed_type_name = type_name($parsed_type);
-  if ($debug_parse_expression)
-    { print "test_parse_type: '$type' '$exp' '$parsed_type' '$parsed_type_name'\n"; }
-  if ($type ne $parsed_type_name)
-    { if ($exp =~ /\?/)
-	{ print STDERR "Conditional flub? "; }
-      print STDERR "Type $parsed_type_name ($parsed_type) should have been $type for $exp\n"; }
-}
-
-# Need to also check that these are actually correct;
-# right now this is merely a regression test.
-sub test_parse_types ()
-{
-  check_args(0, @_);
   # Integers
-  test_parse_type("int", "0400");
-  test_parse_type("unsigned int", "0x8000");
+  test_parse_expression("int", "0400");
+  test_parse_expression("unsigned int", "0x8000");
   # Different than the above because 55 is an int -- might be negative,
   # which wouldn't fit into unsigned int.  type_lub should take values
   # when appropriate, too, maybe.
-  test_parse_type("unsigned long", "33 ? 55 : 0x8000");
+  test_parse_expression("unsigned long", "33 ? 55 : 0x8000");
   # Should be int, not bool; it's (5 > 4) ? 3 : 2, not 5 > (4 ? 3 : 2).
   # This leads me down the slippery slope of coping with operator precedence...
-  test_parse_type("int", "5 > 4 ? 3 : 2");
+  test_parse_expression("int", "5 > 4 ? 3 : 2");
+  test_parse_expression("int", "((B) - 1)");
+  test_parse_expression("unsigned long", "2ULL");
+  test_parse_expression("unsigned long", "(LONG_LONG_MAX * 2ULL + 1)");
+  test_parse_expression("unsigned long", "0X7FFFFFFFL");
 
-  # Casts
-  test_parse_type("char *", "(char*)NULL");
-  test_parse_type("ct_data near *", "(ct_data near *)0");
-  test_parse_type("uch", "(uch)get_byte()");
-  test_parse_type("char *", "(char*)&window[(unsigned)block_start]");
-  test_parse_type("char *", "(char*)NULL, (long)strstart - block_start, (eof)");
-  test_parse_type("long", "(long)strstart - block_start");
-  test_parse_type("char_type *", "((char_type *)(&d_buf[DIST_BUFSIZE-1]))");
-  test_parse_type("ush", "((ush)(uch)((p)[0]) | ((ush)(uch)((p)[1]) << 8))");
-  test_parse_type("ulg", "((ulg)(SH(p)) | ((ulg)(SH((p)+2)) << 16))");
+  # Casts and named types
+  test_parse_expression("char *", "(char*)NULL");
+  test_parse_expression("ct_data near *", "(ct_data near *)0");
+  test_parse_expression("uch", "(uch)get_byte()");
+  test_parse_expression("char *", "(char*)&window[(unsigned)block_start]");
+  test_parse_expression("char *", "(char*)NULL, (long)strstart - block_start, (eof)");
+  test_parse_expression("long", "(long)strstart - block_start");
+  test_parse_expression("char_type *", "((char_type *)(&d_buf[DIST_BUFSIZE-1]))");
+  test_parse_expression("ush", "((ush)(uch)((p)[0]) | ((ush)(uch)((p)[1]) << 8))");
+  test_parse_expression("ulg", "((ulg)(SH(p)) | ((ulg)(SH((p)+2)) << 16))");
+  test_parse_expression("uch", "(uch)get_byte");
+  test_parse_expression("uch", "(uch)get_byte()");
+  test_parse_expression("va_list", "(va_list)__builtin_saveregs()");
+  test_parse_expression("va_list", "((AP) = (va_list)__builtin_saveregs())");
+  test_parse_expression("XColormapEvent *", "(XColormapEvent *)&Event");
+  test_parse_expression("unsigned", "(unsigned)(1<<HASH_BITS)");
+  test_parse_expression("__sighandler_t", "((__sighandler_t)-1)");
 
-  # To fix this, must parse as
-  test_parse_type("char *", "(block_start >= 0L ? (char*)&window[(unsigned)block_start] :  (char*)NULL, (long)strstart - block_start, (eof))");
-
-  test_parse_type("char *", "flush_block(block_start >= 0L ? (char*)&window[(unsigned)block_start] :  (char*)NULL, (long)strstart - block_start, (eof))");
+  # Characters
+  test_parse_expression("char", "'\\'");
+  test_parse_expression("char *", "\"foo\"");
+  test_parse_expression("char *", "flush_block(block_start >= 0L ? (char*)&window[(unsigned)block_start] :  (char*)NULL, (long)strstart - block_start, (eof))");
+  test_parse_expression("char *", "\"foo\" \"bar\"");
 
   # Boolean
-  test_parse_type("bool", "block_start >= 0L");
+  test_parse_expression("bool", "inptr < insize");
+  test_parse_expression("bool", "block_start >= 0L");
+  test_parse_expression("bool", "(strcmp((s1),(s2)) == 0)");
+  test_parse_expression("bool", "(state->basic.eax == MACH_RCV_INTERRUPTED && !memcmp (pc, &syscall, sizeof syscall))");
+  test_parse_expression("bool", "(size1 == 0)");
+  test_parse_expression("bool", "(startpos >= size1)");
+  test_parse_expression("bool", "(foo || bar)");
+  test_parse_expression("bool", "(size1 == 0 || startpos >= size1)");
+
+  # Array
+  test_parse_expression("typeUNKNOWN", "{  { LONG_MAX, LONG_MAX },  { LONG_MAX, LONG_MAX }, }");
 
   # Unknown
-  test_parse_type("typeUNKNOWN", "tab_prefix[i]");
-  test_parse_type("typeUNKNOWN", "&window");
-  test_parse_type("typeUNKNOWN", "NULL");
-  test_parse_type("typeUNKNOWN", "(eof)");
-  test_parse_type("typeUNKNOWN", "memset ((voidp)(s), 0, (n))");
-  test_parse_type("typeUNKNOWN", "malloc((size_t)(items)*(size_t)(size))");
-  test_parse_type("bool", "inptr < insize");
-  test_parse_type("typeUNKNOWN", "inbuf[inptr++]");
-  test_parse_type("typeUNKNOWN", "(inptr < insize ? inbuf[inptr++] : fill_inbuf(0))");
-  test_parse_type("typeUNKNOWN", "fill_inbuf(0)");
+  test_parse_expression("typeUNKNOWN", "tab_prefix[i]");
+  test_parse_expression("typeUNKNOWN", "&window");
+  test_parse_expression("typeUNKNOWN", "NULL");
+  test_parse_expression("typeUNKNOWN", "(eof)");
+  test_parse_expression("typeUNKNOWN", "memset ((voidp)(s), 0, (n))");
+  test_parse_expression("typeUNKNOWN", "malloc((size_t)(items)*(size_t)(size))");
+  test_parse_expression("typeUNKNOWN", "inbuf[inptr++]");
+  test_parse_expression("typeUNKNOWN", "(inptr < insize ? inbuf[inptr++] : fill_inbuf(0))");
+  test_parse_expression("typeUNKNOWN", "fill_inbuf(0)");
+  test_parse_expression("typeUNKNOWN", "BLOCK_SIGNAL (SIGCHLD, nvar, ovar)");
+  test_parse_expression("typeUNKNOWN", "_elf_data_set_element(set, symbol)");
+  test_parse_expression("typeUNKNOWN", "((size_t) &((TYPE *)0)->MEMBER)");
+  test_parse_expression("typeUNKNOWN", "symbol_set_declare(set)");
+  test_parse_expression("typeUNKNOWN", "_elf_text_set_element(set, symbol)");
+  test_parse_expression($typeUNKNOWN, "get_byte()");
+  test_parse_expression($typeUNKNOWN, "strcmp((s1),(s2))");
+  test_parse_expression($typeUNKNOWN, "((s1),(s2))");
+  test_parse_expression($typeUNKNOWN, "(s1),(s2)");
+  test_parse_expression($typeUNKNOWN, "(s1)");
+  test_parse_expression($typeUNKNOWN, "s1,s2");
+  test_parse_expression($typeUNKNOWN, "strcmp(s1,s2)");
+  test_parse_expression($typeUNKNOWN, "(1L << (n))");
+  test_parse_expression($typeUNKNOWN, "(1 << (n))");
+  test_parse_expression($typeUNKNOWN, "(1 << n)");
+  test_parse_expression($typeUNKNOWN, "(1<<HASH_BITS)");
+  test_parse_expression($typeUNKNOWN, "(((struct mhead *) mem) - 1) -> mh_index");
+  test_parse_expression($typeUNKNOWN, "8 << (((struct mhead *) mem) - 1) -> mh_index");
+  test_parse_expression($typeUNKNOWN, "O_WRONLY | O_CREAT | O_EXCL | O_BINARY");
+  test_parse_expression($typeUNKNOWN, "(foo ? string2[startpos - size1]  : string1[startpos])");
+  test_parse_expression($typeUNKNOWN, "(size1 == 0 || startpos >= size1 ? string2[startpos - size1]  : string1[startpos])");
+}
+
+sub test_parse_expression ($$)
+{
+  my ($expected_type, $exp) = check_args(2, @_);
+  $expected_type = type_name(type_to_num($expected_type));
+  if ($debug_parse_expression)
+    { print "test_parse_expression: '$expected_type' '$exp'\n"; }
+  my ($parsed_type, $remaining) = parse_expression($exp);
+  my $parsed_type_name = type_name($parsed_type);
+  if ($debug_parse_expression)
+    { print "test_parse_expression: '$expected_type' '$exp' '$parsed_type' '$parsed_type_name'\n"; }
+  if ($remaining ne "")
+    { print STDERR "Didn't parse all of $expected_type '$exp',\n    got $parsed_type_name with remaining = '$remaining'\n"; }
+  elsif ($expected_type ne $parsed_type_name)
+    { if ($exp =~ /\?/)
+	{ print STDERR "Conditional flub? "; }
+      print STDERR "Type $parsed_type_name ($parsed_type) should have been $expected_type for $exp\n"; }
 }
 
 sub test_regexp ($$;$)
@@ -6016,8 +6085,10 @@ if ($opt_i) {
   while (<STDIN>) {
     next if /^-.*$/;
     chop ($_);
-    push @files,$_;
-    $file_inclusion_method{$_} = "FromStdin";
+    # bash/machines.h is for use by the makefile, not C code
+    if (!(($_ eq "./machines.h") && ($opt_d =~ /bash/)))
+      { push @files,$_;
+	$file_inclusion_method{$_} = "FromStdin"; }
   }
 }
 
@@ -6131,9 +6202,9 @@ if ($opt_g)
   else { die "Bad -g option $opt_g"; }
 }
 
+# Testing
 if ($opt_T)
-{ test_parse_types();
-  test_typedecl_regexps();
+{ test_typedecl_regexps();
   test_parse_expressions();
   test_categorize_macro_defs();
   exit -1;			# Don't run following programs, eg from gzip.
@@ -6145,12 +6216,11 @@ $fDebugCmdProcessing && print "@ARGV";
 # Add the rest of the arguments to the files list
 { my $file;
   foreach $file (@ARGV) {
-    push @files,$file;
-    $file_inclusion_method{$file} = "FromCmdLine";
+    # bash/machines.h is for use by the makefile, not C code
+    if (!(($file eq "./machines.h") && ($opt_d =~ /bash/)))
+      { push @files,$file;
+	$file_inclusion_method{$file} = "FromCmdLine"; }
   } }
-
-# Testing
-# test_typedecl_regexp(); exit();
 
 get_include_path();
 initialize_builtin_macros();
