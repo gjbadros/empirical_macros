@@ -51,10 +51,7 @@ sub check_args ($@)
   my ($pack, $file_arg, $line_arg, $subname, $hasargs, $wantarr) = caller(1);
   if (@_ < 1) { croak "check_args needs at least 7 args, got ", scalar(@_), ": @_\n "; }
   if ((!wantarray) && ($num_formals != 0))
-    { # my ($package, $filename, $line) = caller;
-      # die "$filename:$line: check_args called in scalar context by $subname: @args";
-      croak "check_args called in scalar context";
-    }
+    { croak "check_args called in scalar context"; }
   # Can't use croak below here: it would only go out to caller, not its caller
   my $num_actuals = @args;
   if ($num_actuals != $num_formals)
@@ -76,10 +73,7 @@ sub check_args_range ($$@)
   my ($pack, $file_arg, $line_arg, $subname, $hasargs, $wantarr) = caller(1);
   if (@_ < 2) { croak "check_args_range needs at least 8 args, got ", scalar(@_), ": @_"; }
   if ((!wantarray) && ($max_formals != 0) && ($min_formals !=0) )
-    { # my ($package, $filename, $line) = caller;
-      # die "$filename:$line: check_args_range called in scalar context: @args\n";
-      croak "check_args_range called in scalar context";
-    }
+    { croak "check_args_range called in scalar context"; }
   # Can't use croak below here: it would only go out to caller, not its caller
   my $num_actuals = @args;
   if (($num_actuals < $min_formals) || ($num_actuals > $max_formals))
@@ -99,12 +93,10 @@ sub check_args_at_least ($@)
   # Don't do this, because we want every sub to start with a call to check_args*
   # if ($min_formals == 0)
   #   { die "Isn't it pointless to check for at least zero args to $subname?\n"; }
-  if (@_ < 1) { croak "check_args_at_least needs at least 7 args, got ", scalar(@_), ": @_"; }
+  if (scalar(@_) < 1)
+    { croak "check_args_at_least needs at least 1 arg, got ", scalar(@_), ": @_"; }
   if ((!wantarray) && ($min_formals != 0))
-    { # my ($package, $filename, $line) = caller;
-      # die "$filename:$line: check_args_at_least called in scalar context: @args\n"
-      croak "check_args_at_least called in scalar context";
-    }
+    { croak "check_args_at_least called in scalar context"; }
   # Can't use croak below here: it would only go out to caller, not its caller
   my $num_actuals = @args;
   if ($num_actuals < $min_formals)
