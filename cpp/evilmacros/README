@@ -38,6 +38,7 @@ How To Use Pcp3 To Preprocess A Package
 6) pcp3-compare-exps-vs-c
    # check that for every .c file, a .exps file exists
 6b) For each file remaining, create the .exps file by making that .o file
+        make -k CC=gcc-pcp3
     (may need to touch-oldify the .o file first).
     Do this in its own directory, not from the top-level directory.
 
