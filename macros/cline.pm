@@ -237,7 +237,8 @@ sub cline_updateinvars ($)
 		{ $seen_ncnb = 1; }
 	      $cline_incomment = $true; }
 	  elsif ($match eq "*/")
-	    { push(@{$warnings}, "illegal: comment terminator */ not in comment\n    in $_[0]"); }
+	    { $remaining = $POSTMATCH;
+	      push(@{$warnings}, "illegal: comment terminator */ not in comment\n    in $_[0]"); }
 	  else
 	    { croak("cline_updateinvars: what match?  $match in $_[0]"); } }
       else
