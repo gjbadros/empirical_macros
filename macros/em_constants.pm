@@ -6,18 +6,28 @@ require Exporter;
 @ISA = qw(Exporter);
 # Initially used below line to generate the @EXPORT line
 #perl -ne 'BEGIN {print "\@EXPORT = qw("; } END {print ");\n";} print "$1 " if /([$%@]\w+)\s+/'
-@EXPORT = qw($true $false $OBSOLETE $DANGER $EVIL $ILLEGAL
- $catNOTYET $catINPROCESS $catNODEF $catMULTIPLE $catNULLDEFINE
- $catEXP $catEXPASSIGN $catEXPFREE $catLITERAL $catCONSTANT $catSOMECONSTANT
- $catFAILURE $catHASTYPEARG $catMACROFUN $catMACROTYPE $catUSESTYPEARG
- $catASM $catSYNTAX $catTYPE $catRESDWORD $catSTATEMENT $catRECURSIVE
- $catMISMATCH $catPASTING $catSTRINGIZE $catLast
- @categoryname
+@EXPORT = qw(
+ $true $false $OBSOLETE $DANGER $EVIL $ILLEGAL
+
+ $catNOT_YET $catIN_PROCESS $catNO_DEF $catNULL_DEFINE $catEXP
+ $catSOME_CONSTANT $catCONSTANT $catLITERAL
+ $catSTATEMENT $catSTATEMENT_SANS_SEMI $catPARTIAL_STATEMENT
+ $catSTATEMENTS $catSTATEMENTS_SANS_SEMI $catPARTIAL_STATEMENTS
+ $catTYPE $catPARTIAL_TYPE $catRESERVED_WORD
+ $catFUNCTION_NAME $catSYMBOL_UNKNOWN $catSYMBOLS $catRECURSIVE
+ $catUNBALANCED $catPUNCTUATION $catCOMMAND_LINE $catASSEMBLY_CODE
+ $catMULTIPLE $catFAILURE $catLast @categoryname
+
+ $propNONE $propASSIGN $propFREE_VAR $propINVOKES_MACRO
+ $propPASSES_TYPE_AS_ARG $propUSES_MACRO_AS_TYPE $propUSES_ARG_AS_TYPE
+ $propASSEMBLY_CODE $propPASTING $propSTRINGIZE
+
  $typeFAIL $typeBOOL $typeCHAR $typeUCHAR $typeSCHAR $typeSHORT
  $typeUSHORT $typeINT $typeUINT $typeLONG $typeULONG
  $typeFLOAT $typeDOUBLE $typeLDOUBLE
  $typeSTRING $typeNUMBER $typeUNKNOWN $typeUNSPECIFIED $typeNODEF
  %type_num @type_name_array
+
  $c_ftype
  @ftype_ALL
  %InclusionMethod_to_Index
@@ -56,8 +66,10 @@ require Exporter;
  $builtin_type_re $numeric_binop_regexp $bool_binop_regexp
  $arb_type_binop_regexp $binop_regexp $prefix_unop_regexp
  $postfix_unop_regexp $selector_regexp
+ $cpp_include_arg_re
 );
 #End of @EXPORT
+
 
 ###########################################################################
 ### Constants
@@ -73,85 +85,169 @@ $false = (1 == 0);
 # sub name FALSE () { 1==0 }
 # In Perl 5.004, this allegedly will be expanded inline
 
-# some evilness (pasting, stringization) is independent of the others,
-# though it may not be able to be classified (actually, stringization
-# is pretty easy to classify, when we see that a macro argument follows #).
-# In this case evilness is more need-for-preprocessor.
-
-# Also note that some evilness has to do with whole files, or parsing,
-# while other has to do with macros that have to be macros.
-# Maybe rename the latter from "evil" to "macrofeature" or some such.
-
 # These should probably be merged into failure categories, below
 $OBSOLETE = 1;
 $DANGER = 2;
 $EVIL = 3;
 $ILLEGAL = 4;
 
-# Nonconstant: free var (var, function, etc), expression w/side effect,
-#	inconsistent types, etc.
-# Statement (??)
-# Other unclassifiable: give evilness reason, or name the free var,
-#	or do multiple of these.
 
-
-# Categories
+###########################################################################
+### Categories
+###
 
 # These speak of the BODY; whether the macro takes args is a different matter.
-# Right now I return "some constant" many places that I should really return "some value".
-# Fix later.
 
-$catNOTYET = 0;		# shouldn't be used; should be undefined instead
-$catINPROCESS = 1;
-$catNODEF = 2;
-$catMULTIPLE = 3;
-$catNULLDEFINE = 4;
-# Expressions
-$catEXP = 5;
-$catEXPASSIGN = 6;
-$catEXPFREE = 7;		# expression with free variables
-$catLITERAL = 8;		# also specify the literal value
-$catCONSTANT = 9;		# need to also specify the particular value, if possible
-$catSOMECONSTANT = 10;	# a constant, but not known which (e.g., multiple #defines)
-# Non-expressions
-$catFAILURE = 11;		# shouldn't have just one, should have many
-$catHASTYPEARG = 12;		# macro argument has a type
-# These shouldn't be failures
-$catMACROFUN = 13;
-$catMACROTYPE = 14;
-$catUSESTYPEARG = 15;
+## Failure:
+$catNOT_YET = 0;		# shouldn't be used; should be undefined instead
+$catIN_PROCESS = 1;		# currently being categorized
+$catNO_DEF = 2;			# can happen if a macro expands to (name of)
+				#   another macro that is never defined
 
-# New categories -- higher numbers take precedence over lower ones
-# Be sure to keep in sync w/ strings of @categoryname
-$catASM = 16;
-$catSYNTAX = 17;		# this goes along with MISMATCH, sort of
-$catTYPE = 18;
-$catRESDWORD  = 19;
-$catSTATEMENT = 20;  # STATEMENT-s likely contain reserved words, but are more specific
-$catRECURSIVE = 21;
-$catMISMATCH  = 22;
-$catPASTING   = 23;
-$catSTRINGIZE = 24;
+## Null define:
+$catNULL_DEFINE = 3;
 
-$catLast = 24;
+## Expression:
+$catEXP = 4;
+$catSOME_CONSTANT = 5;	# a constant, but not known which (e.g., multiple #defines)
+$catCONSTANT = 6;		# need to also specify the particular value
+$catLITERAL = 7;		# also specify the literal value
+
+## Statement
+$catSTATEMENT = 8;
+$catSTATEMENT_SANS_SEMI = 9;	# semicolon-less statement
+$catPARTIAL_STATEMENT = 10;
+# Are these useful, or should they be a property?
+$catSTATEMENTS = 11;		# multiple statements
+$catSTATEMENTS_SANS_SEMI = 12;		# multiple statements, last one lacks semicolon
+$catPARTIAL_STATEMENTS = 13;	# multiple statements, last one incomplete
+
+## Type
+$catTYPE = 14;			# expands to a type
+$catPARTIAL_TYPE = 15;
+
+## Single symbol (no $catMACRONAME: if expands to a macro, inherit its type)
+$catRESERVED_WORD = 16;		# expands to (just) non-type reserved word -- irrelevant?
+$catFUNCTION_NAME = 17;		# expands to name of function declared in package
+$catSYMBOL_UNKNOWN = 18;	# symbol (not function, macro, or reserved word)
+				#   (probably a macro whose def we didn't see,
+				#    or possibly a local or global variable)
+
+$catSYMBOLS = 19;		# multiple space-separated symbols: #def P(x,y) x y
+
+$catRECURSIVE = 20;		# not sure there are enough of these to justify;
+				# currently all but about 5 are misclassifications
+
+## Fragments
+$catUNBALANCED = 21;		# unbalanced parentheses; was $catMISMATCH;
+				#   includes {), so perhaps that was better
+$catPUNCTUATION = 22;	# expands to just punctuation token(s); was $catSYNTAX
+
+## Not C code:
+$catCOMMAND_LINE = 23;		# Command-line arguments
+$catASSEMBLY_CODE = 24;
+
+$catMULTIPLE = 25; # a def gets this if it expands to a macro with this category
+$catFAILURE = 26;		# other sorts of failure (for example...?)
+
+$catLast = 26;			# same as last one
 
 @categoryname = (
 		 'uncategorized', 'being_categorized', 'never_defined',
-		 'multiply_categorized', 'null_define',
-		 'expression', 'expression_with_assignment',
-		 'expression_with_free_variables',
-		 'literal', 'constant', 'some_constant',
-		 'failed_categorization', 'has_type_argument',
-		 'macro_as_function', 'macro_as_type',
-		 'uses_type_argument',
-		 'assembly_code', 'syntax_tokens',
-		 'expands_to_type', 'expands_to_reserved_word',
-		 'statement',
+		 'null_define',
+		 'expression', 'some_constant', 'constant', 'literal',
+		 'statement', 'semicolonless_statement', 'partial_statement',
+		 'statements', 'semicolonless_statements', 'partial_statements',
+		 'type', 'partial_type',
+		 'reserved_word', 'function_name', 'unknown_symbol',
+		 'symbols',
 		 'recursive',
 		 'mismatched_entities',
-		 'token_pasting',
-		 'stringization',
-		 );
+		 'punctuation',
+		 'command_line_arguments', 'assembly_code',
+		 'multiply_categorized',
+		 'failed_categorization');
+
+if ((not defined($categoryname[$catLast]))
+     || defined($categoryname[$catLast+1]))
+{ die "categoryname and catLast out of synch! '$categoryname[$catLast]' '$categoryname[$catLast+1]'"; }
+
+# Properties, which can be attached to any of the above:
+$propNONE = 0;
+$propASSIGN = 1;
+$propFREE_VAR = 2;		# expression with free variables
+$propINVOKES_MACRO = 4;	# uses a macro as a function -- irrelevant?
+$propPASSES_TYPE_AS_ARG = 8;	# body passes a type to another macro
+$propUSES_MACRO_AS_TYPE = 16;	# expands a macro where a type is expected
+$propUSES_ARG_AS_TYPE = 32;	# a macro argument was used as a type
+$propASSEMBLY_CODE = 64;	# contains in-line assembly code
+$propPASTING   = 128;
+$propSTRINGIZE = 256;
+
+# 		 'token_pasting',
+# 		 'stringization',
+# 		 'has_type_argument',
+# 		 'macro_as_function', 'macro_as_type',
+# 		 'uses_type_argument',
+# 		 'assembly_code', ,
+
+
+
+
+## Old version; delete soon.
+# $catNOT_YET = 0;		# shouldn't be used; should be undefined instead
+# $catIN_PROCESS = 1;
+# $catNO_DEF = 2;
+# $catMULTIPLE = 3; # a def gets this if it expands to a macro with this category
+# $catNULL_DEFINE = 4;
+# # Expressions
+# $catEXP = 5;
+# $catEXPASSIGN = 6;
+# $catEXPFREE = 7;		# expression with free variables
+# $catLITERAL = 8;		# also specify the literal value
+# $catCONSTANT = 9;		# need to also specify the particular value, if possible
+# $catSOME_CONSTANT = 10;	# a constant, but not known which (e.g., multiple #defines)
+# # Non-expressions
+# $catFAILURE = 11;		# shouldn't have just one, should have many
+# $catHASTYPEARG = 12;		# macro argument has a type
+# # These shouldn't be failures
+# $catMACROFUN = 13;
+# $catMACROTYPE = 14;
+# $catUSESTYPEARG = 15;
+# 
+# # New categories -- higher numbers take precedence over lower ones
+# # Be sure to keep in sync w/ strings of @categoryname
+# $catASM = 16;
+# $catSYNTAX = 17;		# this goes along with MISMATCH, sort of
+# $catTYPE = 18;			# expands to a type
+# $catRESERVED_WORD  = 19;
+# $catSTATEMENT = 20;  # STATEMENT-s likely contain reserved words, but are more specific
+# $catRECURSIVE = 21;
+# $catMISMATCH  = 22;
+# $catPASTING   = 23;
+# $catSTRINGIZE = 24;
+# $catCOMMAND_LINE   = 25;
+# 
+# $catLast = 25;
+# 
+# @categoryname = (
+# 		 'uncategorized', 'being_categorized', 'never_defined',
+# 		 'multiply_categorized', 'null_define',
+# 		 'expression', 'expression_with_assignment',
+# 		 'expression_with_free_variables',
+# 		 'literal', 'constant', 'some_constant',
+# 		 'failed_categorization', 'has_type_argument',
+# 		 'macro_as_function', 'macro_as_type',
+# 		 'uses_type_argument',
+# 		 'assembly_code', 'syntax_tokens',
+# 		 'expands_to_type', 'expands_to_reserved_word',
+# 		 'statement',
+# 		 'recursive',
+# 		 'mismatched_entities',
+# 		 'token_pasting',
+# 		 'stringization',
+# 		 'command_line_arguments'
+# 		 );
 
 # Conditional Categories (for #if.* preprocessor directives)
 @cond_category_name = qw(debug portability_language_or_library portability_language_macro
@@ -420,6 +516,10 @@ $prefix_unop_regexp = '(?:~!-\+&\*|\+\+|--)';
 $postfix_unop_regexp = '(?:\+\+|--)';
 $selector_regexp = '(?:\.|->)';
 
+
+# Cpp operators
+# Two groups: first for angled include, second for quoted include
+$cpp_include_arg_re = '(?:<(.*)>|\"(.*)\")';
 
 1; #Successful import
 __END__

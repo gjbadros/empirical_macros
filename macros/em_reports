@@ -76,6 +76,7 @@ use checkargs;
 use em_constants;
 use em_util;
 use paren;
+use cline;
 use IO::Handle;
 
 
@@ -111,6 +112,7 @@ my $debug_scopes = $false;
 my $debug_type_match = $false;
 my $debug_parse_function = $false;
 my $debug_parse_expression = $false;
+my $debug_parse_statement = $false;
 my $debug_merge_branches = $false;
 my $debug_parse_array_init = $false;
 my $debug_peek = $false;
@@ -164,13 +166,14 @@ use vars qw($getopts_option_letters $c_reserved_type_word_alternatives
     %file_inclusion_method @files_included $outOFS %macros
     %macros_c_undefs %macros_uses %macros_file_line_uses
     %macros_used_in_functions @mdef_name @mdef_args @mdef_body
-    @mdef_body_noc @mdef_body_simple @mdef_file @mdef_line @mdef_physical_lines
+    @mdef_file @mdef_line @mdef_physical_lines
     @mdef_physical_ncnb_lines %mdef_freevars @mdef_freefuns
-    @mdef_dependenton @mdef_direct_expansion_uses @mdef_type @mdef_category
+    @mdef_dependenton @mdef_direct_expansion_uses @mdef_type
+    @mdef_category @mdef_properties
     @mdef_evilness %mntype %mncategory %fun_decl_arg_macros
     %semi_fun_decl_arg_macros %void_macros $fDebugCmdProcessing
     $fDebugCommentRemoval $debug_scopes $debug_type_match
-    $debug_parse_function $debug_parse_expression
+    $debug_parse_function $debug_parse_expression $debug_parse_statement
     $debug_merge_branches $debug_parse_array_init $debug_peek
     $debug_getline $debug_categorize_macro $debug_cpp_if_comments
     $fIgnoreIncludes @getline_ungot_raw_lines
@@ -185,6 +188,8 @@ use vars qw($getopts_option_letters $c_reserved_type_word_alternatives
     @rg_ccd_cat_counts
     %macros_used_by_cpp
 );
+# Computed from the above, but not in state file.
+my @mdef_body_simple;
 
 
 use vars qw(%macros_c_all_uses @freq_use_buckets @freq_def_buckets
@@ -434,10 +439,9 @@ sub output_stats ()
 	print "$mdef_file[$index]:$mdef_line[$index]: "
 	  . ($mdef_args[$index] ? "function, " : "") . $categoryname[$category];
 	if (($category == $catEXP)
-	    || ($category == $catEXPFREE)
 	    || ($category == $catLITERAL)
 	    || ($category == $catCONSTANT)
-	    || ($category == $catSOMECONSTANT))
+	    || ($category == $catSOME_CONSTANT))
 	  { # These used to be commas, but those turn into tabs with -t option
 	    print "(" . type_name($type) . ")"; }
 	print ": $mdef_name[$index]$mdef_args[$index] $mdef_body[$index]\n";
@@ -542,15 +546,11 @@ sub output_stats ()
 		         . "missing space between macro name and parenthesized body"); }
 	      # Check uses of each formal
 	      my $category = $mdef_category[$i];
-	      # This is insufficient: $catMACROTYPE and $catUSESTYPEARG, among
-	      # others, may also be expressions.
 	      my $category_is_expression
 		= (($category == $catEXP)
-		   || ($category == $catEXPASSIGN)
-		   || ($category == $catEXPFREE)
 		   || ($category == $catLITERAL)
 		   || ($category == $catCONSTANT)
-		   || ($category == $catSOMECONSTANT));
+		   || ($category == $catSOME_CONSTANT));
 	      if ($args)
 		{ my @args = args_array($args);
 		  for my $arg (@args)
@@ -623,7 +623,7 @@ sub output_stats ()
 
 	      # Check body
 	      if ($body =~ /\n/)
-		{ die "Shouldn't find newlines in body: $body"; }
+		{ die "$mdef_file[$i]:$mdef_line[$i]: newline in $macro_name (def #$i): '$body'"; }
 	      if ($mdef_body[$i] =~ /\n/)
 		{ push(@complaints,
 		       "multi-line comment or string"); }
@@ -650,7 +650,7 @@ sub output_stats ()
 		       "semicolon-swallowing problem: enclose statement(s) in \"do ... while (0)\""); }
 	      else
 		{ my $remaining = $body;
-		  while ($remaining =~ /[;\{]/)
+		  while ($remaining =~ /[;\{]/)	# no /g; $remaining used in body
 		    { $remaining = $POSTMATCH;
 		      if ($MATCH eq ";")
 			{ push(@complaints,
@@ -842,13 +842,13 @@ sub compute_freq_use_info () {
   foreach my $name (keys %macros) {
     next if MacroNotDefinedInsidePackage($name);
     my $index = $macros{$name}[0];
-    if ($mdef_category[$index] == $catNULLDEFINE) {
+    if ($mdef_category[$index] == $catNULL_DEFINE) {
       # if the first definition's category is NULLDEFINE, use
       # a different category if any of its other definitions were
       # not NULLDEFINEs.
       my $i = 1;
       while (defined($macros{$name}[$i]) &&
-	     $mdef_category[$macros{$name}[$i]] == $catNULLDEFINE) {
+	     $mdef_category[$macros{$name}[$i]] == $catNULL_DEFINE) {
 	$i++;
       }
       if (defined($macros{$name}[$i])) {
@@ -872,13 +872,13 @@ sub compute_freq_def_info () {
   foreach my $name (keys %macros) {
     next if MacroNotDefinedInsidePackage($name);
     my $index = $macros{$name}[0];
-    if ($mdef_category[$index] == $catNULLDEFINE) {
+    if ($mdef_category[$index] == $catNULL_DEFINE) {
       # if the first definition's category is NULLDEFINE, use
       # a different category if any of its other definitions were
       # not NULLDEFINEs.
       my $i = 1;
       while (defined($macros{$name}[$i]) &&
-	     $mdef_category[$macros{$name}[$i]] == $catNULLDEFINE) {
+	     $mdef_category[$macros{$name}[$i]] == $catNULL_DEFINE) {
 	$i++;
       }
       if (defined($macros{$name}[$i])) {
@@ -1001,6 +1001,10 @@ sub ReadMacroAnalysisState {
     eval $in;
   }
   close(INPUTSTATE);
+
+  # If @mdef_body_simple wasn't in the state file, compute it from @mdef_body.
+  if (!defined($mdef_body_simple[0]))
+    { @mdef_body_simple = map { cline_simplify($_) } @mdef_body; }
 }
 
 ###########################################################################
@@ -1122,6 +1126,7 @@ if ($opt_g)
       $debug_type_match = $false;
       $debug_parse_function = $false;
       $debug_parse_expression = $false;
+      $debug_parse_statement = $false;
       $debug_merge_branches = $false;
       $debug_parse_array_init = $false;
       $debug_peek = $false;
@@ -1140,6 +1145,7 @@ if ($opt_g)
   elsif ($opt_g == 10) { $debug_getline = $true; }
   elsif ($opt_g == 11) { $debug_categorize_macro = $true; }
   elsif ($opt_g == 12) { $debug_cpp_if_comments = $true; }
+  elsif ($opt_g == 15) { $debug_parse_statement = $true; }
   else { die "Bad -g option $opt_g"; }
 }
 
