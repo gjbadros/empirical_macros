@@ -84,11 +84,16 @@ Box 352350, Seattle, WA  98195-2350  USA \\
   various aspects of preprocessor use and particularly note data that are
   material to the development of tools for C or C++, including translating
   from C to C++ to reduce preprocessor usage.  Our results show that while
-  most Cpp usage follows fairly simple patterns, program
-  analysis tool must address the preprocessor in order to be effective.
+  most Cpp usage follows fairly simple patterns, an effective program
+  analysis tool must address the preprocessor.
   These results are of interest to language designers, tool writers,
   programmers, and software engineers.
 \end{abstract}
+
+\noindent
+Keywords: C preprocessor, Cpp, C, C++, program understanding, file
+inclusion, macro, macro substitution, conditional compilation, empirical study
+
 
 \bigskip
 
@@ -501,7 +506,7 @@ these directives account for .017\% of directives, or one in six thousand.
 Their only significant user is \pkg{g77}, which contains 154 uses of {\tt
 \#error} (representing 1.5\% of its preprocessor directives and 0.16\% of
 its NCNB lines) to check for incompatible preprocessor flags.  We ignore
-the empty directive (``{\tt \#}'' followed by only whitespace), which produces
+the null directive (``{\tt \#}'' followed by only whitespace), which produces
 no output.
 
 
@@ -598,7 +603,8 @@ The ten definition categories follow.
 \captionsmall{Categorization of macro definition bodies.  The legend numerically
   represents the information in the top row; the category names in the
   legend should be read across, by rows.  The packages are ordered from
-  most preprocessor directives per line to fewest (as in Figure 2).}
+  most preprocessor directives per line to fewest (as in
+  Figure~\ref{fig:directives-breakdown}).}
 \label{fig:categorization}
 \end{figure}
 
@@ -697,8 +703,7 @@ ASSERT(p) if (!(p)) botch(\verb|__STRING|(p)); else}).
 \begin{verbatim}
     #define __ptr_t void *
     #define __INLINE extern inline
-%    #define private static   -- this e.g. may be confusing since it is
- %    used for null define too as #define private /* nothing */ --12/11/97 gjb
+    #define private static
     #define FLOAT_ARG_TYPE union flt_or_int
     #define CMPtype SItype
 \end{verbatim}
@@ -1223,12 +1228,11 @@ variant declaration styles; as such, they require a definition for each
 variety, and they are frequently redefined to ensure that their settings
 are correct.
 
-%% here's my try at what you're getting at --12/11/97 gjb
-
 The least frequently redefined macros are those classified as unknown
 symbol.  This is partially due to our method of coalescing multiple
-definitions\,---\,any macro definition that is not an unknown symbol
-results in that macro name being classified as something else.  Our
+definitions:  macro definitions classified as unknown symbol are overriden
+by definitions with any other classification (see
+Appendix~\ref{app:category-lub}).  Our
 analysis included enough library header files to include some
 recognizable definition of most common macros.
 
