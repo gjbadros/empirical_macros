@@ -5230,7 +5230,7 @@ sub evilprint ($@) {
 sub current_line_no () {
   check_args(0, @_);
   if (!$categorizing_macros) {
-    return ($. - cline_ungot_phys_lines());
+    return int($. - cline_ungot_phys_lines());
   } else {
     return $current_macro_line_number;
   }
