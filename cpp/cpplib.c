@@ -38,6 +38,8 @@ Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include <sys/stat.h>
 #include <fcntl.h>
 
+/* #define VERBOSE_RETURN_VALUES */
+
 #ifdef EMACS
 #define NO_SHORTNAMES
 #include "../src/config.h"
@@ -329,6 +331,8 @@ extern char *getenv ();
 extern FILE *fdopen ();
 extern char *version_string;
 extern struct tm *localtime ();
+
+char szCompileFileName[200] = "@UNSET@";
 
 /* These functions are declared to return int instead of void since they
    are going to be placed in a table and some old compilers have trouble with
@@ -3834,7 +3838,9 @@ do_include (pfile, keyword, unused1, unused2)
       }
     else
       {
+#ifdef VERBOSE_RETURN_VALUES
       fprintf(stderr,"Skipping inclusion of %s, since DO_INCLUDE hook returned 0\n",fname);
+#endif
       }
   }
   return 0;
@@ -6799,6 +6805,9 @@ push_pending (pfile, cmd, arg)
    Returns if an unrecognized option is seen.
    Returns number of handled arguments.  */
 
+
+extern char szHooksFile[];
+
 int
 cpp_handle_options (pfile, argc, argv)
      cpp_reader *pfile;
@@ -6830,7 +6839,7 @@ cpp_handle_options (pfile, argc, argv)
 	  {
 	  if (i + 1 == argc)
 	    fatal ("Filename missing after `%s' option", argv[i]);
-	  szHooksFile = argv[i+1];
+	  strcpy(szHooksFile,argv[i+1]);
 	  i++;
 	  }
 	else 
@@ -6839,6 +6848,10 @@ cpp_handle_options (pfile, argc, argv)
       case 'q':
 	opts->fWarnMissingHooks = FALSE;
 	break;
+      case 'c':
+        /* get the filename, but don't increment i */
+        strcpy(szCompileFileName,argv[i+1]);
+        break;
 
       case 'i':
 	if (!strcmp (argv[i], "-include")

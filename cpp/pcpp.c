@@ -79,7 +79,7 @@ cpp_reader parse_in;
 cpp_reader *pcr = &parse_in;
 cpp_options options;
 
-char *szHooksFile = "cpphook.pm";
+char szHooksFile[100] = "cpphook.pm";
 
 
 /* More 'friendly' abort that prints the line and file.
@@ -125,6 +125,8 @@ SzIsSpeculative()
 {
   return FIsSpeculative()?"SPECULATIVE:":"";
 }
+
+extern char szCompileFileName[];
 
 int
 main (int argc, char **argv, char **env)
@@ -175,7 +177,7 @@ main (int argc, char **argv, char **env)
     die("Problem with hooks file!  Check that perl file for compilation errors.");
 
   perl_run(my_perl);
-  gjb_call_hooks_void(opts,HI_STARTUP);
+  gjb_call_hooks_sz(opts,HI_STARTUP,szCompileFileName);
 
   parse_in.show_column = 1;
 
