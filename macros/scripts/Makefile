@@ -48,6 +48,7 @@ MAC  := $(addsuffix .mac,$(PKGS))
 CCD  := $(addsuffix .ccd,$(PKGS))
 DEPEND  := $(addsuffix .depend,$(PKGS))
 SDEPEND  := $(addsuffix .sdepend,$(PKGS))
+SDEPEND_BY_MACRO  := $(addsuffix .bymacro,$(SDEPEND))
 USECUM  := $(addsuffix .frequse_cum,$(PKGS))
 DEFCUM  := $(addsuffix .freqdef_cum,$(PKGS))
 CATUSECUM  := cat-*.frequse_cum
@@ -199,7 +200,12 @@ tbl-expansion-dependences-by-line: $(SDEPEND)
 %.sdepend: %.depend
 	awk '/======================================================================/,/^  thislinewontmatchanything  $$/' < $< > $@
 
+%.sdepend.bymacro: %.sdepend
+	macros-simplify-dependences-by-macro $<
+
 sdepend: $(SDEPEND)
+
+sdepend_bymacro: $(SDEPEND_BY_MACRO)
 
 ###########################################################################
 ### Etc.
@@ -241,4 +247,4 @@ fast:	$(SCRIPTSPATH)
 # *.stat file
 .PRECIOUS: %.state
 
-.PHONY: all clean showvars text_tables data_analyze data_reports raw copy fast sdepend
+.PHONY: all clean showvars text_tables data_analyze data_reports raw copy fast sdepend sdepend_bymacro

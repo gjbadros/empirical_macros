@@ -1,0 +1,17 @@
+#!/uns/bin/perl -w
+foreach my $file (@ARGV) {
+  open(IN,"<$file") || die "Could not open $file: $!";
+  open(OUT,">$file.bymacro") || die "Could not open output file $file.bymacro: $!";
+  print STDERR "Handling $file...\n";
+  print OUT "#Name\tDDefs\tDefs\tIncl\tExp\tAny\n";
+  while (<IN>) {
+#    print STDERR $_;
+    if (/^(\d+)\s+(\w+)\s*=\s*(\d+)\s+\[(\d+)\]\s+\*\s+\((\d+)\s*\+\s*(\d+)\)\s*$/) {
+      my ($product,$name,$ddefs,$defs,$incl,$exp) = ($1,$2,$3,$4,$5,$6);
+      my $any = $product/($ddefs > 0? $ddefs: 1);
+      print OUT "$name\t$ddefs\t$defs\t$incl\t$exp\t$any\n";
+    } elsif (/^\s*$/) {
+      last;
+    }
+  }
+}
