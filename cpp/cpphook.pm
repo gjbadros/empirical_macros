@@ -12,6 +12,18 @@ use em_util;
 use vars qw( *CHOUT @Hooks );
 use Boolean;
 
+sub AddHook {
+  my ($indexname,$fnref) = @_;
+  if (!defined($$indexname)) {
+    die "Cannot find hook named $indexname";
+  }
+  push @{$Hooks[$$indexname]}, $fnref;
+# Below line would still work, but uses the less general, 
+# single hook interface  --10/02/97 gjb
+#  $Hooks[$$indexname] = $fnref;
+}
+
+
 my %macro_name;
 
 
@@ -36,13 +48,9 @@ sub FIsDeclAllowable {
   return FALSE;
 }
 
-
-sub AddHook {
-  my ($indexname,$fnref) = @_;
-  if (!defined($$indexname)) {
-    die "Cannot find hook named $indexname";
-  }
-  $Hooks[$$indexname] = $fnref;
+# For testing of more general multiple hook mechanism
+sub Startup2 {
+  print STDERR "Startup2\n";
 }
 
 sub Startup {
@@ -59,6 +67,7 @@ sub Startup {
   print MAPPING "(setq char-mapping (list\n";
   open(TP,">textprops.el") || die "Could not open output file: $!";
   open(TPSOURCE,">textprops-source.el") || die "Could not open output file: $!";
+  open(MACEXP_STACKS,">macro_expand_stacks") || die "Could not open output file: $!";
 #  select CHOUT;
   select STDERR;
   $| = 1; # Turn on autoflush
@@ -112,7 +121,7 @@ sub create_def {
   push @{$macro_name{$mname}{defs}}, [ $fname, $s_start,$s_end ];
   @{$macro_name{$mname}{currdef}} = ( $fname, $s_start,$s_end );
   if (!FIsDeclAllowable()) {
-    annotate_definition("Parse stack may not be appropriate for a declaration",$mname,$s_start,$s_end);
+    annotate_definition('xform',"Parse stack may not be appropriate for a declaration",$mname,$s_start,$s_end);
     print STDERR ":**BETTER NOT CHANGE THIS TO A DECL!\n";
   }
   select $old;
@@ -161,12 +170,24 @@ sub cpp_error {
 sub do_undef {
   my ($s_start,$s_end,$mname, $cDeletes) = @_;
   print CPP "do_undef of $mname [$s_start,$s_end] ($cDeletes deleted)\n";
-  annotate_definition_with_undef($mname,$s_start,$s_end);
 }
+
+sub pre_do_undef {
+  my ($s_start,$s_end,$mname) = @_;
+  print CPP "pre_do_undef of $mname [$s_start,$s_end]\n";
+  annotate_definition_with_undef('doc',$mname,$s_start,$s_end);
+}
+
 sub delete_def {
   my ($keyword, $fExists) = @_;
   print CPP "delete_def $keyword, $fExists\n";
 }
+
+sub pop_buffer {
+  my $cbb = cpp::CbuffersBack();
+  print "POP_BUFFER, $cbb buffers back";
+}
+
 
 sub macro_cleanup {
   my ($mname, $s_start, $s_end, $cnexted, @nests) = @_;
@@ -176,11 +197,13 @@ sub macro_cleanup {
   my $fname = cpp::Fname();
   my $old = select;
   select CPP;
+  my $state_stack = join(",",cpp::ParseStateStack());
   print "macro_cleanup $mname; [$s_start - $s_end] source $offset, $cbb; output $cbytesOutput\n";
   print " : nests = ", join("->",@nests), "\n";
   if ($cbb == 1) {
     $top_level_full_expansion =~ s%\n%\\n\\%g;
-    print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'doc \"$mname final expansion: $top_level_full_expansion\")\n";
+    print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'final-exp \"$mname final expansion: $top_level_full_expansion\")\n";
+    print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'stack \"$state_stack\")\n";
     $top_level_full_expansion = "";
     $top_level_mname = "";
   }
@@ -193,20 +216,20 @@ sub macro_arg_exp  {
 }
 
 sub annotate_definition {
-  my ($message, $mname, $s, $e) = @_;
+  my ($prop, $message, $mname, $s, $e) = @_;
   my ($fnamedef, $s_start, $s_end) = @{$macro_name{$mname}{currdef}};
   my $fname = cpp::Fname();
   print STDERR "\"$mname\"\n";
-  print TPSOURCE "#$fnamedef:(add-text-property $s_start $s_end \'doc \"$message at $fname:$s,$e\")\n";
+  print TPSOURCE "#$fnamedef:(add-text-property $s_start $s_end \'$prop \"$message at $fname:$s,$e\")\n";
 }
 
 
 sub annotate_definition_with_use {
-  annotate_definition("Use",@_);
+  annotate_definition('use',"Use",@_);
 }
 
 sub annotate_definition_with_undef {
-  annotate_definition("Undef-fed",@_);
+  annotate_definition('doc',"Undef-fed",@_);
 }
 
 sub expand_macro {
@@ -234,6 +257,8 @@ sub expand_macro {
   print " : MEH = ", join("<-",cpp::MacroExpansionHistory()),"\n";
   chomp $raw_call;
   print " : was \"$mname$raw_call\" with $cargs args, length = ", $call_length, "\n";
+  my $state_stack = join(",",cpp::ParseStateStack());
+  print MACEXP_STACKS "$mname: $state_stack\n";
   my $iarg = 0;
 # Return values here that look like "@-BAZ" are escape macros (they've been expanded)
   while ($#args > 0) {
@@ -249,7 +274,6 @@ sub expand_macro {
       print TPSOURCE "#$fname:(put-face-property-if-none $s_start $s_end \'italic)\n";
       print TPSOURCE "#$fname:(put-mouse-face-property-if-none $s_start $s_end \'highlight)\n";
     }
-    print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'doc \"$mname expands to $expansion\")\n";
   }
   select $old;
 }
@@ -296,34 +320,44 @@ sub do_if {
 }
 
 sub do_elif {
-  my ($conditional, $skipped, $value) = @_;
-  print CPP "do_elif_eval on $conditional ($skipped) evals to $value\n";
+  my ($conditional, $skipped, $fSkipping) = @_;
+  print CPP "do_elif_eval on $conditional ($skipped), ", !$fSkipping?"Not ":"", "skipped\n";
 }
 sub do_xifdef {
-  my ($kind,$conditional, $trailing_garbage, $skipped, $value) = @_;
-  print CPP "do_xifdef ($kind) on $conditional [$trailing_garbage] ($skipped) evals to $value\n";
+  my ($kind,$conditional, $trailing_garbage, $skipped, $fSkipping, $s_start) = @_;
+  my $fname = cpp::Fname();
+  my $s_end = cpp::CchOffset() + 1;
+  print CPP "do_xifdef ($kind) on $conditional [$trailing_garbage] ($skipped), ",
+  !$fSkipping?"Not ":"", "skipped\n";
+  print CPP ": @[$s_start - $cch_offset]\n";
+  if ($fSkipping) {
+    print TPSOURCE "#$fname:(put-face-property-if-none $s_start $s_end \'font-lock-reference-face)\n";
+    print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'doc \"Skipped due to $kind $conditional\")\n";
+  }
 }
 
 sub do_ifdef {
-  my ($conditional, $trailing_garbage, $skipped, $value) = @_;
-  print CPP "do_ifdef on $conditional [$trailing_garbage] ($skipped) evals to $value\n";
+  my ($conditional, $trailing_garbage, $skipped, $fSkipping) = @_;
+  print CPP "do_ifdef on $conditional [$trailing_garbage] ($skipped), ",
+  !$fSkipping?"Not ":"", "skipped\n";
   cpp::YYPushStackState();
   @state_stack = cpp::ParseStateStack();
   print CPP ": Stack: @state_stack\n";
 }
 
 sub do_ifndef {
-  my ($kind,$conditional, $trailing_garbage, $skipped, $value) = @_;
-  print CPP "do_ifndef on $conditional [$trailing_garbage] ($skipped) evals to $value\n";
+  my ($kind,$conditional, $trailing_garbage, $skipped, $fSkipping) = @_;
+  print CPP "do_ifndef on $conditional [$trailing_garbage] ($skipped), ",
+  !$fSkipping?"Not ":"", "skipped\n";
   cpp::YYPushStackState();
   @state_stack = cpp::ParseStateStack();
   print CPP ": Stack: @state_stack\n";
 }
 
 sub do_else {
-  my ($orig_conditional, $trailing_garbage, $skipped) = @_;
-  print CPP "do_else (orig conditional was $orig_conditional) [$trailing_garbage] skipped ($skipped)\n";
-#  cpp::YYSwapStackState();
+  my ($orig_conditional, $trailing_garbage, $skipped, $fSkipping) = @_;
+  print CPP "do_else (orig conditional was $orig_conditional) [$trailing_garbage] ($skipped), ",
+  !$fSkipping?"Not ":"", "skipped\n";
   @state_stack = cpp::ParseStateStack();
   print CPP ": Stack: @state_stack\n";
 }
@@ -355,6 +389,11 @@ sub done_include_file {
   my ($filename, $fSystemInclude) = @_;
   # NOTE: $fSystemInclude is always undef due to a bug
   print "done_include_file $filename, $fSystemInclude\n";
+}
+
+sub Got_token2 {
+  my ($token,$mname,$argno,$raw,@history) = @_;
+  print STDERR "Got TOKEN2, $token\n";
 }
 
 # Token's come a lot, so redirect this output somewhere else
@@ -404,11 +443,13 @@ sub do_func_call {
 # Add the hooks, now
 
 AddHook("STARTUP",\&Startup);
+#AddHook("STARTUP",\&Startup2);
 AddHook("DO_DEFINE",\&do_define);
 AddHook("HANDLE_DIRECTIVE",\&handle_directive);
 AddHook("CREATE_PREDEF",\&create_predef);
 AddHook("CREATE_DEF",\&create_def);
 AddHook("DO_UNDEF",\&do_undef);
+AddHook("PRE_DO_UNDEF",\&pre_do_undef);
 AddHook("DELETE_DEF",\&delete_def);
 AddHook("CPP_ERROR",\&cpp_error);
 AddHook("CPP_OUT",\&cpp_out);
@@ -432,9 +473,11 @@ AddHook("INCLUDE_FILE",\&include_file);
 AddHook("DONE_INCLUDE_FILE",\&done_include_file);
 AddHook("EXIT",\&Exit);
 AddHook("TOKEN",\&Got_token);
+#AddHook("TOKEN",\&Got_token2);
 AddHook("FUNCTION",\&do_function);
 AddHook("FUNC_CALL",\&do_func_call);
 AddHook("ANNOTATE",\&annotate);
+AddHook("POP_BUFFER",\&pop_buffer);
 
 
 1;
