@@ -140,29 +140,6 @@ $debug_cline = $false;
 #   syntactic check for parens, braces, commas, etc.
 $cline_simplify_strings = $false;
 
-# FIX: the encapsulation of some of these functions is
-# bad w.r.t., esp., error messages.
-# Note that you can not just return a single error message, since
-# many could be generated from one call.  Perhaps just concatenating
-# all the error messages to a growingly large string and returning it
-# may be the way to go.
-
-# FIXME FIXMERNST -- duplicate from em_analyze
-# Print a message to the EVIL stream, with file and line number prefix
-sub evilprint ($@) {
-  my (@msg) = check_args_at_least(1, @_);
-  print STDERR input_file_and_line(), ": ", @msg;
-  return;
-}
-
-# FIXME FIXMERNST -- duplicate from em_analyze
-# just return the current file and line number as a string
-sub input_file_and_line ()
-{
-  check_args(0, @_);
-#  return "$current_file:" . current_line_no();
-  return "\$current_file: \@{[ current_line_no() ]}";
-}
 
 ###########################################################################
 ### Determination of whether in string, whether in comment
@@ -311,7 +288,6 @@ sub append_lines ($$)
   return ($arg1 . $arg2);
 }
 
-# FIXME FIXMERNST -- duplicate from em_analyze
 # Add newline to end of string; return string unchanged if it already has one.
 sub add_newline ($)
 { my ($string) = check_args(1, @_);
@@ -368,14 +344,14 @@ sub get_spliced_cline ($;$)
 	{ if (substr($raw_line, -2) ne "\\\n")
 	    { die "Didn't find backslash-newline where there must be one: '$raw_line'\n"; }
 	  # What is the point of this test?  I added $true to front.
-	  if ($true || !($cline_incomment || ($cline_instring && $cline_simplify_strings))) {
-#FIXMERNST -- what's going on here?
-#	    if (substr($simple_line, -2) ne "\\\n")
-#		{ die "Didn't find backslash-nonewline where there must be one: '$simple_line'\n"; }
-	       $simple_line = substr($simple_line, 0, length($simple_line)-2); }
+	  if ($true || !($cline_incomment || ($cline_instring && $cline_simplify_strings)))
+	    {
+	      # FIX: this gives Greg some kind of error.  What's going on?
+	      # if (substr($simple_line, -2) ne "\\\n")
+	      #  { die "Didn't find backslash-nonewline where there must be one: '$simple_line'\n"; }
+	      $simple_line = substr($simple_line, 0, length($simple_line)-2); }
 	  elsif ((length($simple_line) >= 2) && (substr($simple_line, -1) eq "\\\n"))
-	    { die "Found backslash-nonewline where there mustn't be one: '$simple_line'\n"; } 
-	}
+	    { die "Found backslash-nonewline where there mustn't be one: '$simple_line'\n"; } }
       if ($simple_line =~ /\\\n/)
 	{ die "Found backslashes that should have just been removed."; }
       my $next_raw_line = <$filehandle>;
