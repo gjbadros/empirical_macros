@@ -1,5 +1,25 @@
 #!/uns/bin/zsh
-awk '/^CATEGORIES_NI:/ { \
+# use macros-make-categories-tbl-from-stat *.stat
+# FIX: use getopts 
+if [[ $1 == "-h" ]]; then
+    echo "Usage: $0 [-t] [-p] <stat-files>"
+    echo " -t means don't output for latex, use tab-delimiters"
+    echo " -p means give numbers as percentages"
+    exit 0;
+fi
+
+while getopts "pt" OPT; do
+    if [[ $OPT == "p" ]]; then
+	OPTS=($OPTS -v usepct=1)
+    fi
+    if [[ $OPT == "t" ]]; then
+	OPTS=($OPTS -v nolatex=1)
+    fi
+done
+shift $OPTIND
+
+gawk $OPTS -- 'function pct(x) { if (usepct) { return (100*x/totLine) + 0.05 } else {return x} }; \
+/^CATEGORIES_NI:/ { \
 cNull = $16; sNull += cNull; \
 cLit = $4 + $11 + $17; sLit += cLit; \
 cExp = $6 + $7 + $8 + $12; sExp += cExp; \
@@ -7,14 +27,23 @@ cStm = $18; sStm += cStm; \
 cStrPast = $19 + $21; sStrPast += cStrPast; \
 cSyntax = $5 + $10 + $13 + $14 + $20; sSyntax += cSyntax; \
 cFail = $2 + $3 + $9 + $15 + $22; sFail += cFail; \
-print FILENAME, cNull, cLit, cExp, cStm, cStrPast, cSyntax, cFail \
+totLine = cNull + cLit + cExp + cStm + cStrPast + cSyntax + cFail; \
+gsub(/\..*$/, "", FILENAME); \
+print FILENAME, pct(cNull), pct(cLit), pct(cExp), pct(cStm), pct(cStrPast), pct(cSyntax), pct(cFail); \
+totLine = 0; \
 } \
 BEGIN { \
-OFS=" & "; \
+if (usepct) { OFMT="%2.1f" } \
+if (nolatex) { OFS="\t"; } \
+else { OFS=" & "; \
 ORS="\\\\\\hline\n"; \
-print "\\begin{tabular}{|l|c|c|c|c|c|c|c|}\\hline\n" "Package", "Null define", "Literal", "Expression", "Statement", "Stringization and pasting", "Other syntatic macros", "Failed classification" } \
+print "\\begin{tabular}{|l|c|c|c|c|c|c|c|}\\hline"; } \
+print "",        "Null",   "",       "",            "",          "Stringization", "Other syntatic","Failed"; \
+print "Package", "Define", "Literal", "Expression", "Statement", "and pasting",   "macros",        "classification"; } \
 END { \
-print "\\hline\nTotal", sNull, sLit, sExp, sStm, sStrPast, sSyntax, sFail; \
-ORS="";
-print "\\end{tabular}" } ' \
-"$@" | sed 's/.stat / /'
+if (!nolatex) { print "\\hline" }; \
+totLine = sNull + sLit + sExp + sStm + sStrPast + sSyntax + sFail;
+print "Total", pct(sNull), pct(sLit), pct(sExp), pct(sStm), pct(sStrPast), pct(sSyntax), pct(sFail); \
+ORS=""; \
+if (!nolatex) {print "\\end{tabular}"; } } ' \
+ "$@"
