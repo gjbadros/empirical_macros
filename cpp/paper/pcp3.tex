@@ -141,7 +141,7 @@ what the \emph{compiler} gets.
 #include <stdio.h>
 
 int main(int argc, char *argv[]) {
-  printf("Hello world");
+  printf("Hello world\n");
   return 0;
 }
 \end{pseudocode}
@@ -563,7 +563,7 @@ AddHook("EXIT",\&Exit);
 
 sub Typedef { my ($name) = @_;
   push @typedefs, $name;
-  $num_typedefs{cpp::Fname()}++;
+  $num_typedefs{pcp3::Fname()}++;
 }
 
 sub Exit { my ($return_value) = @_;
