@@ -284,10 +284,11 @@ sub do_include {
 }
 
 sub do_if {
-  my ($s_start,$s_end,$conditional, $skipped, $value) = @_;
+  my ($s_start,$s_end,$conditional, $skipped, $value, $s_branch_start) = @_;
   print CPP "do_if on $conditional evals to $value ";
   print CPP ", skipping $skipped" if $skipped ne "";
   print CPP "\n";
+  my $s_branch_end = pcp3::CchOffset() + 1;
   pcp3::YYPushStackState();
   @state_stack = pcp3::ParseStateStack();
   print CPP ": Stack: @state_stack\n";
@@ -301,7 +302,8 @@ sub do_if {
 }
 
 sub do_elif {
-  my ($s_start,$s_end,$already_did_clause, $conditional, $skipped, $value) = @_;
+  my ($s_start,$s_end,$already_did_clause, $conditional, $skipped, $value, $s_branch_start) = @_;
+  my $s_branch_end = pcp3::CchOffset() + 1;
   print CPP "do_elif on $conditional ($skipped) evals to $value; $already_did_clause\n";
   if ($value == 0 && $conditional ne "0") {
     handle_unincluded_block($s_branch_start,$s_branch_end,$skipped);
