@@ -6,6 +6,10 @@
 % {\epsfxsize 7in\epsfbox{dir.eps}}.
 \usepackage{epsfig}
 
+% the "fullpage" package does almost the same thing
+% as the below lines-- it doesn't make things quite as
+% tall or wide, but is generally what I use
+% \usepackage{fullpage}
 \marginparwidth 0pt
 \oddsidemargin  0pt
 \evensidemargin 0pt
@@ -16,10 +20,9 @@
 \textwidth   6.5 in
 \textheight  8.5 in
 
-\def\floatpagefraction{.8}      % default .5
-\def\textfraction{.2}           % what is the default?
-\def\topfraction{.75}           % what is the default?
-
+\renewcommand{\floatpagefraction}{.8} %default .5
+%\renewcommand{\textfraction}{.2}  % .2 is the default
+%\renewcommand{\topfraction}{.7}   % .7 is the default
 
 \begin{document}
 % \bibliographystyle{plain}
@@ -45,7 +48,6 @@ Seattle, WA  98195-2350  USA\\
 \today}  
 
 \maketitle
-
 
 \begin{abstract}
 
@@ -353,7 +355,7 @@ compilation directives are grouped together, as are ``other'' directives.
 %and (e) any other directives in the bottom row. 
 
 \begin{figure}
-\centerline{\epsfig{file=dir.eps}}
+\centerline{\epsfig{file=directives-per-line.eps}}
 \caption{Preprocessor directives as a fraction of non-comment,
   non-blank (NCNB) lines.  Each package's total NCNB line count appears
   in the legend.  In 3 packages, over 20\% of all NCNB lines were
@@ -387,7 +389,7 @@ preprocessor directives (shown in Figure~\ref{fig:total_directives}) is
 about 4\% for flex and rcs and about 6\% for zsh.
 
 \begin{figure}
-\centerline{\epsfig{file=dir2.eps}}
+\centerline{\epsfig{file=directives-breakdown.eps}}
 \caption{Type of directive as a fraction of total directives.}
 \label{fig:total_directives}
 \end{figure}
@@ -589,7 +591,7 @@ classification heuristics failed
   include multiple adjacent identifiers
   ({\tt \#define EXFUN(name, proto) name proto},
   {\tt \#define \verb|DO_OP|(OP,a,b) (a OP b)}) and illegal identifier
-  names ({\tt \#define \verb|FAT$C_VFC| 3} for VMS compilation), tokens
+  names ({\tt \#define \verb|FAT$C_VFC| 3} for VMS compilation), tokens %$HACK
   ({\tt \#define \verb|LIB_PATH| /usr/ucblib}), and constants ({\tt 1ULL} for
   {\tt unsigned long long}).  Of the fewer than 1000 classification
   failures in the 24 packages, over half appeared in gnuplot; gnuplot, cvs,
