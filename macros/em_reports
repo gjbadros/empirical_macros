@@ -25,7 +25,7 @@ my $getopts_option_letters = 'ihvtIAau1pTlg:d:D:M:S:F:L:C:s:';
 # Remove the asterisks below when the options are known to the users.
 
 sub usage () {
-  die "@_\nUsage: $0 [-$getopts_option_letters] <files>
+  die "@_\nUsage: $0 [-$getopts_option_letters]
 New options marked with *; options with ':', above, take an argument
   -t  use [TAB] as the OFS for the statistics files (not space)
 * -l  forbid the use of `\$' in identifiers, per ANSI standard
@@ -658,6 +658,10 @@ usage() if ($opt_h);
 my $statename = "state";
 if ($opt_s) {
   $statename = $opt_s;
+} else {
+  print STDERR
+    "The -s <file.state> option is required for em_reports.  Use em_analyze.\n";
+  exit -1;
 }
 
 # using a default directory-- only open the files that
@@ -759,14 +763,6 @@ if ($opt_T) {
 }
 
 $fDebugCmdProcessing && print "@ARGV";
-
-# Add the rest of the arguments to the files list
-{ my $file;
-  foreach $file (@ARGV) {
-    if (!forbidden_file($file))
-      { push @files,$file;
-	$file_inclusion_method{$file} = "FromCmdLine"; }
-  } }
 
 ReadMacroAnalysisState($statename);
 #$WARNING = 0;
