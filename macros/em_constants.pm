@@ -25,7 +25,7 @@ use checkargs;
  $catMULTIPLE $catFAILURE $catLast @categoryname
 
  @mcat_NULL @mcat_LITERAL @mcat_NONLITERAL_EXPRESSION
- @mcat_STATEMENT @mcat_SYNTAX @mcat_TYPE @mcat_RECURSIVE
+ @mcat_STATEMENT @mcat_SYNTAX @mcat_TYPE
  @mcat_NON_C_CODE @mcat_OTHER @mcat_SYMBOL_UNKNOWN @mcat_FAILURE
 
  $propNONE $propASSIGN $propFREE_VAR $propINVOKES_MACRO
