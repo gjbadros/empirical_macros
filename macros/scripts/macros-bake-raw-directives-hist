@@ -10,6 +10,10 @@
 # The output is correctly in reverse order, since Excel reverses the lines
 # (and columns!)
 
+# This should really be controlled by a command-line argument.
+my $use_percents = 0;
+# $use_percents = 1;
+
 $tot_lines = 0;
 $tot_def = 0;
 $tot_undef = 0;
@@ -36,7 +40,8 @@ while (<FILE>)
   my $this_other = $error + $ident + $pragma;
   my $this_total = $define + $undef + $this_include + $this_cond + $line + $this_other;
 
-  push(@lines, [$package, $this_other/$ncnb_lines, $line/$ncnb_lines, $this_cond/$ncnb_lines, $this_include/$ncnb_lines, $undef/$ncnb_lines, $define/$ncnb_lines, $this_total/$ncnb_lines]);
+  { my $denom = ($use_percents ? $this_total/100.0 : $ncnb_lines);
+    push(@lines, [$package, $this_other/$denom, $line/$denom, $this_cond/$denom, $this_include/$denom, $undef/$denom, $define/$denom, $this_total/$denom]); }
 
   $tot_lines += $ncnb_lines;
   $tot_def += $define;
@@ -50,16 +55,19 @@ while (<FILE>)
 close(FILE);
 
 # Sort by total
-@lines_sorted = sort { $$a[7] <=> $$b[7] } @lines;
+my @lines_sorted = @lines;
+if (!$use_percents)
+{ @lines_sorted = sort { $$a[7] <=> $$b[7] } @lines_sorted; }
 
 print join("\t", "package", "other", "line", "conditional", "include", "undef", "define", "total"), "\n";
 print "Mean";
-foreach $val ($tot_other/$tot_lines, $tot_line/$tot_lines, $tot_cond/$tot_lines, $tot_include/$tot_lines, $tot_undef/$tot_lines, $tot_def/$tot_lines, $tot_total/$tot_lines)
-{ printf("\t%2.3f", $val); }
+{ my $denom = ($use_percents ? $tot_total/100.0 : $tot_lines);
+  foreach my $val ($tot_other/$denom, $tot_line/$denom, $tot_cond/$denom, $tot_include/$denom, $tot_undef/$denom, $tot_def/$denom, $tot_total/$denom)
+    { printf("\t%2.3f", $val); } }
 print "\n";
 foreach $line_ref (@lines_sorted)
 { print shift(@$line_ref);
-  foreach $val (@$line_ref)
+  foreach my $val (@$line_ref)
     { printf("\t%2.3f", $val); }
   print "\n";
   # "$package\t$this_other\t$line\t$this_cond\t$this_include\t$undef\t$define\n";

@@ -20,7 +20,9 @@ foreach my $file (@ARGV) {
       die "Have not seen a line count yet!" if !defined($lines);
       my ($product,$name,$ddefs,$defs,$incl,$exp) = ($1,$2,$3,$4,$5,$6);
       my $any = $product/($ddefs > 0? $ddefs: 1);
-      printf OUT "%s$name\t$ddefs\t$defs\t%2.5f\t%2.5f\t%2.5f\t%d\t%d\t%d\n",
+      # All these precisions used to be %2.5f, but 7 digits plus a decimal
+      # place doesn't fit in an 8-character column, so change to 2.4
+      printf OUT "%s$name\t$ddefs\t$defs\t%2.4f\t%2.4f\t%2.4f\t%d\t%d\t%d\n",
       ($incl + $exp + $any)>0?"":"",
       $incl*100/$lines, $exp*100/$lines, $any*100/$lines,
       $incl, $exp, $any;

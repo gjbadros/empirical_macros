@@ -9,18 +9,15 @@ BEGIN {
   use Carp;
   use vars qw($ORS $OFS $FORMAT);
   $FORMAT="%2.3f";
-  my $getopts_option_letters = 'htp';
-  sub usage () {
-    die "@_\nUsage: $0 [-$getopts_option_letters] <*.stat files>
+  my $getopts_option_letters = 'htpb';
+  my $usage_msg = "Usage: $0 [-$getopts_option_letters] <*.stat files>
 -t  to use tab delimiters, not latex output format
 -p  to give the numbers as percentages
+-b  to also give breakdown of metacategory elements
 -h  to display this help
 ";
-  }
 
-  use vars qw ($opt_h $opt_t $opt_p %column_name_to_colno $fInitializedHeadings $nolatex $usepct $totLine $fFoundLine);
-
-
+  use vars qw ($opt_h $opt_t $opt_p $opt_b %column_name_to_colno $fInitializedHeadings $nolatex $usepct $totLine $fFoundLine);
 
   $nolatex = 0;
   $usepct = 0;
@@ -33,7 +30,7 @@ BEGIN {
   use Getopt::Std;
   getopts($getopts_option_letters);
 
-  if ($opt_h) { usage(); }
+  if ($opt_h) { die $usage_msg; }
   if ($opt_t) { $nolatex = 1; }
   if ($opt_p) { $usepct = 1; }
 
@@ -64,12 +61,16 @@ BEGIN {
   my ($sNull, $sConst, $sExp, $sStm, $sSyntax, $sType,
       $sNonC, $sSymbol, $sFail, @rest2) = 0 x 40;
 
+  my @nonmeta_sums = ();
 }
 
 
 
 if (/^CATEGORIES_NI:/) {
   $fFoundLine = 1;
+  for my $colno (1..$#F)
+    { $nonmeta_sums[$colno] += $F[$colno]; }
+
   $cNull = sum_meta_category(@mcat_NULL); $sNull += $cNull;
   $cConst = sum_meta_category(@mcat_CONSTANT); $sConst += $cConst;
   $cExp = sum_meta_category(@mcat_NONCONSTANT_EXPRESSION); $sExp += $cExp;
@@ -117,6 +118,44 @@ END {
   }
   $ORS="";
   if (!$nolatex) {print "\\end{tabular}\n"; }
+
+
+  if ($opt_b) {
+    @F = @nonmeta_sums;
+    $cNull = sum_meta_category(@mcat_NULL);
+    if ($sNull != $cNull) { die "sNull $sNull, cNull $cNull"; }
+    $cConst = sum_meta_category(@mcat_CONSTANT);
+    if ($sConst != $cConst) { die "sConst $sConst, $cConst cConst"; }
+    $cExp = sum_meta_category(@mcat_NONCONSTANT_EXPRESSION);
+    if ($sExp != $cExp) { die "sExp $sExp, cExp $cExp"; }
+    $cStm = sum_meta_category(@mcat_STATEMENT);
+    if ($sStm != $cStm) { die "sStm $sStm, cStm $cStm"; }
+    $cSyntax = sum_meta_category(@mcat_SYNTAX);
+    if ($sSyntax != $cSyntax) { die "sSyntax $sSyntax, cSyntax $cSyntax"; }
+    $cType = sum_meta_category(@mcat_TYPE);
+    if ($sType != $cType) { die "sType $sType, cType $cType"; }
+    $cNonC = sum_meta_category(@mcat_NON_C_CODE);
+    if ($sNonC != $cNonC) { die "sNonC $sNonC, cNonC $cNonC"; }
+    $cSymbol = sum_meta_category(@mcat_SYMBOL);
+    if ($sSymbol != $cSymbol) { die "sSymbol $sSymbol, cSymbol $cSymbol"; }
+    $cSymUknown = sum_meta_category(@mcat_SYMBOL_UNKNOWN);
+    if ($sSymUnknown != $cSymUknown) { die "sSymUnknown $sSymUnknown, cSymUknown $cSymUknown"; }
+    $cFail = sum_meta_category(@mcat_FAILURE);
+    if ($sFail != $cFail) { die "sFail $sFail, cFail $cFail"; }
+    $totLine = $cNull + $cConst + $cExp + $cStm + $cSyntax +
+      $cType + $cNonC + $cSymUknown + $cFail + $cSymbol;
+
+    breakdown_meta_category("mcat_NULL", $sNull, @mcat_NULL);
+    breakdown_meta_category("mcat_CONSTANT", $sConst, @mcat_CONSTANT);
+    breakdown_meta_category("mcat_NONCONSTANT_EXPRESSION", $sExp, @mcat_NONCONSTANT_EXPRESSION);
+    breakdown_meta_category("mcat_STATEMENT", $sStm, @mcat_STATEMENT);
+    breakdown_meta_category("mcat_SYNTAX", $sSyntax, @mcat_SYNTAX);
+    breakdown_meta_category("mcat_TYPE", $sType, @mcat_TYPE);
+    breakdown_meta_category("mcat_NON_C_CODE", $sNonC, @mcat_NON_C_CODE);
+    breakdown_meta_category("mcat_SYMBOL", $sSymbol, @mcat_SYMBOL);
+    breakdown_meta_category("mcat_SYMBOL_UNKNOWN", $sSymUnknown, @mcat_SYMBOL_UNKNOWN);
+    breakdown_meta_category("mcat_FAILURE", $sFail, @mcat_FAILURE);
+  }
 }
 
 ########### Utility subroutines
@@ -140,4 +179,23 @@ sub sum_meta_category {
   }
 #DBG  print STDERR "Summed to $sum\n";
   return $sum;
+}
+
+sub breakdown_meta_category {
+  my ($mcat_name, $mcat_total, @catnames) = @_;
+  die if !$fInitializedHeadings;
+  print STDERR "$mcat_name: $mcat_total\n";
+  my $sum = 0;
+  foreach my $catname (@catnames) {
+    my $catindex;
+    { no strict; $catindex = $ {$catname}; }
+    my $colname = $categoryname[$catindex];
+    my $colno = $column_name_to_colno{$colname};
+ #DBG    print STDERR "Catname $catname -> catindex $catindex -> colname $colname -> colno $colno\n";
+    $sum += $F[$colno];
+    print STDERR "  " . two_significant_digits(percent2($F[$colno], $mcat_total)) . "%  $colname ($F[$colno])\n";
+  }
+  #DBG  print STDERR "Summed to $sum\n";
+  if ($sum != $mcat_total)
+    { die "sum $sum, mcat_total $mcat_total"; }
 }

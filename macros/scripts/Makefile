@@ -52,6 +52,7 @@ CCD  := $(addsuffix .ccd,$(PKGS))
 DEPEND  := $(addsuffix .depend,$(PKGS))
 SDEPEND  := $(addsuffix .sdepend,$(PKGS))
 SDEPEND_BY_MACRO  := $(addsuffix .bymacro,$(SDEPEND))
+# freq{use,def,ddf}_cum is created by em_reports
 USECUM  := $(addsuffix .frequse_cum,$(PKGS))
 DEFCUM  := $(addsuffix .freqdef_cum,$(PKGS))
 DDFCUM  := $(addsuffix .freqddf_cum,$(PKGS))
@@ -78,6 +79,7 @@ TEXT_TABLES :=	tbl-package-sizes \
 		tbl-any-dependences-by-line \
 		tbl-inclusion-dependences-by-macro \
 		tbl-expansion-dependences-by-macro \
+		tbl-any-dependences-by-macro \
 		tbl-def-categories \
 		tbl-directives-breakdown \
 		tbl-lint \
@@ -260,6 +262,9 @@ tbl-inclusion-dependences-by-macro: $(SDEPEND_BY_MACRO)
 
 tbl-expansion-dependences-by-macro: $(SDEPEND_BY_MACRO)
 	macros-make-dependences-by-macro 5 `only-non-empty-files $^` > $@ # column 5 has expansion dependences
+
+tbl-any-dependences-by-macro: $(SDEPEND_BY_MACRO)
+	macros-make-dependences-by-macro 6 `only-non-empty-files $^` > $@ # column 6 has any dependences
 
 sdepend: $(SDEPEND)
 
