@@ -6,6 +6,7 @@ char *hook_names[] = {
 "EXIT",
 "HANDLE_DIRECTIVE",
 "DO_DEFINE",
+"PRE_DO_UNDEF",
 "DO_UNDEF",
 "DO_INCLUDE",
 "DO_IF",
@@ -36,5 +37,6 @@ char *hook_names[] = {
 "FUNCTION",
 "FUNC_CALL",
 "ANNOTATE",
+"POP_BUFFER",
 };
 
