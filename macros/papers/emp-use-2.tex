@@ -193,11 +193,11 @@ Through extensive discussions, we have found that experts have widely
 varying experiences with the preprocessor and similarly varying
 expectations about what our data should and do show.  Some of our
 specific analyses could have been performed differently, and some can
-be (and have been) interpreted in various ways.  Our data, however,
-leave little doubt about our high-level views about the broad and
-diverse usage of the preprocessor, about the majority of usages being
-simple, nor about the potential for reducing at least some of the
-complexity introduced by the more complicated uses.
+be (and have been) interpreted in various ways.
+Our data, however, leave little doubt that the preprocessor is used in
+broad and diverse ways, that most of those uses are simple, and that
+there is certainly potential to reduce at least some of the complexity
+introduced by the more sophisticated uses.
 
 %We had two initial motivations for pursuing this line of research.
 %One, we wanted to know how difficult it would be, in practice, to
@@ -796,21 +796,6 @@ statements may be handled relatively easily by people and tools.  Other
 macros, especially those that do not expand to a complete syntactic
 construct, are more problematic.
 
-A notable outlier in Figure~\ref{fig:categorization} is the \pkg{perl}
-package's high occurrence of unknown identifiers in macro definitions.
-At almost 31\%, these kinds of macro definitions are over three times
-more prevalent in \pkg{perl} than in \pkg{mosaic}, the package that is
-second in this metric.  This excessiveness results from \pkg{perl} using 
-the preprocessor to conditionally redefine over one thousand global
-symbols to have the prefix ``Perl_'' for avoiding link-time collisions
-when its interpreter is embedding in another application.  Typical
-such macro definitions are:
-
-\begin{verbatim}
-    #define Sv          Perl_Sv
-    #define Xpv         Perl_Xpv
-\end{verbatim}
-
 The ten macro body categories are as follows. Each example in this 
 {\typeofdocument} comes from the packages studied.
 
@@ -1007,12 +992,22 @@ ASSERT(p) if (!(p)) botch(\verb|__STRING|(p)); else}).
   with a particular architecture, system, or library (for which we did not
   have header files available).
 
-  Unknown identifiers can also be local variables, or variables or functions that we failed to
+  Unknown identifiers can also be local variables, or variables or
+  functions that we failed to
   parse.  Our approximate parser can succeed where an exact parse would not
   (as for non-syntactic code that deviates from the language grammar
   or for entities interrupted by preprocessor
   directives), but occasionally it fails to recognize declarations or
   definitions.
+
+  In \pkg{perl}, unknown identifiers make up 31\% of macro definitions,
+  compared to an average of 6.9\% and \verb|ABOUT 9% NEED EXACT NUMBER| in
+  \pkg{mosaic}, which has the the second largest proportion of unknown
+  identifiers.  In order to avoid link-time collisions when the Perl
+  interpreter is embedded in another application, \pkg{perl} conditionally
+  redefines over one thousand global symbols to add the prefix
+  \verb|Perl_|, as in {\tt \#define Xpv Perl_Xpv}.
+
 
 %% mcat_NON_C_CODE: 17
 %%   100%  command_line_arguments (17)
