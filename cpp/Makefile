@@ -20,7 +20,8 @@ ALL_CFLAGS += -DUSE_CPP -DSHOW_TYPES -DCT_DEBUG
 
 # Directory where sources are, from where we are.
 srcdir = .
-PERLARCHDIR = /uns/lib//perl5.004/arch
+#PERLBASE = /uns/lib/perl5.004
+PERLARCHDIR = $(PERLBASE)/arch
 
 INCLUDES = -I$(srcdir) -I$(srcdir)/config -I$(PERLARCHDIR)/CORE
 
@@ -207,7 +208,7 @@ HOST_OBSTACK=$(OBSTACK)
 
 
 # Output of "perl -M"ExtUtils::Embed" -e ccopts -e ldopts" running on uni --gjb
-PERLLIBS = -rdynamic  -L/usr/local/lib /uns/lib/perl5.004/arch/auto/DynaLoader/DynaLoader.a -L/uns/lib/perl5.004/arch/CORE -lperl -lgdbm -ldb -lm -lc
+PERLLIBS = -rdynamic  -L/usr/local/lib $(PERLBASE)/arch/auto/DynaLoader/DynaLoader.a -L$(PERLBASE)/arch/CORE -lperl -lgdbm -ldb -lm -lc
 
 ## Other vars for configuring backcalls.{xs,c} to build properly
 ## (Credit Ken Fox [kfox@ford.com])
