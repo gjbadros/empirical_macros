@@ -57,6 +57,7 @@ use English;
 
 use checkargs;
 use cline;
+use paren;
 
 #require Exporter;
 #@ISA = qw(Exporter);
@@ -77,13 +78,14 @@ ENTER USAGE INFO HERE
 ### Constants
 ###
 
-my $debug_cppp
-
 ### Boolean
 my $true = (1 == 1);
 my $false = (1 == 0);
 my $unknown = 'unknown';	# maybe use undef instead?  Problem: undef
 				# is a bad arg some places.
+
+# my $debug_cppp = $false;
+my $debug_cppp = $true;
 
 # Lifted from em_analyze
 my $char_literal_contents_re = '(\\\\?.|\\\\[0-7]{3})';
@@ -109,7 +111,7 @@ sub is_unknown ($)
   return ($arg eq 'unknown');
 }
 
-# Returns a textual substitution for "defined($symbol)", which is one of
+# Returns a textual substitution for "defined($symbol)"; result is one of
 # "1", "0", or "defined($symbol)" itself (if the definedness is unknown).
 sub eval_defined ($)
 { my ($symbol) = check_args(1, @_);
@@ -124,7 +126,7 @@ sub eval_defined ($)
 sub eval_all_defined ($)
 { my ($string) = check_args(1, @_);
   if ($debug_cppp) { print "eval_all_defined <= $string\n"; }
-  $string =~ s/\bdefined\(\w+\)/eval_defined($1)/ge;
+  $string =~ s/\bdefined\(\w+\)/eval_defined($MATCH)/ge;
   if ($debug_cppp) { print "eval_all_defined => $string\n"; }
   return $string;
 }
