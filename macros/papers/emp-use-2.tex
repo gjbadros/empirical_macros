@@ -1565,48 +1565,50 @@ Split this into:
 We could find no other empirical study of the use of the C
 preprocessor nor any other macro processor.  However, we did find some
 guidance on using C macros effectively and tools for checking macro
-usage.
+usage. 
 
-Carroll and Ellis state that ``almost all uses of macros can be eliminated
-from C++ libraries''~[p.~146]{Carroll95}.  They list eight categories
-of macro usage and explain how to convert them into C++ mechanisms.  They
-do not discuss automatic conversion, but focus on instructing the software
-engineer on better ways to do Cpp-like things.  Our work differs in at
-least two ways.  First, our categories are somewhat different; we
-believe that this is because ours were derived based on repeated
-analyses of our data, rather than defined {\em a priori\/}.  Second,
-we don't focus only on macros that could be converted to C++, since we
-were interested as well in understanding which macros posed problems
-to such as effort.
+A number of organizations provide hints about effective ways to the use
+the C preprocessor.  The GNU C preprocessor manual~\cite{cpp-manual}
+discusses a set of techniques including simple macros, argument macros,
+predefined macros, stringization macros, concatenation macros, and
+undefining and redefining macros.  It also identifies a set of
+``pitfalls and subtleties of macros''; these are much like some of the
+problems our analysis tool identifies.  Several coding style guides
+discuss the preprocessor and make recommendations on its acceptable uses
+and on ways to reduce unexpected behaviour resulting from poorly
+designed constructs~\cite{Stallman97,ellemtel92,Cannon95,Dolenc90}.
 
-Similarly, a number of organizations provide hints about effective
-ways to the use the C preprocessor.  The GNU documentation [[must
-cite!  Is this the Cpp manual?  That should be cited somewhere
-anyway]] discusses a set of techniques including simple macros,
-argument macros, predefined macros, stringization macros,
-concatenation macros, and undefining and redefining macros.  It also
-identifies a set of ``pitfalls and subtleties of macros''; these are
-much like some of the problems our analysis tool identifies.
+Carroll and Ellis state that ``almost all uses of macros can be
+eliminated from C++ libraries''~[p.~146]{Carroll95}.  They list eight
+categories of macro usage and explain how the software engineer can use
+C++ language features instead of using the preprocessor.  Our categories
+differ from theirs---we focus on actual use in C programs, whereas they
+concentrate on potential uses in C++ programs.
 
-We discovered that these categorizations sometimes focussed on constructs
-that don't happen very often or missed ones that are actually frequent.
-Our effort not only categorizes problems, but it also determines the
-frequency of appearance of those problems and discovers other idiosyncratic
-uses.
+Spencer and Collyer recommend against using most varieties of
+\texttt{\#ifdef}~\cite{SpencerC92}.  As we do, they accept the special
+cases of providing default values for macros and preventing
+multiple-inclusion of header files as essential uses of the
+preprocessor.  Spencer and Collyer also suggest testing for specific
+features instead of machines in conditional compilation directives; we
+use this preference in our categorization of those directives.
 
-The Lint program will warn about empty statements, constants in conditional
-context, and a few other things.  But it's pretty inadequate.  This mostly
-has to do with problems after expansion.
+Krone and Snelting use mathematical concept analysis to determine the
+conditional compilation structure of code~\cite{Krone94}.  They determine,
+for each line, which preprocessor macros it depends upon, and display that
+information in a lattice.  They do not determine how macros depend upon one
+another directly, only by their nesting in {\tt \#if}, and the information
+conveyed is about the program as a whole.  [[Compare to our CCD work, which
+also tries to find such mismtches; and talk a bit more about what they
+discovered and how it compares to what we discovered.]]
+
+%Greg:  describe LCLint methodology and results.  Say exactly what you did
+%(i.e., how hard you tried), and what the results were.  Also, that you tried
+%on only 20, not all 30, packages, which doesn't include the biggest ones.
 
 A number of tools check whether specific C programs satisfy particular
-constraints.  The lint program checker [[reference]]
-checks for potentially problematic uses of C\@.  
-
-
-
-Greg:  describe LCLint methodology and results.  Say exactly what you did
-(i.e., how hard you tried), and what the results were.  Also, that you tried
-on only 20, not all 30, packages, which doesn't include the biggest ones.
+constraints.  Various ``lint'' source-code analyzers checks for
+potentially problematic uses of C, often including the C preprocessor.
 
 
 LCLint performs many of lint's checks and also
@@ -1648,14 +1650,6 @@ That quotation is really easy to nitpick:
 %% FIX: If we could also list the platforms for which each can compile,
 %% that would be great, but I doubt the benefit is worth the effort for now
 
-Krone and Snelting use mathematical concept analysis to determine the
-conditional compilation structure of code~\cite{Krone94}.  They determine,
-for each line, which preprocessor macros it depends upon, and display that
-information in a lattice.  They do not determine how macros depend upon one
-another directly, only by their nesting in {\tt \#if}, and the information
-conveyed is about the program as a whole.  [[Compare to our CCD work, which
-also tries to find such mismtches; and talk a bit more about what they
-discovered and how it compares to what we discovered.]]
 
 
 [[Expand; relocate in this section?]]
