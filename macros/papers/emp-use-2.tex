@@ -115,7 +115,7 @@ arbitrary source code manipulations that complicate
 understanding of the program by both software engineers and tools.  In
 the worst case, the preprocessor makes merely determining the program
 text as difficult as determining the output of an ordinary program.
-The designer of the C++ language which shares C's preprocessor also noted these
+The designer of the C++ language, which shares C's preprocessor, also noted these
 problems: ``Occasionally, even the most extreme uses of Cpp are
 useful, but its facilities are so unstructured and intrusive that they
 are a constant problem to programmers, maintainers, people porting
@@ -171,7 +171,7 @@ Each approach has different strengths and weaknesses.
   complete expressions or statements.  Conditional compilation and
   alternative macro definitions lead to very different results from a
   single original program text.  Preprocessing adds complexity to an
-  implementation which must trade off performing preprocessing against
+  implementation, which must trade off performing preprocessing against
   maintaining the code in close to its original form.  Extracting structure
   from macro-obfuscated source is not a task for the faint-hearted.
   Despite these problems, in many situations only some sort of
@@ -755,7 +755,7 @@ ASSERT(p) if (!(p)) botch(\verb|__STRING|(p)); else}).
 \item[Not C code]\label{page:not-c-code}
   The predominant use of such macros is for filenames and operating system
   command lines (together, 90\% of this category) and assembly code (the
-  remaining 10\%).  The former usually appear in a file that is used by
+  remaining 10\%).  The former usually appear in a file used by
   the preprocessor when run over both code and Makefiles.\footnote{Cpp's
     specification states that its input should be syntactic C code, so it
     can avoid performing replacements in comments and string constants.
@@ -2011,7 +2011,7 @@ programmers are encouraged not to use constructs that might be
 dangerous, or to change code that contains such constructs.  We ran
 LCLint on our set of packages with its macro diagnostics enabled and
 found that its diagnostics were too restrictive to allow parsing to
-continue after non-trivial macro definitions---LCLint reported 3184
+continue after non-trivial macro definitions\,---\,LCLint reported 3184
 parse errors and 571 internal bugs when running on the approximately
 4000 files in our suite of packages.  Though LCLint's macro rules seem
 useful, some user effort in adding fine-grained annotations to the
@@ -2134,7 +2134,7 @@ variables, though it can do so when necessary via a special construct.
 Other macro systems require that their output to be a syntactic AST rather
 than merely a token stream~\cite{WeiseC93}.
 
-An alternative approach that avoids the clumsiness of a separate language
+An alternative approach which avoids the clumsiness of a separate language
 of limited expressiveness is to make the macro language more
 powerful\,---\,perhaps even using the language itself via constructs
 evaluated at compile time rather than run time.  (The macro systems of
