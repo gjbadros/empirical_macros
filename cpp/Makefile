@@ -20,7 +20,7 @@ ALL_CFLAGS += -DUSE_CPP -DSHOW_TYPES -DCT_DEBUG
 
 # Directory where sources are, from where we are.
 srcdir = .
-#PERLBASE = /uns/lib/perl5.004
+PERLBASE = /uns/lib/perl5.004
 PERLARCHDIR = $(PERLBASE)/arch
 
 INCLUDES = -I$(srcdir) -I$(srcdir)/config -I$(PERLARCHDIR)/CORE
