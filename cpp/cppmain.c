@@ -277,7 +277,7 @@ main (int argc, char **argv, char **env)
   perl_destruct(my_perl);
   perl_free(my_perl);
 
-  if (parse_in.errors)
+  if (fShouldParse && parse_in.errors)
     {
     return_exit_code = FATAL_EXIT_CODE;
     }
