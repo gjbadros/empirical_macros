@@ -60,6 +60,7 @@ sub Startup {
   open(VARS,">$prefix.vars") || die "Cannot open $prefix.vars: $!";
   open(TYPES,">$prefix.types") || die "Cannot open $prefix.types: $!";
   open(EXPAND,">$prefix.exps") || die "Cannot open $prefix.exps: $!";
+  open(EXP_CL,">$prefix.expcl") || die "Cannot open $prefix.expcl: $!";
   open(TOKEN,">$prefix.tokens") || die "Could not open $prefix.tokens: $!";
   open(FUNCTIONS,">$prefix.funcs") || die "Cannot open $prefix.funcs: $!";
   print STDERR "STARTUP...\n";
@@ -217,6 +218,13 @@ sub expand_macro {
     print CPP "EXPANSION HERE of $mname\n";
   }
   select CPP;
+
+  if ($s_start >= 0) {
+    if ($has_escapes == 0) {
+      # top level expansion
+      $top_level_mname = $mname;
+    }
+  }
 
   print "\nexpand_macro $mname = ", pcp3::ExpansionLookup($mname), ", source offset: $s_start - $s_end, $cbuffersDeep [$has_escapes]; ", 
       pcp3::FExpandingMacros(), " in $fname\n";
@@ -450,6 +458,28 @@ sub do_func_call {
   print "CallFunction: $szName\n";
 }
 
+
+sub macro_cleanup {
+  my ($s_start, $s_end, $mname, $cnested, @nests) = @_;
+  my $offset  = pcp3::CchOffset();
+  my $cbb = pcp3::CbuffersBack();
+  my $cbytesOutput = pcp3::CchOutput();
+  my $fname = pcp3::Fname();
+  my $old = select;
+  select CPP;
+  my $state_stack = join(",",pcp3::ParseStateStack());
+  print EXP_CL "macro_cleanup $mname; [$s_start - $s_end] source $offset, $cbb; output $cbytesOutput\n";
+  print EXP_CL " : nests = ", join("->",@nests), "\n";
+  print EXP_CL " : MEH = ", join("<-",pcp3::MacroExpansionHistory()),"\n";
+  if ($cbb == 1) {
+    print EXP_CL "#$fname:(add-text-property $s_start $s_end \'final-exp \"$mname\")\n";
+    $top_level_full_expansion = "";
+    $top_level_mname = "";
+  }
+  select $old;
+}
+
+
 # Add the hooks, now
 
 AddHook("STARTUP",\&Startup);
@@ -465,7 +495,7 @@ AddHook("PRE_DO_UNDEF",\&pre_do_undef);
 #AddHook("CPP_OUT",\&cpp_out);
 AddHook("EXPAND_MACRO",\&expand_macro);
 #AddHook("MACARG_EXP",\&macro_arg_exp);
-#AddHook("MACRO_CLEANUP",\&macro_cleanup);
+AddHook("MACRO_CLEANUP",\&macro_cleanup);
 #AddHook("IFDEF_MACRO",\&ifdef_macro);
 #AddHook("IFDEF_LOOKUP_MACRO",\&ifdef_lookup_macro);
 #AddHook("SPECIAL_SYMBOL",\&special_symbol);
