@@ -390,7 +390,7 @@ END
 \caption{Legal ANSI \C{} program which is difficult for tools and humans
   to understand without preprocessing.  Though this example is
   representative of actual abuses of the preprocessor, people generally
-  are more merciful in their use of \cpp{}.}
+  are more merciful in their use of \Cpp{}.}
 \label{fig:worstcase}
 \end{center}
 \end{figure}
@@ -745,7 +745,7 @@ that has been annotated, a subsidiary Emacs frame dynamically displays
 the annotations made to the current character. See
 ~\figref{fig:emacsdocprop} for an example.
 
-\begin{figure}[bhtp]
+\begin{figure}[b!]
   \begin{center}
     \leavevmode
     \includegraphics{figs/doc-prop.ps}
@@ -785,7 +785,7 @@ Given a straightforward preprocessor and parser front end, some analyses
 are impossible.  For example, since the preprocessor will skip code if
 instructed by conditional compilation directives, that source will never
 be seen by the parser, leaving unprocessed code.  The
-\texttt{DO_XIFDEF} and \texttt{DO_IF} hooks are provided the code that is
+\texttt{DO\_XIFDEF} and \texttt{DO\_IF} hooks are provided the code that is
 skipped as an argument, but only as literal text.  For an analysis to
 reason about the whole source program (not just one configuration), the
 skipped code must be exposed to the parser as if it were not removed by
@@ -837,7 +837,7 @@ block of an \ppd{ifdef} directive leave the parser in states which differ.
 % Permits using the parser to parse individual pieces of code you're
 % interested in
 
-\section{Replacing preprocessor constructs with language features}
+\section{Transformations of preprocessor constructs into language features}
 \label{sec:xform}
 
 %% Transformations really about understanding
@@ -879,7 +879,7 @@ integers, and so are candidates for replacement with \C{} \texttt{const
 \begin{small}
 \begin{pseudocode}[4.5in]
 #include <stdio.h>
-
+#define CCD2
 #ifdef CCD1
 #  define FOO 1
 #endif
@@ -892,7 +892,8 @@ integers, and so are candidates for replacement with \C{} \texttt{const
 #define BAZ 5
 #define BING 6
 
-int main(char **argv, int argc) {
+int
+main(char **argv, int argc) {
   int fud = FUD;
   int BONG = -1;
   int rgi[BING];
@@ -906,8 +907,8 @@ int main(char **argv, int argc) {
 #undef FUD
 \end{pseudocode}
 \end{small}
-\caption{Example illustrating some subtleties when converting \ppd{define}s
-  into constant declarations.}
+\caption{Example illustrating some subtleties when considering transforming \ppd{define}s
+  into constant declarations.  See \figref{fig:xformed} for the transformed version.}
 \label{fig:def_example}
 \end{center}
 \end{figure}
@@ -963,7 +964,27 @@ the old name translated into all lowercase.  For example, \texttt{BING} will be 
 replacing \texttt{FUD} with \texttt{fud} will result in a name conflict
 not unlike the problem with \texttt{BONG}, above.  In such instances,
 the analysis records the potential name conflict and does not
-alter the variable name.
+alter the variable name.  See the code resulting from the analysis's
+transformations in \figref{fig:xformed}
+
+\begin{figure}[p]
+  \begin{center}
+    \leavevmode
+    \includegraphics{figs/xformed.ps}
+    \caption{The code from \figref{fig:def_example} after being transformed
+      by the \pcp{} analysis. Note that \texttt{FOO}, \texttt{BAR}, and
+      \texttt{BONG} are conservatively not converted because there are
+      complications. Blue text (highlighted by the analysis) indicates
+      macros that expand.  Dark green text marks macro definitions,
+      while light green text notates code that was skipped in the main
+      parse (here because \texttt{CCD1} was not defined). The
+      doc-property frame displays the annotations, including the
+      warnings about complications, for the \texttt{BAR} macro.}
+    \label{fig:xformed}
+  \end{center}
+\end{figure}
+
+
 
 %%FIXGJB: another figure showing conservatively transformed code?
 %%FIXGJB: another graphic showing another view of emacs w/ the #define
@@ -972,8 +993,8 @@ alter the variable name.
 Because all of the heuristics for the transformation are implemented in
 \Perl{} action code, they are easy to develop, test, and refine.  Since
 the \pcp{} framework does not specifically provide mechanisms for
-altering source code, analyses supporting transformations should instead
-leverages the power of Emacs and its editing capabalities.  When provided
+altering source code, analyses supporting transformations can instead
+leverage the power of Emacs and its editing capabalities.  When provided
 accurate annotations and appropriate instructions for safe
 transformations, the actual editing of the code can be done
 interactively with simple Emacs support overseeing the changes.
@@ -1162,6 +1183,8 @@ name table.
 
 Because \pcp{} works like a compiler, it handles only a single
 translation unit at a time.  This complicates whole-program analysis.
+The Emacs-based text annotations provides only rudimentary support for
+combining information derived from various translation units.
 To better support reasoning about an entire source code
 artifact, a database approach similar to \texttt{CIA++}~\cite{CIA++90}
 could be used.  Atkinson and Griswold mention the importance of flexibility in allowing
