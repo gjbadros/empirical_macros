@@ -12,15 +12,23 @@
 #define GOODBYE BAZ
 #define MULTI HELLO
 #define GMULTI GOODBYE
+#define REVERSE MAX(foo,bar)
+#define DEEP MAX((MAX(1,2)),MAX(MAX(3,MAX(4,5)),7))
+#define COMPLEX(wow) MANY(MAX((MAX(1,2)),MAX(MAX(3,MAX(4,5)),wow)),__P(wow))
+
 
 int main (char *argv, int argc)
 {
  NEWTEST:
+  /* MULTI -> HELLO -> LONG_BAR LONG_BAR -> bar bar */
+  /* Need: (source_start, source_end, expansion, expansion_derivation) */ 
+  MULTI;
   HELLO;
   GOODBYE;
-  MULTI;
   GMULTI;
  TESTMANY:
+  /* MANY(a,b) -> Initial Offset a b a a a b Terminating offset */
+  /* Need: (source_start, source_end, expansion, expansion_dervication, @s_start_args, @s_end_args, @expansions_args */
   MANY(a,b);
  TEST1:
   FOO;
@@ -38,6 +46,12 @@ int main (char *argv, int argc)
   __P((int, long));
   __P((FOO, LONG_BAR));
   __P((MACRO_ALPHA));
+ TEST6:
+   REVERSE;
+ TEST7:
+   DEEP;
+ TEST8:
+   COMPLEX(wow);
+   COMPLEX(MULTI);
 
 }
-
