@@ -26,7 +26,7 @@
        
 *************************************************************************/
 
-#include <stdio.h>
+//#include <stdio.h>
 
 typedef enum {PLUS, MINUS} sign;
 
@@ -64,6 +64,14 @@ typedef bc_struct *bc_num;
 
 #undef foo
 
+#undef foo
+
+#undef bar
+
+#define bar(x) x
+
+#undef bar
+
 MAX(x,y);
 
 __FILE__
@@ -79,3 +87,9 @@ for all to see \n\n";
 
 #include "foo.h"
 
+#if defined(FOO)
+Next line here
+#elif defined(BAR)
+Another set of lines that 
+all get skipped over
+#endif

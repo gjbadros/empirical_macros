@@ -77,8 +77,8 @@ sub cpp_error {
 }
 
 sub do_undef {
-  my ($keyword) = @_;
-  print "do_undef of $keyword\n";
+  my ($keyword, $cDeletes) = @_;
+  print "do_undef of $keyword ($cDeletes deleted)\n";
 }
 
 sub delete_def {
@@ -99,7 +99,7 @@ sub special_symbol {
 sub comment {
   my ($comment,$how_term,$lines) = @_;
   print "\n-----------------\n";
-  print "COMMENT ($lines lines) ending w/ $how_term: $comment\n";
+  print "COMMENT ($lines lines in @{[cpp::fname()]}) ending w/ $how_term: $comment\n";
   print "-----------------\n";
 }
 
@@ -111,7 +111,43 @@ sub string_constant {
 sub do_include {
   my ($keyword, $file, $flags) = @_;
   print "do_include $keyword -> ", simplify_path_name($file),";  $flags\n";
-  print "Was working on: ", cpp::fname(), "\n";
+#  print "Was working on: ", cpp::fname(), "\n";
+}
+
+sub do_if {
+  my ($conditional, $skipped, $value) = @_;
+  print "do_if on $conditional evals to $value ";
+  print ", skipping $skipped" if $skipped ne "";
+  print "\n";
+}
+
+sub do_elif {
+  my ($conditional, $skipped, $value) = @_;
+  print "do_elif_eval on $conditional ($skipped) evals to $value\n";
+}
+sub do_xifdef {
+  my ($kind,$conditional, $trailing_garbage, $skipped, $value) = @_;
+  print "do_xifdef ($kind) on $conditional [$trailing_garbage] ($skipped) evals to $value\n";
+}
+
+sub do_ifdef {
+  my ($conditional, $trailing_garbage, $skipped, $value) = @_;
+  print "do_ifdef on $conditional [$trailing_garbage] ($skipped) evals to $value\n";
+}
+
+sub do_ifndef {
+  my ($kind,$conditional, $trailing_garbage, $skipped, $value) = @_;
+  print "do_ifndef on $conditional [$trailing_garbage] ($skipped) evals to $value\n";
+}
+
+sub do_else {
+  my ($orig_conditional, $trailing_garbage, $skipped) = @_;
+  print "do_else (orig conditional was $orig_conditional) [$trailing_garbage] skipped $skipped\n";
+}
+
+sub do_endif {
+  my ($orig_conditional, $trailing_garbage) = @_;
+  print "do_endif (orig conditional was $orig_conditional) [$trailing_garbage]\n";
 }
 
 # Add the hooks, now
@@ -128,6 +164,13 @@ AddHook($SPECIAL_SYMBOL,\&special_symbol);
 AddHook($COMMENT,\&comment);
 AddHook($STRING_CONSTANT,\&string_constant);
 AddHook($DO_INCLUDE,\&do_include);
+AddHook($DO_IF,\&do_if);
+AddHook($DO_ELIF,\&do_elif);
+AddHook($DO_XIFDEF,\&do_xifdef);
+AddHook($DO_IFDEF,\&do_ifdef);
+AddHook($DO_IFNDEF,\&do_ifndef);
+AddHook($DO_ELSE,\&do_else);
+AddHook($DO_ENDIF,\&do_endif);
 
 
 1;

@@ -3950,7 +3950,7 @@ do_undef (pfile, keyword, buf, limit)
   int sym_length;
   HASHNODE *hp;
   U_CHAR *orig_buf = buf;
-  int fExists = 0;
+  int cDeletes = 0;
 
 #if 0
   /* If this is a precompiler run (with -pcp) pass thru #undef commands.  */
@@ -3970,10 +3970,10 @@ do_undef (pfile, keyword, buf, limit)
       if (hp->type != T_MACRO)
 	cpp_warning (pfile, "undefining `%s'", hp->name);
       delete_macro (pfile,hp);
-      fExists = 1;
+      cDeletes++;
     }
+  gjb_call_hooks_szl_i(CPP_OPTIONS(pfile),DO_UNDEF,buf,sym_length,cDeletes);
 
-  gjb_call_hooks_sz_i(CPP_OPTIONS(pfile),DO_UNDEF,keyword->name,fExists);
 
   if (CPP_PEDANTIC (pfile)) {
     buf += sym_length;
@@ -4181,8 +4181,16 @@ do_if (pfile, keyword, buf, limit)
      struct directive *keyword;
      U_CHAR *buf, *limit;
 {
-  HOST_WIDE_INT value = eval_if_expression (pfile, buf, limit - buf);
+  HOST_WIDE_INT value;
+  U_CHAR *pchStartExpr = CPP_BUFFER(pfile)->cur+1;
+  U_CHAR *pchEndExpr = NULL;
+  value = eval_if_expression (pfile, buf, limit - buf);
+  pchEndExpr = CPP_BUFFER(pfile)->cur;
   conditional_skip (pfile, value == 0, T_IF, NULL_PTR);
+  gjb_call_hooks_szl_szl_i(CPP_OPTIONS(pfile),DO_IF,
+			   pchStartExpr,pchEndExpr-pchStartExpr-1,
+			   pchEndExpr,CPP_BUFFER(pfile)->cur-pchEndExpr-1,
+			   value);
   return 0;
 }
 
@@ -4197,8 +4205,15 @@ do_elif (pfile, keyword, buf, limit)
      struct directive *keyword;
      U_CHAR *buf, *limit;
 {
+  U_CHAR *pchStartExpr = CPP_BUFFER(pfile)->cur+1;
+  U_CHAR *pchEndExpr = NULL;
+  int fSkip_IfWasTrue = 0;
+  HOST_WIDE_INT value;
+
   if (pfile->if_stack == CPP_BUFFER (pfile)->if_stack) {
     cpp_error (pfile, "`#elif' not within a conditional");
+    gjb_call_hooks_sz_sz_i(CPP_OPTIONS(pfile),DO_ELIF,
+			   "@BAD@","@BAD@",value);
     return 0;
   } else {
     if (pfile->if_stack->type != T_IF && pfile->if_stack->type != T_ELIF) {
@@ -4216,9 +4231,13 @@ do_elif (pfile, keyword, buf, limit)
   }
 
   if (pfile->if_stack->if_succeeded)
+    {
     skip_if_group (pfile, 0);
+    fSkip_IfWasTrue = 1;
+    }
   else {
-    HOST_WIDE_INT value = eval_if_expression (pfile, buf, limit - buf);
+    value = eval_if_expression (pfile, buf, limit - buf);
+    pchEndExpr = CPP_BUFFER(pfile)->cur;
     if (value == 0)
       skip_if_group (pfile, 0);
     else {
@@ -4226,11 +4245,23 @@ do_elif (pfile, keyword, buf, limit)
       output_line_command (pfile, 1, same_file);
     }
   }
+  if (fSkip_IfWasTrue)
+    gjb_call_hooks_szl_szl_i(CPP_OPTIONS(pfile),DO_ELIF,
+			     "@IFWASTRUE@",11,
+			     pchEndExpr,CPP_BUFFER(pfile)->cur-pchEndExpr-1,
+			     value);
+  else
+    gjb_call_hooks_szl_szl_i(CPP_OPTIONS(pfile),DO_ELIF,
+			     pchStartExpr,pchEndExpr-pchStartExpr-1,
+			     pchEndExpr,CPP_BUFFER(pfile)->cur-pchEndExpr-1,
+			     value);
   return 0;
 }
 
 /*
  * evaluate a #if expression in BUF, of length LENGTH,
+ * FIXGJB: This does not appear to use buf nor length, and instead
+ * just parses out of pfile->buffer->cur until the end of the expression --gjb
  * then parse the result as a C expression and return the value as an int.
  */
 static HOST_WIDE_INT
@@ -4275,6 +4306,9 @@ do_xifdef (pfile, keyword, unused1, unused2)
   int start_of_file = 0;
   U_CHAR *control_macro = 0;
   int old_written = CPP_WRITTEN (pfile);
+  U_CHAR *pchStartExpr = CPP_BUFFER(pfile)->cur+1;
+  U_CHAR *pchEndExpr = NULL;
+  U_CHAR *pchEndGarbage = NULL;
 
   /* Detect a #ifndef at start of file (not counting comments).  */
   if (ip->fname != 0 && keyword->type == T_IFNDEF)
@@ -4318,7 +4352,9 @@ do_xifdef (pfile, keyword, unused1, unused2)
       if (c != EOF && c != '\n')
 	cpp_pedwarn (pfile, "garbage at end of `#%s' argument", keyword->name);
     }
+  pchEndExpr = CPP_BUFFER(pfile)->cur;
   skip_rest_of_line (pfile);
+  pchEndGarbage = CPP_BUFFER(pfile)->cur;
 
 #if 0
     if (pcp_outfile) {
@@ -4335,6 +4371,25 @@ do_xifdef (pfile, keyword, unused1, unused2)
 #endif
 
   conditional_skip (pfile, skip, T_IF, control_macro);
+  /* This will call DO_XIFDEF hook and either DO_IFDEF or DO_IFNDEF hook */
+  gjb_call_hooks_sz_szlx3_i(CPP_OPTIONS(pfile),DO_XIFDEF,
+			   keyword->type == T_IFDEF? "IFDEF": "IFNDEF",
+			   pchStartExpr,pchEndExpr-pchStartExpr,
+			   pchEndExpr,pchEndGarbage-pchEndExpr,
+			   pchEndGarbage,CPP_BUFFER(pfile)->cur-pchEndGarbage,
+			   skip);
+  if (keyword->type == T_IFDEF)
+    gjb_call_hooks_szlx3_i(CPP_OPTIONS(pfile),DO_IFDEF,
+			      pchStartExpr,pchEndExpr-pchStartExpr,
+			      pchEndExpr,pchEndGarbage-pchEndExpr,
+			      pchEndGarbage,CPP_BUFFER(pfile)->cur-pchEndGarbage,
+			      skip);
+  else
+    gjb_call_hooks_szlx3_i(CPP_OPTIONS(pfile),DO_IFNDEF,
+			      pchStartExpr,pchEndExpr-pchStartExpr,
+			      pchEndExpr,pchEndGarbage-pchEndExpr,
+			      pchEndGarbage,CPP_BUFFER(pfile)->cur-pchEndGarbage,
+			      skip);
   return 0;
 }
 
@@ -4549,13 +4604,20 @@ do_else (pfile, keyword, buf, limit)
      U_CHAR *buf, *limit;
 {
   cpp_buffer *ip = CPP_BUFFER (pfile);
+  U_CHAR *pchStartGarbage = ip->cur+1;
+  U_CHAR *pchEndGarbage = NULL;
 
   if (CPP_PEDANTIC (pfile))
     validate_else (pfile, "#else");
   skip_rest_of_line (pfile);
+  pchEndGarbage = ip->cur+1;
 
   if (pfile->if_stack == CPP_BUFFER (pfile)->if_stack) {
     cpp_error (pfile, "`#else' not within a conditional");
+    gjb_call_hooks_sz_szl_szl(CPP_OPTIONS(pfile),DO_ELSE,
+			      "@NONE@",
+			      pchStartGarbage,pchEndGarbage-pchStartGarbage,
+			      "", 0);
     return 0;
   } else {
     /* #ifndef can't have its special treatment for containing the whole file
@@ -4578,6 +4640,10 @@ do_else (pfile, keyword, buf, limit)
     ++pfile->if_stack->if_succeeded;	/* continue processing input */
     output_line_command (pfile, 1, same_file);
   }
+  gjb_call_hooks_sz_szl_szl(CPP_OPTIONS(pfile),DO_ELSE,
+			    pfile->if_stack->control_macro,
+			    pchStartGarbage,pchEndGarbage-pchStartGarbage,
+			    pchEndGarbage,ip->cur-pchEndGarbage);
   return 0;
 }
 
@@ -4591,15 +4657,33 @@ do_endif (pfile, keyword, buf, limit)
      struct directive *keyword;
      U_CHAR *buf, *limit;
 {
+  cpp_buffer *ip = CPP_BUFFER (pfile);
+  U_CHAR *pchStartGarbage = ip->cur+1;
+  U_CHAR *pchEndGarbage = NULL;
+  char *szControlMacro = NULL;
+  int fUnbalanced = 0;
   if (CPP_PEDANTIC (pfile))
     validate_else (pfile, "#endif");
   skip_rest_of_line (pfile);
-
+  pchEndGarbage = ip->cur+1;
   if (pfile->if_stack == CPP_BUFFER (pfile)->if_stack)
+    {
     cpp_error (pfile, "unbalanced `#endif'");
+    fUnbalanced = 1;
+    }
   else
     {
       IF_STACK_FRAME *temp = pfile->if_stack;
+      if (temp->control_macro != NULL) 
+	{
+	szControlMacro = xmalloc(strlen(temp->control_macro)+1);
+	strcpy(szControlMacro,temp->control_macro);
+	}
+      else
+	{
+	szControlMacro = xmalloc(5);
+	strcpy(szControlMacro,"@??@");
+	}
       pfile->if_stack = temp->next;
       if (temp->control_macro != 0)
 	{
@@ -4652,6 +4736,11 @@ FIXME!
       free (temp);
       output_line_command (pfile, 1, same_file);
     }
+  gjb_call_hooks_sz_szl(CPP_OPTIONS(pfile),DO_ENDIF,
+			(fUnbalanced?"@UNBALANCED@":szControlMacro),
+			pchStartGarbage,pchEndGarbage-pchStartGarbage);
+  if (szControlMacro)
+    free(szControlMacro);
   return 0;
 }
 
