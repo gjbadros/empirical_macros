@@ -277,16 +277,15 @@ sub cline_simplify ($)
 
 # This pretties things up but changes contents of line-spanning strings,
 # so don't call it if ARG1 ends inside a string.
+# NOTE: this sub is also in em_analyze
 sub append_lines ($$)
 {
   my ($arg1, $arg2) = check_args(2, @_);
-  # "+" instead of "*" wouldn't introduce spaces where there were none before;
-  # but we want to make sure the two lines don't just run together.
-  # Exception to the above: if splicing, then running together may be OK.
-  # At present, callers take care of that themselves.
-  $arg1 =~ s/[ \t\n]*$/ /;
-  $arg2 =~ s/^[ \t\n]*/ /;
-  return ($arg1 . $arg2);
+  $arg1 =~ s/[ \t\n]+$//;
+  $arg2 =~ s/^[ \t\n]+//;
+  # insert a space so that the two lines don't just run together
+  # (above regexps are a lot faster (3x) than using [ \t\n]*)
+  return ($arg1 . "  " . $arg2);
 }
 
 # Add newline to end of string; return string unchanged if it already has one.
