@@ -818,7 +818,7 @@ my @rg_cpp_phys_ncnb_lines = (0) x $c_ftype;
 
 my @rg_cpp_cmds = (0) x $c_ftype;
 
-# $ {$rg_category_counts[$ft_index]}{"uncategorized"} ==
+# ${$rg_category_counts[$ft_index]}{"uncategorized"} ==
 # the number of times a macro definition was categorized as uncategorized
 # for files of type $ft_index
 # (much like @rg_cpp_cmds list of hashes)
@@ -2125,7 +2125,7 @@ sub updateinvars ($)
 	      goto UIV_RETURN; } }
       # If not instring, \" suffices instead of the more complicated
       # regexp that checks for leading backslashes.
-      elsif ($remaining =~ m/\/[\*\/]|[\'\"]/) #'HACKCOLOR
+      elsif ($remaining =~ m/\/[\*\/]|[\'\"]/)
 	{ my $match = $MATCH;
 	  my $postmatch = $POSTMATCH;
 	  $result .= $PREMATCH;
@@ -2198,7 +2198,7 @@ sub updateinvars ($)
 # 
 #   # If not instring, I think \" suffices instead of the more complicated
 #   # regexp that checks for leading backslashes.
-#   while (($line =~ m/[\"\']/) #'HACKCOLOR
+#   while (($line =~ m/[\"\']/)
 # 	 # should regexp-quote $token
 # 	 || ($line =~ m/\Q$token\E/))
 #     { my $match = $MATCH;
@@ -5081,6 +5081,8 @@ sub initialize_builtin_macros () {
   # __TIME__.  __STDC__ is undefined or has a nonzero value.
   # __STDC_VERSION__ is 199409L if implementation complies with Amendment 1.
 
+  # FIX: split this into the "standard" builtins, and the gcc builtins
+  # FIX: the blank lines in the qw() constructs below separate the two types
   my @num_def_macros = (
     qw(__LINE__ __STDC_VERSION__
 
