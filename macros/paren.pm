@@ -100,7 +100,6 @@ sub contains_mismatch ( $ )
 { my ($body) = check_args(1, @_);
   if ($debug_paren) { print "contains_mismatch <= $body"; }
 
-  my $result = 0;
   my @nesting = ();
 
   my $full_body = $body;

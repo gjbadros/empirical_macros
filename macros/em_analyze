@@ -6755,7 +6755,10 @@ sub SaveMacroAnalysisState ( $ )
   open(OUTSTATE, ">$output_filename")
     or (open(OUTSTATE, ">state" && printf STDERR "Couldn't open $output_filename, using \"state\" instead\n"))
       or die "Failed opening output file: $!";
-  print OUTSTATE "\# -*- Perl -*-\n";
+  # Without the selects and setting of $|, -*- Perl -*- appears at end of file.
+  { select(OUTSTATE); $| = 1;
+    print OUTSTATE "\# -*- Perl -*-\n";
+    $| = 0; select(STDOUT); }
 
   # Try to save some space, to avoid running out of memory in Data::Dumper
   undef @mdef_body_noc;
@@ -6770,10 +6773,10 @@ sub SaveMacroAnalysisState ( $ )
     my $v = $state_file_vars[$i];
     my $g = $v;
     $g =~ s/[\@\%\$]/\*/;
-### FIX: I have reversed the commenting on these two lines because of a bug
-### in DumpxsFd.  Change this back once the bug is corrected.
-#    $es = "Data::Dumper->DumpxsFd(fileno OUTSTATE,[\\$v],[\"$g\"]);\n";
-    $es = "print OUTSTATE Data::Dumper->Dumpxs([\\$v],[\"$g\"]);\n";
+    # DumpxsFd used to cause trouble with closing random open files, discarding
+    # buffered output.  It doesn't seem to do that any more, though...
+    $es = "Data::Dumper->DumpxsFd(fileno OUTSTATE,[\\$v],[\"$g\"]);\n";
+#    $es = "print OUTSTATE Data::Dumper->Dumpxs([\\$v],[\"$g\"]);\n";
     print STDERR $es;
     eval $es;
     $es = "undef $v;\n";
@@ -7031,10 +7034,11 @@ print STDERR "Categorizing $cMacrosInTables macros\n";
 # print STDERR "fun_decl_arg_macros:", join("\n",keys %fun_decl_arg_macros), "\n";
 
 # Flush the output, becuase DumpxsFd may close them and delete buffered output.
-select(EVIL); $| = 1;
-select(PARSE_ERRS); $| = 1;
-# close(EVIL);
-# close(PARSE_ERRS);
+# (I can no longer reproduce that problem, but just in case...)
+select(EVIL); $| = 1; print EVIL "";
+select(PARSE_ERRS); $| = 1; print PARSE_ERRS "";
+# # close(EVIL);
+# # close(PARSE_ERRS);
 
 print STDERR "Save macro analysis state\n";
 SaveMacroAnalysisState($statename);

@@ -270,7 +270,8 @@ sub cline_simplify ( $ )
 
   if ($debug_cline) { print "cline_simplify <= '$arg'\n"; }
 
-  my ($result, $seen_ncnb, $warnings) = cline_updateinvars($arg);
+  my $result;
+  ($result, undef, undef) = cline_updateinvars($arg);
   # Not sure if eliminating space is the right thing; but if mdef_body_simple
   # isn't stored in state file, it must be done here or elsewhere.
   $result =~ s/^\s+//;
@@ -327,7 +328,7 @@ sub add_newline ( $ )
 # Optional argument $cpp_comment is true if we are in a "CPP comment" -- that
 #   is, in "#if 0", in the else part of "#if 1", or similar.  This prevents
 #   cline_updateinvars from being called and causes ncnb lines to be zero.
-sub get_spliced_cline ($;$)
+sub get_spliced_cline ( $;$ )
 {
   my ($filehandle, $cpp_comment) = check_args_range(1, 2, @_);
   if (!defined($cpp_comment))
