@@ -93,14 +93,14 @@ clean_reports:
 # Could also depend on $(PKG_DIR)/$(ANALYZE_OUTPUT_DIR)*/c-files-listing
 %.state: #[REMOVE THIS # TO DEPEND ON SCRIPTS] $(COMMON_DIR)/../em_analyze
 	em_make_state_file $(PKG_DIR) $(ANALYZE_OUTPUT_DIR) $@ $(EXTRA_ANALYZE_FLAGS) || echo $< >> $(ANALYZE_OUTPUT_DIR)/failures
-	stringify-state-file `basename $@ .state`.*state
-	@ chgrp macros `basename $@ .state`.*
-	@ chmod g+rw `basename $@ .state`.*
+	stringify-state-file $(basename $@).*state
+	@ -chgrp macros $(basename $@).*
+	@ -chmod g+rw $(basename $@).*
 
 %.stat: %.state #[REMOVE THIS # TO DEPEND ON SCRIPTS] $(COMMON_DIR)/../em_reports
-	em_reports -s $< -t $(EXTRA_REPORTS_FLAGS) -d $(ANALYZE_OUTPUT_DIR):`echo $@ | sed -e 's/\.stat$$//'`
-	@ chgrp macros `basename $@ .stat`.*
-	@ chmod g+rw `basename $@ .stat`.*
+	em_reports -s $< -t $(EXTRA_REPORTS_FLAGS) -d $(ANALYZE_OUTPUT_DIR):$(basename $@)
+	@ -chgrp macros $(basename $@).*
+	@ -chmod g+rw $(basename $@).*
 
 
 ###########################################################################
