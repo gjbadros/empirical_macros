@@ -189,15 +189,16 @@ heavily used that it is worthwhile to understand, annotate, or
 eliminate the remaining one-third of the macros; these are the macros which are most likely
 to cause difficulties.
 
-Through extensive discussions, we have found that experts have widely
-varying experiences with the preprocessor and similarly varying
-expectations about what our data should and do show.  Some of our
-specific analyses could have been performed differently, and some can
-be (and have been) interpreted in various ways.
-Our data, however, leave little doubt that the preprocessor is used in
-broad and diverse ways, that most of those uses are simple, and that
-there is certainly potential to reduce at least some of the complexity
-introduced by the more sophisticated uses.
+Different programmers have different backgrounds and different tasks.  These
+differences lead to substantial variations not only in how programmers use
+the preprocessor, but also in their attitudes towards the preprocessor and
+what data about preprocessor use they find of interest.  We
+have found repeatedly that data that confirms one person's intuition comes
+as a surprise to another\,---\,and every component of our data has had both
+effects on different individuals.  Therefore, we provide a broad range
+of analyses with the expectation that different readers will focus on
+different parts, and will perhaps choose to extend our work in specific
+directions.
 
 %We had two initial motivations for pursuing this line of research.
 %One, we wanted to know how difficult it would be, in practice, to
@@ -999,14 +1000,14 @@ ASSERT(p) if (!(p)) botch(\verb|__STRING|(p)); else}).
   or for entities interrupted by preprocessor
   directives), but occasionally it fails to recognize declarations or
   definitions.
-
+  
   In \pkg{perl}, unknown identifiers make up 31\% of macro definitions,
-  compared to an average of 6.9\% and 9.0\% in
-  \pkg{mosaic}, which has the the second largest proportion of unknown
-  identifiers.  In order to avoid link-time collisions when the Perl
-  interpreter is embedded in another application, \pkg{perl} conditionally
-  redefines over one thousand global symbols to add the prefix
-  \verb|Perl_|, as in {\tt \#define Xpv Perl_Xpv}.
+  compared to 9.0\% in \pkg{mosaic}, which has the the second largest
+  proportion of unknown identifiers, and an average of 6.9\%.  In order to
+  avoid link-time collisions when the Perl interpreter is embedded in
+  another application, \pkg{perl} conditionally redefines over one thousand
+  global symbols to add the prefix \verb|Perl_|, as in {\tt \#define Xpv
+  Perl_Xpv}.
 
 
 %% mcat_NON_C_CODE: 17
@@ -3271,13 +3272,14 @@ understanding tools) to give incomplete or incorrect results.
 
 % Also, learn weird new Cpp tricks!
 
-Finally, our results are of interest to software engineers researchers
+Finally, our results are of interest to software engineering researchers
 for all of the above reasons and more.  Since this is the first study
 of Cpp usage of which we are aware, it was worth performing simply to
-determine whether the results were predictable \emph{a priori}; in
-addition, we found some interesting, and in some cases surprising,
-features of our suite of programs.  More highly focused and deeper analyses
+determine whether the results were predictable \emph{a priori}. 
+Each aspect of our analysis has been surprising and interesting to
+some individuals.  Pursuing more highly focused and deeper analyses
 would be worthwhile.
+
 
 \section*{Acknowledgments}
 
