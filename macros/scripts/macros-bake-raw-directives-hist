@@ -1,0 +1,43 @@
+#!/uns/bin/perl -wn
+
+# Take a raw-directives-hist, which is a list of lines of the form
+#  NCNB_lines package define elif else endif error ident if ifdef ifndef import include include_next line pragma undef
+
+# Output a baked-directives-hist, which is a list of lines of the form
+#  package define undef include conditional line other
+# Also output a total line.
+
+BEGIN { print "package lines define undef include conditional line other\n";
+	$tot_lines = 0;
+	$tot_def = 0;
+	$tot_undef = 0;
+	$tot_include = 0;
+	$tot_cond = 0;
+	$tot_line = 0;
+	$tot_other = 0;
+      }
+
+my ($NCNB_lines, $package, $define, $elif, $else, $endif, $error, $ident, $if, $ifdef, $ifndef, $import, $include, $include_next, $line, $pragma, $undef)
+  = split;
+
+
+# $package
+# $NCNB_lines
+# $define
+# $undef
+my $this_include = $import + $include + $include_next;
+my $this_cond = $if + $ifdef + $ifndef + $elif + $else + $endif;
+# $line
+my $this_other = $error + $ident + $pragma;
+
+print "$package $NCNB_lines $define $undef $this_include $this_cond $line $this_other\n";
+
+$tot_lines += $NCNB_lines;
+$tot_def += $define;
+$tot_undef += $undef;
+$tot_include += $this_include;
+$tot_cond += $this_cond;
+$tot_line += $line;
+$tot_other += $this_other;
+
+END { print "Total $tot_lines $tot_def $tot_undef $tot_include $tot_cond $tot_line $tot_other\n"; }

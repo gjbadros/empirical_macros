@@ -21,7 +21,7 @@ TEXT_TABLES :=	tbl-package_sizes \
 		tbl-def_frequency \
 		tbl-how_used_ni
 
-RAW_TABLES := raw-directives-hist
+RAW_TABLES := raw-directives-hist baked-directives-hist
 
 LATEX_TABLES :=	tbl-categories.tex
 
@@ -61,8 +61,13 @@ tbl-how_used_ni: $(MAC)
 ### Raw tables
 ###
 
+raw: $(RAW_TABLES)
+
 raw-directives-hist: $(STAT)
 	macros-make-directives-raw-hist-from-stats $^ > $@
+
+baked-directives-hist: raw-directives-hist
+	macros-bake-raw-directives-hist < $^ > $@
 
 package_and_sizes-tbl.txt: $(STAT)
 	macros-make-package-sizes-tbl-from-stat $^ > $@
@@ -89,4 +94,4 @@ showvars:
 	echo $(CVT_LATEX_TABLES)
 	echo $(ALL_TABLES)
 
-.PHONY: all clean showvars text_tables data
+.PHONY: all clean showvars text_tables data raw
