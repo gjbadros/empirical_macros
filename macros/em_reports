@@ -165,11 +165,11 @@ use vars qw($getopts_option_letters $c_reserved_type_word_alternatives
     $current_function_start_line $current_macro_line_number @files
     %file_inclusion_method @files_included $outOFS %macros
     %macros_c_undefs %macros_uses %macros_file_line_uses
-    %macros_used_in_functions @mdef_name @mdef_args @mdef_body
+    %macros_used_in_functions @mdef_name @mdef_formals @mdef_body
     @mdef_file @mdef_line @mdef_physical_lines
     @mdef_physical_ncnb_lines %mdef_freevars @mdef_freefuns
     @mdef_dependenton @mdef_direct_expansion_uses @mdef_type
-    @mdef_category @mdef_properties
+    @mdef_category @mdef_properties @mdef_free_vars
     @mdef_evilness %mntype %mncategory %fun_decl_arg_macros
     %semi_fun_decl_arg_macros %void_macros $fDebugCmdProcessing
     $fDebugCommentRemoval $debug_scopes $debug_type_match
@@ -186,7 +186,7 @@ use vars qw($getopts_option_letters $c_reserved_type_word_alternatives
     %either_dependee_lines
     @mdef_direct_inclusion_dependenton
     @rg_ccd_cat_counts
-    %macros_used_by_cpp
+    %macros_used_by_cpp %functions %typedefs
 );
 # Computed from the above, but not in state file.
 my @mdef_body_simple;
@@ -342,10 +342,10 @@ sub output_stats ()
       for (my $iDef = 0; $iDef <= $#{$macros{$name}}; $iDef++ ) {
 	my $i = $macros{$name}[$iDef];
 	if ($mdef_file[$i] ne $built_in_fake_file) {
-	  #print STDERR "NAME=$name,", join(", ",@{$macros{$name}}),"\n";
+	  # print STDERR "NAME=$name,", join(", ",@{$macros{$name}}),"\n";
 	  # Used to output $i third here, but it's irrelevant.
 	  print "$name", $iDef+1, $file_inclusion_method{$mdef_file[$i]},
-	  $mdef_file[$i], $mdef_line[$i], count_macro_args($mdef_args[$i]),
+	  $mdef_file[$i], $mdef_line[$i], count_macro_args($mdef_formals[$i]),
 	  $mdef_physical_lines[$i], $mdef_physical_ncnb_lines[$i],
 	  $categoryname[$mdef_category[$i]],
 	  # FIX: add type name back in when we get that working
@@ -433,7 +433,7 @@ sub output_stats ()
 	  print STDERR "categoryname[$category] not defined\n";
 	}
 	print "$mdef_file[$index]:$mdef_line[$index]: "
-	  . ($mdef_args[$index] ? "function, " : "") . $categoryname[$category];
+	  . ($mdef_formals[$index] ? "function, " : "") . $categoryname[$category];
 	if (($category == $catEXP)
 	    || ($category == $catLITERAL)
 	    || ($category == $catCONSTANT)
@@ -442,7 +442,7 @@ sub output_stats ()
 	    print "(" . (defined($type) ? type_name($type) : "UNDEFINED_TYPE") . ")"; }
 	elsif ($category == $catFAILURE)
 	  { print "($mdef_properties[$index])"; }
-	print ": $mdef_name[$index]$mdef_args[$index] $mdef_body[$index]\n";
+	print ": $mdef_name[$index]$mdef_formals[$index] $mdef_body[$index]\n";
       }
     }
   }
@@ -489,10 +489,10 @@ sub output_stats ()
 	      { my %def_hash;
 		for my $i (@{$macros{$macro_name}})
 		  { my $body = $mdef_body_simple[$i];
-		    my $args = $mdef_args[$i];
+		    my $args = $mdef_formals[$i];
 		    # Canonicalize formal names to avoid gratuitous differences
 		    if ($args)
-		      { my @formals = args_array($args);
+		      { my @formals = formals_array($args);
 			for my $fno (0 .. $#formals)
 			  { $body =~ s/\b$formals[$fno]\b/EM_ARG_NUM_$fno/g; } }
 		    $body =~ s/\s+//g; # collapse all spaces
@@ -524,17 +524,58 @@ sub output_stats ()
       print "\n";
     }
 
+  # Produce a version with info pre-digested for easier graphing.
+
+  # Total number of warnings
+
+  ## Per-macro warnings:
+  # Total number of macro definitions
+  # Number of macros with at least one warning (or histogram?)
+  # For each warning, number of macro definitions with that warning.
+
+  # Don't bother with these finer-grained warnings; insufficient benefit.
+  # ## Per-formal warnings:
+  # # Total number of formals
+  # # Number of formals with at least one warning (or histogram?)
+  # # For each warning, number of formals with that warning.
+  # 
+  # # For per-formal-use warnings:
+  # # Total number of formal uses
+  # # Number of formal uses with at least one warning (or histogram?)
+  # # For each warning, number of formal uses with that warning.
+
+
   if ($opt_l)
     { if ($opt_v) { print STDOUT "lint..."; }
       select LINT;
       my $old_ofs = $OFS;
       $OFS = "\n    ";
+
+      my $num_macro_defs = 0;
+      # The different possible warnings:
+      # Per macro
+      my $warn_null_with_args = 0;
+      my $warn_newline = 0;
+      my $warn_unparen_body = 0;
+      my $warn_semicolon_swallowing = 0; # split into multiple_statements and full_statement?
+      my $warn_free_var = 0;
+      ## Don't bother to do these per total number of formals or per total
+      ## number of formal uses; for now, just per number of macro defs.
+      # Per formal
+      my $warn_formal_bad_name = 0;
+      my $warn_formal_multiple_uses = 0;
+      # Per formal use
+      my $warn_formal_use_adjacent = 0;
+      my $warn_formal_use_unparen = 0;
+      my $warn_formal_use_side_effect = 0;
+
       for my $macro_name (sort keys %macros)
 	{ for my $i (@{$macros{$macro_name}})
 	    { if ($file_inclusion_method{$mdef_file[$i]} ne "FromInclude<>")
-		{ my @complaints = ();
+		{ $num_macro_defs++;
+		  my @complaints = ();
 		  my $body = $mdef_body_simple[$i];
-		  my $args = $mdef_args[$i];
+		  my $args = $mdef_formals[$i];
 		  my $category = $mdef_category[$i];
 		  my $category_is_expression
 		    = (($category == $catEXP)
@@ -550,9 +591,16 @@ sub output_stats ()
 		       || ($category == $catPARTIAL_STATEMENTS));
 		  my $properties = $mdef_properties[$i];
 
+		  my $this_warn_formal_non_identifier = $false;
+		  my $this_warn_formal_reserved_word = $false;
+		  my $this_warn_formal_multiple_uses = $false;
+		  my $this_warn_formal_use_adjacent = $false;
+		  my $this_warn_formal_use_unparen = $false;
+		  my $this_warn_formal_use_side_effect = $false;
+
 		  # Check formals
 		  if ($args)
-		    { my @args = args_array($args);
+		    { my @args = formals_array($args);
 		      # Check for formals but no body -- "#define foo(bar)"
 		      # might have been intended as "#define foo (bar)".
 		      # Suppress if body contains an empty comment.
@@ -560,19 +608,23 @@ sub output_stats ()
 			{ if (((scalar(@args) == 1) && ($args[0] eq $macro_name))
 			      || ($args !~ /\(\s*$identifier_re\s*(,\s*$identifier_re\s*)*\s*\)/))
 			    { push(@complaints,
-				   "missing space between macro name and parenthesized body (empty comment suppresses)"); }
+				   "missing space between macro name and parenthesized body (empty comment suppresses)");
+			      $warn_null_with_args++; }
 			  elsif ((scalar(@args) == 1) && ($macro_name !~ /^DEBUG_/))
 			    # Suppress warning if multiple arguments or debugging macro
 			    { push(@complaints,
-				   "possible missing space between macro name and parenthesized body (empty comment suppresses)"); } }
+				   "possible missing space between macro name and parenthesized body (empty comment suppresses)");
+			      $warn_null_with_args++; } }
 
 		      # Check uses of each formal
 		      for my $arg (@args)
 			{ my @formal_complaints = ();
 			  if ($arg !~ /^$identifier_re$/o)
-			    { push(@formal_complaints, "not an identifier"); }
+			    { push(@formal_complaints, "not an identifier");
+			      $this_warn_formal_non_identifier = $true; }
 			  elsif ($arg =~ /^$reserved_word_re$/o)
-			    { push(@formal_complaints, "name is reserved word"); }
+			    { push(@formal_complaints, "name is reserved word");
+			      $this_warn_formal_reserved_word = $true; }
 			  # Add spaces to make sure that there's a first and last part
 			  my @parts = split(/\b\Q$arg\E\b/, " $body ");
 			  for my $i (0..$#parts)
@@ -588,7 +640,8 @@ sub output_stats ()
 			      # if ($macro_name eq "__isctype") { print STDOUT "pre = $pre\nmatch = " . ($pre =~ /[\?:,\)]$/) . "  " . ($pre !~ /\($/) . "  " . ($post !~ /^\)/) . "  " . ($arg ne $body) . "\n" ; }
 			      if (($i < $#parts) && (!$post))
 				{ push(@formal_complaints,
-				       "adjacent uses \#$i and \#" . $i+1); }
+				       "adjacent uses \#$i and \#" . $i+1);
+				  $this_warn_formal_use_adjacent = $true; }
 
 			      if (!$is_selector && ($pre =~ /$selector_regexp$/o))
 				{ $is_selector = $true; }
@@ -620,14 +673,15 @@ sub output_stats ()
 				  || ($post =~ /^([-+*\/%&^\|]|<<|>>)?=[^=]/))
 				{ push(@sideeff_uses, $i); }
 			    }
-			  if (!$is_selector)
+			  if (!$is_selector && (scalar(@unparen_uses) > 0))
 			    { if (scalar(@unparen_uses) == 1)
 				{ push(@formal_complaints,
 				       "unparenthesized use \#$unparen_uses[0]"); }
 			      elsif (scalar(@unparen_uses) > 1)
 				{ push(@formal_complaints,
 				       "unparenthesized uses \#"
-				       . join(",#", @unparen_uses)); } }
+				       . join(",#", @unparen_uses)); }
+			      $this_warn_formal_use_unparen = $true; }
 			  if (scalar(@sideeff_uses) > 0)
 			    { my $prefix = ($is_selector
 					    ? "structure side-effected through "
@@ -638,21 +692,36 @@ sub output_stats ()
 			      elsif (scalar(@sideeff_uses) > 1)
 				{ push(@formal_complaints,
 				       $prefix . "uses \#"
-				       . join(",#", @sideeff_uses)); } }
+				       . join(",#", @sideeff_uses)); }
+			     $this_warn_formal_use_side_effect = $true; }
 			  if ((!$is_selector) && (scalar(@parts) > 2))
-			    { # Make this complaint first (except that "not an identifier" should precede it)
-			      unshift(@formal_complaints, "multiple uses"); }
+			    { # Make this complaint first (except that "not an identifier" ought to precede it)
+			      unshift(@formal_complaints, "multiple uses");
+			      $this_warn_formal_multiple_uses = $true;
+			    }
 			  if (scalar(@formal_complaints) > 0)
 			    { push(@complaints,
 				   "formal $arg: " . join("; ", @formal_complaints)); }
 			} }
+
+		  if ($this_warn_formal_non_identifier || $this_warn_formal_reserved_word)
+		    { $warn_formal_bad_name++; }
+		  if ( $this_warn_formal_multiple_uses)
+		    { $warn_formal_multiple_uses++; }
+		  if ($this_warn_formal_use_adjacent)
+		    { $warn_formal_use_adjacent++; }
+		  if ($this_warn_formal_use_unparen)
+		    { $warn_formal_use_unparen++; }
+		  if ($this_warn_formal_use_side_effect)
+		    { $warn_formal_use_side_effect++; }
 
 		  # Check body
 		  if ($body =~ /\n/)
 		    { die "$mdef_file[$i]:$mdef_line[$i]: newline in $macro_name (def #$i): '$body'"; }
 		      if ($mdef_body[$i] =~ /\n/)
 			{ push(@complaints,
-			       "multi-line comment or string"); }
+			       "multi-line comment or string");
+			  $warn_newline++; }
 		  if ($category_is_expression && ($category != $catLITERAL))
 		    { # Don't demand parentheses around a single identifier,
 		      # number, or string, or around a function call (which has
@@ -673,21 +742,69 @@ sub output_stats ()
 			{ push(@complaints,
 			       "macro body should be enclosed in parentheses"
 			       # If it has args and assignment, maybe it's really a semicolonless statement.
-			       . (($args && ($properties & $propASSIGN)) ? " (if used as expression)" : "")); } }
+			       . (($args && ($properties & $propASSIGN)) ? " (if used as expression)" : ""));
+			  $warn_unparen_body++; } }
 		  if ($category_is_statement)
 		    { if (($category == $catSTATEMENTS)
 			  || ($category == $catSTATEMENTS_SANS_SEMI))
 			{ push(@complaints,
-			       "multiple statements: enclose in \"do ... while (0)\""); }
+			       "multiple statements: enclose in \"do ... while (0)\"");
+			  $warn_semicolon_swallowing++; }
 		      elsif (($category == $catSTATEMENT)
 			     || ($category == $catSTATEMENTS))
 			{ push(@complaints,
-			       "semicolon-swallowing problem: enclose statement in \"do ... while (0)\""); } }
+			       "semicolon-swallowing problem: enclose statement in \"do ... while (0)\"");
+			  $warn_semicolon_swallowing++; } }
+
+		  if ($properties & $propFREE_VAR)
+		    { my $free_vars = $mdef_free_vars[$i];
+		      if (!$free_vars)
+			{ die "properties includes propFREE_VAR, but none listed $macro_name, def \#$i = $body"; }
+		      push(@complaints, "free variable"
+			   . (($free_vars =~ /,/) ? "s " : " ")
+			   . $free_vars);
+		      $warn_free_var++; }
+
 		  if (scalar(@complaints) > 0)
 		    { print LINT "$mdef_file[$i]:$mdef_line[$i]:\n        #define $macro_name$args $mdef_body[$i]", @complaints;
 			# Separate print statement so we don't get $OFS before it
 			print LINT "\n"; }
 		} } }
+      # Note that $num_macro_defs != $cMacrosInTables because we omit FromInclude<>
+      print "\n\n";
+      print "Total macro definitions not in libraries: $num_macro_defs\n";
+      if ($num_macro_defs > 0)
+	{ print "$warn_null_with_args ("
+	    . sprintf("%2.2f",percent2($warn_null_with_args,$num_macro_defs))
+	      . "%) Null body with args\n";
+	  print "$warn_newline ("
+	    . sprintf("%2.2f",percent2($warn_newline,$num_macro_defs))
+	      . "%) contains newline\n";
+	  print "$warn_unparen_body ("
+	    . sprintf("%2.2f",percent2($warn_unparen_body,$num_macro_defs))
+	      . "%) unparenthesized body\n";
+	  print "$warn_semicolon_swallowing ("
+	    . sprintf("%2.2f",percent2($warn_semicolon_swallowing,$num_macro_defs))
+	      . "%) swallows semicolon\n";
+	  print "$warn_free_var ("
+	    . sprintf("%2.2f",percent2($warn_free_var,$num_macro_defs))
+	      . "%) free variables\n";
+	  print "$warn_formal_bad_name ("
+	    . sprintf("%2.2f",percent2($warn_formal_bad_name,$num_macro_defs))
+	      . "%) bad formal name\n";
+	  print "$warn_formal_multiple_uses ("
+	    . sprintf("%2.2f",percent2($warn_formal_multiple_uses,$num_macro_defs))
+	      . "%) multiple formal uses\n";
+	  print "$warn_formal_use_adjacent ("
+	    . sprintf("%2.2f",percent2($warn_formal_use_adjacent,$num_macro_defs))
+	      . "%) adjacent formal uses\n";
+	  print "$warn_formal_use_unparen ("
+	    . sprintf("%2.2f",percent2($warn_formal_use_unparen,$num_macro_defs))
+	      . "%) unparenthesized formal uses\n";
+	  print "$warn_formal_use_side_effect ("
+	    . sprintf("%2.2f",percent2($warn_formal_use_side_effect,$num_macro_defs))
+	      . "%) side-effected formal\n"; }
+
       $OFS = $old_ofs;
     } # end of if $opt_l (lint)
 
@@ -800,7 +917,7 @@ sub OutputHistogram ($$$;$) {
       # This case feels gratuitous
       push @values_list, $v;
     } else {
-      push @values_list, sprintf "%2.2f",pct2($v,$divisor);
+      push @values_list, sprintf "%2.2f",percent2($v,$divisor);
     }
   }
   if ($fPrintHeading)
@@ -931,77 +1048,6 @@ sub OutputCountsHistogramCum ($$@) {
   }
 }
 
-###########################################################################
-### Utilities
-###
-
-# pct2(x) returns a percentage (not a fraction) which corresponds to arg1/arg2.
-sub pct2 ($$) {
-  my ($x,$w) = check_args(2, @_);
-  if ($w <= 0) {
-    croak("pct2: Bad divisor: $x / $w");
-    return 0;
-  }
-  if ($x < 0 || $x > $w) {
-    print STDERR "pct2: Percentage out of range: $x / $w\n";
-  }
-  return (100*$x/$w);
-}
-
-
-# sum_array sums all its inputs, typically the elements of an array.
-# Pass in a slice of the array in order to sum that part.
-sub sum_array (@) {
-  my (@args) = @_;
-  my $sum = 0;
-  { foreach my $elt (@args)
-      { $sum += $elt if defined $elt; } }
-  return $sum;
-}
-
-# make_cum_array returns an array that is the running total of the
-# elements in the array passed in.
-# e.g.     1, 3, 2,  1,  6,  2
-# returns  1, 4, 6,  7, 13, 15
-sub make_cum_array (@) { # returns @cum_array
-  my (@args) = @_;
-  my @cum_array = ();
-  my $sum = 0;
-  foreach my $elt (@args) {
-    $sum += $elt if defined $elt;
-    push @cum_array, $sum;
-  }
-  return @cum_array;
-}
-
-
-# Sum corresponding elements of an array (or array slice)
-# into the destination reference provided
-sub sum_parallel_hashes { # returns void; output in $_[0]
-  my ($dest_hashref,@array_of_hash_refs) = check_args_at_least(1,@_);
-  no strict 'refs';  #FIX: Must I do this?
-  foreach my $hashref (@array_of_hash_refs) {
-    foreach my $key (keys %{$hashref}) {
-      if (!defined($dest_hashref->{$key})) {
-	# print STDERR "UNDEF: $key\n";
-	$dest_hashref->{$key} = 0;
-      }
-      $dest_hashref->{$key} += $hashref->{$key};
-    }
-  }
-  return;
-}
-
-
-
-# Add newline to end of string; return string unchanged if it already has one.
-sub add_newline ($)
-{ my ($string) = check_args(1, @_);
-  if ($string =~ m/\n$/)
-    { return $string; }
-  else
-    { return $string . "\n"; }
-}
 
 ###########################################################################
 ### Persistence

@@ -3,11 +3,14 @@ package em_util;
 require 5.002;
 require Exporter;
 @ISA = qw(Exporter);
-@EXPORT = qw( is_number type_name count_macro_args args_array );
-
+@EXPORT = qw( is_number type_name count_macro_args formals_array actuals_array
+	     percent2 sum_array make_cum_array sum_parallel_hashes add_newline);
 
 use checkargs;
 use em_constants;
+use paren;
+
+use Carp;
 
 # Common functions to em_reports and em_analyze
 # For determining whether a Perl variable has numeric type.
@@ -46,11 +49,107 @@ sub count_macro_args ($) {
 }
 
 # Given a macro argument declaration, return an array of formal names.
-sub args_array ($)
+sub formals_array ($)
 { my ($args) = check_args(1, @_);
   $args =~ s/^\s*\(\s*//;
   $args =~ s/\s*\)\s*$//;
   return split(/\s*,\s*/,$args);
+}
+
+# Like formals_array, but works for arbitrary expressions
+sub actuals_array ($)
+{ my ($args) = check_args(1, @_);
+  if (!($args =~ s/^\s*\(\s*(.*)\)\s*$/$1/))
+    { croak "argument to args_array not enclosed in parentheses: $args"; }
+  my $remaining = $args;
+  my @results = ();
+  my $this_arg = "";
+  while ($remaining =~ /[,\(\{]/)
+    { my $pre = $PREMATCH;
+      my $remaining = $POSTMATCH;
+      if ($MATCH eq ",")
+	{ push(@results, $this_arg . $pre);
+	  $this_arg = ""; }
+      else
+	{ $this_arg .= $pre . $MATCH;
+	  my $close_index = (($MATCH eq "\(")
+			     ? find_close_paren($remaining)
+			     : find_close_brace($remaining));
+	  if ($close_index eq $false)
+	    { mdie("No match for $MATCH found in $remaining"); }
+	  $this_arg .= substr($remaining, 0, $close_index+1);
+	  $remaining = substr($remaining, $close_index+1); } }
+  push(@results, $this_arg . $remaining);
+  return @results;
+}
+
+
+# percent2(x) returns a percentage (not a fraction) which corresponds to arg1/arg2.
+sub percent2 ($$) {
+  my ($x,$w) = check_args(2, @_);
+  if ($w <= 0) {
+    croak("percent2: Bad divisor: $x / $w");
+    return 0;
+  }
+  if ($x < 0 || $x > $w) {
+    print STDERR "percent2: Percentage out of range: $x / $w\n";
+  }
+  return (100*$x/$w);
+}
+
+
+# sum_array sums all its inputs, typically the elements of an array.
+# Pass in a slice of the array in order to sum that part.
+sub sum_array (@) {
+  my (@args) = @_;
+  my $sum = 0;
+  { foreach my $elt (@args)
+      { $sum += $elt if defined $elt; } }
+  return $sum;
+}
+
+# make_cum_array returns an array that is the running total of the
+# elements in the array passed in.
+# e.g.     1, 3, 2,  1,  6,  2
+# returns  1, 4, 6,  7, 13, 15
+sub make_cum_array (@) { # returns @cum_array
+  my (@args) = @_;
+  my @cum_array = ();
+  my $sum = 0;
+  foreach my $elt (@args) {
+    $sum += $elt if defined $elt;
+    push @cum_array, $sum;
+  }
+  return @cum_array;
+}
+
+
+# Sum corresponding elements of an array (or array slice)
+# into the destination reference provided
+sub sum_parallel_hashes { # returns void; output in $_[0]
+  my ($dest_hashref,@array_of_hash_refs) = check_args_at_least(1,@_);
+  no strict 'refs';  #FIX: Must I do this?
+  foreach my $hashref (@array_of_hash_refs) {
+    foreach my $key (keys %{$hashref}) {
+      if (!defined($dest_hashref->{$key})) {
+	# print STDERR "UNDEF: $key\n";
+	$dest_hashref->{$key} = 0;
+      }
+      $dest_hashref->{$key} += $hashref->{$key};
+    }
+  }
+  return;
+}
+
+
+
+# Add newline to end of string; return string unchanged if it already has one.
+sub add_newline ($)
+{ my ($string) = check_args(1, @_);
+  if ($string =~ m/\n$/)
+    { return $string; }
+  else
+    { return $string . "\n"; }
 }
 
 

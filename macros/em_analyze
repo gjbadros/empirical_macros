@@ -623,6 +623,7 @@ my $current_function;		# the current function
 my $current_function_start_line; # the first line of the current function
 				# (sometimes function headers span lines)
 my %functions = ();		# keys are all functions encountered
+my %typedefs = ();		# keys are all typedefs encountered
 
 my $current_macro_line_number;	# Used by current_line_no when categorizing macros
 
@@ -696,7 +697,7 @@ my $cMacrosInTables = 0;
 # Also want to have summary info true about all definitions...
 # FIX: This data structure of parallel arrays could be improved
 my @mdef_name;
-my @mdef_args;
+my @mdef_formals;
 my @mdef_body;			# with comments; for user output
 my @mdef_body_noc;		# no comments; for processing (does contain unsimplified strings and character literals)
 my @mdef_body_simple;		# no comments; strings and chars are simplified
@@ -709,8 +710,9 @@ my @mdef_freefuns;
 my @mdef_direct_inclusion_dependenton;		# cpp conditions, not just symbols
 my @mdef_direct_expansion_uses;	# direct expansion uses (symbols in expansion)
 my @mdef_category;
-my @mdef_properties;
 my @mdef_type;			# a C type, like UINT; not always meaningful
+my @mdef_properties;
+my @mdef_free_vars;		# comma-separated list of variable names
 my @mdef_evilness;
 
 # These are for aggregate information -- that is, information about a macro
@@ -841,7 +843,7 @@ sub process_macro_definition ($$$$)
   #   { print " $macros{$name}[$i]"; }
   # print "\n";
   $mdef_name[$this_macro_index] = $name;
-  $mdef_args[$this_macro_index] = $args;
+  $mdef_formals[$this_macro_index] = $args;
   $mdef_body[$this_macro_index] = $body;
   $mdef_body_noc[$this_macro_index] = $body_noc;
   $mdef_body_simple[$this_macro_index] = $body_simple;
@@ -1485,9 +1487,8 @@ sub peek_fulltoken_line ($)
 
 # find_close_{paren,brace}_read is like find_close_{paren,brace}, but:
 #  * return a second result, orginarily the argument string
-#  * optional third argument says whether to read lines to try to balance, in
-#    which case the second return value can differ from the first input value,
-#    and the first result is never $false
+#  * read lines to try to balance, in which case the second return value can
+#    differ from the first input value, and the first result is never $false
 # These were more efficient when integrated with find_close_{paren,brace}, but
 # this version is more modular.
 
@@ -1508,10 +1509,13 @@ sub find_close_brace_read ($;$)
   if (!defined($pos))
     { $pos = 0; }
   my $index = find_close_brace($exp, $pos);
+  # print "find_close_brace_read ($pos) <= $exp\n";
   while ($index eq $false)
     { my $nextline = get_fulltoken_line($true);
+      # print "find_close_brace_read ($pos) adding '$nextline' to '$exp'.\n";
       $exp .= $nextline;
       $index = find_close_brace($exp, $pos); }
+  # print "find_close_brace_read ($pos) => $index + $exp\n";
   return ($index, $exp);
 }
 
@@ -1787,7 +1791,7 @@ sub getline_handle_preprocessor_command ($$$$$)
     elsif (($cpp_cmd eq "if") || ($cpp_cmd eq "elif"))
       {
 	# Call to cline_simplify is to get rid of character constants
-	for my $word (words_in(cline_simplify($cpp_cmd_arg_noc)))
+	for my $word (possible_macro_names_in(cline_simplify($cpp_cmd_arg_noc)))
 	  { add_macro_used_by_cpp($word); } }
   }
 
@@ -2859,8 +2863,9 @@ sub parse_function_decl_args ($)
   return ($false, $text, ());
 }
 
-# Return the remaining string, reference to a list of warnings, and an associative array of names to types,
-# (They're in that order because the multiple-value thing must be last.)
+# Return the remaining string, reference to a list of warnings, and an
+# associative array of names to types.
+# (Return values in that order because the multiple-value thing must be last.)
 # If there are warnings, then the parse failed; otherwise, it succeeded.
 # Don't bother sharing code with argument declarator parsing; too much work.
 sub parse_declarations ($)
@@ -3261,6 +3266,7 @@ sub process_macro_calls ()
       # do not do the second pass on included files
       if ( file_was_included($current_file) && !$opt_A) {
 	print STDERR " -- skipping (use -A option to not skip)\n" if $opt_v;
+	find_function_declarations($current_file);
 	next;
       } elsif (!open(INPUT,$current_file)) {
 	# fix: Shouldn't we print to STDERR unconditionally?
@@ -3338,7 +3344,9 @@ PROCESSLINE:
 	      if (!defined($line))
 		{ mdie("PROCESSLINE: line undefined."); }
 	      # print "PROCESSLINE $line\n";
+	      my $line_orig = $line;
 	      $line = simple_macro_substitute($line);
+	      $line = simple_macro_substitute_2($line);
 	      if ($line =~ /^\s*$/)
 		{ # do nothing; maybe this was a preprocessor directive
 		  # print "empty line ", current_line_no(), ":\n";
@@ -3346,6 +3354,30 @@ PROCESSLINE:
 	      elsif ($line =~ /^\s*typedef\s+/)
 		{ # process typedefs
 		  # print "typedef line ", current_line_no(), ": $line\n";
+		  if ($line !~ /;/)
+		    { my $success;
+		      ($success, $line) = get_fulltoken_lines_to(';', $line, 5); }
+		  while ($line =~ /[\{;]/)
+		    { $line = $POSTMATCH;
+		      # print "found '$MATCH'; set line to $line = $POSTMATCH\n";
+		      if ($MATCH eq ";")
+			{ if ($PREMATCH =~ /$identifier_re$/)
+			    { # print "found typedef name $MATCH\n";
+			      $typedefs{$MATCH} = input_file_and_line();
+			    }
+			  else
+			    { parse_error("No identifier found before typedef semicolon: $line"); } }
+		      elsif ($MATCH eq "\{")
+			{ my ($close_brace_pos,$extended_line) = find_close_brace_read($line);
+			  $line = substr($extended_line, $close_brace_pos+1);
+			  if ($line !~ /;/)
+			    { my ($success, $lines) = get_fulltoken_lines_to(';', $line, 5);
+			      $line .= $lines; } }
+		      else
+			{ die "What match? '$MATCH' $line"; } }
+
+		  # Should store all the typedefs somewhere so we don't
+		  # consider them free variables.
 		  $line = $POSTMATCH;
 # This is wrong because typedefs can have semicolons inside braces.
 #		  my $semi_pos;
@@ -3421,7 +3453,7 @@ PROCESSLINE:
 		    { print "matched type declarator <$typespec><$declarator><$nextchar>\n";
 		      print "  remaining: $remaining\n";
 		    }
-		  # print "maybe matched type declarator <$1><$2><$3><$4><$5><$6><$7><$8><$9> <<", defined($macros{$6}), (defined($macros{$6}) ? (">><<$#{$macros{$6}} $macros{$6}[0] |$mdef_name[$macros{$6}[0]]|$mdef_args[$macros{$6}[0]]|$mdef_body[$macros{$6}[0]]|$mdef_file[$macros{$6}[0]]|$mdef_line[$macros{$6}[0]]|") : ""), ">>\n";
+		  # print "maybe matched type declarator <$1><$2><$3><$4><$5><$6><$7><$8><$9> <<", defined($macros{$6}), (defined($macros{$6}) ? (">><<$#{$macros{$6}} $macros{$6}[0] |$mdef_name[$macros{$6}[0]]|$mdef_formals[$macros{$6}[0]]|$mdef_body[$macros{$6}[0]]|$mdef_file[$macros{$6}[0]]|$mdef_line[$macros{$6}[0]]|") : ""), ">>\n";
 
 		  # Fallthroughs below depend on the fact that this is the last
 		  # clause in the elsif chain: there's nothing else we would
@@ -3448,11 +3480,21 @@ PROCESSLINE:
 			 # This test is intended to skip over macros that
 			 # can't be active right now.
 			 && macro_active($declarator, [ @current_inclusion_dependenton ])
+			 # If the macro expands to a single identifier, then
+			 # ignore it, even if it is active.
+			 # Can't do this test; macros aren't yet categorized
+			 # && ($mncategory{$declarator} != $catFUNCTION_NAME)
+			 # && ($mncategory{$declarator} != $catSYMBOL_UNKNOWN)
+			 && (!((scalar(@{$macros{$declarator}}) == 1)
+			       && ($mdef_body_simple[$macros{$declarator}[0]] =~ /^$identifier_re\s*\Q$mdef_formals[$macros{$declarator}[0]]\E/)))
 			 )
 		    ## FIX: all this belongs in simple_macro_substitute.
 		    { # The function being defined is actually a macro.
 		      # Try to expand it, else fall through.
 		      # print "macro masquerading as declarator $declarator\n";
+		      # print scalar(@{$macros{$declarator}}), " <<"
+		      #  , $mdef_body_simple[$macros{$declarator}[0]], ">> <<",
+		      #  , "$identifier_re\s*\Q$mdef_formals[$macros{$declarator}[0]]\E", ">>\n";
 
 		      my $identifier = $declarator;
 
@@ -3466,8 +3508,10 @@ PROCESSLINE:
 		      # There is only one expansion for the macro.  Expand it.
 		      # This isn't quite right if the dependentons aren't
 		      # compatible.
-		      if (exists($macros{$identifier})
-			  && ($#{$macros{$identifier}} == 0))
+		      # Should also select this case if there are multiple
+		      # definitions, one of which depends on __STDC__ and
+		      # the others depend on !__STDC__.
+		      if (scalar(@{$macros{$identifier}}) == 1)
 			{ # ... expand macro ...;
 			  # goto PROCESSLINE;
 			}
@@ -3477,7 +3521,7 @@ PROCESSLINE:
 		      # construct either a K&R or ANSI function declaration
 		      # by passing in a parenthesized list as the argument.
 		      # "if (is_fun_decl_arg_macro($identifier))" redoes work.
-		      if (defined($fun_decl_arg_macros{$identifier}))
+		      if (exists($fun_decl_arg_macros{$identifier}))
 			{
 			  mdie("shouldn't find fun_decl_arg_macro $identifier");
 			  # ... expand macro ...;
@@ -3862,6 +3906,139 @@ ATCOMMA:
 }
 
 
+# Largely lifted from process_macro_calls
+sub find_function_declarations ($)
+{ my ($file) = check_args(1, @_);
+
+  if (!open(INPUT,$file)) {
+    # fix: Shouldn't we print to STDERR unconditionally?
+    # fix: Add quiet option; then this will occur unless that is set.
+    print STDERR "$file -- open failed\n" if $opt_v;
+    return; }
+
+  check_file_boundary();
+  while ($line = get_fulltoken_line())
+    {
+      if ($line =~ m/^\s*\#/o)
+	{ mdie("get_fulltoken_line shouldn't return preprocessor lines: $line"); }
+      if ($line =~ /^\s/)
+	{ # indented or empty line; skip (is that the right thing?)
+	  next;
+	}
+
+      # not empty or a preprocessor line
+
+      # Look for:
+      #   typedef,
+      #   function definition/declaration (only at symtab_scopes == 0),
+      #   variable definition/declaration,
+      #   function call (of a macro),
+      #   brackets (to keep track of scopes),
+      #   not string/char literals (already simplified).
+      # These can span multiple lines, especially function definitions.
+
+      $line = simple_macro_substitute($line);
+
+      $line = simple_macro_substitute_2($line);
+
+      # ** Perhaps at this point reinsert the test for declaration split
+      # over multiple lines. **
+
+      if (($line =~ /^($type_declarator_re)\s*\(/o)
+	  # must check this second, to get "int (*foo) (arg1, arg2)"
+	  || ($line =~ /^($identifier_re)\s*\(/o))
+	{
+	  # We don't know whether we matched $type_declarator_re or
+	  # $identifier_re, so rematch, which is wasteful.
+	  my $typespec;
+	  my $declarator;
+	  my $args = "\($POSTMATCH";
+	  { my $identifier_or_typedecl = $1;
+	    # Do the easy case first here; order doesn't matter.
+	    if ($identifier_or_typedecl =~ /^$identifier_re$/o)
+	      { # fix: should warn about implicit return type for function.
+		$typespec = "((int))";
+		$declarator = $identifier_or_typedecl; }
+	    elsif ($identifier_or_typedecl =~ /^$type_declarator_re$/o)
+	      { $typespec = $1;
+		$declarator = $2; }
+	    else
+	      { mdie("must be identifier or type declarator: $identifier_or_typedecl"); } }
+	  if ($debug_type_match)
+	    { print "matched type declarator <$typespec><$declarator><(>\n";
+	    }
+
+	  # Fallthroughs below depend on the fact that this is the last
+	  # clause in the elsif chain: there's nothing else we would
+	  # try to do here if we didn't see a type declarator.
+
+	  if (($typespec =~ /$reserved_nontype_word_re/o)
+	      || ($declarator =~ /$reserved_nontype_word_re/o))
+	    { # "else if (...)", "return foo;", "sizeof(buf)", etc.
+	      # print "rejected typespec $typespec\n";
+	      next;
+	    }
+
+	  if (exists($macros{$declarator})
+	      # Skip macros that can't be active right now.
+	      && macro_active($declarator, [ @current_inclusion_dependenton ])
+	      && (!((scalar(@{$macros{$declarator}}) == 1)
+		    && ($mdef_body_simple[$macros{$declarator}[0]] =~ /^$identifier_re\s*\Q$mdef_formals[$macros{$declarator}[0]]\E/)))
+	      )
+	    { # The function being defined is actually a macro.
+	      # Try to expand it, else fall through.
+	      # print "find_function_declarations: macro masquerading as declarator $declarator\n";
+
+## All this is in simple_macro_substitute_2 now.
+# 	      if (scalar(@{$macros{$declarator}}) > 1)
+# 		{ next; }
+# 
+# 	      my $mdef_index = $macros{$declarator}[0];
+# 
+# 	      my @formals;
+# 	      { my $formals = $mdef_formals[$mdef_index];
+# 		# if macro takes no arguments, skip
+# 		if (!$formals)
+# 		  { next; }
+# 		@formals = formals_array($formals); }
+# 
+# 	      my $close_pos = find_close_paren($args, 1);
+# 	      if (!$close_pos)
+# 		{ print "couldn't find close paren for macro invocation $declarator $args";
+# 		  next; }
+# 	      my @actuals = actuals_array(substr($args, $close_pos));
+# 
+# 	      if (scalar(@formals) != scalar(@actuals))
+# 		{ mdie("formals-actuals mismatch: <<" . join(",", @formals)
+# 		       . ">> <<" . join(",", @actuals) . ">>"); }
+# 	      my $result = $mdef_body_simple[$mdef_index];
+# 	      for my $i (0 .. $#formals)
+# 		{ $result =~ s/\b$formals[$i]\b/$actuals[$i]/g; }
+# 
+# 	      print "Expanded $
+# 
+# 
+# 	      die "implement expansion";
+
+	    }
+
+	  # This actually is a valid type specifier and declarator
+	  my ($type, $identifier) = parse_declarator($typespec, $declarator);
+
+	  if (defined($functions{$identifier}))
+	    { $functions{$identifier} .= "; " . input_file_and_line(); }
+	  else
+	    { $functions{$identifier} = input_file_and_line(); }
+
+	}
+      # done with this line; get another
+    }
+  check_file_boundary();
+  # print "closing file $current_file\n";
+  close(INPUT);
+}
+
+
 # This should perhaps do more:  substitute for macros with only one definition,
 # or those that expand to either nothing or a keyword like const, etc.
 sub simple_macro_substitute ($)
@@ -3883,11 +4060,59 @@ sub simple_macro_substitute ($)
 }
 
 
+# If the first element is a macro call, then expand it.
+sub simple_macro_substitute_2 ($)
+{ my ($text) = check_args(1, @_);
+
+  if ($text !~ /^($identifier_re)\s*\(/)
+    { return $text; }
+
+  $text =~ /^($identifier_re)\s*\(/; # is this necessary?
+  my $name = $1;
+  my $args = "\($POSTMATCH";
+  if (!(exists($macros{$name})
+      # Skip macros that can't be active right now.
+      && macro_active($name, [ @current_inclusion_dependenton ])
+      && (!((scalar(@{$macros{$name}}) == 1)
+	    && ($mdef_body_simple[$macros{$name}[0]] =~ /^$identifier_re\s*\Q$mdef_formals[$macros{$name}[0]]\E/)))
+      ))
+    { return $text; }
+
+  if (scalar(@{$macros{$name}}) > 1)
+    { return $text; }
+
+  my $mdef_index = $macros{$name}[0];
+
+  if (!$mdef_formals[$mdef_index])
+    { return $text; }
+
+  my @formals = formals_array($mdef_formals[$mdef_index]);
+
+  my $close_pos = find_close_paren($args, 1);
+  if (!$close_pos)
+    { print "couldn't find close paren for macro invocation $name $args";
+      return $text; }
+  my @actuals = actuals_array(substr($args, 0, $close_pos+1));
+
+  if (scalar(@formals) != scalar(@actuals))
+    { mdie("formals-actuals mismatch: <<" . join(",", @formals)
+	   . ">> <<" . join(",", @actuals) . ">>"); }
+
+  my $result = $mdef_body_simple[$mdef_index];
+  for my $i (0 .. $#formals)
+    { $result =~ s/\b$formals[$i]\b/$actuals[$i]/g; }
+
+  # print "Expanded ", add_newline($text), "to ", add_newline($result);
+
+  return $result;
+}
+
+
 # Returns the remaining line to reprocess.  (Is that enough?)
 sub process_function_definition_or_declaration ($$$)
 {
   my ($type, $identifier, $remaining) = check_args(3, @_);
-  # print "process_fun_def_or_decl $type $identifier (", exists($macros{$identifier}), ") $remaining\n";
+  # print "process_fun_def_or_decl $type $identifier (", exists($macros{$identifier}), add_newline(") $remaining");
 
   # found (start of) function definition or prototype
   # Only need to check the new stuff, not the whole thing.
@@ -3907,8 +4132,7 @@ sub process_function_definition_or_declaration ($$$)
   #   K&R-style function definition
   #   ANSI-style function definition
   my @arg_decls;
-  { my $success;
-    ($success, $remaining, @arg_decls) = parse_function_decl_args($remaining);
+  { ($success, $remaining, @arg_decls) = parse_function_decl_args($remaining);
     # print "parse_function_decl_args => ", join(', ', @arg_decls), "; remaining = $remaining\n";
     if (!defined($remaining))
       { mdie("parse_function_decl_args result 2 undefined ", $#arg_decls+1, "args => @arg_decls"); }
@@ -3993,9 +4217,7 @@ sub process_function_definition_or_declaration ($$$)
       # $current_function_start_line may get set earlier, if we see a split
       # declaration/definition (that's a bit gross).
       # Perhaps check that it is already set.
-
       $current_function = $identifier;
-      $functions{$current_function} = $true;
 
       # FIX: Why subtract 1 here?  Is this right??
       if (!defined($current_function_start_line))
@@ -4159,6 +4381,11 @@ sub process_function_definition_or_declaration ($$$)
 
       # Done with function definition
     }
+
+  if (defined($functions{$identifier}))
+    { $functions{$identifier} .= "; " . input_file_and_line(); }
+  else
+    { $functions{$identifier} = input_file_and_line(); }
 
   # We just coped with a function definition or declaration.
   # Process the rest of the line (if def, this is anything
@@ -4337,7 +4564,7 @@ sub categorize_macro_name ($)
 	{ categorize_macro_def($mdef_index); }
       # Type may be undefined; it's ingored for some categories.
       if (!defined($mdef_category[$mdef_index]))
-	{ mdie("Undefined category (type $mdef_type[$mdef_index]): $i $mdef_index $mdef_name[$mdef_index] $mdef_args[$mdef_index] $mdef_body[$mdef_index]"); } }
+	{ mdie("Undefined category (type $mdef_type[$mdef_index]): $i $mdef_index $mdef_name[$mdef_index] $mdef_formals[$mdef_index] $mdef_body[$mdef_index]"); } }
 
   if ($debug_categorize_macro)
     { my @cat_and_type = ();
@@ -4400,7 +4627,7 @@ sub categorize_macro_def ($)
 { my ($index) = check_args(1, @_);
 
   if ($debug_categorize_macro)
-    { print "Categorizing $index $mdef_name[$index]$mdef_args[$index] $mdef_body[$index] from $mdef_file[$index]\n"; }
+    { print "Categorizing $index $mdef_name[$index]$mdef_formals[$index] $mdef_body[$index] from $mdef_file[$index]\n"; }
 
   if ($mdef_file[$index] eq $built_in_fake_file)
     { mdie("Trying to categorize built-in."); }
@@ -4420,12 +4647,11 @@ sub categorize_macro_def ($)
   $fDebugCommentRemoval && print STDERR "body = '$mdef_body[$index]'\nbody_simple = '$body'\n";
 
   # Rename formals which are reserved words; only happens twice in suite.
-  for my $arg (args_array($mdef_args[$index]))
+  for my $arg (formals_array($mdef_formals[$index]))
     { if ($arg =~ /^$reserved_word_re$/o)
 	{ # No need for quoting: any reserved word is an identifier.
-	  # Bizarre substitution: "${arg}_" looks like close brace to Emacs
+	  # Bizarre substitution because "${arg}_" looks like close brace to Emacs
 	  $body =~ s/\b$arg\b/$arg . "_"/ge; # no /o
-	  print "body became $body\n";
 	} }
 
   # Fix: are these special cases better done in parse_expression?
@@ -4477,12 +4703,14 @@ sub categorize_macro_def ($)
 	{ $category = $catRESERVED_WORD; }
       elsif ($body =~ /^$reserved_type_word_re$/)
 	{ $category = $catPARTIAL_TYPE; }
-      elsif (defined($macros{$body}))
+      elsif (exists($macros{$body}))
 	{ categorize_macro_name($body);
 	  $category = $mncategory{$body};
 	  $type = $mntype{$body}; }
-      elsif (defined($functions{$body}))
+      elsif (exists($functions{$body}))
 	{ $category = $catFUNCTION_NAME; }
+      elsif (exists($typedefs{$body}))
+	{ $category = $catTYPE; }
       else
 	{ $category = $catSYMBOL_UNKNOWN; } }
   elsif ($body =~ /(^|[^\$])\b\Q$mdef_name[$index]\E\b($|[^\$])/)	# no /o
@@ -4623,25 +4851,56 @@ sub get_macro_properties ($)
   # so doesn't work on statements (right)?
 
   # Check whether a macro argument was used as a type.
-  foreach my $arg (split(/[\(, \t\)]+/, $mdef_args[$index]))
+  foreach my $arg (formals_array($mdef_formals[$index]))
     { delete $parsevars{$arg};
       if (defined($parsetypes{$arg}))
 	{ $result |= $propUSES_ARG_AS_TYPE; }
       delete $parsefuns{$arg}; }
 
-  # Assume the functions and types are well-defined if not macros
-  # If they are macros, should check 'em, not just fail.
-  foreach my $fun (keys %parsefuns)
-    { if (defined $macros{$fun})
-	# This is actually fine most of the time; fix later.
-	{ $result |= $propINVOKES_MACRO; } }
+  ## This isn't really INVOKES_MACRO, but "something that looks like a
+  ## function call in an expression is actually a macro invocation."
+  ## That's not interesting, so comment it out for the time being.
+  #   # Assume the functions and types are well-defined if not macros
+  #   # If they are macros, should check 'em, not just fail.
+  #   foreach my $fun (keys %parsefuns)
+  #     { if (defined $macros{$fun})
+  # 	# This is actually fine most of the time; fix later.
+  # 	{ $result |= $propINVOKES_MACRO; } }
 
   foreach my $type (keys %parsetypes)
     { if (defined($macros{$type}))
 	# This may be fine; fix later.
 	{ $result |= $propUSES_MACRO_AS_TYPE; } }
 
-  ## Free variables.
+  ## Free variables: new implementation.
+  { my %vars;
+    foreach my $var (identifiers_in($body))
+      { $vars{$var} = $true; }
+    foreach my $arg (formals_array($mdef_formals[$index]))
+      { delete $vars{$arg}; }
+    foreach my $var (keys %vars)
+      { if (exists($macros{$var})
+	    || exists($macros_used_by_cpp{$var})
+	    || exists($functions{$var})
+	    || exists($typedefs{$var})
+	    || ($var =~ /^$reserved_word_re$/)
+	    || ($body =~ /(\.|->)\s*$var\b/))
+	  { delete $vars{$var}; } }
+    if ((scalar(keys %vars) == 0) || ($body !~ /\{/))
+      { my $body_remaining = $body;
+	while ($body_remaining =~ /\{/)
+	  { my ($post_decls, $warnings, %name_types) = parse_declarations($POSTMATCH);
+	    $body_remaining = $post_decls;
+	    for my $local_var (keys %name_types)
+	      { delete $vars{$local_var};
+		for my $var (keys %vars)
+		  { if ($name_types{$local_var} =~ /\b$var\b/) # no /o
+		      { delete $vars{$var}; } } } } }
+    $mdef_free_vars[$index] = join(",", keys %vars);
+    if ($mdef_free_vars[$index])
+      { $result |= $propFREE_VAR; } }
+
+  ## Free variables: old implementation.
   #   # For each free variable, check its type.
   #   foreach my $var (keys %mdef_freevars)
   #     { # print "examining free var $var ($mdef_name[$index])\n";
@@ -4690,7 +4949,7 @@ sub get_macro_properties ($)
 sub is_fun_decl_arg_macro ($)
 { my ($identifier) = check_args(1, @_);
 
-#  print STDERR "is_fun_decl_arg_macro: $identifier $#{$macros{$identifier}} ", join(', ',(map {$mdef_args[$macros{$identifier}[$_]]} (0..$#{$macros{$identifier}}))), "\n";
+#  print STDERR "is_fun_decl_arg_macro: $identifier $#{$macros{$identifier}} ", join(', ',(map {$mdef_formals[$macros{$identifier}[$_]]} (0..$#{$macros{$identifier}}))), "\n";
 
   # don't require only 2 definitions-- require > 1 and
   # check that all definitions
@@ -4719,14 +4978,14 @@ sub is_fun_decl_arg_macro ($)
     if (!defined($macros{$identifier}[$i])) {
       die "\$macros{" . $identifier . "} not defined, cMacroDefs = $cMacroDefs";
     }
-    if (!defined($mdef_args[$macros{$identifier}[$i]])) {
-      die "mdef_args of \$macros{" . $identifier . "}[$i] not defined";
+    if (!defined($mdef_formals[$macros{$identifier}[$i]])) {
+      die "mdef_formals of \$macros{" . $identifier . "}[$i] not defined";
     }
-    if (count_macro_args($mdef_args[$macros{$identifier}[$i]]) != 1) {
+    if (count_macro_args($mdef_formals[$macros{$identifier}[$i]]) != 1) {
       #      print STDERR "=> false1 at $i\n";
       return $false;
     }
-    my $args = $mdef_args[$macros{$identifier}[$i]];
+    my $args = $mdef_formals[$macros{$identifier}[$i]];
     my $body = $mdef_body_simple[$macros{$identifier}[$i]];
 
     my $expands_to_just_parens = $false;
@@ -4764,7 +5023,7 @@ sub is_fun_decl_arg_macro ($)
 sub is_semi_fun_decl_arg_macro ($)
 { my ($identifier) = check_args(1, @_);
 
-#  print STDERR "is_fun_decl_arg_macro: $identifier $#{$macros{$identifier}} ", join(', ',(map {$mdef_args[$macros{$identifier}[$_]]} (0..$#{$macros{$identifier}}))), "\n";
+#  print STDERR "is_fun_decl_arg_macro: $identifier $#{$macros{$identifier}} ", join(', ',(map {$mdef_formals[$macros{$identifier}[$_]]} (0..$#{$macros{$identifier}}))), "\n";
 
   # don't require only 2 definitions-- require > 1 and
   # check that all definitions
@@ -4787,11 +5046,11 @@ sub is_semi_fun_decl_arg_macro ($)
   my $one_expanded_to_itself = $false;
 
   foreach my $i (0..$#{$macros{$identifier}}) {
-    if (count_macro_args($mdef_args[$macros{$identifier}[$i]]) != 1) {
+    if (count_macro_args($mdef_formals[$macros{$identifier}[$i]]) != 1) {
 #      print STDERR "=> false1 at $i\n";
       return $false;
     }
-    my $args = $mdef_args[$macros{$identifier}[$i]];
+    my $args = $mdef_formals[$macros{$identifier}[$i]];
     my $body = $mdef_body_simple[$macros{$identifier}[$i]];
 
     my $expands_to_just_paren = $false;
@@ -4844,7 +5103,7 @@ sub is_void_macro ($)
   my $one_expanded_to_void = $false;
 
   foreach my $i (0..$#{$macros{$identifier}}) {
-    my $args = $mdef_args[$macros{$identifier}[$i]];
+    my $args = $mdef_formals[$macros{$identifier}[$i]];
     my $body = $mdef_body_simple[$macros{$identifier}[$i]];
 
     if ($args ne "") {
@@ -5097,7 +5356,7 @@ sub initialize_builtin_macros () {
 #   introduce_new_macro($mac);
 #   $macros{$mac} = [$index];
 #   $mdef_name[$index] = $mac;
-#   $mdef_args[$index] = "";
+#   $mdef_formals[$index] = "";
 #   $mdef_direct_inclusion_dependenton[$index] = [];
 #   $mdef_file[$index] = $built_in_fake_file;
 #   $mdef_line[$index] = 0;
@@ -5245,6 +5504,7 @@ sub analyze_for_macro_use ($) {
 	{ $either_dependee_lines{$exp_dep}++; } }
 }
 
+# Note that "words" include literal numbers, etc.
 sub words_in ($)
 {
   my ($text) = check_args(1, @_);
@@ -5254,11 +5514,17 @@ sub words_in ($)
   return split(/\W+/,$text);
 }
 
+sub identifiers_in ($)
+{
+  my ($text) = check_args(1, @_);
+  return grep { $_ =~ /$identifier_re/o } words_in($text);
+}
+
 # This may not be quite right, but it works well enough
 sub possible_macro_names_in ($)
 {
   my ($text) = check_args(1, @_);
-  return grep { $_ ne "defined" && $_ =~ /$identifier_re/o } words_in($text);
+  return grep { $_ ne "defined" } identifiers_in($text);
 }
 
 
@@ -5268,6 +5534,7 @@ sub macros_appearing_in ($)
   if ($finding_macro_defs) {
     warn "subroutine macros_appearing_in is used on first pass";
   }
+  # I suspect that words_in is more efficient than identifiers_in, here.
   return grep { defined($macros{$_}) } words_in($text);
 }
 
@@ -5512,19 +5779,6 @@ sub complete_include_pathname ($$) {
   return $complete_file;
 }
 
-###########################################################################
-### Utilities
-###
-
-# Add newline to end of string; return string unchanged if it already has one.
-sub add_newline ($)
-{ my ($string) = check_args(1, @_);
-  if ($string =~ m/\n$/)
-    { return $string; }
-  else
-    { return $string . "\n"; }
-}
-
 
 ###########################################################################
 ### Testing
@@ -5539,7 +5793,7 @@ sub test_categorize_macro_def ($$$)
   $mdef_body_noc[1000] = $body;
   $mdef_body_simple[1000] = $body;
   $mdef_name[1000] = "dummy";
-  $mdef_args[1000] = "(arg)";
+  $mdef_formals[1000] = "(arg)";
   $mdef_file[1000] = "test-file";
   $file_inclusion_method{$mdef_file[1000]} = "FromStdin";
   undef $mdef_category[1000];
@@ -5933,11 +6187,11 @@ sub SaveMacroAnalysisState
   # em_reports will try to use)
   my @vars_list = qw(
     %macros %macros_c_undefs %macros_uses
-    @mdef_name @mdef_args @mdef_body
+    @mdef_name @mdef_formals @mdef_body
     @mdef_file @mdef_line @mdef_physical_lines
     @mdef_physical_ncnb_lines @mdef_freefuns
     @mdef_direct_inclusion_dependenton @mdef_direct_expansion_uses
-    @mdef_type @mdef_category @mdef_properties
+    @mdef_type @mdef_category @mdef_properties @mdef_free_vars
     @mdef_evilness %mdef_freevars
     %mntype %mncategory
     @rg_cppcmdcounts @rg_category_counts
@@ -5949,7 +6203,7 @@ sub SaveMacroAnalysisState
     %inclusion_dependenton %inclusion_dependees %inclusion_dependee_lines
     %expansion_dependenton %expansion_dependees %expansion_dependee_lines
     %either_dependee_lines
-    %macros_used_by_cpp
+    %macros_used_by_cpp %functions %typedefs
 		     );
 
   undef %macros_used_in_functions;  #FIXGJB: We probably want this info,
@@ -5962,7 +6216,7 @@ sub SaveMacroAnalysisState
     my $g = $v;
     $g =~ s/[\@\%\$]/\*/;
     $es = "print OUTSTATE Data::Dumper->Dumpxs([\\$v],[\"$g\"]);\n";
-    print STDERR $es;
+    # print STDERR $es;
     eval $es;
     $es = "undef $v;\n";
     eval $es;
@@ -6175,7 +6429,7 @@ print STDERR "Categorizing $cMacrosInTables macros\n";
       #   print &parse_expression($mdef_body[$i]) . ": ";
       #   foreach my $var (keys(%parsevars)) { print $var . " "; }
       #   print "\n  $mdef_name[$i]";
-      #   if (defined($mdef_args[$i])) { print $mdef_args[$i]; }
+      #   if (defined($mdef_formals[$i])) { print $mdef_formals[$i]; }
       #   print " $mdef_body[$i]\n";
       # current_file and current_line_no need to be set
       # while we are categorizing.  Also must always
@@ -6190,7 +6444,9 @@ print STDERR "Categorizing $cMacrosInTables macros\n";
     { categorize_macro_name($mname); }
 }
 
-#print STDERR "Included files:", join("\n",@files_included), "\n";
+# print STDERR "Files:",join("\n  ",@files),"\n";
+# print STDERR "Included files:", join("\n    ",@files_included), "\n";
+# print STDERR "fun_decl_arg_macros:", join("\n",keys %fun_decl_arg_macros), "\n";
 
 print STDERR "Save macro analysis state\n";
 SaveMacroAnalysisState("$statename");
