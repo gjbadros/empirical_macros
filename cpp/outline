@@ -1,0 +1,56 @@
+Title: (PCP^3?): Improving Abstraction and Program Understanding in
+(Legacy/Existing) C Programs by Integrating Parsing and Preprocessing
+
+Date: Thursday, Oct 23, 1997, 10am, Sieg 422
+Practice: Tuesday Oct. 21, 1997, 11:30am, Sieg 422
+Paper: Thursday, October 16, 1997
+
+
+* Introduction
+** State problem, other approaches
+** overview of sections
+
+* Background
+** em_tools, use an approximate parse
+** data supporting not so bad
+** why approx parse bad for transformations, conservative analysis
+
+* New approach, tightly integrated preprocessor and parser (new front end)
+** more fine-grained mapping
+** more than just a thin straw between levels of analysis, better interaction and information sharing
+** useful for prg understanding, too
+** more global reasoning is possible, since you don't have to ignore lines conditionally-compiled out
+** reuse of existing tested components
+*** fewer surprises
+*** approach extends to applying directly to a compiler, possible by gcc guru but not me
+** hooks infrastructure
+*** think about how to handle various constructs, don't worry about main loop
+*** BUT, still pretty order dependent, unfortunately
+
+** uses perl to make easier to develop
+*** potential for reuse of em_tools code
+*** higher level language
+** Annotate code at character level + provide viewer in Emacs
+*** leverage existing editing tool
+*** ASTs are not ready for prime-time editing, lots of HCI issues
+*** integrate understanding and transformation;  text is a good universal medium
+
+* Results
+
+* Other/Possible applications
+** Syntax highlighting
+** Source + output annotations
+** Def/Use for Macros
+** Tags generation
+*** lexical approximation tools have had years to evolve & work great, esp. on, e.g., Emacs soure, since crazy constructs in the code resulting in mis-pseudo-parses of code that matters is likely considered a bug in the tool and would result in a hack bug-fix to the tool to make it get it right in the important case;  years of iteration make them accurate.
+** Call graph extraction (add summaries to fns)
+** parser debugging, teaching
+** multi-version reasoning
+
+* Conclusions
+
+* Related work
+** Tawk
+** ASTLog
+** TXL
+** 
