@@ -4634,10 +4634,15 @@ sub categorize_macro_name ($)
 sub categorize_macro_def ($)
 { my ($index) = check_args(1, @_);
 
-  # print "Categorizing $index $mdef_name[$index]$mdef_args[$index] $mdef_body[$index]\n";
+  if ($debug_categorize_macro)
+    { print "Categorizing $index $mdef_name[$index]$mdef_args[$index] $mdef_body[$index] from $mdef_file[$index]\n"; }
+
+  if ($mdef_file[$index] eq $built_in_fake_file)
+    { mdie("Trying to categorize built-in."); }
 
   if (defined($mdef_category[$index]))
-    { # print "Already categorized! $mdef_category[$index] $categoryname[$mdef_category[$index]]\n";
+    { if ($debug_categorize_macro)
+	{ print "Already categorized! $mdef_category[$index] $categoryname[$mdef_category[$index]]\n"; }
       return; }
   # Avoid recursive call even if possible loop in macro definitions.
   $mdef_category[$index] = $catINPROCESS;
@@ -4805,7 +4810,7 @@ CATEGORIZED:
   update_categories_for($category);
 
   if ($debug_categorize_macro)
-    { print "categorize_macro_def ($index): $categoryname[$category]",
+    { print "categorize_macro_def ($index: $mdef_name[$index]): $categoryname[$category]",
           (defined($type) ? "(" . type_name($type) . ")" : ""),
           ": $body\n"; }
 }
@@ -5780,8 +5785,9 @@ sub update_categories_for ($) {
   }
   $ {$rg_category_counts[$current_ftype_index]}{$category}++;
 
-  #print STDERR "CAT: $category got incremented -- now is ",
-  #$ {$rg_category_counts[$current_ftype_index]}{$category}, "\n";
+  if ($debug_categorize_macro)
+    { print STDERR "CAT: $category got incremented -- now is ",
+        $ {$rg_category_counts[$current_ftype_index]}{$category}, "\n"; }
 }
 
 
