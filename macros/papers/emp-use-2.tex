@@ -797,7 +797,7 @@ statements may be handled relatively easily by people and tools.  Other
 macros, especially those that do not expand to a complete syntactic
 construct, are more problematic.
 
-The ten macro body categories are as follows. Each example in this 
+The ten macro body categories are as follows.  Each example in this 
 {\typeofdocument} comes from the packages studied.
 
 % The examples are chosen for clarity and brevity from the packages studied.
@@ -1007,7 +1007,7 @@ ASSERT(p) if (!(p)) botch(\verb|__STRING|(p)); else}).
   avoid link-time collisions when the Perl interpreter is embedded in
   another application, \pkg{perl} conditionally redefines over one thousand
   global symbols to add the prefix \verb|Perl_|, as in {\tt \#define Xpv
-  Perl_Xpv}.
+  \verb|Perl_Xpv|}.
 
 
 %% mcat_NON_C_CODE: 17
@@ -1193,7 +1193,7 @@ Figure~\ref{fig:subset-properties}.
   The macro body directly changes program state via assignment (of the form
   {\tt =}, {\tt {\em op}=}, {\tt -{}-}, or {\tt ++}).  
   Indirect side
-  effects due to function or macro calls were not counted in this category.
+  effects due to function or macro calls are not counted in this category.
   The side effect may be to a
   global variable, a variable local to the macro body, a macro parameter,
   or a local variable in scope at the point of macro invocation.
@@ -1265,7 +1265,7 @@ Figure~\ref{fig:subset-properties}.
   only as a pasted identifier, at its other uses.  Pasting is often
   abstracted out into a separate macro\,---\,such as {\tt \#define
   \verb|__CONCAT|(x,y) x \#\# y}\,---\,but such pasting macros are used less
-  than typical macros defined in our test suite.
+  frequently than average in our test suite.
 
 % Macros that *only* do pasting:
 %  ghostview.catg:102:./stdc.h:30: CONCAT(x,y) x ## y
@@ -1628,7 +1628,7 @@ settings are correct.
 
 The least frequently redefined macros are those categorized as unknown
 identifier.  This is partially due to our method of coalescing multiple
-definitions:  macro definitions categorized as unknown identifiers are overridden
+definitions:  macro definitions categorized as unknown identifier are overridden
 by definitions with any other categorization (see
 Figure~\ref{fig:category-lub}).  Our
 analysis included enough library header files to include some
@@ -3127,8 +3127,9 @@ Common Cpp constructs could be replaced by a special-purpose syntax.  For
 instance, declarations or partial declarations could be made explicit
 objects, such as by making type modifiers first-class at compile (or, more
 likely, preprocess) time; the language or the preprocessor could include a
-{\tt dynamic} declaration modifier for dynamic binding (like Lisp's {\tt
-special} delcaration for dynamic variables); and
+{\tt dynamic} declaration modifier for dynamic binding (like the {\tt
+special} declaration for dynamic variables in
+Lisp~\cite{commonlisp:languagespec}); and
 similar support could be provided for repetitive constructs.  Manipulations
 of these objects would then be performed through a clearly-specified
 interface rather than via string and token concatenation, easing the
@@ -3278,7 +3279,7 @@ of Cpp usage of which we are aware, it was worth performing simply to
 determine whether the results were predictable \emph{a priori}. 
 Each aspect of our analysis has been surprising and interesting to
 some individuals.  Pursuing more highly focused and deeper analyses
-would be worthwhile.
+along some of these directions could be worthwhile.
 
 
 \section*{Acknowledgments}
