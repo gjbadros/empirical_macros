@@ -532,144 +532,154 @@ sub output_stats ()
       my $old_ofs = $OFS;
       $OFS = "\n    ";
       for my $macro_name (sort keys %macros)
-	{
-	  for my $i (@{$macros{$macro_name}})
-	    { my @complaints = ();
-	      my $body = $mdef_body_simple[$i];
-	      my $args = $mdef_args[$i];
+	{ for my $i (@{$macros{$macro_name}})
+	    { if ($file_inclusion_method{$mdef_file[$i]} ne "FromInclude<>")
+		{ my @complaints = ();
+		  my $body = $mdef_body_simple[$i];
+		  my $args = $mdef_args[$i];
+		  my $category = $mdef_category[$i];
+		  my $category_is_expression
+		    = (($category == $catEXP)
+		       || ($category == $catLITERAL)
+		       || ($category == $catCONSTANT)
+		       || ($category == $catSOME_CONSTANT));
+		  my $category_is_statement
+		    = (($category == $catSTATEMENT)
+		       || ($category == $catSTATEMENT_SANS_SEMI)
+		       || ($category == $catPARTIAL_STATEMENT)
+		       || ($category == $catSTATEMENTS)
+		       || ($category == $catSTATEMENTS_SANS_SEMI)
+		       || ($category == $catPARTIAL_STATEMENTS));
+		  my $properties = $mdef_properties[$i];
 
-	      # Check for formals but no body -- "#define foo(bar)" might
-	      # have been intended as "#define foo (bar)".
-	      if ((!$body) && $args)
-		{ push(@complaints,
-		       (($args =~ /\(\s*\Q$macro_name\E\s*\)/) ? "" : "possible ")
-		         . "missing space between macro name and parenthesized body"); }
-	      # Check uses of each formal
-	      my $category = $mdef_category[$i];
-	      my $category_is_expression
-		= (($category == $catEXP)
-		   || ($category == $catLITERAL)
-		   || ($category == $catCONSTANT)
-		   || ($category == $catSOME_CONSTANT));
-	      if ($args)
-		{ my @args = args_array($args);
-		  for my $arg (@args)
-		    { my @formal_complaints = ();
-		      if ($arg !~ /^$identifier_re$/o)
-			{ push(@formal_complaints, "not an identifier"); }
-		      # Add spaces to make sure that there's a first and last part
-		      my @parts = split(/\b\Q$arg\E\b/, " $body ");
-		      for my $i (0..$#parts)
-			{ $parts[$i] =~ s/^\s+//;
-			  $parts[$i] =~ s/\s+$//; }
-
-		      if (scalar(@parts) > 2)
-			{ push(@formal_complaints, "multiple uses"); }
-		      my @unparen_uses = ();
-		      my @sideeff_uses = ();
-		      for my $i (1..$#parts)
-			{ my $pre = $parts[$i-1];
-			  my $post = $parts[$i];
-			  # if ($macro_name eq "__isctype") { print STDOUT "pre = $pre\nmatch = " . ($pre =~ /[\?:,\)]$/) . "  " . ($pre !~ /\($/) . "  " . ($post !~ /^\)/) . "  " . ($arg ne $body) . "\n" ; }
-			  if (($i < $#parts) && (!$post))
-			    { push(@formal_complaints,
-				   "adjacent uses \#$i and \#" . $i+1); }
-			  # Maybe only do this test if body is an expression.
-			  # Perhaps consolidate all these into one error message.
-
-			  if ((($pre !~ /\($/) || ($post !~ /^\)/))
-			      # Don't complain if arg is whole body --
-			      # probably a syntactic macro.
-			      && ($arg ne $body)
-			      # A better test than category == 'expression'
-			      # is whether this use is adjacent to an operator.
-			      # && $category_is_expression
-			      && (($pre =~ /$binop_regexp$/o)
-				  || ($pre =~ /$prefix_unop_regexp$/o)
-				  || ($pre =~ /$selector_regexp$/o)
-				  #  for ? : and , and casting
-				  || ($pre =~ /[\?:,\)]$/)
-				  || ($post =~ /^$binop_regexp/o)
-				  || ($post =~ /^$postfix_unop_regexp/o)
-				  || ($post =~ /^$selector_regexp/o)
-				  # no comma: it's lowest precedence and left-associative
-				  || ($post =~ /^[\?:]/o) #  for ? :
-				  )
-			      )
-			    { push(@unparen_uses, $i); }
-			  if (($pre =~ /(--|\+\+)$/)
-			      || ($post =~ /^(--|\+\+)/)
-			      || ($post =~ /^([-+*\/%&^\|]|<<|>>)?=[^=]/))
-			    { push(@sideeff_uses, $i); }
-			}
-		      if (scalar(@unparen_uses) == 1)
-			{ push(@formal_complaints,
-			       "unparenthesized use \#$unparen_uses[0]"); }
-		      elsif (scalar(@unparen_uses) > 1)
-			{ push(@formal_complaints,
-			       "unparenthesized uses \#"
-			       . join(",#", @unparen_uses)); }
-		      if (scalar(@sideeff_uses) == 1)
-			{ push(@formal_complaints,
-			       "side-effected use \#$sideeff_uses[0]"); }
-		      elsif (scalar(@sideeff_uses) > 1)
-			{ push(@formal_complaints,
-			       "side-effected uses \#"
-			       . join(",#", @sideeff_uses)); }
-		      if (scalar(@formal_complaints) > 0)
-			{ push(@complaints,
-			       "formal $arg: " . join("; ", @formal_complaints)); }
-		    } }
-
-	      # Check body
-	      if ($body =~ /\n/)
-		{ die "$mdef_file[$i]:$mdef_line[$i]: newline in $macro_name (def #$i): '$body'"; }
-	      if ($mdef_body[$i] =~ /\n/)
-		{ push(@complaints,
-		       "multi-line comment or string"); }
-	      if ($category_is_expression)
-		{ # Don't demand parentheses around a single identifier,
-		  # number, or string, or around a function call (which has
-		  # high precedence).
-		  if (!		# complain if not one of the following:
-		      (# parenthesized, or function call
-		       (($body =~ /^($identifier_re\s*)?\(/o)
-			# For testing
-			# && (print STDERR "match = $MATCH, close = \n")
-			&& (find_close_paren($body, length($MATCH)) == length($body)-1))
-		       # identifier or number
-		       || ($body =~ /^\w+$/)
-		       # string
-		       || ($body =~ /^$string_literal_re$/o)
-		       # character
-		       || ($body =~ /^$char_literal_re$/o)))
+		  # Check for formals but no body -- "#define foo(bar)" might
+		  # have been intended as "#define foo (bar)".
+		  # Suppress if body contains an empty comment.
+		  if ((!$body) && $args && !($mdef_body[$i] =~ /\/\*\s*\*\/$/))
 		    { push(@complaints,
-			   "macro body should be enclosed in parentheses"); } }
-	      if ($body =~ /[;\}]$/)
-		{ push(@complaints,
-		       "semicolon-swallowing problem: enclose statement(s) in \"do ... while (0)\""); }
-	      else
-		{ my $remaining = $body;
-		  while ($remaining =~ /[;\{]/)	# no /g; $remaining used in body
-		    { $remaining = $POSTMATCH;
-		      if ($MATCH eq ";")
-			{ push(@complaints,
-			       "multiple statements (semicolon outside {}): enclose in \"do ... while (0)\"");
-			  last; }
-		      my $close_brace_pos = find_close_brace($remaining);
-		      if (!$close_brace_pos)
-			{ push(@complaints,
-			       "unbalanced open brace before $remaining");
-			  last; }
-		      else
-			{ $remaining = substr($remaining, $close_brace_pos); } } }
+			   (($args =~ /\(\s*\Q$macro_name\E\s*\)/) ? "" : "possible ")
+			   . "missing space between macro name and parenthesized body (suppress w/empty comment)"); }
+		  # Check uses of each formal
+		  if ($args)
+		    { my @args = args_array($args);
+		      for my $arg (@args)
+			{ my @formal_complaints = ();
+			  if ($arg !~ /^$identifier_re$/o)
+			    { push(@formal_complaints, "not an identifier"); }
+			  # Add spaces to make sure that there's a first and last part
+			  my @parts = split(/\b\Q$arg\E\b/, " $body ");
+			  for my $i (0..$#parts)
+			    { $parts[$i] =~ s/^\s+//;
+			      $parts[$i] =~ s/\s+$//; }
 
+			  my @unparen_uses = ();
+			  my @sideeff_uses = ();
+			  my $is_selector = $false;
+			  for my $i (1..$#parts)
+			    { my $pre = $parts[$i-1];
+			      my $post = $parts[$i];
+			      # if ($macro_name eq "__isctype") { print STDOUT "pre = $pre\nmatch = " . ($pre =~ /[\?:,\)]$/) . "  " . ($pre !~ /\($/) . "  " . ($post !~ /^\)/) . "  " . ($arg ne $body) . "\n" ; }
+			      if (($i < $#parts) && (!$post))
+				{ push(@formal_complaints,
+				       "adjacent uses \#$i and \#" . $i+1); }
 
-	      if (scalar(@complaints) > 0)
-		{ print LINT "$mdef_file[$i]:$mdef_line[$i]:\n        #define $macro_name$args $mdef_body[$i]", @complaints;
-		  # Separate print statement so we don't get $OFS before it
-		  print LINT "\n"; }
-	    } }
+			      if (!$is_selector && ($pre =~ /$selector_regexp$/o))
+				{ $is_selector = $true; }
+
+			      # Maybe only do this test if body is an expression (nah).
+			      if (# only (unparenthesized) names follow selectors
+				  (!$is_selector)
+				  && (($pre !~ /\($/) || ($post !~ /^\)/))
+				  # Don't complain if arg is whole body --
+				  # probably a syntactic macro.
+				  && ($arg ne $body)
+				  # A better test than category == 'expression'
+				  # is whether this use is adjacent to an operator.
+				  # && $category_is_expression
+				  && (($pre =~ /$binop_regexp$/o)
+				      || ($pre =~ /$prefix_unop_regexp$/o)
+				      #  for ? : and , and casting
+				      || ($pre =~ /[\?:,\)]$/)
+				      || ($post =~ /^$binop_regexp/o)
+				      || ($post =~ /^$postfix_unop_regexp/o)
+				      || ($post =~ /^$selector_regexp/o)
+				      # no comma: it's lowest precedence and left-associative
+				      || ($post =~ /^[\?:]/o) #  for ? :
+				      )
+				  )
+				{ push(@unparen_uses, $i); }
+			      if (($pre =~ /(--|\+\+)$/)
+				  || ($post =~ /^(--|\+\+)/)
+				  || ($post =~ /^([-+*\/%&^\|]|<<|>>)?=[^=]/))
+				{ push(@sideeff_uses, $i); }
+			    }
+			  if (!$is_selector)
+			    { if (scalar(@unparen_uses) == 1)
+				{ push(@formal_complaints,
+				       "unparenthesized use \#$unparen_uses[0]"); }
+			      elsif (scalar(@unparen_uses) > 1)
+				{ push(@formal_complaints,
+				       "unparenthesized uses \#"
+				       . join(",#", @unparen_uses)); } }
+			  if (scalar(@sideeff_uses) > 0)
+			    { my $prefix = ($is_selector
+					    ? "structure side-effected through "
+					    : "side-effected ");
+			      if (scalar(@sideeff_uses) == 1)
+				{ push(@formal_complaints,
+				       $prefix . "use \#$sideeff_uses[0]"); }
+			      elsif (scalar(@sideeff_uses) > 1)
+				{ push(@formal_complaints,
+				       $prefix . "uses \#"
+				       . join(",#", @sideeff_uses)); } }
+			  if ((!$is_selector) && (scalar(@parts) > 2))
+			    { # Make this complaint first (except that "not an identifier" should precede it)
+			      unshift(@formal_complaints, "multiple uses"); }
+			  if (scalar(@formal_complaints) > 0)
+			    { push(@complaints,
+				   "formal $arg: " . join("; ", @formal_complaints)); }
+			} }
+
+		  # Check body
+		  if ($body =~ /\n/)
+		    { die "$mdef_file[$i]:$mdef_line[$i]: newline in $macro_name (def #$i): '$body'"; }
+		      if ($mdef_body[$i] =~ /\n/)
+			{ push(@complaints,
+			       "multi-line comment or string"); }
+		  if ($category_is_expression && ($category != $catLITERAL))
+		    { # Don't demand parentheses around a single identifier,
+		      # number, or string, or around a function call (which has
+		      # high precedence).
+		      if (!	# complain if not one of the following:
+			  (# parenthesized, or function call
+			   (($body =~ /^($identifier_re\s*)?\(/o)
+			    # For testing
+			    # && (print STDERR "match = $MATCH, close = \n")
+			    && (find_close_paren($body, length($MATCH)) == length($body)-1))
+			   # identifier or number
+			   || ($body =~ /^\w+$/)
+			   # string
+			   || ($body =~ /^$string_literal_re$/o)
+			   # character
+			   || ($body =~ /^$char_literal_re$/o)))
+			{ push(@complaints,
+			       "macro body should be enclosed in parentheses"
+			       # If it has args and assignment, maybe it's really a semicolonless statement.
+			       . (($args && ($properties & $propASSIGN)) ? " (if used as expression)" : "")); } }
+		  if ($category_is_statement)
+		    { if (($category == $catSTATEMENTS)
+			  || ($category == $catSTATEMENTS_SANS_SEMI))
+			{ push(@complaints,
+			       "multiple statements: enclose in \"do ... while (0)\""); }
+		      elsif (($category == $catSTATEMENT)
+			     || ($category == $catSTATEMENTS))
+			{ push(@complaints,
+			       "semicolon-swallowing problem: enclose statement in \"do ... while (0)\""); } }
+		  if (scalar(@complaints) > 0)
+		    { print LINT "$mdef_file[$i]:$mdef_line[$i]:\n        #define $macro_name$args $mdef_body[$i]", @complaints;
+			# Separate print statement so we don't get $OFS before it
+			print LINT "\n"; }
+		} } }
       $OFS = $old_ofs;
     } # end of if $opt_l (lint)
 

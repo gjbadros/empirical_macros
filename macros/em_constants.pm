@@ -184,6 +184,11 @@ $propASSEMBLY_CODE = 64;	# contains in-line assembly code
 $propPASTING   = 128;
 $propSTRINGIZE = 256;
 
+sub prop_contains ($$)
+{ my ($prop, $bit) = checkargs(2, @_);
+  return ($prop & $bit); }
+
+
 # 		 'token_pasting',
 # 		 'stringization',
 # 		 'has_type_argument',

@@ -2569,6 +2569,8 @@ sub parse_exp ($;$)
 	}
       # actually "size_t", but "int" is understood and that isn't yet.
       return parse_exp_follower($typeINT, $remaining); }
+  elsif ($exp =~ /^$reserved_nontype_word_re/o)	# reserved word except "sizeof"
+    { return ($typeFAIL, $exp); }
 
   # Literals
 
@@ -3039,7 +3041,7 @@ sub parse_statement ($)
 	{ return ($catSTATEMENT, $POSTMATCH); }
       else
 	{ return ($catSTATEMENT_SANS_SEMI, $remaining); } }
-  elsif ($body =~ /^(if|while)\s*\(/)
+  elsif ($body =~ /^(if|while|switch)\s*\(/)
     { # Don't try to parse the open paren, as it might look like a cast.
       my ($type, $remaining) = parse_expression($POSTMATCH);
       if ($debug_parse_statement)
@@ -3075,6 +3077,27 @@ sub parse_statement ($)
 	    { return ($catSTATEMENT, $POSTMATCH); }
 	  else
 	    { return ($catSTATEMENT_SANS_SEMI, $exp_remaining); } } }
+  elsif ($body =~ /^for\s*\(/)
+    { # It doesn't matter whether the calls to parse_expression succeed or not,
+      # as parts the for init, test, or step may be omitted.
+      my ($t1, $rem1) = parse_expression($POSTMATCH);
+      if ($rem1 =~ /^\s*;/)
+	{ my ($t2, $rem2) = parse_expression($POSTMATCH);
+	  if ($rem2 =~ /^\s*;/)
+	    { my ($t3, $rem3) = parse_expression($POSTMATCH);
+	      if ($rem3 =~ /^\s*\)/)
+		{ my ($cat, $remaining) = parse_statement($POSTMATCH);
+		  if ($cat == $catFAILURE)
+		    { return ($catPARTIAL_STATEMENT, $remaining); }
+		  else
+		    { return ($cat, $remaining); } }
+	      else
+		{ return ($catPARTIAL_STATEMENT, $rem3); } }
+	  else
+	    { return ($catPARTIAL_STATEMENT, $rem2); } }
+      else
+	{ return ($catPARTIAL_STATEMENT, $rem1); } }
+
   elsif ($body =~ /^\{/)
     { # quite weak test, but good enough for me.
       my $close_pos = find_close_brace($body, 1);
@@ -4423,6 +4446,7 @@ sub categorize_macro_def ($)
   else {
     my $remaining;
     reset_parse_vars();
+    local $commaop = $true;
     ($type, $remaining) = parse_expression($body);
     # print "type = $type; remaining = $remaining\n";
     # $type was ($type != $typeFAIL)
@@ -4488,7 +4512,8 @@ sub get_macro_properties ($)
   # Use of $parse_exp_saw_equals is more exact when it's an expression.
   # no: == != <= >=
   # yes: = += -= *= /= %= <<= >>= &= ^= |=; ($body =~ /(<<|>>|[-+*\/%&^|])=/)
-  if (($body =~ /(<<|>>)=/) || ($body =~ /[^!<>=]=[^=]/))
+  # yes: ++ --
+  if (($body =~ /(<<|>>)=|\+\+|--/) || ($body =~ /[^!<>=]=[^=]/))
     { $result |= $propASSIGN; }
 
   if (($body =~ /,\s*$builtin_type_re\s*[,\)]/o)
@@ -5439,9 +5464,9 @@ sub test_categorize_macro_def ($$$)
   undef $mdef_category[1000];
   categorize_macro_def(1000);
   if ($category ne $categoryname[$mdef_category[1000]])
-    { print "Category $categoryname[$mdef_category[1000]] should have been $category for $body\n"; }
+    { print "Category $categoryname[$mdef_category[1000]] should have been $category: $body\n"; }
   if ($properties != $mdef_properties[1000])
-    { print "Property $mdef_properties[1000] should have been $properties for $body\n"; }
+    { print "Property $mdef_properties[1000] should have been $properties: $body\n"; }
 }
 
 # This needs to test properties too
@@ -5458,7 +5483,7 @@ sub test_categorize_macro_defs ()
   test_categorize_macro_def("expression", $propNONE, "((ush)(uch)((p)[0]) | ((ush)(uch)((p)[1]) << 8))");
   test_categorize_macro_def("expression", $propNONE, "((ulg)(SH(p)) | ((ulg)(SH((p)+2)) << 16))");
   test_categorize_macro_def("expression", $propNONE, "malloc((size_t)(items)*(size_t)(size))");
-  test_categorize_macro_def("expression", $propNONE, "(inptr < insize ? inbuf[inptr++] : fill_inbuf(0))");
+  test_categorize_macro_def("expression", $propASSIGN, "(inptr < insize ? inbuf[inptr++] : fill_inbuf(0))");
   test_categorize_macro_def($catTYPE, $propNONE, "struct bsdtty");
   test_categorize_macro_def($catTYPE, $propNONE, "extern inline");
   test_categorize_macro_def("statement", $propASSIGN, "if (status < 0) { perror(name); error=1; }");
@@ -5493,6 +5518,11 @@ sub test_categorize_macro_defs ()
   test_categorize_macro_def($catSTATEMENTS_SANS_SEMI, $propASSIGN, "if (var) free (var); var = NULL");
   test_categorize_macro_def($catSTATEMENT_SANS_SEMI, $propASSIGN,
 			    "if (CHUNK_VAR->sp == ((char *)CHUNK_VAR + sizeof(*CHUNK_VAR))) { random code in here; } else (CHUNK_VAR->sp -= BYTES), (CHUNK_VAR->bytes_left += BYTES)");
+
+  test_categorize_macro_def($catSTATEMENT, $propASSIGN, "for (rl = 0;;) { code goes here; }");
+  test_categorize_macro_def($catSTATEMENT, $propNONE, "for ( ; ; ) { code goes here; }");
+  test_categorize_macro_def($catSTATEMENT, $propASSIGN, "for ( ; ; i++) { code goes here; }");
+  test_categorize_macro_def($catSTATEMENT, $propNONE, "switch (a ? b : c) { case d: e; case 'f': g(h); }");
 }
 
 
@@ -5661,7 +5691,7 @@ sub test_parse_expression ($$)
   elsif ($expected_type ne $parsed_type_name)
     { if ($exp =~ /\?/)
 	{ print STDERR "Conditional flub? "; }
-      print STDERR "Type $parsed_type_name ($parsed_type) should have been $expected_type for $exp\n"; }
+      print STDERR "Type $parsed_type_name ($parsed_type) should have been $expected_type: $exp\n"; }
 }
 
 sub test_regexp ($$;$)
