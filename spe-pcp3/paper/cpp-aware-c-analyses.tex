@@ -56,7 +56,7 @@
 % Don't even print these out for the paper
 \newcommand{\backcallobsoleted}[3]{}
 
-\newcommand{\hook}[2]{\item \texttt{#1} (\texttt{#2}) \\ }
+\newcommand{\hook}[2]{\texttt{#1}(\texttt{#2}) \\ }
 \newcommand{\shook}[1]{\texttt{#1}}
 
 \newcommand{\hookobsoleted}[2]{}
@@ -1085,58 +1085,90 @@ generally include source code character offsets and other relevant
 details of the invoking action.
 
 \begin{description}
-\item[\shook{STARTUP}, \shook{STARTPARSE}, \shook{EXIT}] ~ \\
-  Initialization of \Cpp{}, initialization of parser, and conclusion of processing
+\item[\shook{STARTUP}, \shook{STARTPARSE}, \hook{EXIT}{\$return\_\-exit\_\-code}] ~ \\
+  Initialization of \Cpp{}, initialization of parser, and conclusion of processing.
 
-\item[\shook{HANDLE\_DIRECTIVE}] ~ \\
-  Reading of a \Cpp{} directive
+\item[\hook{HANDLE\_DIRECTIVE}{\$directive\_\-name}] ~ \\
+  Reading of a \Cpp{} directive.
 
 \item[\shook{DO\_XIFDEF}, \shook{DO\_IF}, \shook{DO\_ELIF},
       \shook{DO\_ELSE}, \shook{DO\_ENDIF}] ~ \\
-  Handling of conditional compilation directives
+  Handling of conditional compilation directives.  Each of
+  \shook{DO\_XIFDEF}, \shook{DO\_IF}, and \shook{DO\_ELIF} is invoked
+  with (\$s\_\-start, \$s\_\-end, \$conditional, \$text\_skipped,
+  \$value). \shook{DO\_ELSE} also reports a boolean, \$fSkipping,
+  instead of \$value, and also includes \$s\_start\_\-branch, the source 
+  code offset of the corresponding \ppd{if} or \ppd{ifdef} conditional.
+  \shook{DO\_ENDIF} is invoked with just \$s\_\-start, \$s\_\-end, and
+  \$orig\_conditional.
 
 \item[\shook{CREATE\_PREDEF}, \shook{CREATE\_DEF}] ~ \\
   Predefined (\eg{} \verb+__GCC__+) and
-  user-defined macro definitions (from \ppd{define}s)
+  user-defined macro definitions (from \ppd{define}s).  These are
+  invoked with the following arguments:
+  \$s\_\-start, \$s\_\-end, \$mname, \$expansion, \$num\_\-args, 
+  \$internal\_\-expansion, \$file, \$line, \$r\_\-argnames, \$flags, 
+  \$internal\_\-expansion\_\-args\_\-uses.
 
-\item[\shook{DELETE\_DEF}] ~ \\
-  \ppd{undef} of a macro
+\item[\hook{DELETE\_DEF}{\$mname,\$fExists}] ~ \\
+  \ppd{undef} of a macro;  \$fExists reports whether the macro was
+  previously \ppd{define}d.
 
-\item[\shook{SPECIAL\_SYMBOL}] ~ \\
-  Expansion of a special symbol (\eg{} \verb+__FILE__+)
+\item[\hook{SPECIAL\_SYMBOL}{\$symbol}] ~ \\
+  Expansion of a special symbol (\eg{} \verb+__FILE__+).
 
-\item[\shook{EXPAND\_MACRO}, \shook{MACRO\_CLEANUP}] ~ \\
-  In-code expansion of a macro, and completed expansion of a
-  macro (these action hooks nest)
+\item[\hook{EXPAND\_MACRO}{\$s\_\-start, \$s\_\-end, \$mname, \$expansion, \$length, \$raw\_\-call, \$has\_\-escapes, \$cbuffersDeep, \$cnested, @nests, \$cargs, @args}] ~ \\
+  In-code expansion of a macro.
 
-\item[\shook{IFDEF\_MACRO}, \shook{IFDEF\_LOOKUP\_MACRO}] ~ \\
+\item[\hook{MACRO\_CLEANUP}{\$s\_\-start, \$s\_\-end, \$mname, \$c\_\-nested, @nests}] ~ \\
+  Completed expansion of a macro (this action hook and \shook{EXPAND\_MACRO} nest).
+
+\item[\shook{IFDEF\_MACRO}, \hook{IFDEF\_LOOKUP\_MACRO}{\$mname,\$fDefined}] ~ \\
   Expansion of a macro inside a conditional compilation
-  directive, or test for definedness
+  directive, or test for definedness.  \shook{IFDEF\_MACRO} is invoked
+  with the same arguments as \shook{EXPAND\_\-MACRO} when, e.g., an
+  \ppd{if FOO} is encountered.  \shook{IFDEF\_LOOKUP\_MACRO} is invoked
+  instead when a macro is simply tested for definedness, e.g., by an
+  \ppd{ifdef FOO}.
 
-\item[\shook{COMMENT}, \shook{STRING\_CONSTANT}] ~ \\
-  Reading of a comment and string constant
+\item[\shook{COMMENT}{\$s\_\-start, \$s\_\-end, \$comment\_\-text, 
+        \$how\_\-terminated, \$num\-lines}] ~ \\
+  Reading of a comment.
+
+\item[\hook{STRING\_\-CONSTANT}{\$s\_\-start, \$s\_\-end, \$string, \$lines}] ~ \\
+  Reading of string literal.
 
 \item[\shook{CPP\_ERROR}, \shook{CPP\_WARN}, \shook{CPP\_PEDWARN}] ~ \\
-  \Cpp{} errors, warnings, and pedantic warnings
+  \Cpp{} errors, warnings, and pedantic warnings.  Each gets the
+  arguments \$filename, \$line\_\-number, \$message.
 
-\item[\shook{CPP\_OUT}, \shook{CPP\_TOKEN}] ~ \\
-  Outputting a sequence of characters written, and inputting a token
+\item[\hook{CPP\_OUT}{\$string}, \shook{CPP\_TOKEN}] ~ \\
+  Outputting a sequence of characters written, and inputting a token.
+  \shook{CPP\_TOKEN} reports from where the token arose.  
+  It is invoked with the arguments \$token, \$raw\_\-text, \$macro\_\-name
+  (or empty if no macro expanded to create this token), and \$arg\_\-num
+  (or -1 if no macro expanded to create this token, or 0 if it was part
+  of the literal body of the macro definition).
 
 \item[\shook{INCLUDE\_FILE}, \shook{DONE\_INCLUDE\_FILE}] ~ \\
-  Inclusion of a file, and conclusion of reading an included file (these action hooks nest)
+  Inclusion of a file, and conclusion of reading an included file (these
+  action hooks nest).  Each is invoked with \$filename.
 
-\item[\shook{FUNCTION}, \shook{FUNC\_CALL}] ~ \\
-  Parsing of a function definition and function invocation
+\item[\hook{FUNCTION}{\$func\_\-name,\$fStatic}, \hook{FUNC\_CALL}{\$func\_\-name}] ~ \\
+  Parsing of a function definition and function invocation.
 
 \item[\shook{ASSIGN\_EXPR}, \shook{EQUALITY\_TEST}] ~ \\
-  Parsing of an assignment and equality test
+  Parsing of an assignment and equality test expression.  The full
+  expressions are the single argument.
 
 \item[\shook{TYPEDEF}, \shook{VARDECL}] ~ \\
-  Parsing of a typedef and variable declaration parsed.
+  Parsing of a typedef and variable declaration parsed. Both are invoked 
+  with the name of the new definition.
 
-\item[\shook{POP\_PERL\_BUFFER}] ~ \\
+\item[\hook{POP\_PERL\_BUFFER}{\$num\_\-buffers\_\-deep}] ~ \\
   Completion of processing a \Perl{}-pushed (via the \texttt{PushBuffer}
-  backcall) buffer
+  backcall) buffer.  When \$num\_\-buffers\_\-deep is 0, the parser is no 
+  longer parsing a macro expansion.
 
 \end{description}
 
