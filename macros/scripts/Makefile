@@ -226,7 +226,7 @@ tbl-properties-percents: $(PROP)
 # changes get made to a c-files-listing files
 package_num_files:
 	cd $(USER_PREFIX)/packages; \
-	(for i in *c-files-listing; do echo -n $${i%%-*} && grep -v '^\#' < $$i | wc -l; done ) | awk '{print $$1 "\t" $$2; sum += $$2} END {print "total\t" sum}' > $(ANALYZE_OUTPUT_DIR)/$@
+	(for i in *c-files-listing; do echo -n $${i%%-*} && grep -v '^\#' < $$i | wc -l; done ) | awk '{print $$1 "\t" $$2; sum += $$2} END {print "zzz<total>\t" sum}' > $(ANALYZE_OUTPUT_DIR)/$@
 
 
 tbl-inclusion-dependences-by-line: $(SDEPEND)
