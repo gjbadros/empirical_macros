@@ -17,7 +17,7 @@ elsif (/^Excluding libraries/)
 elsif (/^([0-9]+)\s+\([0-9]+\.[0-9]+%\) any warning by name$/)
   { $names_any_warning += $1;
     $names_any_warning_files++; }
-elsif (/^([0-9]+)\s+\([0-9]+\.[0-9]+%\) any warning by def$/)
+elsif (/^([0-9]+)\s+\([0-9]+\.[0-9]+%\) any warning by def(inition)?$/)
   { $defs_any_warning += $1;
     $defs_any_warning_files++; }
 # No trailing $ here, because the message tells what the arities are

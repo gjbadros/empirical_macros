@@ -291,6 +291,11 @@ tbl-def-categories: $(STAT)
 	macros-make-categories-tbl-from-stat.pl -t -p $^ > $@
 
 tbl-subset-categories: $(MAC)
+	# The -w12 ensures that we don't attend to the actual subcategories,
+	# only the summaries (the stars in the table).  The downside of this
+	# is that reading tbl-subset-categories can mislead one into the 
+	# belief that all the macros contain exactly that set of definitions.
+        # To see the exact sets of definition categories, omit the "-w12".
 	macros-make-subset-metacateg-from-mac -m $^ | sort | uniq -c -w12 | sort -nr > $@
 
 tbl-subset-categories.tex: tbl-subset-categories

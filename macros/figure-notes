@@ -41,15 +41,17 @@ Excel importation notes
    edited the macro to not load those data files, and they may have other
    problems)
 
-11) Ctrl-p to print a graph to psc2es, Ctrl-Shift-P to print a graph to a file (will be prompted for name)
+11) Ctrl-p to print a graph to psc2es, Ctrl-Shift-P to print a graph to a
+      file (will be prompted for name)
+    A better technique is to use the macros for printing, however.
 
-11) Clean up the PostScript
+12) Clean up the PostScript
   a) Remove HPLJ gubbish from beginning and end of each file, if necessary
   b) Convert PostScript to Encapsulated PostScript (on a Linux machine)
        setenv PATH /homes/gws/gjb/bin/share:/homes/gws/gjb/bin/linux:$PATH
        rehash
        excel-ps-to-eps *.ps
-  c) Fix up the bounding box lines:
+  c) Fix up the bounding box lines (also on a Linux machine):
        for i in *.eps; do echo $i && gv =(bbfig $i); done
      and edit the postscript for each file as it appears.
 
@@ -68,6 +70,9 @@ tbl-package-sizes.tex:
 
 
 tbl-subset-properties.tex:
+  -\addtolength{\tabcolsep}{-.4\tabcolsep}
+  +\addtolength{\tabcolsep}{-.3\tabcolsep}
+
   -\begin{tabular}{|r|*{8}{c|}}\hline
   -\rotatebox{90}{\parbox{1in}{Percentage of~ \\ 26182 macro \\ definitions}~} &
   -\rotatebox{90}{Free variables~(8.5\%)~} &
@@ -81,7 +86,7 @@ tbl-subset-properties.tex:
   +\begin{tabular}{|r|*{8}{c|}}
   +\multicolumn{1}{c}{\begin{rotate}{90}{\parbox{1in}{Percentage of~ \\ 26182 macro \\ definitions}~}\end{rotate}} &
   +\multicolumn{1}{c}{\begin{rotate}{45}{Free variables~(8.5\%)~}\end{rotate}} &
-  +\multicolumn{1}{c}{\begin{rotate}{45}{Assignment~(6.5\%)~}\end{rotate}} &
+  +\multicolumn{1}{c}{\begin{rotate}{45}{Side effects~(6.5\%)~}\end{rotate}} &
   +\multicolumn{1}{c}{\begin{rotate}{45}{Use macro as type~(1.4\%)~}\end{rotate}} &
   +\multicolumn{1}{c}{\begin{rotate}{45}{Pass type as argument~(0.46\%)~}\end{rotate}} &
   +\multicolumn{1}{c}{\begin{rotate}{45}{Use argument as type~(0.073\%)~}\end{rotate}} &
@@ -89,12 +94,23 @@ tbl-subset-properties.tex:
   +\multicolumn{1}{c}{\begin{rotate}{45}{Stringization~(0.031\%)~}\end{rotate}} &
   +\multicolumn{1}{c}{\begin{rotate}{45}{Self-referential~(0.027\%)~}\end{rotate}}
 
+tbl-lint.tex:
+  -unparenthesized formal uses & 2447 & 9.3\% \\ 
+  +unparenthesized formal & 2447 & 9.3\% \\ 
+
+  -null body with args & 106 & 0.40\% \\ 
+  +null body with arguments & 106 & 0.40\% \\ 
+
 tbl-summarize-frequency.tex:
-  Update by hand from tbl-avg-def-frequency, tbl-avg-ddf-frequency
+  Update by hand from tbl-avg-def-frequency, tbl-avg-ddf-frequency.
+  Delete "Not C code" line.
 
 tbl-subset-categories.tex:
   Comment out the last half or so of the table which represents very
-  infrequently ocurring combinations.
+    infrequently ocurring combinations.
+  Remove the "Not C code" column;
+    requires changing one 10 to 9, many 1-11 to 1-10.
+  Change "Failed classification" to "Other".
 
 tbl-where-used.tex:
   Remove three \hline commands.

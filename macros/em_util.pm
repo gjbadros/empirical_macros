@@ -220,7 +220,7 @@ sub print_lint_summary ( $$$$$$$$$$$$$$$$;$ )
       . "%) any warning by name\n";
   print "$defs_any_warning\t("
     . sprintf("%2.4f",percent2($defs_any_warning,$defs))
-      . "%) any warning by def\n";
+      . "%) any warning by definition\n";
   print "$different_arity\t("
     . sprintf("%2.4f",percent2($different_arity,$macros))
       . "%) inconsistent arity by name\n";

@@ -21,6 +21,10 @@ where "@_" should be supplied literally.
 
 =head1 DESCRIPTION
 
+checkargs checks the number of arguments passed to a perl function at run
+time, catching some common errors that could otherwise go undetected until
+later in the program.
+
 As the first line of user-written subroutine foo, do one of the following:
 
   my ($arg1, $arg2) = check_args(2, @_);
@@ -34,6 +38,18 @@ argument checkers to set the argument list is the recommended usage.
 
 The number of arguments and their definedness are checked; if the wrong
 number are received, the program exits with an error message.
+
+Use of checkargs is not without cost:  profiling reveals that in one
+system, checkargs consumes 35% of all time.  To create a faster version of
+your program after you have thoroughly tested it, name the following script
+remove_check_args and run remove_check_args on perl source to create a
+faster version.
+
+  #!/uns/bin/perl -wp
+  # remove_check_args -- replace check_args_.* function calls by "@_"
+  # (check_args can easily consume 35% of a program's running time)
+  s/^(\s*{)?\s*\bcheck_args(|_at_least|_range)\s*\(.*;/$1||""/e;
+  s/=\s*\bcheck_args(|_at_least|_range)\s*\(.*;/= \@_;/;
 
 =head1 AUTHOR
 

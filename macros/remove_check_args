@@ -1,6 +1,5 @@
 #!/uns/bin/perl -wp
-# Remove all the check_args_.* function calls, and replace with just "@_"
-# (check_args was consuming 1/3rd of the running time for em_analyze)
+# remove_check_args -- replace check_args_.* function calls by "@_"
+# (check_args can easily consume 35% of a program's running time)
 s/^(\s*{)?\s*\bcheck_args(|_at_least|_range)\s*\(.*;/$1||""/e;
 s/=\s*\bcheck_args(|_at_least|_range)\s*\(.*;/= \@_;/;
-
