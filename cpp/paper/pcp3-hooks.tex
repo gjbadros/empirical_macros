@@ -3,6 +3,8 @@
 \hook{EXIT}{\$return\_\-exit\_\-code} Called just before the system exit() call.
 \hook{HANDLE\_\-DIRECTIVE}{\$directive\_\-name} Called exactly once for each directive.  \$directive\_\-name is
 the directive as it appeared in the source code with the leading \pphash{} removed.
+If the hook returns a 0, do not execute the C code for this directive; this
+is useful for ignoring line directives.
 \hook{DO\_\-DEFINE}{\$s\_\-start, \$s\_\-end, \$name\_\-args\_\-body} Called exactly once for each \pphash{}define. 
 Arguments give the source code character offsets of the line and the 
 unprocessed rest of the line including the name of the macro, its arguments
@@ -26,6 +28,8 @@ with three relevant masks:  \$ANGLE\_\-BRACKETS, for whether the filename appear
 in angle brackets signifying a system include file; \$SKIP\_\-DIRS, for whether this
 is an \pphash{}include\_\-next directive; and \$IMPORTING, for whether this is an \pphash{}import
 directive.
+If the hook returns 0, do not include that file -- useful for letting the perl
+code control whether inclusions are done, for preventing multiple-inclusions.
 \hook{DO\_\-IF}{\$s\_\-start, \$s\_\-end, \$conditional, \$skipped, \$value} 
 Called exactly once for each \pphash{}if 
 (not \pphash{}ifdef or \pphash{}ifndef) directive seen by the preprocessor. In particular,
