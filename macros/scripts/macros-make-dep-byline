@@ -1,0 +1,72 @@
+#!/uns/bin/perl -w
+# --01/28/99 gjb
+# macros-make-dep-byline
+
+if ($#ARGV != 2) {
+  die "Usage:
+macros-make-dep-byline tbl-{inclusion,expansion,any}-dependences-by-line > tbl-depbyline\n";
+}
+
+
+my $inc_file = $ARGV[0];
+my $exp_file = $ARGV[1];
+my $any_file = $ARGV[2];
+
+open(INC,"<$inc_file") || die "Cannot open $inc_file: $!";
+open(EXP,"<$exp_file") || die "Cannot open $exp_file: $!";
+open(ANY,"<$any_file") || die "Cannot open $any_file: $!";
+
+my $header = <INC>;
+$header = <EXP>;
+$header = <ANY>;
+
+my @inc = ();
+my @exp = ();
+my @any = ();
+
+
+
+my $lines = 0;
+while (<INC>) {
+  s/^\s+//;
+  my @cols = split(/\s+/);
+  shift @cols;
+#  print STDERR "Adding ", join(":",@cols), "\n";
+  $inc[$lines++] = sum_array(@cols);
+}
+my $last_line = $lines;
+
+$lines = 0;
+while (<EXP>) {
+  s/^\s+//;
+  my @cols = split(/\s+/);
+  shift @cols;
+  $exp[$lines++] = sum_array(@cols);
+}
+$last_line = $lines if $lines > $last_line;
+
+
+$lines = 0;
+while (<ANY>) {
+  s/^\s+//;
+  my @cols = split(/\s+/);
+  shift @cols;
+  $any[$lines++] = sum_array(@cols);
+}
+$last_line = $lines if $lines > $last_line;
+
+# output
+print join("\t","# Lines","Inclusion", "Expansion", "Any"), "\n";
+for my $i (0..$last_line) {
+  print join("\t",$i,$inc[$i] || "" ,$exp[$i] || "" ,$any[$i] || ""), "\n";
+}
+
+
+
+sub sum_array {
+  my $sum = 0;
+  foreach my $v (@_) {
+    $sum += $v;
+  }
+  return $sum;
+}
