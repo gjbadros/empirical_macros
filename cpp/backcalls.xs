@@ -83,23 +83,14 @@ SumCchExpansionOffset()
 ###%\backcall{$cbuffersback}{CbuffersBack}{}
 ###% Return the number of macro expansions deep that we currently are in
 ###% the current expansion.  This returns 0 if we are not expanding a macro.
+###% The number returned is the number of non-file buffers in the current
+###% stack of expansions (so it's not increased by nested #include-s).
 int
 CbuffersBack()
-	cpp_buffer *buffer = parse_in.buffer;
-	int cbuffersBack = 0;
-	CODE:
-	while (buffer != CPP_NULL_BUFFER(&parse_in)) {
-	    if (buffer->nominal_fname) {
-		break;
-	    } else {
-		cbuffersBack++;
-		buffer = CPP_PREV_BUFFER(buffer);
-	    }
-	}
-	RETVAL=cbuffersBack;
+        CODE:
+	RETVAL=CbuffersDeep(&parse_in);
 	OUTPUT:
 	RETVAL
-
 
 ###%\backcall{@expanded_macros_list}{MacroExpansionHistory}{}
 ###% Returns a list of strings of the form 
@@ -193,9 +184,9 @@ CchOffset()
 ###% that appeared on the command line.
 char *
 InFname()
-	struct cpp_options *opts = parse_in.data;
+ #	struct cpp_options *opts = parse_in.data;
 	CODE:
-	RETVAL = opts?opts->in_fname:"@NONE@";
+	RETVAL = options.in_fname;
 	OUTPUT:
 	RETVAL
 
@@ -358,24 +349,27 @@ ResetParseDebugging()
 void
 YYPushStackState()
 	CODE:
-	if (!fShouldParse) return;
+	if (!fShouldParse) goto done;
 	PushStackState();
+	done:
 
 ###%\backcall{}{YYPopAndRestoreStackState}{}
 ###% Restore the entire current state of the parse stack from the meta stack.
 void
 YYPopAndRestoreStackState()
 	CODE:
-	if (!fShouldParse) return;
+	if (!fShouldParse) goto done;
 	PopAndRestoreStackState();
+	done:
 
 ###%\backcall{}{YYPopAndRestoreStackState}{}
 ###% Throws out the top state stack from the meta stack.
 void
 YYPopAndDiscardStackState()
 	CODE:
-	if (!fShouldParse) return;
+	if (!fShouldParse) goto done;
 	PopAndDiscardStackState();
+	done:
 
 
 ###%\backcall{}{YYSwapStackState}{}
@@ -383,8 +377,9 @@ YYPopAndDiscardStackState()
 void
 YYSwapStackState()
 	CODE:
-	if (!fShouldParse) return;
+	if (!fShouldParse) goto done;
 	SwapStackState();
+	done:
 
 ###%\backcall{}{YYPushDupTopStackState}{}
 ###% Push another copy of the top element of the meta stack of stack states onto
@@ -392,8 +387,9 @@ YYSwapStackState()
 void
 YYPushDupTopStackState()
 	CODE:
-	if (!fShouldParse) return;
+	if (!fShouldParse) goto done;
 	PushDupTopStackState();
+	done:
 
 ###%\backcall{$fStacksEqual}{YYFCompareTopStackState}{}
 ###% Return TRUE iff the top of the meta stack of state stacks is
