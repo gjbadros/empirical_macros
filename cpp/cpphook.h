@@ -63,12 +63,15 @@ void gjb_call_hooks_sz_szl_i(struct cpp_options *, HOOK_INDEX, char *, char *, i
 
 void gjb_call_hooks_sz_szl_i_i(struct cpp_options *, HOOK_INDEX, char *, char *, int, int, int);
 
+void gjb_call_hooks_sz_i_i(struct cpp_options *, HOOK_INDEX, char *, int, int);
+
 void gjb_call_hooks_sz_szl_i_szl_i(struct cpp_options *, HOOK_INDEX, 
 				   char *, char *, int, int, char *, int, int);
 
 void gjb_call_hooks_expansion(struct cpp_reader *pfile, HOOK_INDEX ih,
 			      char *sz1, char *sz2, int cch2, int i1, 
-			      char *sz3, int cch3, int has_escapes, int cbuffersDeep,
+			      char *sz3, int cch3, int ichSourceStart, int ichSourceEnd,
+			      int has_escapes, int cbuffersDeep,
 			      cpp_expand_info *pcei,
 			      int nargs, struct argdata *args);
 

@@ -207,6 +207,26 @@ gjb_call_hooks_sz_szl_i_i(struct cpp_options *opts, HOOK_INDEX ih,
 }
 
 void
+gjb_call_hooks_sz_i_i(struct cpp_options *opts, HOOK_INDEX ih,
+		      char *sz1, int i1, int i2)
+{
+  SV *psvFunc = NULL;
+
+  dSP;
+  
+  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+    return;
+
+  PUSHMARK(sp);
+  XPUSHs(sv_2mortal(newSVpv(sz1, 0)));
+  XPUSHs(sv_2mortal(newSViv(i1)));
+  XPUSHs(sv_2mortal(newSViv(i2)));
+  PUTBACK ;
+     
+  perl_call_sv(psvFunc, G_DISCARD);
+}
+
+void
 gjb_call_hooks_sz_szl_i_szl_i(struct cpp_options *opts, HOOK_INDEX ih,
 			      char *sz1, char *sz2, int cch2, int i1, 
 			      char *sz3, int cch3, int i2)
@@ -245,7 +265,8 @@ int CNestedArgExpansions(cpp_expand_info *pcei)
 void
 gjb_call_hooks_expansion(struct cpp_reader *pfile, HOOK_INDEX ih,
 			 char *sz1, char *sz2, int cch2, int i1, 
-			 char *sz3, int cch3, int has_escapes, int cbuffersDeep,
+			 char *sz3, int cch3, int ichSourceStart, int ichSourceEnd,
+			 int has_escapes, int cbuffersDeep,
 			 cpp_expand_info *pcei,
 			 int nargs, struct argdata *args)
 {
@@ -266,12 +287,15 @@ gjb_call_hooks_expansion(struct cpp_reader *pfile, HOOK_INDEX ih,
   XPUSHs(sv_2mortal(newSVpvlen(sz2, cch2)));
   XPUSHs(sv_2mortal(newSViv(i1)));
   XPUSHs(sv_2mortal(newSVpvlen(sz3, cch3)));
+  XPUSHs(sv_2mortal(newSViv(ichSourceStart)));
+  XPUSHs(sv_2mortal(newSViv(ichSourceEnd)));
   XPUSHs(sv_2mortal(newSViv(has_escapes)));
   XPUSHs(sv_2mortal(newSViv(cbuffersDeep)));
   XPUSHs(sv_2mortal(newSViv(cNestedArgExpansions)));
   while (pcei != NULL) 
     {
-    XPUSHs(sv_2mortal(newSVpvf("%s#%d",pcei->hp->name,pcei->argno)));
+    XPUSHs(sv_2mortal(newSVpvf("%s#%d[%d]",pcei->hp->name,pcei->argno,
+			       pcei->offset)));
     pcei = pcei->pceiPrior;
     }
   XPUSHs(sv_2mortal(newSViv(nargs)));
