@@ -594,14 +594,15 @@ XS(XS_cpp_YYFCompareTopStackState)
 	bool	RETVAL;
 #line 402 "backcalls.xs"
 #line 403 "backcalls.xs"
-	RETVAL = TRUE;
-	if (!fShouldParse) return;
+        RETVAL = TRUE;
+	if (!fShouldParse) goto done;
 	RETVAL = FCompareTopStackState();
-#line 407 "backcalls.xs"
+	done:
+#line 408 "backcalls.xs"
 	ST(0) = boolSV(RETVAL);
 	if (SvREFCNT(ST(0))) sv_2mortal(ST(0));
-#line 407 "backcalls.xs"
-#line 407 "backcalls.xs"
+#line 408 "backcalls.xs"
+#line 408 "backcalls.xs"
     }
     XSRETURN(1);
 }
@@ -613,28 +614,29 @@ XS(XS_cpp_FLookupSymbol)
 	croak("Usage: cpp::FLookupSymbol(szSymbol)");
     {
 	char *	szSymbol = (char *)SvPV(ST(0),na);
-#line 416 "backcalls.xs"
+#line 417 "backcalls.xs"
 	str_t *pstr;
 	symentry_t *se;
-#line 418 "backcalls.xs"
-	bool	RETVAL;
-#line 418 "backcalls.xs"
 #line 419 "backcalls.xs"
+	bool	RETVAL;
+#line 419 "backcalls.xs"
+#line 420 "backcalls.xs"
 	RETVAL = FALSE;
-	if (!fShouldParse) return;
+	if (!fShouldParse) goto done; 
 	pstr = nmelook(szSymbol,strlen(szSymbol));
 	if (!ParseStack || !ParseStack->contxt) {
 	   RETVAL = FALSE;
-           return;
+	} else {
+	  se = symtab_lookup(ParseStack->contxt->syms,
+			     pstr);
+	  RETVAL = (se != NULL);
 	}
-	se = symtab_lookup(ParseStack->contxt->syms,
-			   pstr);
-        RETVAL = (se != NULL);
-#line 430 "backcalls.xs"
+	done:
+#line 432 "backcalls.xs"
 	ST(0) = boolSV(RETVAL);
 	if (SvREFCNT(ST(0))) sv_2mortal(ST(0));
-#line 430 "backcalls.xs"
-#line 430 "backcalls.xs"
+#line 432 "backcalls.xs"
+#line 432 "backcalls.xs"
     }
     XSRETURN(1);
 }
