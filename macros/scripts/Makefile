@@ -93,7 +93,8 @@ ALL_TABLES := $(TEXT_TABLES) $(RAW_TABLES) $(LATEX_TABLES)
 
 PAPER_TABLES :=  $(TEXT_TABLES) $(LATEX_TABLES)
 
-all:	$(PAPER_TABLES)
+# Do data_analyze first, as data_reports may core dump
+all:	data_analyze $(PAPER_TABLES)
 
 clean:
 	rm -f $(ALL_TABLES)
