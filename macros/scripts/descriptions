@@ -1,0 +1,59 @@
+macros-make-data-analyze (redundant w/ em_make_state_file)
+em_make_state_file
+macros-clean-reports
+macros-make-data-reports
+
+
+Figure 1 -- package-sizes (analyzed packages and their sizes)
+-------------------------
+macros-make-package-sizes-tbl-from-stat
+  [zsh running awk over *.stat files]
++ Makefile join-ing w/ package-version, package-descriptions, and adding heading, latexify-ing
+
+Figure 2 -- directives-breakdown (percent of ncnb lines)
+--------------------------------
+macros-make-directives-raw-hist-from-stats
+  [zsh running awk over *.stat files]
+macros-bake-raw-directives-hist
+  [perl script running on output from macros-make-directives-raw-hist-from-stats]
+
+Figure 3 -- def-categories (percent of all macro definitions)
+--------------------------
+macros-make-categories-tbl-from-stat (uses an option to create LaTeX output)
+  [zsh running gawk on macros-make-categories-tbl-from-stat.awk over *.stat files]
+
+Figure 4 -- cat-def-frequency (Number of definitions)
+-----------------------------
+macros-extract-defuse-categories
+  [perl script running over *.freq{use,def}_cum files]
+macros-make-tbl-frequsedef-from-cum
+  [perl script running over *.freqdef_cum files]
+
+Figure 5 -- subset-categorization
+---------------------------------
+macros-make-subset-categorizations-from-mac, then histogram-numeric | latexify-mark-tagle
+  [perl script running over *.mac files]
+
+Figure 6 -- cat-use-frequency (number of uses)
+-----------------------------
+macros-extract-defuse-categories
+  [perl script running over *.freq{use,def}_cum files]
+macros-make-tbl-frequsedef-from-cum
+  [perl script running over *.frequse_cum files]
+
+Figure 7 -- where-used (percent of all macro uses)
+----------------------
+macros-make-how-used-ni-tbl-from-mac
+  [ zsh script running macros-how-used-ni-from-mac [zsh running awk script | histogram]]
+
+Figure 8 -- ccd-categories (percent of all conditional compilation directives)
+--------------------------
+Done directly from makefile on *.ccd files
+
+Figure 9 & 10 -- cat-def-frequency-after-cppp, cat-use-frequency-after-cppp
+---------------------------------------------------------------------------
+See cat-{def,use}-frequency 
+
+Extras:
+latexify-mark-table [perl script]
+latexify [zsh script using awk and sed]
