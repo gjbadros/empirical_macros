@@ -36,6 +36,49 @@
  *   it will not crash, and it will give "" for len = 0
  */
 
+
+/* Call either the function ref at the sv passed in, or call all of
+   the function refs if it's an SV passed in */
+I32  perl_call_sv_hooks(SV* hooksv_or_hookav, I32 flags)
+{
+  I32 sv_type;
+  if (!SvROK(hooksv_or_hookav)) {
+    warn("%s got a non-reference passed to it", __FUNCTION__);
+    return -1;
+  }
+  sv_type = SvTYPE(SvRV(hooksv_or_hookav));
+  if (sv_type == SVt_PVCV) {
+    return perl_call_sv(hooksv_or_hookav, flags);
+  } else if (sv_type == SVt_PVAV) {
+    AV *array = (AV *) SvRV(hooksv_or_hookav);
+    int len = av_len(array);
+    int i = 0;
+    SV **ppsvCur;
+    int retval = 0;
+    if (len > 0) {
+      /* FIXGJB: save the stack of variables to be passed as args */
+      warn("%s does not yet call multiple hooked functions, only first will be executed\n",
+	   __FUNCTION__);
+    }
+    for (;i<=len;i++) {
+      ppsvCur = av_fetch(array,i,0);
+      if (!ppsvCur) {
+	warn("%s has element in array of function refs that is NULL\n",
+	     __FUNCTION__);
+      } else {
+	if (i>0) {
+	  /* FIXGJB: restore the stack of variables to be passed as args */
+	}
+	retval |= perl_call_sv(*ppsvCur, flags);
+      }
+      break; /* FIXGJB: remove when know how to fix stack to support multiple calls */
+    } /* for */
+    return retval;
+  }
+  return -1;
+}
+
+
 inline SV *newSVpvlen(char *sz, int cch) {
   if (cch <= 0)
     return newSVpv("",0);
@@ -115,7 +158,7 @@ gjb_call_hooks_void(struct cpp_options *opts, HOOK_INDEX ih)
     return;
 
   PUSHMARK(sp);
-  perl_call_sv(psvFunc, G_DISCARD|G_NOARGS);
+  perl_call_sv_hooks(psvFunc, G_DISCARD|G_NOARGS);
 }
 
 
@@ -133,7 +176,7 @@ gjb_call_hooks_i(struct cpp_options *opts, HOOK_INDEX ih, int i)
   XPUSHs(sv_2mortal(newSViv(i)));
   PUTBACK ;
      
-  perl_call_sv(psvFunc, G_DISCARD);
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
 }
 
 void
@@ -150,7 +193,7 @@ gjb_call_hooks_sz(struct cpp_options *opts, HOOK_INDEX ih, char *sz)
   XPUSHs(sv_2mortal(newSVpv(sz, 0)));
   PUTBACK ;
      
-  perl_call_sv(psvFunc, G_DISCARD);
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
 }
 
 void
@@ -169,7 +212,7 @@ gjb_call_hooks_sz_szl(struct cpp_options *opts, HOOK_INDEX ih,
   XPUSHs(sv_2mortal(newSVpvlen(sz2, cch)));
   PUTBACK ;
      
-  perl_call_sv(psvFunc, G_DISCARD);
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
 }
 
 void
@@ -189,7 +232,7 @@ gjb_call_hooks_sz_szl_i(struct cpp_options *opts, HOOK_INDEX ih,
   XPUSHs(sv_2mortal(newSViv(i)));
   PUTBACK ;
      
-  perl_call_sv(psvFunc, G_DISCARD);
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
 }
 
 void
@@ -210,7 +253,7 @@ gjb_call_hooks_sz_szl_i_i(struct cpp_options *opts, HOOK_INDEX ih,
   XPUSHs(sv_2mortal(newSViv(i2)));
   PUTBACK ;
      
-  perl_call_sv(psvFunc, G_DISCARD);
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
 }
 
 void
@@ -230,7 +273,7 @@ gjb_call_hooks_sz_i_i(struct cpp_options *opts, HOOK_INDEX ih,
   XPUSHs(sv_2mortal(newSViv(i2)));
   PUTBACK ;
      
-  perl_call_sv(psvFunc, G_DISCARD);
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
 }
 
 void
@@ -250,7 +293,7 @@ gjb_call_hooks_i_i_sz(struct cpp_options *opts, HOOK_INDEX ih, int i1, int i2,
   XPUSHs(sv_2mortal(newSVpv(sz1, 0)));
   PUTBACK ;
      
-  perl_call_sv(psvFunc, G_DISCARD);
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
 }
 
 void
@@ -273,7 +316,7 @@ gjb_call_hooks_sz_szl_i_szl_i(struct cpp_options *opts, HOOK_INDEX ih,
   XPUSHs(sv_2mortal(newSViv(i2)));
   PUTBACK ;
      
-  perl_call_sv(psvFunc, G_DISCARD);
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
 }
 
 
@@ -320,7 +363,7 @@ void gjb_call_hooks_pcat_szl(struct cpp_options *opts, HOOK_INDEX ih,
 
   PUTBACK ;
      
-  perl_call_sv(psvFunc, G_DISCARD);
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
 }
 
 
@@ -387,7 +430,7 @@ gjb_call_hooks_expansion(struct cpp_reader *pfile, HOOK_INDEX ih,
     }
   PUTBACK ;
      
-  perl_call_sv(psvFunc, G_DISCARD);
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
 }
 
 
@@ -417,7 +460,7 @@ gjb_call_hooks_macro_cleanup(struct cpp_options *opts, HOOK_INDEX ih,
     }
   PUTBACK ;
      
-  perl_call_sv(psvFunc, G_DISCARD);
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
 }
 
 
@@ -438,7 +481,51 @@ gjb_call_hooks_sz_szl_szl(struct cpp_options *opts, HOOK_INDEX ih,
   XPUSHs(sv_2mortal(newSVpvlen(sz2, cch2)));
   PUTBACK ;
      
-  perl_call_sv(psvFunc, G_DISCARD);
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
+}
+
+void
+gjb_call_hooks_sz_szl_szl_i(struct cpp_options *opts, HOOK_INDEX ih,
+			    char *sz, char *sz1, int cch1, char *sz2, int cch2, int i)
+{
+  SV *psvFunc = NULL;
+
+  dSP;
+  
+  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+    return;
+
+  PUSHMARK(sp);
+  XPUSHs(sv_2mortal(newSVpv(sz, 0)));
+  XPUSHs(sv_2mortal(newSVpvlen(sz1, cch1)));
+  XPUSHs(sv_2mortal(newSVpvlen(sz2, cch2)));
+  XPUSHs(sv_2mortal(newSViv(i)));
+  PUTBACK ;
+     
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
+}
+
+void
+gjb_call_hooks_sz_szl_szl_i_i(struct cpp_options *opts, HOOK_INDEX ih,
+			      char *sz, char *sz1, int cch1, char *sz2, int cch2, 
+			      int i1, int i2)
+{
+  SV *psvFunc = NULL;
+
+  dSP;
+  
+  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+    return;
+
+  PUSHMARK(sp);
+  XPUSHs(sv_2mortal(newSVpv(sz, 0)));
+  XPUSHs(sv_2mortal(newSVpvlen(sz1, cch1)));
+  XPUSHs(sv_2mortal(newSVpvlen(sz2, cch2)));
+  XPUSHs(sv_2mortal(newSViv(i1)));
+  XPUSHs(sv_2mortal(newSViv(i2)));
+  PUTBACK ;
+     
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
 }
 
 void
@@ -456,7 +543,7 @@ gjb_call_hooks_szl(struct cpp_options *opts, HOOK_INDEX ih,
   XPUSHs(sv_2mortal(newSVpvlen(sz, cch)));
   PUTBACK ;
      
-  perl_call_sv(psvFunc, G_DISCARD);
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
 }
 
 void
@@ -476,7 +563,7 @@ gjb_call_hooks_szl_sz_i(struct cpp_options *opts, HOOK_INDEX ih,
   XPUSHs(sv_2mortal(newSViv(i)));
   PUTBACK ;
      
-  perl_call_sv(psvFunc, G_DISCARD);
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
 }
 
 void
@@ -496,7 +583,7 @@ gjb_call_hooks_szl_szl_i(struct cpp_options *opts, HOOK_INDEX ih,
   XPUSHs(sv_2mortal(newSViv(i)));
   PUTBACK ;
      
-  perl_call_sv(psvFunc, G_DISCARD);
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
 }
 
 void 
@@ -518,7 +605,7 @@ gjb_call_hooks_szlx3_i(struct cpp_options *opts, HOOK_INDEX ih,
   XPUSHs(sv_2mortal(newSViv(i)));
   PUTBACK ;
      
-  perl_call_sv(psvFunc, G_DISCARD);
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
 }
 
 void 
@@ -541,7 +628,31 @@ gjb_call_hooks_sz_szlx3_i(struct cpp_options *opts, HOOK_INDEX ih, char *sz,
   XPUSHs(sv_2mortal(newSViv(i)));
   PUTBACK ;
      
-  perl_call_sv(psvFunc, G_DISCARD);
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
+}
+
+void 
+gjb_call_hooks_sz_szlx3_i_i(struct cpp_options *opts, HOOK_INDEX ih, char *sz, 
+			    char *sz1, int cch1,  char *sz2, int cch2,
+			    char *sz3, int cch3,  int i1, int i2)
+{
+  SV *psvFunc = NULL;
+
+  dSP;
+  
+  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+    return;
+
+  PUSHMARK(sp);
+  XPUSHs(sv_2mortal(newSVpv(sz, 0)));
+  XPUSHs(sv_2mortal(newSVpvlen(sz1, cch1)));
+  XPUSHs(sv_2mortal(newSVpvlen(sz2, cch2)));
+  XPUSHs(sv_2mortal(newSVpvlen(sz3, cch3)));
+  XPUSHs(sv_2mortal(newSViv(i1)));
+  XPUSHs(sv_2mortal(newSViv(i2)));
+  PUTBACK ;
+     
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
 }
 
 void
@@ -561,7 +672,7 @@ gjb_call_hooks_sz_sz_i(struct cpp_options *opts, HOOK_INDEX ih,
   XPUSHs(sv_2mortal(newSViv(i)));
   PUTBACK ;
      
-  perl_call_sv(psvFunc, G_DISCARD);
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
 }
 
 void
@@ -581,7 +692,7 @@ gjb_call_hooks_sz_sz_3flags(struct cpp_options *opts, HOOK_INDEX ih,
   XPUSHs(sv_2mortal(newSVbitmap(f1,f2,f3,-1)));
   PUTBACK ;
      
-  perl_call_sv(psvFunc, G_DISCARD);
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
 }
 
 void
@@ -599,7 +710,7 @@ gjb_call_hooks_sz_i(struct cpp_options *opts, HOOK_INDEX ih, char *sz, int i)
   XPUSHs(sv_2mortal(newSViv(i)));
   PUTBACK ;
      
-  perl_call_sv(psvFunc, G_DISCARD);
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
 }
 
 void
@@ -620,7 +731,7 @@ gjb_call_hooks_sz_i_sz_i(struct cpp_options *opts, HOOK_INDEX ih,
   XPUSHs(sv_2mortal(newSViv(i2)));
   PUTBACK ;
      
-  perl_call_sv(psvFunc, G_DISCARD);
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
 }
 
 void
@@ -642,7 +753,7 @@ gjb_call_hooks_sz_i_sz_i_i(struct cpp_options *opts, HOOK_INDEX ih,
   XPUSHs(sv_2mortal(newSViv(i3)));
   PUTBACK ;
      
-  perl_call_sv(psvFunc, G_DISCARD);
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
 }
 
 void
@@ -660,7 +771,7 @@ gjb_call_hooks_szl_i(struct cpp_options *opts, HOOK_INDEX ih, char *sz, int cch,
   XPUSHs(sv_2mortal(newSViv(i)));
   PUTBACK ;
      
-  perl_call_sv(psvFunc, G_DISCARD);
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
 }
 
 void
@@ -681,7 +792,27 @@ gjb_call_hooks_i_i_szl_i(struct cpp_options *opts, HOOK_INDEX ih, int s, int e,
   XPUSHs(sv_2mortal(newSViv(i)));
   PUTBACK ;
      
-  perl_call_sv(psvFunc, G_DISCARD);
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
+}
+
+void
+gjb_call_hooks_i_i_szl(struct cpp_options *opts, HOOK_INDEX ih, int s, int e,
+			 char *sz, int cch)
+{
+  SV *psvFunc = NULL;
+
+  dSP;
+  
+  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+    return;
+
+  PUSHMARK(sp);
+  XPUSHs(sv_2mortal(newSViv(s)));
+  XPUSHs(sv_2mortal(newSViv(e)));
+  XPUSHs(sv_2mortal(newSVpvlen(sz, cch)));
+  PUTBACK ;
+     
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
 }
 
 
@@ -720,7 +851,7 @@ gjb_call_hooks_i_i_szl_sz_defn(struct cpp_options *opts, HOOK_INDEX ih,
     }
   PUTBACK ;
      
-  perl_call_sv(psvFunc, G_DISCARD);
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
 }
   
 void
@@ -741,7 +872,7 @@ gjb_call_hooks_szx4(struct cpp_options *opts, HOOK_INDEX ih,
   XPUSHs(sv_2mortal(newSVpv(sz4, 0)));
   PUTBACK ;
      
-  perl_call_sv(psvFunc, G_DISCARD);
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
 }
 
 void gjb_call_hooks_sz_i_sprintf(struct cpp_options *opts, HOOK_INDEX ih, 
@@ -763,7 +894,7 @@ void gjb_call_hooks_sz_i_sprintf(struct cpp_options *opts, HOOK_INDEX ih,
   XPUSHs(sv_2mortal(newSVpvlen(szMsg, cch)));
   PUTBACK ;
 
-  perl_call_sv(psvFunc, G_DISCARD);
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
 }
 
 void gjb_call_hooks_sz_i_i_sprintf(struct cpp_options *opts, HOOK_INDEX ih, 
@@ -786,7 +917,7 @@ void gjb_call_hooks_sz_i_i_sprintf(struct cpp_options *opts, HOOK_INDEX ih,
   XPUSHs(sv_2mortal(newSVpvlen(szMsg, cch)));
   PUTBACK ;
 
-  perl_call_sv(psvFunc, G_DISCARD);
+  perl_call_sv_hooks(psvFunc, G_DISCARD);
 }
 
 char *
