@@ -907,16 +907,24 @@ gjb_call_hooks_i_i_sz_sz_i(struct cpp_options *opts, HOOK_INDEX ih, int s, int e
   perl_call_sv_hooks(psvFunc, G_DISCARD);
 }
 
-void
+/* Modified to return an int, so that DO_INCLUDE
+   hooks could say whether we want the #include-d file
+   actually included --05/05/98 gjb */
+int
 gjb_call_hooks_i_i_sz_sz_3flags(struct cpp_options *opts, HOOK_INDEX ih, int s, int e,
 				char *sz1, char *sz2, int f1, int f2, int f3)
 {
   SV *psvFunc = NULL;
 
   dSP;
+  int count;
+  int retval;
   
   if ((psvFunc = get_hook_for(ih,!opts || opts->fWarnMissingHooks)) == 0)
-    return;
+    return -1;
+
+  ENTER ;
+  SAVETMPS;
 
   PUSHMARK(sp);
   XPUSHs(sv_2mortal(newSViv(s)));
@@ -926,7 +934,19 @@ gjb_call_hooks_i_i_sz_sz_3flags(struct cpp_options *opts, HOOK_INDEX ih, int s, 
   XPUSHs(sv_2mortal(newSVbitmap(f1,f2,f3,-1)));
   PUTBACK ;
      
-  perl_call_sv_hooks(psvFunc, G_DISCARD);
+  count = perl_call_sv_hooks(psvFunc, G_DISCARD);
+
+  if (count != 1)
+    {
+    croak("Big trouble: count != 1");
+    }
+
+  retval = POPi;
+
+  PUTBACK ;
+  FREETMPS ;
+  LEAVE ;
+  return retval;
 }
 
 void

@@ -458,9 +458,9 @@ void gjb_call_hooks_sz_sz_i(struct cpp_options *, HOOK_INDEX, char *, char *, in
 void gjb_call_hooks_i_i_sz_sz_i(struct cpp_options *, HOOK_INDEX, int, int,
 				char *, char *, int);
 
-void gjb_call_hooks_i_i_sz_sz_3flags(struct cpp_options *, HOOK_INDEX, int, int, 
-				     char *, char *, 
-				     int, int, int);
+int gjb_call_hooks_i_i_sz_sz_3flags(struct cpp_options *, HOOK_INDEX, int, int, 
+                                    char *, char *, 
+                                    int, int, int);
 
 
 /* NOTE: beware _szl and _sz_i have some proto! */
