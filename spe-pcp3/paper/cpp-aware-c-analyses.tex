@@ -95,7 +95,8 @@
 }
 
 %\date{31 January 1999}
-\date{27 June 1999}
+%\date{27 June 1999}
+\date{14 July 1999}
 
 
 \begin{document}
@@ -123,7 +124,7 @@ interpreter for the action ``hooks.''  Many common software engineering
 analyses can be written surprisingly easily using our implementation,
 replacing numerous ad-hoc tools.  The framework's integration of the
 preprocessor and the parser further enables some analyses that otherwise
-would be especially difficult.
+would be especially difficult to perform.
 
 \subsection*{Keywords}
 Parsing, preprocessor, C, C++, cpp, lexical analysis, syntactic analysis, Perl.
@@ -189,7 +190,7 @@ non-trivial \C{} program uses the preprocessor, and an empirical study
 of numerous packages written in \C{} documents the extensive use of \Cpp{}
 constructs~\cite{EmpCpp-TR}.
 
-Though the \Cpp{} is sometimes used by other languages (e.g.,
+Though \Cpp{} is sometimes used by other languages (\eg{}
 \texttt{Java} programs and the X11 \texttt{xrdb} resource database
 language) and causes similar difficulties whenever used, we focus on
 \Cpp{}'s use with \C{} code exclusively.  We are interested in the huge
@@ -197,8 +198,8 @@ body of \C{} programs, and helping programmers understand and extend
 those software artifacts. \Cpp{} is a necessary and integral part of the
 \C{} programming language specification.  In practice, the \C{}
 preprocessor is almost never separated from \C{} code, thus the issues
-relating the \Cpp{} arise with virtually all \C{} programs.  In
-addition, the framework we describe could be applied to analyze other
+relating the \Cpp{} arise with virtually all \C{} programs.  Though we
+focus on \C{}, the framework we describe could be applied to analyze other
 uses of \Cpp{} (and even other textual preprocessing languages) in a
 fairly direct way.
 
@@ -402,7 +403,7 @@ code.
 \label{sec:call_graph_revised}
 The simple call-graph extractor used as an example in the preceding
 section suffers from many of the same shortcomings as tools that
- on preprocessed code: it reasons about only a single
+operate on preprocessed code: it reasons about only a single
 configuration of the source and eliminates all macro abstractions
 from the extracted model.  As Murphy et al.\ discuss, there are many
 degrees of freedom for call-graph extractors~\cite{Murphy98}.  As
@@ -546,7 +547,7 @@ against entering an infinite inclusion loop by being enclosed in an
 
 If an analysis were always to evaluate the code inside the \ppd{ifndef},
 it would repeatedly and inifinitely re-analyze \file{foo.h}.  To avoid
-this difficulty, an analysis can simply not include a header file more
+this difficulty, an analysis can simply choose to not include a header file more
 than once.  The \texttt{DO\_INCLUDE} callback permits the software
 engineer to return \texttt{FALSE} to signify that the inclusion
 directive should be ignored.  If an analysis is using
@@ -801,8 +802,9 @@ Our framework combines a
 \textbf{\textsf{P}}arser, a \textbf{\textsf{C}}
 \textbf{\textsf{p}}re\textbf{\textsf{p}}rocessor, and a
 \textbf{\textsf{P}}erl action language.  Thus, we have named the tool
-that implements the framework \pcppp{} or \pcp{}, pronounced pee-see-pee-cubed. (The tool is
-  available from the authors upon email request.)
+that implements the framework \pcppp{} or \pcp{}, pronounced
+``pee-see-pee-cubed.''
+(The tool is available from the authors upon email request.)
 
 \subsection{Parser}
 \label{ssec:parser}
@@ -1081,18 +1083,18 @@ paper.
 The below lists action hooks and the conditions under which the
 framework invokes the corresponding callback.  We omit partially
 redundant and less useful hooks. Passed parameters
-generally include source code character offsets and other relevant
-details of the invoking action.
+generally include source code character offsets, \$s\_\-start and
+\$s\_\-end, and other relevant details of the invoking action.
 
 \begin{description}
-\item[\shook{STARTUP}, \shook{STARTPARSE}, \hook{EXIT}{\$return\_\-exit\_\-code}] ~ \\
+\item[\hook{STARTUP}{}, \hook{STARTPARSE}{}, \hook{EXIT}{\$return\_\-exit\_\-code}] ~ \\
   Initialization of \Cpp{}, initialization of parser, and conclusion of processing.
 
 \item[\hook{HANDLE\_DIRECTIVE}{\$directive\_\-name}] ~ \\
   Reading of a \Cpp{} directive.
 
-\item[\shook{DO\_XIFDEF}, \shook{DO\_IF}, \shook{DO\_ELIF},
-      \shook{DO\_ELSE}, \shook{DO\_ENDIF}] ~ \\
+\item[\hook{DO\_XIFDEF}{..}, \hook{DO\_IF}{..}, \hook{DO\_ELIF}{..},
+      \hook{DO\_ELSE}{..}, \hook{DO\_ENDIF}{..}] ~ \\
   Handling of conditional compilation directives.  Each of
   \shook{DO\_XIFDEF}, \shook{DO\_IF}, and \shook{DO\_ELIF} is invoked
   with (\$s\_\-start, \$s\_\-end, \$conditional, \$text\_skipped,
@@ -1102,12 +1104,12 @@ details of the invoking action.
   \shook{DO\_ENDIF} is invoked with just \$s\_\-start, \$s\_\-end, and
   \$orig\_conditional.
 
-\item[\shook{CREATE\_PREDEF}, \shook{CREATE\_DEF}] ~ \\
+\item[\hook{CREATE\_PREDEF}{..}, \hook{CREATE\_DEF}{..}] ~ \\
   Predefined (\eg{} \verb+__GCC__+) and
   user-defined macro definitions (from \ppd{define}s).  These are
   invoked with the following arguments:
   \$s\_\-start, \$s\_\-end, \$mname, \$expansion, \$num\_\-args, 
-  \$internal\_\-expansion, \$file, \$line, \$r\_\-argnames, \$flags, 
+  \$internal\_\-expansion, \$file, \$line, \$r\_\-argnames, \$flags, and
   \$internal\_\-expansion\_\-args\_\-uses.
 
 \item[\hook{DELETE\_DEF}{\$mname,\$fExists}] ~ \\
@@ -1117,13 +1119,17 @@ details of the invoking action.
 \item[\hook{SPECIAL\_SYMBOL}{\$symbol}] ~ \\
   Expansion of a special symbol (\eg{} \verb+__FILE__+).
 
-\item[\hook{EXPAND\_MACRO}{\$s\_\-start, \$s\_\-end, \$mname, \$expansion, \$length, \$raw\_\-call, \$has\_\-escapes, \$cbuffersDeep, \$cnested, @nests, \$cargs, @args}] ~ \\
-  In-code expansion of a macro.
+\item[\hook{EXPAND\_MACRO}{..}] ~ \\
+  In-code expansion of a macro.  Arguments to this hook are:
+\$s\_\-start, \$s\_\-end, \$mname, \$expansion, \$length, \$raw\_\-call,
+\$has\_\-escapes, \$cbuffersDeep, \$cnested, @nests, \$cargs, and
+@args.  @nests and @args are \Perl{} arrays containing macro nesting
+information, and the arguments of the current expansion, respectively.
 
 \item[\hook{MACRO\_CLEANUP}{\$s\_\-start, \$s\_\-end, \$mname, \$c\_\-nested, @nests}] ~ \\
   Completed expansion of a macro (this action hook and \shook{EXPAND\_MACRO} nest).
 
-\item[\shook{IFDEF\_MACRO}, \hook{IFDEF\_LOOKUP\_MACRO}{\$mname,\$fDefined}] ~ \\
+\item[\hook{IFDEF\_MACRO}{..}, \hook{IFDEF\_LOOKUP\_MACRO}{\$mname,\$fDefined}] ~ \\
   Expansion of a macro inside a conditional compilation
   directive, or test for definedness.  \shook{IFDEF\_MACRO} is invoked
   with the same arguments as \shook{EXPAND\_\-MACRO} when, e.g., an
@@ -1131,18 +1137,18 @@ details of the invoking action.
   instead when a macro is simply tested for definedness, e.g., by an
   \ppd{ifdef FOO}.
 
-\item[\shook{COMMENT}{\$s\_\-start, \$s\_\-end, \$comment\_\-text, 
+\item[\hook{COMMENT}{\$s\_\-start, \$s\_\-end, \$comment\_\-text, 
         \$how\_\-terminated, \$num\-lines}] ~ \\
   Reading of a comment.
 
 \item[\hook{STRING\_\-CONSTANT}{\$s\_\-start, \$s\_\-end, \$string, \$lines}] ~ \\
   Reading of string literal.
 
-\item[\shook{CPP\_ERROR}, \shook{CPP\_WARN}, \shook{CPP\_PEDWARN}] ~ \\
+\item[\hook{CPP\_ERROR}{..}, \hook{CPP\_WARN}{..}, \hook{CPP\_PEDWARN}{..}] ~ \\
   \Cpp{} errors, warnings, and pedantic warnings.  Each gets the
   arguments \$filename, \$line\_\-number, \$message.
 
-\item[\hook{CPP\_OUT}{\$string}, \shook{CPP\_TOKEN}] ~ \\
+\item[\hook{CPP\_OUT}{\$string}, \hook{CPP\_TOKEN}{..}] ~ \\
   Outputting a sequence of characters written, and inputting a token.
   \shook{CPP\_TOKEN} reports from where the token arose.  
   It is invoked with the arguments \$token, \$raw\_\-text, \$macro\_\-name
@@ -1150,20 +1156,19 @@ details of the invoking action.
   (or -1 if no macro expanded to create this token, or 0 if it was part
   of the literal body of the macro definition).
 
-\item[\shook{INCLUDE\_FILE}, \shook{DONE\_INCLUDE\_FILE}] ~ \\
+\item[\hook{INCLUDE\_FILE}{\$filename}, \hook{DONE\_INCLUDE\_FILE}{\$filename}] ~ \\
   Inclusion of a file, and conclusion of reading an included file (these
-  action hooks nest).  Each is invoked with \$filename.
+  action hooks nest).
 
 \item[\hook{FUNCTION}{\$func\_\-name,\$fStatic}, \hook{FUNC\_CALL}{\$func\_\-name}] ~ \\
   Parsing of a function definition and function invocation.
 
-\item[\shook{ASSIGN\_EXPR}, \shook{EQUALITY\_TEST}] ~ \\
-  Parsing of an assignment and equality test expression.  The full
-  expressions are the single argument.
+%\item[\shook{ASSIGN\_EXPR}, \shook{EQUALITY\_TEST}] ~ \\
+%  Parsing of an assignment and equality test expression.  The full
+%  expressions are the single argument.
 
-\item[\shook{TYPEDEF}, \shook{VARDECL}] ~ \\
-  Parsing of a typedef and variable declaration parsed. Both are invoked 
-  with the name of the new definition.
+\item[\hook{TYPEDEF}{\$new\_\-name}, \hook{VARDECL}{\$new\_\-name}] ~ \\
+  Parsing of a typedef and variable declaration parsed.
 
 \item[\hook{POP\_PERL\_BUFFER}{\$num\_\-buffers\_\-deep}] ~ \\
   Completion of processing a \Perl{}-pushed (via the \texttt{PushBuffer}
