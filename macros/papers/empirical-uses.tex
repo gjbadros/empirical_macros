@@ -86,6 +86,82 @@ facilities are so unstructured and intrusive that they are a constant
 problem to programmers, maintainers, people porting code, and tool
 builders.''~\cite[p.~424]{Stroustrup-DesignEvolution}
 
+
+\subsection{The analyses}
+
+To build a better understanding of how the preprocessor is used,
+we wrote tools to analyze preprocessor usage and ran them on {\numpackages}
+C packages comprising {\numlines} lines of code.  Figure~\ref{fig:packages}
+describes the packages and lists their sizes in terms of physical lines (or
+newline characters) and non-comment, non-blank (NCNB) lines, which
+disregards lines consisting of only comments or whitespace.  The remainder
+of the analysis uses only the NCNB length, which more accurately reflects
+the amount of source code.
+
+\begin{figure}
+\centering
+{% ``\small'' here has no effect; in a table, each cell is its own group.
+ % It will require a hack to make the table smaller as I'd like it.
+  \setlength{\tabcolsep}{.25em}
+  \input{package_and_sizes-tbl.tex}
+}
+\caption{Analyzed packages and their sizes}
+\label{fig:packages}
+\end{figure}
+
+
+Overall, our analysis confirms that the C preprocessor is used in
+exceptionally broad and diverse ways, complicating the development of C
+programming support tools.  On the other hand, the analysis also convinces
+us that, by extending our analysis framework with some class type
+inferencing techniques (similar to those used by Siff and Reps for C to C++
+translation~\cite{Siff-fse96}, O'Callahan and Jackson for program
+understanding~\cite{OCallahan-icse97}, and others), we can take significant
+steps towards a tool that usefully converts a high percentage of Cpp code
+into C++ language features.\footnote{Preliminary results indicate that many
+  C++ packages rely heavily on Cpp, even when C++ supports a nearly
+  identical language construct, probably due to a combination of trivial
+  translations from C to C++ and of C programmers becoming C++ programmers
+  without changing their habits.} We are interested not in translations
+that merely allow a C program to be compiled by a C++ compiler (which is
+usually easy, by intentional design of C++) but those that take advantage
+of the added richness and benefits of C++ constructs.
+
+In terms of the complexity of preprocessor usage, the results reported here
+contain both good news and bad.  By far
+the largest number of macro definitions and uses are relatively simple, of
+the variety that a programmer could understand without undue effort (although
+perhaps requiring tedious work) or that a relatively unsophisticated tool
+could understand (although in practice very few even try).  Despite the
+preponderance of innocuous macros, the preprocessor is so heavily used that
+the remaining ones are numerically significant.  It is precisely these
+macros that are mostly likely to cause difficulties, and there are enough
+of them to be problematic in practice and to make the effort of
+understanding, annotating, or eliminating them worthwhile.
+
+%% The tool is completely uninteresting; why would anyone care?
+% We wrote a collection of Perl scripts to produce and analyze these data.
+% As we developed them, we slowly shifted from a lexical analysis of the
+% source to a syntactic analysis of the source.  For example, we now properly
+% parse virtually all declarations in every package.  We're pursuing even
+% more analysis, pushing into semantics.  For instance, we can now determine
+% which identifiers are free variables within a defined macro.  We are also
+% close to inferring the types of macro bodies, one of several steps
+% necessary before we can attempt to build a converter from C to C++ which
+% eliminates most macro usages (except for {\tt \#include}).  Such a
+% translator would both enable programmers to shift to C++ and its constructs
+% more easily and simplify the development of source-level debuggers,
+% call graph extractors, and other programming support tools.
+
+
+
+%[FIX: We catch errors that you miss when you look at post-processed code
+%since we look at all branches.]
+%
+%[FIX: Harsh macro examples?  They're in the categorization section, but
+%maybe give some hints here too.]
+
+
 \subsection{Coping with Cpp}
 
 Tools\,---\,and, to a lesser degree, software engineers\,---\,have three
@@ -178,6 +254,7 @@ program which warns of potentially dangerous uses of Cpp.
 %they, too, apply their techniques to post-processed
 %code~\cite{OCallahan-icse97}.
 
+
 \subsection{Cpp: not all bad}
 
 Despite its evident shortcomings, Cpp is a useful and often necessary
@@ -205,118 +282,6 @@ particular configuration of the code.
 Our long-term goal is not to take these useful features away from
 programmers, but to reduce Cpp use, making programs easier for both humans
 and tools to understand.
-
-
-\subsection{The analyses}
-
-To build a better understanding of how the preprocessor is used,
-we wrote tools to analyze preprocessor usage and ran them on {\numpackages}
-C packages comprising {\numlines} lines of code.  Figure~\ref{fig:packages}
-describes the packages and lists their sizes in terms of physical lines (or
-newline characters) and non-comment, non-blank (NCNB) lines, which
-disregards lines consisting of only comments or whitespace.  The remainder
-of the analysis uses only the NCNB length, which more accurately reflects
-the amount of source code.
-
-\begin{figure}
-\centering
-{\small
-  \setlength{\tabcolsep}{.25em}
-  \input{package_and_sizes-tbl.tex}
-}
-\caption{Analyzed packages and their sizes}
-\label{fig:packages}
-\end{figure}
-
-
-Overall, our analysis confirms that the C preprocessor is used in
-exceptionally broad and diverse ways, complicating the development of C
-programming support tools.  On the other hand, the analysis also convinces
-us that, by extending our analysis framework with some class type
-inferencing techniques (similar to those used by Siff and Reps for C to C++
-translation~\cite{Siff-fse96}, O'Callahan and Jackson for program
-understanding~\cite{OCallahan-icse97}, and others), we can take significant
-steps towards a tool that usefully converts a high percentage of Cpp code
-into C++ language features.\footnote{Preliminary results indicate that many
-  C++ packages rely heavily on Cpp, even when C++ supports a nearly
-  identical language construct, probably due to a combination of trivial
-  translations from C to C++ and of C programmers becoming C++ programmers
-  without changing their habits.} We are interested not in translations
-that merely allow a C program to be compiled by a C++ compiler (which is
-usually easy, by intentional design of C++) but those that take advantage
-of the added richness and benefits of C++ constructs.
-
-In terms of the complexity of preprocessor usage, the results reported here
-contain both good news and bad.  By far
-the largest number of macro definitions and uses are relatively simple, of
-the variety that a programmer could understand without undue effort (although
-perhaps requiring tedious work) or that a relatively unsophisticated tool
-could understand (although in practice very few even try).  Despite the
-preponderance of innocuous macros, the preprocessor is so heavily used that
-the remaining ones are numerically significant.  It is precisely these
-macros that are mostly likely to cause difficulties, and there are enough
-of them to be problematic in practice and to make the effort of
-understanding, annotating, or eliminating them worthwhile.
-
-%% The tool is completely uninteresting; why would anyone care?
-% We wrote a collection of Perl scripts to produce and analyze these data.
-% As we developed them, we slowly shifted from a lexical analysis of the
-% source to a syntactic analysis of the source.  For example, we now properly
-% parse virtually all declarations in every package.  We're pursuing even
-% more analysis, pushing into semantics.  For instance, we can now determine
-% which identifiers are free variables within a defined macro.  We are also
-% close to inferring the types of macro bodies, one of several steps
-% necessary before we can attempt to build a converter from C to C++ which
-% eliminates most macro usages (except for {\tt \#include}).  Such a
-% translator would both enable programmers to shift to C++ and its constructs
-% more easily and simplify the development of source-level debuggers,
-% call graph extractors, and other programming support tools.
-
-
-
-%[FIX: We catch errors that you miss when you look at post-processed code
-%since we look at all branches.]
-%
-%[FIX: Harsh macro examples?  They're in the categorization section, but
-%maybe give some hints here too.]
-
-
-\subsection{Who cares?}
-
-The results of this research are of interest to language designers, tool
-writers, programmers, and software engineers.
-
-Language designers can examine uses of the macro system's extra-linguistic
-capabilities to determine what programmers consider missing from the
-language.  Future language specifications can support (or prevent!)\ such
-practices in a more disciplined, structured way.
-
-[[[Think more about this:  Also, how do language choices lead to more/less
-tightly integrated (as opposed to open, component-based) environments?
-E.G., no need for \verb|__LINE__| in Java?]]]
-
-Programming tool writers, too, need to understand how Cpp is used, for that
-sheds insight on the sorts of inputs that will be provided to the tool.  By
-coping with the most common constructs, the tool can provide relatively
-good coverage for low effort.  By identifying problematic uses, much better
-feedback can be given to the programmer, who can be more effective as a
-result.  The analysis results also indicate the difficulty of processing
-preprocessor directives; before these analyses, we did not know whether the
-task was so trivial as to be uninteresting, so difficult as to be not worth
-attempting, or somewhere in between.
-
-The analyses are of interest to programmers who wish to make their code
-cleaner and more portable, and can help them to avoid constructs that cause
-tools (such as test frameworks and program understanding tools)
-to give incomplete or incorrect results.
-
-% Also, learn weird new Cpp tricks!
-
-Finally, our results are of interest to software engineers for all of the
-above reasons and more.  Since this is the first Cpp usage study of which
-we are aware, it is worth performing simply to determine whether the
-results were predictable a priori; we did in fact discover a number of
-interesting features of our suite of programs.
 
 
 \subsection{Outline}
@@ -347,7 +312,10 @@ those that expand to partial syntactic units such as unbalanced
 braces or partial declarations (half of one percent), and others not 
 directly expressible in the programming language (about four percent).
 
-Section~\ref{sec:related} discusses related and future work and concludes.
+Section\~ref{sec:conclusion} discusses the relevance of the research,
+suggests more techniques for mitigating the negative impact of Cpp on
+program understanding, and discusses avenues for future work, while
+section~\ref{sec:related} discusses related work.
 
 
 \section{Occurrence of preprocessor directives}
@@ -497,7 +465,9 @@ system supports.  The presence or absence of a feature requires different
   the percentage of identifiers that are defined a given number of times
   or fewer.  Overall, 96\% of macros were defined three or
   fewer times; the other 4\% of macros had four or more distinct
-  definitions ({\tt \#define} directives).}
+  definitions ({\tt \#define} directives).  The outlier, for which 10\% of
+  macros are defined more than eight times, is the remind
+  package, which uses macros for all user output.}
 \label{fig:freq-def}
 \end{figure}
 
@@ -545,26 +515,27 @@ the package (not in system headers).  About 82\% of all macros were
 expanded eight or fewer times.
 
 It is notable that most packages contain a significant number of defined
-macros that are never expanded.  (Figure~\ref{fig:freq-use} reports only on
-macros defined in a package, not those defined in system or library header
-files, inclusion of which would push the unused percentage well above
-50\%.)  Most packages are in the 4-12\% range, while gnuplot exceeds 40\%.
-Although it's difficult to fully account for the larger numbers,
-contributing factors include a lot of cut-and-paste and a lack of attention
-to implementations for specific platforms in some packages.  Again with
-respect to bounding analysis, covering macros with 10 or fewer uses covers
-approximately 85\% of the cases.
+macros that are never expanded\,---\,on average, over 13\%.
+(Figure~\ref{fig:freq-use} reports only on macros defined in a package, not
+those defined in system or library header files, inclusion of which would
+push the unused percentage well above 50\%.)  Most packages are in the
+4-12\% range, while gnuplot exceeds 40\%.  Although it's difficult to fully
+account for the larger numbers, contributing factors include a lot of
+cut-and-paste and a lack of attention to implementations for specific
+platforms in some packages.  Again with respect to bounding analysis,
+covering macros with 10 or fewer uses covers approximately 85\% of the
+cases.
 
 The tail of this distribution is quite long, indicating that some macros
 are used very heavily.  Ninety-nine percent of macros expanded 147 or fewer
 times, 99.5\% of macros are expanded 273 or fewer times, 99.9\% are
-expanded 882 or fewer times, and python uses {\tt NULL} (which it defines
-itself) 4233 times.  Figure~\ref{fig:freq-use} weights each macro equally
-rather than weighting each macro use equally, which would weight python's
-{\tt NULL} 4233 times more heavily than a macro used only once (and
-infinitely more than a macro never used at all).  Only macros defined in a
-package, and uses in that package, are counted; system macros and uses are
-excluded.
+expanded 882 or fewer times, and python uses {\tt NULL} (which python
+itself defines) 4233 times.  Figure~\ref{fig:freq-use} weights each macro
+equally rather than weighting each macro use equally, which would weight
+python's {\tt NULL} 4233 times more heavily than a macro used only once
+(and infinitely more than a macro never used at all).  Only macros defined
+in a package, and uses in that package, are counted; system macros and uses
+are excluded.
 
 
 \begin{figure}
@@ -592,7 +563,7 @@ In general, packages use macros either to direct conditional compilation or
 to produce code, but not for both purposes; this separation of concerns
 makes the source code easier to understand.  Only 3.1\% of macros expand in
 both code and conditional contexts (the fourth and fifth categories in the
-figure; the sixth, macro and code, accounts for only another 0.2% of macros).
+figure; the sixth, macro and code, accounts for only another 0.2\% of macros).
 Conditional usage is rare in general; conditional compilation accounts for
 half of Cpp directives but only 5.4\% of macros (plus the categories just
 listed above).
@@ -656,7 +627,7 @@ assigns to different variables at different invocations.\footnote{By
 of dynamic scoping by capturing the version of a variable at the point of
 macro invocation.
 
-% Computed ``10% use assignment'' from CATEGORIES_NI lines of *.stat files.
+% Computed ``10\% use assignment'' from CATEGORIES_NI lines of *.stat files.
 
 % Problem: can't figure out how to get typewriter curly braces in footnote.
 \item[Statement]  The macro body is a complete statement such as
@@ -805,6 +776,126 @@ conflicts will demonstrate that they present no real obstacles to
 understanding (even if they do complicate some details).
 
 
+\section{Conclusions}
+\label{sec:conclusion}
+
+% \subsection{Who cares?}
+\subsection{Relevance of the results}
+
+The results of this research are of interest to language designers, tool
+writers, programmers, and software engineers.
+
+Language designers can examine uses of the macro system's extra-linguistic
+capabilities to determine what programmers consider missing from the
+language.  Future language specifications can support (or prevent!)\ such
+practices in a more disciplined, structured way.
+
+% [[[Think more about this:  Also, how do language choices lead to more/less
+% tightly integrated (as opposed to open, component-based) environments?
+% E.G., no need for \verb|__LINE__| in Java?]]]
+
+Programming tool writers, too, need to understand how Cpp is used, for that
+sheds insight on the sorts of inputs that will be provided to the tool.  By
+coping with the most common constructs, the tool can provide relatively
+good coverage for low effort.  By identifying problematic uses, much better
+feedback can be given to the programmer, who can be more effective as a
+result.  The analysis results also indicate the difficulty of processing
+preprocessor directives; before these analyses, we did not know whether the
+task was so trivial as to be uninteresting, so difficult as to be not worth
+attempting, or somewhere in between.
+
+The analyses are of interest to programmers who wish to make their code
+cleaner and more portable, and can help them to avoid constructs that cause
+tools (such as test frameworks and program understanding tools)
+to give incomplete or incorrect results.
+
+% Also, learn weird new Cpp tricks!
+
+Finally, our results are of interest to software engineers for all of the
+above reasons and more.  Since this is the first Cpp usage study of which
+we are aware, it is worth performing simply to determine whether the
+results were predictable a priori; we did in fact discover a number of
+interesting features of our suite of programs.
+
+
+\subsection{Making C programs easier to understand}
+
+The combination of C and Cpp makes a source text unnecessarily difficult to
+understand.  A good first step is to eliminate Cpp uses where an equivalent
+C or C++ construct exists, and to apply tools to explicate the remaining
+uses.  Here we discuss a few approaches to solving this problem by
+eliminating the source of confusion rather than applying tools.  We do not
+seriously consider simply eliminating the preprocessor, for it provides
+conveniences and functionality not present in the language.
+
+Since many of the most problematic uses of Cpp provide portability across
+different language dialects or different operating environments,
+standardization can obviate many such uses.  Canonicalizing library
+function names and calling conventions makes conditional compilation less
+necessary and incidentally makes all programs more portable, even those
+which have not gone to special effort to achieve portability.  This
+proposal moves the responsibility for portability (really, conformance to a
+specification) from the application program into the library or operating
+system, which is a reasonable design choice since many application programs
+rely on a much smaller number of libraries and run on relatively few
+operating systems.
+
+Likewise, the most common single cause for Cpp directives would be
+eliminated if the C language and its dialects had only a single declaration
+syntax.  Because most C compilers, and all C++ compilers, accept ANSI-style
+declarations, much support for multiple declaration style may have outlived
+its usefulness.  We are investigating the effect on our statistics (and
+program understandability) of ``partially evaluating'' a program source by
+specifying the definedness and values of some Cpp identifiers.
+
+Some Cpp directives, such as {\tt \#include}, can be moved into the
+language proper; this would also eliminate the need for Cpp constructs that
+prevent multiple inclusion of header files.  Likewise, compilers that do a
+good job of constant-folding and dead code elimination can encourage
+programmers to use language constructs rather than relying on the
+guarantees of an extra-linguistic tool like Cpp.
+
+Cpp constructs meant for specific purposes could be replaced by a
+special-purpose syntax for those frequently-occurring cases.  For instance,
+declarations or partial declarations could be made explicit (perhaps
+first-class) objects.  Manipulations of these objects would then be
+performed through a clearly-specified interface rather than via string
+concatenation, easing the understanding burden on the programmer.  Such
+uses would also be visible to the compiler and could be checked and
+reasonable error messages provided.  The downside of this approach is the
+introduction of a new syntax or new library functions which may not
+simplify the program text and which cannot cover all cases, only a few
+specified ones.
+
+An alternative approach which avoids the clumsiness of a separate language
+of limited expressibility is to make the macro language more
+powerful\,---\,perhaps even using the language itself via constructs
+evaluated at compile time rather than run time.  (The macro systems of
+Common Lisp and Scheme, and their descendants~\cite{WeiseC93} take this
+approach.)  An extreme example would be to provide a full-fledged
+reflection capability.  Such an approach is highly general, powerful, and
+and theoretically clean; it circumvents many of the limitations of Cpp.
+However, this approach does {\em not} lead to more understandable programs
+and may result in just the opposite.  As difficult as it may be to
+determine what output a macroless program produces, it can be just as
+difficult simply to determine the text of a program which uses such macros.
+(In practice, such systems are used in fairly restricted ways.)  A dialog
+among users, compiler writers, tool writers, and language theorists is
+necessary when introducing a feature in order to prevent unforeseen
+consequences from turning it into a burden.
+
+
+%% See slide 15 and its notes from Mike's quals talk.
+% \subsection{Future work}
+% 
+% These results suggest a wide variety of future avenues for research, both
+% in terms of expanding our understanding of uses of the preprocessor in
+% practice and in addressing the issues identified by this study.
+% 
+%   We are
+% pursuing a number of these 
+
+
 \section{Related work}
 \label{sec:related}
 
@@ -867,7 +958,7 @@ code without requiring human interaction or producing misleading results.
 %% FIX: If we could also list the platforms for which each can compile,
 %% that would be great, but I doubt the benefit is worth the effort for now
 
-Krone and Snelting use mathematical foundations analysis to determine the
+Krone and Snelting use mathematical concept analysis to determine the
 conditional compilation structure of code~\cite{Krone94}.  They determine,
 for each line, which preprocessor macros it depends upon, and display that
 information in a lattice.  They do not determine how macros depend upon one
