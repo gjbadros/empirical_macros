@@ -21,6 +21,8 @@ sub AddHook {
 
 sub Startup {
   print STDERR "STARTUP...\n";
+#  open(CPP,">cpp.listing") || die "Could not open output file: $!";
+  *CPP = *STDERR;
   open(CHOUT,">chout.listing") || die "Could not open output file: $!";
   open(TOKEN,">token.listing") || die "Could not open output file: $!";
   open(MAPPING,">mapping") || die "Could not open output file: $!";
@@ -45,18 +47,20 @@ sub Exit {
 
 sub do_define {
   my ($body) = @_;
-  print "In do_define w/ body = $body\n";
+  print CPP "In do_define w/ body = $body\n";
 }
 
 sub handle_directive {
   my ($body) = @_;
-  print "In handle_directive for $body\n";
+  print CPP "In handle_directive for $body\n";
 }
 
 sub create_def {
   my ($name, $expn, $nargs, $simp_expn, $file, $line, 
       $backward_argnames_string, $def_flags,
       @currpat) = @_;
+  my $old = select;
+  select CPP;
   print "Create def for \"$name\": \"$expn\"\n";
   print "nargs = ", $nargs, "\n";
   print "simp_expn = \"", $simp_expn, "\"", "\n";
@@ -70,12 +74,15 @@ sub create_def {
     print "$argnames[$currpat[0]], $currpat[1], $currpat[2]\n";
     splice(@currpat,0,3);
   }
+  select $old;
 }
 
 sub create_predef {
   my ($name, $expn, $nargs, $simp_expn, $file, $line, 
       $backward_argnames_string, $def_flags,
       @currpat) = @_;
+  my $old = select;
+  select CPP;
   print "PREDEF for \"$name\": \"$expn\"\n";
   print "nargs = ", $nargs, "\n";
   print "simp_expn = \"", $simp_expn, "\"", "\n";
@@ -89,6 +96,7 @@ sub create_predef {
     print "$argnames[$currpat[0]], $currpat[1], $currpat[2]\n";
     splice(@currpat,0,3);
   }
+  select $old;
 }
 
 sub cpp_out {
@@ -106,32 +114,36 @@ sub cpp_out {
 
 sub cpp_error {
   my ($file,$line,$col,$msg) = @_;
-  print "cpp_error: $file:$line:$col, $msg\n";
+  print CPP "cpp_error: $file:$line:$col, $msg\n";
 }
 
 sub do_undef {
   my ($keyword, $cDeletes) = @_;
-  print "do_undef of $keyword ($cDeletes deleted)\n";
+  print CPP "do_undef of $keyword ($cDeletes deleted)\n";
 }
 
 sub delete_def {
   my ($keyword, $fExists) = @_;
-  print "delete_def $keyword, $fExists\n";
+  print CPP "delete_def $keyword, $fExists\n";
 }
 
 sub macro_cleanup {
-  my ($mname, $s_start, $s_end) = @_;
+  my ($mname, $s_start, $s_end, $cnexted, @nests) = @_;
   my $offset  = cpp::CchOffset();
   my $cbb = cpp::CbuffersBack();
   my $cbytesOutput = cpp::CbytesOutput();
   my $fname = cpp::Fname();
+  my $old = select;
+  select CPP;
   print "macro_cleanup $mname; [$s_start - $s_end] source $offset, $cbb; output $cbytesOutput\n";
+  print " : nests = ", join("->",@nests), "\n";
   if ($cbb == 1) {
     $top_level_full_expansion =~ s%\n%\\n\\%g;
     print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'doc \"$mname final expansion: $top_level_full_expansion\")\n";
     $top_level_full_expansion = "";
     $top_level_mname = "";
   }
+  select $old;
 }
 
 sub macro_arg_exp  {
@@ -152,6 +164,8 @@ sub expand_macro {
   my $call_length = length("$mname$raw_call");
   my $cbuffersBack;
   my $fname = cpp::Fname();
+  my $old = select;
+  select CPP;
 
   print "\nexpand_macro $mname = ", cpp::ExpansionLookup($mname), ", source offset: $s_start - $s_end, $cbuffersDeep [$has_escapes]; ", 
       cpp::FExpandingMacros(), " in $fname\n";
@@ -178,18 +192,19 @@ sub expand_macro {
     }
     print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'doc \"$mname expands to $expansion\")\n";
   }
+  select $old;
 }
 
 sub ifdef_macro {
   my ($mname,$expansion,$length,$raw_call,$cargs) = @_;
   my $start = cpp::CbytesOutput()+1;
   my $end = $start + $length - 3; # Subtract off for the @ @, and it's an inclusive range
-  print "ifdef_macro $mname => $expansion (offset $start - $end)\n";
+  print CPP "ifdef_macro $mname => $expansion (offset $start - $end)\n";
 }
 
 sub special_symbol {
   my ($symbol,$enum_node_type) = @_;
-  print "special_symbol $symbol => $node_type_name[$enum_node_type]\n";
+  print CPP "special_symbol $symbol => $node_type_name[$enum_node_type]\n";
 }
 
 # FIX: this lines wrong is wrong
@@ -207,49 +222,49 @@ sub string_constant {
 
 sub do_include {
   my ($keyword, $file, $flags) = @_;
-  print "do_include $keyword -> ", simplify_path_name($file),";  $flags\n";
+  print CPP "do_include $keyword -> ", simplify_path_name($file),";  $flags\n";
 #  print "Was working on: ", cpp::Fname(), "\n";
 }
 
 sub do_if {
   my ($conditional, $skipped, $value) = @_;
-  print "do_if on $conditional evals to $value ";
-  print ", skipping $skipped" if $skipped ne "";
-  print "\n";
+  print CPP "do_if on $conditional evals to $value ";
+  print CPP ", skipping $skipped" if $skipped ne "";
+  print CPP "\n";
 }
 
 sub do_elif {
   my ($conditional, $skipped, $value) = @_;
-  print "do_elif_eval on $conditional ($skipped) evals to $value\n";
+  print CPP "do_elif_eval on $conditional ($skipped) evals to $value\n";
 }
 sub do_xifdef {
   my ($kind,$conditional, $trailing_garbage, $skipped, $value) = @_;
-  print "do_xifdef ($kind) on $conditional [$trailing_garbage] ($skipped) evals to $value\n";
+  print CPP "do_xifdef ($kind) on $conditional [$trailing_garbage] ($skipped) evals to $value\n";
 }
 
 sub do_ifdef {
   my ($conditional, $trailing_garbage, $skipped, $value) = @_;
-  print "do_ifdef on $conditional [$trailing_garbage] ($skipped) evals to $value\n";
+  print CPP "do_ifdef on $conditional [$trailing_garbage] ($skipped) evals to $value\n";
 }
 
 sub do_ifndef {
   my ($kind,$conditional, $trailing_garbage, $skipped, $value) = @_;
-  print "do_ifndef on $conditional [$trailing_garbage] ($skipped) evals to $value\n";
+  print CPP "do_ifndef on $conditional [$trailing_garbage] ($skipped) evals to $value\n";
 }
 
 sub do_else {
   my ($orig_conditional, $trailing_garbage, $skipped) = @_;
-  print "do_else (orig conditional was $orig_conditional) [$trailing_garbage] skipped $skipped\n";
+  print CPP "do_else (orig conditional was $orig_conditional) [$trailing_garbage] skipped $skipped\n";
 }
 
 sub do_endif {
   my ($orig_conditional, $trailing_garbage) = @_;
-  print "do_endif (orig conditional was $orig_conditional) [$trailing_garbage]\n";
+  print CPP "do_endif (orig conditional was $orig_conditional) [$trailing_garbage]\n";
 }
 
 sub add_import {
   my ($filename, $f) = @_;
-  print "do_import on $filename, $f\n"
+  print CPP "do_import on $filename, $f\n"
 }
 
 sub include_file {
@@ -268,9 +283,9 @@ sub Got_token {
   my ($token,$sz) = @_;
   my @history = cpp::MacroExpansionHistory();
   my $argno = cpp::ArgOf();
-  print  "TOKEN: $sz;", substr($token,4),", FExpandingMacros = ",cpp::FExpandingMacros(),
+  print  TOKEN "TOKEN: $sz;", substr($token,4),", FExpanidngMacros = ",cpp::FExpandingMacros(),
    ", CchOffset = ", cpp::CchOffset(), "; CbytesOutput = ", cpp::CbytesOutput(),";", join("<-",@history),"\n";
-  print ": ArgOf = ", $argno, "\n";
+  print TOKEN ": ArgOf = ", $argno, "\n";
 
   my $end = cpp::CbytesOutput()+1;
   my $start = $end-length($sz);

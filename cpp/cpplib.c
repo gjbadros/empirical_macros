@@ -651,7 +651,7 @@ make_assertion (pfile, option, str)
   
   ip = cpp_push_buffer (pfile, buf, strlen (buf));
   do_assert (pfile, NULL, NULL, NULL);
-  cpp_pop_buffer (pfile);
+  cpp_pop_buffer (pfile,0);
 }
 
 /* Append a chain of `struct file_name_list's
@@ -827,13 +827,13 @@ null_underflow (pfile)
 }
 
 int
-null_cleanup (cpp_buffer *pbuf, cpp_reader *pfile)
+null_cleanup (cpp_buffer *pbuf, cpp_reader *pfile, cpp_expand_info *pcei)
 {
   return 0;
 }
 
 int
-macro_cleanup (cpp_buffer *pbuf, cpp_reader *pfile)
+macro_cleanup (cpp_buffer *pbuf, cpp_reader *pfile, cpp_expand_info *pcei)
 {
   int ichSourceStart = pbuf->ichSourceStart;
   int ichSourceEnd = pbuf->ichSourceEnd;
@@ -842,8 +842,8 @@ macro_cleanup (cpp_buffer *pbuf, cpp_reader *pfile)
     macro->type = T_MACRO;
   if (macro->type != T_MACRO || pbuf->buf != macro->value.defn->expansion)
     free (pbuf->buf);
-  gjb_call_hooks_sz_i_i(CPP_OPTIONS(pfile),HI_MACRO_CLEANUP,
-			macro->name,ichSourceStart,ichSourceEnd);
+  gjb_call_hooks_macro_cleanup(CPP_OPTIONS(pfile),HI_MACRO_CLEANUP,
+			       macro->name,ichSourceStart,ichSourceEnd,pcei);
   free(pbuf->args);
   pbuf->args = 0;
   return 0;
@@ -909,7 +909,7 @@ skip_comment (pfile, linep)
   int c;
   unsigned char *pchStart = CPP_BUFFER(pfile)->cur+1;
   long lineStart = linep? *linep:0; // CPP_BUFFER(pfile)->lineno;
-  long linep_dummy;
+  long linep_dummy = 0;
   if (linep == NULL)
     linep = &linep_dummy;
 
@@ -1948,15 +1948,15 @@ cpp_push_buffer (cpp_reader *pfile, U_CHAR *buffer, long length)
 }
 
 cpp_buffer*
-cpp_pop_buffer (cpp_reader *pfile)
+cpp_pop_buffer (cpp_reader *pfile, cpp_expand_info *pcei)
 {
   cpp_buffer *buf = CPP_BUFFER (pfile);
 #ifdef STATIC_BUFFERS
-  (*buf->cleanup) (buf, pfile);
+  (*buf->cleanup) (buf, pfile, pcei);
   return ++CPP_BUFFER (pfile);
 #else
   cpp_buffer *next_buf = CPP_PREV_BUFFER (buf);
-  (*buf->cleanup) (buf, pfile);
+  (*buf->cleanup) (buf, pfile, pcei);
   CPP_BUFFER (pfile) = next_buf;
   free (buf);
   return next_buf;
@@ -1977,7 +1977,7 @@ cpp_scan_buffer (cpp_reader *pfile, cpp_expand_info *pcei)
 	break;
       if (token == CPP_POP && CPP_BUFFER (pfile) == buffer)
 	{
-	  cpp_pop_buffer (pfile);
+	  cpp_pop_buffer (pfile, pcei);
 	  break;
 	}
     }
@@ -2987,17 +2987,17 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
 		 So compute its expansion, if we have not already.  */
 	      if (args[ap->argno].expand_length < 0)
 		{
-		  cpp_expand_info cei;
-		  cei.argno = ap->argno;
-		  cei.hp  = hp;
-		  cei.pceiPrior = pcei;
-		  cei.offset = args[ap->argno].offset;
-		  cei.length = args[ap->argno].raw_length;
+		  cpp_expand_info *pceiNew = calloc(1,sizeof(cpp_expand_info));
+		  pceiNew->argno = ap->argno;
+		  pceiNew->hp  = hp;
+		  pceiNew->pceiPrior = pcei;
+		  pceiNew->offset = args[ap->argno].offset;
+		  pceiNew->length = args[ap->argno].raw_length;
 		  args[ap->argno].expanded = CPP_WRITTEN (pfile);
 		  cpp_expand_to_buffer (pfile,
 					ARG_BASE + args[ap->argno].raw,
 					args[ap->argno].raw_length,
-					&cei);
+					pceiNew);
 
 		  args[ap->argno].expand_length
 		    = CPP_WRITTEN (pfile) - args[ap->argno].expanded;
@@ -3160,7 +3160,6 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
     cpp_buffer *buffer = CPP_BUFFER(pfile);
     assert (i>0);
     
-    fprintf(stderr,"Expanding an expansion; %d vs %d\n",cexpansionsDeep,cbuffersDeep);
     while (buffer != CPP_NULL_BUFFER(pfile)) 
       {
       assert (buffer->nominal_fname == 0);
@@ -3171,7 +3170,6 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
       }
     ichSourceStart = buffer->ichSourceStart;
     ichSourceEnd = buffer->ichSourceEnd;
-    fprintf(stderr," : would use %d - %d\n",ichSourceStart,ichSourceEnd);
     }
 
   if (cbuffersDeep == 0 || CPP_BUFFER(pfile)->has_escapes) 
@@ -4926,7 +4924,7 @@ cpp_get_token (cpp_reader *pfile, cpp_expand_info *pcei)
     handle_eof:
       if (CPP_BUFFER (pfile)->seen_eof)
 	{
-	  if (cpp_pop_buffer (pfile) != CPP_NULL_BUFFER (pfile)) 
+	  if (cpp_pop_buffer (pfile,pcei) != CPP_NULL_BUFFER (pfile)) 
 	    goto get_next;
 	  else
 	    return CPP_EOF;
@@ -5100,7 +5098,7 @@ cpp_get_token (cpp_reader *pfile, cpp_expand_info *pcei)
 			cpp_buffer *next_buf
 			    = CPP_PREV_BUFFER (CPP_BUFFER (pfile));
 			(*CPP_BUFFER (pfile)->cleanup)
-			    (CPP_BUFFER (pfile), pfile);
+			    (CPP_BUFFER (pfile), pfile, pcei);
 			CPP_BUFFER (pfile) = next_buf;
 			continue;
 		    }
@@ -5471,7 +5469,7 @@ cpp_get_token (cpp_reader *pfile, cpp_expand_info *pcei)
 		  if (PEEKC () != EOF)
 		    break;
 		  next_buf = CPP_PREV_BUFFER (CPP_BUFFER (pfile));
-		  (*CPP_BUFFER (pfile)->cleanup) (CPP_BUFFER (pfile), pfile);
+		  (*CPP_BUFFER (pfile)->cleanup) (CPP_BUFFER (pfile), pfile, pcei);
 		  CPP_BUFFER (pfile) = next_buf;
 	        }
 	      parse_set_mark (&macro_mark, pfile);
@@ -5944,7 +5942,7 @@ finclude (pfile, f, fname, system_header_p, dirptr)
     {
       cpp_perror_with_name (pfile, fname);
       close (f);
-      cpp_pop_buffer (pfile);
+      cpp_pop_buffer (pfile,0);
       return 0;
     }
 
@@ -7106,7 +7104,7 @@ cpp_cleanup (cpp_reader *pfile)
 {
   int i;
   while ( CPP_BUFFER (pfile) != CPP_NULL_BUFFER (pfile))
-    cpp_pop_buffer (pfile);
+    cpp_pop_buffer (pfile, 0);
 
   if (pfile->token_buffer)
     {

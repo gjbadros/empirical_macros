@@ -75,6 +75,9 @@ void gjb_call_hooks_expansion(struct cpp_reader *pfile, HOOK_INDEX ih,
 			      cpp_expand_info *pcei,
 			      int nargs, struct argdata *args);
 
+void gjb_call_hooks_macro_cleanup(struct cpp_options *opts, HOOK_INDEX ih,
+				  char *sz1, int i1, int i2, cpp_expand_info *pcei);
+
 void gjb_call_hooks_sz_szl_szl(struct cpp_options *, HOOK_INDEX, 
 			       char *, char *, int, char *, int);
 

@@ -329,6 +329,36 @@ gjb_call_hooks_expansion(struct cpp_reader *pfile, HOOK_INDEX ih,
 }
 
 
+
+void
+gjb_call_hooks_macro_cleanup(struct cpp_options *opts, HOOK_INDEX ih,
+			     char *sz1, int i1, int i2, cpp_expand_info *pcei)
+{
+  SV *psvFunc = NULL;
+  int cNestedArgExpansions = CNestedArgExpansions(pcei);
+
+  dSP;
+  
+  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+    return;
+
+  PUSHMARK(sp);
+  XPUSHs(sv_2mortal(newSVpv(sz1, 0)));
+  XPUSHs(sv_2mortal(newSViv(i1)));
+  XPUSHs(sv_2mortal(newSViv(i2)));
+  XPUSHs(sv_2mortal(newSViv(cNestedArgExpansions)));
+  while (pcei != NULL) 
+    {
+    XPUSHs(sv_2mortal(newSVpvf("%s#%d[%d]",pcei->hp->name,pcei->argno,
+			       pcei->offset)));
+    pcei = pcei->pceiPrior;
+    }
+  PUTBACK ;
+     
+  perl_call_sv(psvFunc, G_DISCARD);
+}
+
+
 void
 gjb_call_hooks_sz_szl_szl(struct cpp_options *opts, HOOK_INDEX ih,
 			  char *sz, char *sz1, int cch1, char *sz2, int cch2)

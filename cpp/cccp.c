@@ -1137,7 +1137,7 @@ static U_CHAR *skip_paren_group PROTO((FILE_BUF *));
 enum file_change_code {same_file, enter_file, leave_file};
 static void output_line_directive PROTO((FILE_BUF *, FILE_BUF *, int, enum file_change_code));
 
-static void macroexpand PROTO((HASHNODE *, FILE_BUF *));
+static void macroexpand PROTO((HASHNODE *, FILE_BUF *, cpp_expand_info *pcei));
 
 struct argdata;
 static char *macarg PROTO((struct argdata *, int));

@@ -83,7 +83,7 @@ enum cpp_token {
 #endif /* !PARAMS */
 
 typedef enum cpp_token (*parse_underflow_t) PARAMS((cpp_reader*, cpp_expand_info *));
-typedef int (*parse_cleanup_t) PARAMS((cpp_buffer *, cpp_reader*));
+typedef int (*parse_cleanup_t) PARAMS((cpp_buffer *, cpp_reader*, cpp_expand_info *));
 
 /* A parse_marker indicates a previous position,
    which we can backtrack to. */
@@ -685,7 +685,7 @@ extern void cpp_pfatal_with_name ();
 extern void cpp_grow_buffer PARAMS ((cpp_reader*, long));
 extern int cpp_parse_escape PARAMS ((cpp_reader*, char**));
 extern cpp_buffer* cpp_push_buffer PARAMS ((cpp_reader *, U_CHAR*, long));
-extern cpp_buffer* cpp_pop_buffer PARAMS ((cpp_reader *));
+extern cpp_buffer* cpp_pop_buffer PARAMS ((cpp_reader *, cpp_expand_info *pcei));
 
 extern cpp_hashnode* cpp_lookup PARAMS ((cpp_reader*, const U_CHAR*,
 					 int, int));
