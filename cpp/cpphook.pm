@@ -211,7 +211,7 @@ sub create_predef {
 
 sub cpp_out {
   my ($sz) = @_;
-  my $cch_output = cpp::CbytesOutput();
+  my $cch_output = cpp::CchOutput();
   my $cch_offset = cpp::CchOffset();
   print MAPPING "'($cch_offset . $cch_output)\n";
   if ($top_level_mname ne "") {
@@ -254,7 +254,7 @@ sub macro_cleanup {
   my ($mname, $s_start, $s_end, $cnexted, @nests) = @_;
   my $offset  = cpp::CchOffset();
   my $cbb = cpp::CbuffersBack();
-  my $cbytesOutput = cpp::CbytesOutput();
+  my $cbytesOutput = cpp::CchOutput();
   my $fname = cpp::Fname();
   my $old = select;
   select CPP;
@@ -311,8 +311,7 @@ sub expand_macro {
   my $cnested = shift @rest;
   my @nests = splice(@rest,0,$cnested);
   my ($cargs,@args) = @rest;
-  my ($exp_offset, $cbb) = cpp::SumCchExpansionOffset();
-  my $cBytesOutput = cpp::CbytesOutput();
+  my $cBytesOutput = cpp::CchOutput();
   my $start = $cBytesOutput + 1 + $exp_offset - ($cbb > 0? $length - 1:0);
   my $end = $start + $length;
   my $call_length = length("$mname$raw_call");
@@ -354,7 +353,7 @@ sub expand_macro {
 
 sub ifdef_macro {
   my ($mname,$expansion,$length,$raw_call,$cargs) = @_;
-  my $start = cpp::CbytesOutput()+1;
+  my $start = cpp::CchOutput()+1;
   my $end = $start + $length - 3; # Subtract off for the @ @, and it's an inclusive range
   print CPP "ifdef_macro $mname => $expansion (offset $start - $end)\n";
 }
@@ -378,8 +377,8 @@ sub string_constant {
 }
 
 sub do_include {
-  my ($keyword, $file, $flags) = @_;
-  print CPP "do_include $keyword -> ", simplify_path_name($file),";  $flags\n";
+  my ($file_as_given, $file_as_resolved, $flags) = @_;
+  print CPP "do_include $file_as_given -> ", simplify_path_name($file_as_resolved),";  $flags\n";
 #  print "Was working on: ", cpp::Fname(), "\n";
 }
 
@@ -485,14 +484,18 @@ sub Got_token {
 
   $argof = cpp::ArgOf();
   print  TOKEN "TOKEN: $raw;", substr($token,4),", FExpandingMacros = ",cpp::FExpandingMacros(),
-   ", CchOffset = $fname:", cpp::CchOffset(), "; CbytesOutput = ", cpp::CbytesOutput(),"\n";
+   ", CchOffset = $fname:", cpp::CchOffset(), "; CchOutput = ", cpp::CchOutput(),"\n";
   print TOKEN ": Nests: ",join("<-",@nests),"\n";
   print TOKEN ": History: ",join("<-",@history),"\n";
   print TOKEN ": From $mname\n";
   print TOKEN ": ArgOf = $argof vs. Argno = $argno\n";
+  if ($raw =~ m/^[\w\$]+$/) {
+    print TOKEN ": ", cpp::FLookupSymbol($raw)? "Found symbol" : "Not found", "\n";
+  }
 
-  my $end = cpp::CbytesOutput()+1;
+  my $end = cpp::CchOutput()+1;
   my $start = $end-length($raw);
+  @history = @nests; # FIXGJB: this is a hack, since stuff not getting passed
   if ($#history >= 0) {
     print TP "#out:(put-face-property-if-none $start $end \'italic)\n";
     print TP "#out:(put-mouse-face-property-if-none $start $end \'highlight)\n";
