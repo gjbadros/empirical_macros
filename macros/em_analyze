@@ -1517,7 +1517,7 @@ sub compute_transitive_dependences ( )
 sub compute_transitive_file_dependences ( )
 { check_args(0, @_);
 
-  if ($opt_v) { print "Computing transitive file dependences...\n"; }
+  if ($opt_v) { print STDERR "Computing transitive file dependences...\n"; }
 
   %local_inclusion_dependenton = ();
   %local_inclusion_dependees = ();
@@ -1581,7 +1581,7 @@ sub compute_transitive_file_dependences ( )
 sub compute_transitive_macro_dependences ( )
 { check_args(0, @_);
 
-  if ($opt_v) { print "Computing transitive macro dependences...\n"; }
+  if ($opt_v) { print STDERR "Computing transitive macro dependences...\n"; }
 
   %local_inclusion_dependenton = ();
   %local_inclusion_dependees = ();
