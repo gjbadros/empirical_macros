@@ -33,6 +33,29 @@ require Exporter;
  $ccatPORT_FEATURE $ccatPORT_MACHINE
  $ccatCOMMENTING $ccatMI_PREVENTION
  $ccatREDEF_SUPPRESION $ccatMISC_SYSTEM $ccatOTHER $ccatMIXED
+
+ $c_reserved_type_word_alternatives $c_reserved_nontype_word_alternatives
+ $c_plus_plus_reserved_type_word_alternatives
+ $c_plus_plus_reserved_nontype_word_alternatives $reserved_type_word_re
+ $reserved_nontype_word_re $reserved_word_re
+
+ $constant_exp_re $constant_or_upcase_exp_re $float_literal_whole_re
+ $float_literal_frac_re $float_literal_exp_re $float_literal_noexp_re
+ $hex_literal_re $dec_oct_literal_re $number_literal_re
+ $char_literal_contents_re $char_literal_re $non_escaped_double_quote_re
+ $string_literal_re
+
+ $identifier_no_dollar_re $identifier_re $type_specifier_re $type_special
+ $type_re_special_1 $type_re_special_2 $type_re_special $type_suffix_re
+ $type_re $type_qualifier_re $pointer_declarator_prefix_re
+ $pointer_declarator_prefixes_re $array_declarator_suffix_re
+ $array_declarator_suffixes_re $declarator_unparenthesized_re
+ $declarator_parenthesized_re $declarator_re $type_declarator_re
+ $simple_arglist_re $type_declarator_arglist_re $numeric_type_word_re
+ $numeric_type_re $non_numeric_type_re $builtin_type_base_re
+ $builtin_type_re $numeric_binop_regexp $bool_binop_regexp
+ $arb_type_binop_regexp $binop_regexp $prefix_unop_regexp
+ $postfix_unop_regexp $selector_regexp
 );
 #End of @EXPORT
 
@@ -113,22 +136,22 @@ $catSTRINGIZE = 24;
 $catLast = 24;
 
 @categoryname = (
-		    'uncategorized', 'being_categorized', 'never_defined',
-		    'multiply_categorized', 'null_define',
-		    'expression', 'expression_with_assignment',
-		    'expression_with_free_variables',
-		    'literal', 'constant', 'some_constant',
-		    'failed_categorization', 'has_type_argument',
-		    'macro_as_function', 'macro_as_type',
-                    'uses_type_argument',
-		    'assembly_code', 'syntax_tokens',
-		    'expands_to_type', 'expands_to_reserved_word',
-		    'statement',
-                    'recursive',
-		    'mismatched_entities',
-		    'token_pasting',
-		    'stringization',
-		   );
+		 'uncategorized', 'being_categorized', 'never_defined',
+		 'multiply_categorized', 'null_define',
+		 'expression', 'expression_with_assignment',
+		 'expression_with_free_variables',
+		 'literal', 'constant', 'some_constant',
+		 'failed_categorization', 'has_type_argument',
+		 'macro_as_function', 'macro_as_type',
+		 'uses_type_argument',
+		 'assembly_code', 'syntax_tokens',
+		 'expands_to_type', 'expands_to_reserved_word',
+		 'statement',
+		 'recursive',
+		 'mismatched_entities',
+		 'token_pasting',
+		 'stringization',
+		 );
 
 # Conditional Categories (for #if.* preprocessor directives)
 @cond_category_name = qw(debug portability_language_or_library portability_language_macro
@@ -259,6 +282,143 @@ $built_in_fake_file = "%Built In%";
 # enumeration for the macros_uses indices
 @i_usage_all = ($i_usage_code, $i_usage_macro, $i_usage_cond) = (0..2);
 
+
+###########################################################################
+### Regular expressions
+###
+
+# Use /o in matches for these, so interpolation/compilation occurs just once.
+# Use single, not double, quotes so as not to lose the backslashes.
+# But note that \\ and \' are interpolated in single-quoted strings.
+# "\b" prevents two words from running up against one another.
+# These regexps are intended not to include any leading or trailing space
+
+### Reserved words
+
+# can appear in a type
+$c_reserved_type_word_alternatives = 'char|const|double|enum|extern|float|int|long|register|short|signed|static|struct|union|unsigned|void|volatile';
+# can't appear in a type
+$c_reserved_nontype_word_alternatives = 'asm|auto|break|case|continue|default|do|else|entry|for|fortran|goto|if|return|sizeof|switch|typedef|while';
+$c_plus_plus_reserved_type_word_alternatives = 'bool|class|friend|inline|private|protected|public|virtual';
+$c_plus_plus_reserved_nontype_word_alternatives = 'asm|catch|const_cast|delete|dynamic_cast|false|mutable|namespace|new|operator|reinterpret_cast|static_cast|template|this|throw|true|try|typeid|using';
+
+$reserved_type_word_re = '\b(' . $c_reserved_type_word_alternatives
+  . '|' . $c_plus_plus_reserved_type_word_alternatives . ')\b';
+$reserved_nontype_word_re = '\b(' . $c_reserved_nontype_word_alternatives
+  . '|' . $c_plus_plus_reserved_nontype_word_alternatives . ')\b';
+$reserved_word_re ='\b(' . $c_reserved_type_word_alternatives
+  . '|' . $c_plus_plus_reserved_type_word_alternatives
+  . '|' . $c_reserved_nontype_word_alternatives
+  . '|' . $c_plus_plus_reserved_nontype_word_alternatives . ')\b';
+
+
+### Literals
+
+# FIX: this regexp is lame-- L,x,U needed for 0x80 << 1LU
+# It also matches whitespace and (bad!) the variable x, etc.
+$constant_exp_re = '[-lLuUxX0-9() \t<>+=*|&%!]+';
+# $like constant_exp_re, but supposed to match macro uses too.
+$constant_or_upcase_exp_re = '[-a-zA-Z_lLuUxX0-9() \t<>+=*|&%!]+';
+
+# Numeric literals
+# floating-point number (four variants): $1 = exponent, $2 = suffix (fFlL)
+$float_literal_whole_re = '[-+]?\d+\.\d*([eE][-+]?\d+)?([fFlL]?)'; # decimal 2.
+$float_literal_frac_re = '[-+]?\d*\.\d+([eE][-+]?\d+)?([fFlL]?)'; # fraction .2
+$float_literal_exp_re = '[-+]?\d+([eE][-+]?\d+)([fFlL]?)'; # exponent 1e37
+$float_literal_noexp_re = '[-+]?\d+()([fF])'; # no exponent 22f
+# integer regexp: $1 = number, $2 = suffix (uUlL); permit two L's for GNU extension
+$hex_literal_re = '(0[xX][0-9a-fA-F]+)([uUlL]?[uUlL]?[uUlL]?)'; # regexp failed with \d for 0-9
+$dec_oct_literal_re = '(\d+)([uUlL]?[uUlL]?[uUlL]?)';
+# Using this is probably ill-advised.
+$number_literal_re = '((' . join(')|(', $float_literal_whole_re, $float_literal_frac_re, $float_literal_exp_re, $float_literal_noexp_re, $hex_literal_re, $dec_oct_literal_re) . '))';
+
+# Character and string literals
+# NOTE: GJB changed the below to {1,3}, but ANSI requires exactly 3 --
+# will just evilprint an error.  Changed back to 3
+$char_literal_contents_re = '(\\\\?.|\\\\[0-7]{3})';
+$char_literal_re = "L?'" . $char_literal_contents_re . "'";
+$non_escaped_double_quote_re = '(^|[^\\\\])(\\\\\\\\)*\"';
+# non-greedy '.*?' because '.*' matches too much, skips over intervening quotes
+$string_literal_re = 'L?\"(|.*?[^\\\\])(\\\\\\\\)*\"'; # string literal
+
+### Types
+
+# Types and declarations/definitions.
+# In general, use $identifier_re in preference to "\w+"
+$identifier_no_dollar_re = '\b[a-zA-Z_]\w*\b';	# 0 groups
+# Fix: $ as first character doesn't work: the leading \b won't match.
+$identifier_re = '\b[a-zA-Z_\$][a-zA-Z0-9_\$]*\b';	# 0 groups
+$type_specifier_re = $identifier_re . '(?:\s+' . $identifier_re. ')*'; # 0 groups
+# Gross special case.  I'm sorry.  [I think this isn't necessary any more.]
+# Don't combine with type_re because that is sometimes combined with
+# $type_declarator_re, which must match before $type_re but after this.
+$type_special = 'int (*)(dc_num, dc_num, int, dc_num *)';
+# Can't get \Q, \E to work.
+# my $type_re_special = '(?:\Q$type_special\E)';	# 0 groups
+# my $type_re_special = "(?:\\Q$type_special\\E)";
+$type_re_special_1 = 'int \(\*\)\(dc_num, dc_num, int, dc_num \*\)';
+$type_re_special_2 = 'int \(\*\)\(void\)';
+$type_re_special = '(?:' . $type_re_special_1 . '|' . $type_re_special_2 . ')';
+# contains leading whitespace; unconditional; 0 groups
+$type_suffix_re = '(?:\s*(?:\*|\[\s*\]))';
+$type_re = $type_specifier_re . $type_suffix_re . '*'; # 0 groups
+# Use $type_declarator_re instead.
+# $type_identifier_re = $type_re . '\s*' . $identifier_re;
+
+# Declarators are actually rather more complicated than this:  see H&S p. 85.
+# We can't really use a regexp to catch them all.  Just hope to catch most...
+$type_qualifier_re = '\b(?:const|volatile)\b'; # 0 groups
+$pointer_declarator_prefix_re = '\*(?:\s*' . $type_qualifier_re . ')*'; # 0 groups
+$pointer_declarator_prefixes_re = '(?:' . $pointer_declarator_prefix_re . '\s*)*'; # 0 groups
+$array_declarator_suffix_re = '\[(?:' . $constant_or_upcase_exp_re . ')?\]'; # 0 groups
+$array_declarator_suffixes_re = '(?:\s*' . $array_declarator_suffix_re . ')*'; # 0 groups
+# Don't do this!  Just look for type_declarator followed by open paren.
+# $function_declarator_suffix_re = ...;
+# declaratorsuffix = $array_declarator_suffix_re plus $function_declarator_suffix_re
+$declarator_unparenthesized_re = $pointer_declarator_prefixes_re
+  . $identifier_re . $array_declarator_suffixes_re; # 0 groups
+$declarator_parenthesized_re = $pointer_declarator_prefixes_re
+  . '\(' . $declarator_unparenthesized_re . '\)' . $array_declarator_suffixes_re; # 0 groups
+$declarator_re = '(' . $declarator_parenthesized_re . '|'
+  . $declarator_unparenthesized_re . ')'; # 1 group: the declarator
+# Use this in preference to $type_identifier_re
+# 2 groups: $1 = type specifier, $2 = declarator
+# my $type_declarator_unparen_re = '(' . $type_specifier_re . ')\s*' . $declarator_re;
+# For functions, does NOT include the open paren or any argument info.
+$type_declarator_re = '(' . $type_specifier_re . ')\s*' . $declarator_re;
+# Should probably use $type_declarator_re and $type_re
+$simple_arglist_re = '\(\s*(?:' . $identifier_re . '\s*\**\s*(?:,\s*' . $identifier_re . '\s*\**\s*)*)?\s*\)'; # 0 groups
+# 3 groups: $1 = type specifier, $2 = declarator, $3 = arglist
+$type_declarator_arglist_re = $type_declarator_re . '\s*(' . $simple_arglist_re . ')';
+
+# # This isn't going to work, because of looping.  Break the loop somehow.
+# $simple_declarator_re = $identifier_re;
+# $arraydeclarator = $directdeclarator . '\s*\[(' . $constant_exp_re . ')?\]';
+# $direct_declarator_re = '(' . $arraydeclarator . '|' . $simple_declarator_re . ')';
+# $pointer_declarator_re = '\*(\s*' . $type_qualifier_re . ')*\s*' . $direct_declarator_re;
+# $declarator_re = '(' . $pointer_declarator_re . '|' . $direct_declarator_re . ')';
+# type plus identifier:  $1 = type, $5 = identifier
+
+# Does not handle function types
+$numeric_type_word_re = '\b(short|signed|unsigned|long|int|char|float|double)\b';
+$numeric_type_re = $numeric_type_word_re . '(\s+' . $numeric_type_word_re . ')*';
+$non_numeric_type_re = '\b(void)\b';
+$builtin_type_base_re = "($numeric_type_re|$non_numeric_type_re|" . '\b(struct|union|enum)\s+' . "$identifier_re)";
+$builtin_type_re = $builtin_type_base_re . $type_suffix_re . '*';
+
+## Binary operators
+# $numeric_binop_regexp should precede $bool_binop_regexp because of < and <<.
+# $bool_binop_regexp should precede $numeric_binop_regexp because of | and ||.
+# Better yet, get rid of this, go back to one regexp, and have a hashtable to
+# give precedences, types, etc.
+$numeric_binop_regexp = '<<=?|>>=?|[-*\/%+&^\|]=?';
+$bool_binop_regexp = '[<=>!]=|&&|\|\||<|>';
+# This might return a boolean, number, or something else.
+$arb_type_binop_regexp = '=';
+$binop_regexp = '(?:<<=?|>>=?|&&|\|\||[<=>!]=|[-*\/%+&^\|]=?|[<=>])';
+$prefix_unop_regexp = '(?:~!-\+&\*|\+\+|--)';
+$postfix_unop_regexp = '(?:\+\+|--)';
+$selector_regexp = '(?:\.|->)';
 
 
 1; #Successful import
