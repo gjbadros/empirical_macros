@@ -12,6 +12,7 @@
 ./proto.h
 ./util.c
 ./vfprintf.c
+# This one really shouldn't be here, but is left in so we can reproduce results.
 ./fix_libmath.h
 ./acconfig.h
 ./dc-array.c
