@@ -298,6 +298,8 @@ sub output_stats ()
       print "$name", $#{$macros{$name}}+1, $macros_c_undefs{$name},
       $cCodeUses, $cMacroUses, $cCondUses, $cTotalUses,
       how_used_from_code_cpp_uses($cCodeUses, $cMacroUses, $cCondUses),
+      # These next two will be blank for things not defined, but only
+      # used in cond. comp. directives
       join(",",CategoriesForMacroName($name)),
       join(",",InclusionMethodsForMacroName($name)),
       "\n%" . join("\n%",@{$macros_used_in_functions{$name}}),
