@@ -13,7 +13,7 @@ COMMON_DIR := $(shell dirname $$(ls -l Makefile | awk '{print $$NF}'))
 #COMMON_DIR := /homes/gws/mernst/research/notkin/macros/scripts
 #COMMON_DIR := /homes/gws/gjb/macros/scripts
 
-EXTRA_ANALYZE_FLAGS := ""
+EXTRA_ANALYZE_FLAGS := "-v"
 #EXTRA_ANALYZE_FLAGS := -g14
 
 PAPER_DIR := /homes/gws/gjb/macros/papers
@@ -139,10 +139,10 @@ tbl-directives-breakdown: tbl-directives-hist
 ###
 
 tbl-def-categories.tex: $(STAT)
-	macros-make-categories-tbl-from-stat $^ > $@
+	macros-make-categories-tbl-from-stat.pl $^ > $@
 
 tbl-def-categories: $(STAT)
-	macros-make-categories-tbl-from-stat -t -p $^ > $@
+	macros-make-categories-tbl-from-stat.pl -t -p $^ > $@
 
 tbl-subset-categories: $(MAC)
 	macros-make-subset-metacateg-from-mac $^ | sort | uniq -c | sort -nr >$@
