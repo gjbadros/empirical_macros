@@ -24,7 +24,7 @@
 BEGIN { if (defined $ENV{"PERLINC"})
 	  { unshift(@INC, split(/[ :]+/, $ENV{"PERLINC"})); } }
 
-my $getopts_option_letters = "ihvtIAau1D:S:F:C:E:";
+my $getopts_option_letters = "ihvtIAau1d:D:S:F:C:E:";
 
 # Remove the asterisks below when the options
 # are known to the users
@@ -35,17 +35,24 @@ New options marked with *, options with ':', above, take an argument
   -i  use files listed on stdin [one per line] in addition to any on cmd line
   -h  display this help message
   -v  be verbose and list files as they are processed to stderr
-* -t  use [TAB] as the OFS for the statistics files (not space)
+  -t  use [TAB] as the OFS for the statistics files (not space)
   -I  ignore include files--just parse files passed in
-* -A  do the second pass on all files, not just those passed in
-* -a  do macro statistics on all files, not just those passed in
-* -u  ignore usage
-* -1  do only the first pass (don't do function parsing, usage)
+  -A  do the second pass on all files, not just those passed in
+  -a  do macro statistics on all files, not just those passed in
+  -u  ignore usage
+  -1  do only the first pass (don't do function parsing, usage)
+* -d [directory:prefix]  use standard filenames under the given directory
   -D [file]  output the names of the macros (and number of times defined)
   -S [file]  output the per directive statistics to file
   -F [file]  output the function information to a file
   -C [file]  show categorizations to file
   -E [file]  send evil macros to file instead of stdout
+
+(Note: -{D,S,F,C,E} options take precedence over the -d option)
+
+e.g.
+
+find-c | evilmacros -iv -d ~/macros/data/stable
 ";
 }
 
@@ -698,7 +705,7 @@ my $debug_type_match = $false;
 my $debug_parse_function = $false;
 
 ## Command-line processing
-use vars qw($opt_i $opt_I $opt_h $opt_v $opt_t 
+use vars qw($opt_i $opt_I $opt_h $opt_v $opt_t $opt_d
 	    $opt_D $opt_S $opt_F $opt_C $opt_E 
 	    $opt_u $opt_1 $opt_A $opt_a);
 my $fIgnoreIncludes = $false;
@@ -4261,6 +4268,46 @@ if ($opt_a && ($opt_u || $opt_1)) {
   die "Option -a is incompatible with options -u or -1";
 }
 
+
+# using a default directory-- only open the files that
+# aren't explicitly given
+if ($opt_d) {
+  my ($dir,$prefix) = split /:/,$opt_d;
+
+  if (!defined($prefix) || $prefix eq "") {
+    $prefix = "";
+  } else {
+    $prefix .= ".";
+  }
+
+  if ($dir !~ /\/$/) {
+    $dir .= "/";
+  }
+
+  print STDERR "Using $dir with prefix $prefix\n";
+
+  if (!$opt_E) {
+    open(EVIL,">$dir/${prefix}evil") || die "Failed opening $!";
+  }
+
+  if (!$opt_S) {
+    open(STATS,">$dir/${prefix}stat") || die "Failed opening $!";
+  }
+
+  if (!$opt_D) {
+    open(DEFINES,">$dir/${prefix}def") || die "Failed opening $!";
+  }
+
+  if (!$opt_F) {
+    open(FUNCTIONS,">$dir/${prefix}func") || die "Failed opening $!";
+  }
+
+  if (!$opt_C) {
+    open(CATEG,">$dir/${prefix}catg") || die "Failed opening $!";
+  }
+}
+
+
 if ($opt_E) { open(EVIL,">$opt_E") || die "Failed opening $opt_E"; }
   else { open(EVIL,">-") || die "Failed opening stdout!"; }
 if ($opt_S) { open(STATS,">$opt_S") || die "Failed opening $opt_S"; }
@@ -4269,7 +4316,6 @@ if ($opt_D) { open(DEFINES,">$opt_D") || die "Failed opening $opt_D"; }
 if ($opt_C) { open(CATEG,">$opt_C") || die "Failed opening $opt_C"; }
 if ($opt_I) { $fIgnoreIncludes = $true; }
 if ($opt_t) { $outOFS = "	"; } # use tab for OFS
-
 
 
 $fDebugCmdProcessing && print "@ARGV";
