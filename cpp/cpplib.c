@@ -2581,8 +2581,10 @@ initialize_builtins (pfile)
     install ("__OBJC__", -1, T_CONST, 1, 0, -1);
 /*  This is supplied using a -D by the compiler driver
     so that it is present only when truly compiling with GNU C.  */
-/*  install ("__GNUC__", -1, T_CONST, 2, 0, -1);  */
-
+  /* Consider routinely adding this in */
+  /*
+  install ("__GNUC__", -1, T_CONST, 2, 0, -1);
+  */
   if (CPP_OPTIONS (pfile)->debug_output)
     {
       char directive[2048];
@@ -4794,19 +4796,21 @@ do_else (pfile, keyword, buf, limit)
   U_CHAR *pchStartGarbage = ip->cur+1;
   U_CHAR *pchEndGarbage = NULL;
   int skip = 0;
+  int s_start;
 
   if (CPP_PEDANTIC (pfile))
     validate_else (pfile, "#else");
   skip_rest_of_line (pfile);
   pchEndGarbage = ip->cur+1;
+  s_start = CchOffset_internal(pfile) + 2;
 
   if (pfile->if_stack == CPP_BUFFER (pfile)->if_stack) {
     cpp_error (pfile, "`#else' not within a conditional");
-    gjb_call_hooks_sz_szl_szl_i(CPP_OPTIONS(pfile),HI_DO_ELSE,
-				"@NONE@",
-				pchStartGarbage,pchEndGarbage-pchStartGarbage,
-				"", 0,
-				skip);
+    gjb_call_hooks_sz_szl_szl_i_i(CPP_OPTIONS(pfile),HI_DO_ELSE,
+				  "@NONE@",
+				  pchStartGarbage,pchEndGarbage-pchStartGarbage,
+				  "", 0,
+				  skip,s_start);
     return 0;
   } else {
     /* #ifndef can't have its special treatment for containing the whole file
@@ -4830,10 +4834,11 @@ do_else (pfile, keyword, buf, limit)
     ++pfile->if_stack->if_succeeded;	/* continue processing input */
     output_line_command (pfile, 1, same_file);
   }
-  gjb_call_hooks_sz_szl_szl_i(CPP_OPTIONS(pfile),HI_DO_ELSE,
-			      DEF_STR(pfile->if_stack->szConditionalClause,"@??@"),
-			      pchStartGarbage,pchEndGarbage-pchStartGarbage,
-			      pchEndGarbage,ip->cur-pchEndGarbage, skip);
+  gjb_call_hooks_sz_szl_szl_i_i(CPP_OPTIONS(pfile),HI_DO_ELSE,
+				DEF_STR(pfile->if_stack->szConditionalClause,"@??@"),
+				pchStartGarbage,pchEndGarbage-pchStartGarbage,
+				pchEndGarbage,ip->cur-pchEndGarbage, skip,
+				s_start);
   return 0;
 }
 
