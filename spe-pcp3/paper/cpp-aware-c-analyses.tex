@@ -110,7 +110,7 @@
 \label{sec:abstract}
 Analyses of \C{} source code usually ignore the \C{} preprocessor
 because of its complexity.  Instead, these analyses either define their
-own approximate parser (or scanner) or else they require that their
+own approximate parser or scanner or else they require that their
 input already be preprocessed.  Neither approach is entirely
 satisfactory: the first gives up accuracy (or incurs large
 implementation costs), while the second loses the preprocessor-based
@@ -203,13 +203,14 @@ expressed in \Cpp{}.
 Various tools including source-level debuggers and call graph extractors
 either run \Cpp{} as the first stage in their analysis, or use
 representations derived from a compiler operating on the preprocessed
-code.  Siff and Reps implement a function-generalization transformation
+code.  For example,
+Siff and Reps implement a function-generalization transformation
 tool that operates on preprocessed code, but note that future versions
 of their tool must drop that requirement so that macro abstractions are
 not lost~\cite{Siff96}. Using preprocessed code for program
 understanding or transformation tasks is fraught with difficulties due
 to changes in the source artifact from preprocessing.\footnote{In
-  contrast, this approach is exactly right for the compiler, which has
+  contrast, this approach is exactly right for the compiler, where there is
   no need to preserve high level abstractions while generating object
   code.}
 
@@ -245,7 +246,7 @@ abstract syntax tree because the source is not
 grammatically-correct \C{} code.  Lexical tools such as \texttt{etags},
 LSME~\cite{Murphy96}, and \texttt{font-lock-mode} for Emacs and
 approximate parsers such as \texttt{Field}~\cite{ReissField} and
-\texttt{LCLint}~\cite{LCLint} use this approach.  Unfortunately,
+\texttt{LCLint}~\cite{LCLint} use this approach.  However,
 disregarding or only partially honoring the \Cpp{} directives leads to
 an extracted model of the source code that is only an approximation of
 the program's appearance to a compiler.  Certain uses of the
@@ -273,7 +274,7 @@ review the limitations of our approach and conclude.
 \label{sec:framework}
 
 The idea behind our framework is simple: provide an integrated parser
-and preprocessor which controls the scanning of the source code while
+and preprocessor that controls the scanning of the source code while
 executing user-defined callbacks when specified ``interesting'' actions occur.
 Though similar to the way the \texttt{yacc} parser~\cite{Levine92}
 associates actions with parse rule invocation, our framework provides
@@ -341,7 +342,8 @@ written in about ten lines of code, as shown in
 Figure~\ref{fig:call_graph_extractor}.
 
 To perform the analysis, we attach subroutines to three parsing
-callbacks.  When a function specifier (the signature specification of a
+callbacks.  When a function specifier (that is, 
+the signature specification of a
 function definition) is parsed, the \texttt{FUNC\_SPEC} hook is
 activated.  That callback resets the set of functions invoked by
 the current function.  For each function call parsed, the
@@ -361,8 +363,8 @@ code.
 \subsection{Revising the Extractor}
 \label{sec:call_graph_revised}
 The simple call-graph extractor used as an example in the preceding
-section suffers from many of the same shortcomings as tools which
-operate on preprocessed code: it reasons about only a single
+section suffers from many of the same shortcomings as tools that
+ on preprocessed code: it reasons about only a single
 configuration of the source and eliminates all macro abstractions
 from the extracted model.  As Murphy et al.\ discuss, there are many
 degrees of freedom for call-graph extractors~\cite{Murphy98}.  A
@@ -507,8 +509,8 @@ effectively exploit the macro expansion hooks, the details of the
 expanding and substituting process must be understood.  For
 \texttt{gcc}'s preprocessor, and consequently for \pcp{}, macro
 expansion takes place as follows:\footnote{This description is necessarily
-  implementation specific.  See \cite[Ch.~3]{Harbison91} for details of
-  what is required by the \C{} language standard.  Also note that
+  implementation specific.  The \C{} language standard provides details
+of what is required \cite[Ch.~3]{Harbison91}.  Also note that
   details of stringization and pasting are omitted as they are
   infrequently used features~\cite{EmpCpp}.}
 
@@ -643,7 +645,7 @@ For example, Emacs's \texttt{etags}~\cite{GNUELisp} creates a database
 of function definitions in unprocessed source but can be easily confused
 by package-specific macros used in function definition headers.\footnote{To
 circumvent this limitation, \texttt{etags} permits the programmer to manually specify an
-arbitrary regular expression which it uses to find definitions to mark.}
+arbitrary regular expression that it uses to find definitions to mark.}
 Also, searching for uses of global variables could be enhanced using our
 framework since it will not omit references to globals hidden by macros.
 
@@ -665,7 +667,7 @@ program understanding little when the correspondence exists only in a
 \Perl{} data structure.
 A standard \Perl{} module of hook utilities provides a
 mechanism to output character-indexed annotations of the source code.
-These annotations are Emacs Lisp source code which manipulate text
+These annotations are Emacs Lisp source code that manipulate text
 properties of character ranges when evaluated by Emacs~\cite{GNUELisp}.  This
 provides a useful mechanism (indeed, essential during the debugging of
 the framework) for visualizing the results of the analyses within the
