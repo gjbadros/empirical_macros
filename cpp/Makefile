@@ -9,8 +9,9 @@ BISON = bison
 CC=gcc2.7.2
 
 CFLAGS=-DYYDEBUG
+# -DDMALLOC_DISABLE
 
-GCC_CFLAGS=$(INTERNAL_CFLAGS) $(X_CFLAGS) $(T_CFLAGS) $(CFLAGS) -I./include
+GCC_CFLAGS=$(INTERNAL_CFLAGS) $(X_CFLAGS) $(T_CFLAGS) $(CFLAGS)
 # This is the variable actually used when we compile.
 ALL_CFLAGS = $(INTERNAL_CFLAGS) $(X_CFLAGS) $(T_CFLAGS) $(CFLAGS) $(XCFLAGS) -g -Wall
 
@@ -23,7 +24,7 @@ srcdir = .
 PERLBASE = /uns/lib/perl5.004
 PERLARCHDIR = $(PERLBASE)/arch
 
-INCLUDES = -I$(srcdir) -I$(srcdir)/config -I$(PERLARCHDIR)/CORE
+INCLUDES = -I/uns/include -I./include -I$(srcdir) -I$(srcdir)/config -I$(PERLARCHDIR)/CORE
 
 
 # Common prefix for installation directories.
@@ -96,7 +97,7 @@ LIBGCC2 = libgcc2.a
 # -g1 causes output of debug info only for file-scope entities.
 # we use this here because that should be enough, and also
 # so that -g1 will be tested.
-LIBGCC2_CFLAGS = -O2 $(LIBGCC2_INCLUDES) $(GCC_CFLAGS) $(TARGET_LIBGCC2_CFLAGS) -g1
+LIBGCC2_CFLAGS = -g $(LIBGCC2_INCLUDES) $(GCC_CFLAGS) $(TARGET_LIBGCC2_CFLAGS) -g1
 
 # Additional options to use when compiling libgcc2.a.
 # Some targets override this to -Iinclude
@@ -276,6 +277,7 @@ pcplines: bison-stack.c bison-stack.h  pcpp.c pcpp.h cpphook.c cpphook.h
 # Used to be called pcppct (Perl-enhanced C Preprocesor and Parser using CTree)
 pcp3: $(NON_GRAMMAR_OBJECTS) $(CT_GRAMMAR_OBJECTS) hook_index_constants.pm
 	rm -f $@
+#	$(CC) $(ALL_CFLAGS) $(LDFLAGS) -o $@ $(filter-out hook_index_constants.pm,$^) $(LIBS) -L/uns/lib $(PERLLIBS)
 	$(CC) $(ALL_CFLAGS) $(LDFLAGS) -o $@ $(filter-out hook_index_constants.pm,$^) $(LIBS) $(PERLLIBS)
 
 pcpp.o: cpphook.h
