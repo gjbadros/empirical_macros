@@ -377,13 +377,13 @@ sub string_constant {
 }
 
 sub do_include {
-  my ($file_as_given, $file_as_resolved, $flags) = @_;
-  print CPP "do_include $file_as_given -> ", simplify_path_name($file_as_resolved),";  $flags\n";
+  my ($s_start,$s_end,$file_as_given, $file_as_resolved, $flags) = @_;
+  print CPP "do_include $file_as_given [$s_start:$s_end] -> ", simplify_path_name($file_as_resolved),";  $flags\n";
 #  print "Was working on: ", cpp::Fname(), "\n";
 }
 
 sub do_if {
-  my ($conditional, $skipped, $value) = @_;
+  my ($s_start,$s_end,$conditional, $skipped, $value) = @_;
   print CPP "do_if on $conditional evals to $value ";
   print CPP ", skipping $skipped" if $skipped ne "";
   print CPP "\n";
@@ -393,8 +393,8 @@ sub do_if {
 }
 
 sub do_elif {
-  my ($conditional, $skipped, $fSkipping) = @_;
-  print CPP "do_elif_eval on $conditional ($skipped), ", !$fSkipping?"Not ":"", "skipped\n";
+  my ($s_start,$s_end,$already_did_clause, $conditional, $skipped, $value) = @_;
+  print CPP "do_elif on $conditional ($skipped) evals to $value; $already_did_clause\n";
 }
 
 sub do_xifdef {
@@ -403,15 +403,16 @@ sub do_xifdef {
   my $s_end = cpp::CchOffset() + 1;
   print CPP "do_xifdef ($kind) on $conditional [$trailing_garbage] ($skipped), ",
   !$fSkipping?"Not ":"", "skipped\n";
-  print CPP ": @[$s_start - $cch_offset]\n";
+  print CPP ": @[$s_start - $s_end]\n";
   if ($fSkipping) {
+    print STDERR "#$fname:(put-face-property-if-none $s_start $s_end \'font-lock-reference-face)\n";
     print TPSOURCE "#$fname:(put-face-property-if-none $s_start $s_end \'font-lock-reference-face)\n";
     print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'doc \"Skipped due to $kind $conditional\")\n";
   }
 }
 
 sub do_ifdef {
-  my ($conditional, $trailing_garbage, $skipped, $fSkipping) = @_;
+  my ($s_start,$s_end,$conditional, $trailing_garbage, $skipped, $fSkipping) = @_;
   print CPP "do_ifdef on $conditional [$trailing_garbage] ($skipped), ",
   !$fSkipping?"Not ":"", "skipped\n";
   cpp::YYPushStackState();
@@ -420,7 +421,7 @@ sub do_ifdef {
 }
 
 sub do_ifndef {
-  my ($kind,$conditional, $trailing_garbage, $skipped, $fSkipping) = @_;
+  my ($s_start,$s_end,$conditional, $trailing_garbage, $skipped, $fSkipping) = @_;
   print CPP "do_ifndef on $conditional [$trailing_garbage] ($skipped), ",
   !$fSkipping?"Not ":"", "skipped\n";
   cpp::YYPushStackState();
@@ -429,21 +430,22 @@ sub do_ifndef {
 }
 
 sub do_else {
-  my ($orig_conditional, $trailing_garbage, $skipped, $fSkipping, $s_start) = @_;
-  my $s_end = cpp::CchOffset() + 1;
+  my ($s_start,$s_end, 
+      $orig_conditional, $trailing_garbage, $skipped, $fSkipping, $s_start_branch) = @_;
+  my $s_end_branch = cpp::CchOffset() + 1;
   print CPP "do_else (orig conditional was $orig_conditional) [$trailing_garbage] ($skipped), ",
   !$fSkipping?"Not ":"", "skipped\n";
   @state_stack = cpp::ParseStateStack();
   print CPP ": Stack: @state_stack\n";
   my $fname = cpp::Fname();
   if ($fSkipping) {
-    print TPSOURCE "#$fname:(put-face-property-if-none $s_start $s_end \'font-lock-reference-face)\n";
+    print TPSOURCE "#$fname:(put-face-property-if-none $s_start_branch $s_end \'font-lock-reference-face)\n";
     print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'doc \"Skipped due to else of $orig_conditional\")\n";
   }
 }
 
 sub do_endif {
-  my ($orig_conditional, $trailing_garbage) = @_;
+  my ($s_start,$s_end,$orig_conditional, $trailing_garbage) = @_;
   chomp($trailing_garbage);
   print CPP "do_endif (orig conditional was $orig_conditional) [$trailing_garbage]\n";
   @state_stack = cpp::ParseStateStack();
