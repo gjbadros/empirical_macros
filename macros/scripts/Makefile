@@ -70,7 +70,6 @@ TEXT_TABLES :=	tbl-package-sizes \
 		tbl-cat-use-frequency \
 		tbl-where-used \
 		tbl-ccd-categories \
-		tbl-lint-warnings \
 		tbl-properties-subset \
 		tbl-properties-percents \
 		tbl-inclusion-dependences-by-line \
@@ -79,14 +78,16 @@ TEXT_TABLES :=	tbl-package-sizes \
 		tbl-inclusion-dependences-by-macro \
 		tbl-expansion-dependences-by-macro \
 		tbl-def-categories \
-		tbl-directives-breakdown
+		tbl-directives-breakdown \
+		tbl-lint
 
 RAW_TABLES := tbl-directives-hist tbl-subset-categories
 
 LATEX_TABLES := tbl-package-sizes.tex \
 		tbl-subset-categories.tex \
 		tbl-subset-properties.tex \
-		tbl-where-used.tex
+		tbl-where-used.tex \
+		tbl-lint.tex
 
 ALL_TABLES := $(TEXT_TABLES) $(RAW_TABLES) $(LATEX_TABLES)
 
@@ -199,8 +200,14 @@ tbl-subset-categories.tex: tbl-subset-categories
 tbl-subset-properties.tex: tbl-properties-percents tbl-properties-subset
 	macros-make-subset-prop-tbl > $@
 
-tbl-lint-warnings: $(LINT)
-	combine-histogram -p'\) ' -s '^Total.*: (.*)' $^ > $@
+tbl-lint.tex: tbl-lint
+	macros-make-lint-table < $^ > $@
+
+tbl-lint:	$(LINT)
+	lint-summarize < $^ > $@
+
+# tbl-lint-warnings: $(LINT)
+# 	combine-histogram -p'\) ' -s '^Total.*: (.*)' $^ > $@
 
 tbl-properties-subset: $(PROP)
 	combine-histogram -s'#.*histogram: total defs = (.*)' -e '^#' $^ > $@
