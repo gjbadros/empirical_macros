@@ -660,7 +660,7 @@ make_assertion (pfile, option, str)
     return;
   }
   
-  ip = cpp_push_buffer (pfile, buf, strlen (buf));
+  ip = cpp_push_buffer (pfile, buf, strlen (buf), FALSE);
   do_assert (pfile, NULL, NULL, NULL);
   cpp_pop_buffer (pfile,0);
 }
@@ -1945,7 +1945,7 @@ nope:
 
 
 cpp_buffer*
-cpp_push_buffer (cpp_reader *pfile, U_CHAR *buffer, long length)
+cpp_push_buffer (cpp_reader *pfile, U_CHAR *buffer, long length, int fFromPerl)
 {
 #ifdef STATIC_BUFFERS
   register cpp_buffer *buf = CPP_BUFFER (pfile);
@@ -1967,6 +1967,7 @@ cpp_push_buffer (cpp_reader *pfile, U_CHAR *buffer, long length)
   buf->alimit = buf->rlimit = buffer + length;
   buf->ichSourceStart = buf->ichSourceEnd = -1;
   buf->args = 0;
+  buf->fFromPerl = fFromPerl;
   
   return buf;
 }
@@ -1978,14 +1979,18 @@ cpp_pop_buffer (cpp_reader *pfile, cpp_expand_info *pcei)
 #ifdef STATIC_BUFFERS
   (*buf->cleanup) (buf, pfile, pcei);
   gjb_call_hooks_i(CPP_OPTIONS(pfile),HI_POP_BUFFER,CbuffersDeep(pfile)-1);
+  if (buf->fFromPerl)
+    gjb_call_hooks_i(CPP_OPTIONS(pfile),HI_POP_PERL_BUFFER,CbuffersDeep(pfile)-1);
   return ++CPP_BUFFER (pfile);
 #else
   cpp_buffer *next_buf = CPP_PREV_BUFFER (buf);
   next_buf->prior_args = buf->args;
   (*buf->cleanup) (buf, pfile, pcei);
   CPP_BUFFER (pfile) = next_buf;
-  free (buf);
   gjb_call_hooks_i(CPP_OPTIONS(pfile),HI_POP_BUFFER,CbuffersDeep(pfile)-1);
+  if (buf->fFromPerl)
+    gjb_call_hooks_i(CPP_OPTIONS(pfile),HI_POP_PERL_BUFFER,CbuffersDeep(pfile)-1);
+  free (buf);
   return next_buf;
 #endif
 }
@@ -2051,7 +2056,7 @@ cpp_expand_to_buffer (cpp_reader *pfile, U_CHAR *buf, int length,
   }
   buf1[length] = 0;
 
-  ip = cpp_push_buffer (pfile, buf1, length);
+  ip = cpp_push_buffer (pfile, buf1, length, FALSE);
   ip->has_escapes = 1;
 #if 0
   ip->lineno = obuf.lineno = 1;
@@ -3253,7 +3258,7 @@ push_macro_expansion (cpp_reader *pfile, U_CHAR *xbuf, int xbuf_len,
 		      HASHNODE *hp, struct argdata *args, cpp_expand_info *pcei,
 		      long ichSourceStart, long ichSourceEnd)
 {
-  register cpp_buffer *mbuf = cpp_push_buffer (pfile, xbuf, xbuf_len);
+  register cpp_buffer *mbuf = cpp_push_buffer (pfile, xbuf, xbuf_len,FALSE);
   mbuf->cleanup = macro_cleanup;
   mbuf->data = hp;
   mbuf->args = args;
@@ -3786,7 +3791,7 @@ do_include (pfile, keyword, unused1, unused2)
 				    angle_brackets,skip_dirs,importing);
 
     /* Actually process the file */
-    cpp_push_buffer (pfile, NULL, 0);
+    cpp_push_buffer (pfile, NULL, 0, FALSE);
     gjb_call_hooks_sz_i(CPP_OPTIONS(pfile),HI_INCLUDE_FILE,fname,
 			is_system_include(pfile,fname));
     if (finclude (pfile, f, fname, is_system_include (pfile, fname),
@@ -6236,7 +6241,7 @@ push_parse_file (pfile, fname)
 
   /* Do partial setup of input buffer for the sake of generating
      early #line directives (when -g is in effect).  */
-  fp = cpp_push_buffer (pfile, NULL, 0);
+  fp = cpp_push_buffer (pfile, NULL, 0, FALSE);
   if (opts->in_fname == NULL)
     opts->in_fname = "";
   fp->nominal_fname = fp->fname = opts->in_fname;
@@ -6501,7 +6506,7 @@ push_parse_file (pfile, fname)
 	      cpp_perror_with_name (pfile, pend->arg);
 	      return FATAL_EXIT_CODE;
 	    }
-	  cpp_push_buffer (pfile, NULL, 0);
+	  cpp_push_buffer (pfile, NULL, 0, FALSE);
 	  finclude (pfile, fd, pend->arg, 0, NULL_PTR);
 	  cpp_scan_buffer (pfile,0,0);
 	}
@@ -6666,7 +6671,7 @@ push_parse_file (pfile, fname)
 	      cpp_perror_with_name (pfile, pend->arg);
 	      return FATAL_EXIT_CODE;
 	    }
-	  cpp_push_buffer (pfile, NULL, 0);
+	  cpp_push_buffer (pfile, NULL, 0, FALSE);
 	  finclude (pfile, fd, pend->arg, 0, NULL_PTR);
 	}
     }

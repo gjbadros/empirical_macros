@@ -321,7 +321,7 @@ PushBuffer($buffer_to_push)
 	if ((len = strlen(szBuf)) != length) {
 	    warn("PushBuffer cannot handle strings with embedded NULLs\n");
 	}
-	cpp_push_buffer(&parse_in,szBuf,len);
+	cpp_push_buffer(&parse_in,szBuf,len,1 /* FROM PERL */);
 
 
 ###%\backcall{}{SetParseDebugging}{}

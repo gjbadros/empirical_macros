@@ -181,6 +181,7 @@ struct cpp_buffer {
      "@@" means a normal '@'.
      (An '@' inside a string stands for itself and is never an escape.) */
   char has_escapes;
+  int fFromPerl;  /* bool saying whether this was pushed using PushBuffer */
 };
 
 struct cpp_pending;  /* Forward declaration - for C++. */
@@ -694,7 +695,7 @@ extern void cpp_pfatal_with_name ();
 
 extern void cpp_grow_buffer PARAMS ((cpp_reader*, long));
 extern int cpp_parse_escape PARAMS ((cpp_reader*, char**));
-extern cpp_buffer* cpp_push_buffer PARAMS ((cpp_reader *, U_CHAR*, long));
+extern cpp_buffer* cpp_push_buffer PARAMS ((cpp_reader *, U_CHAR*, long, int));
 extern cpp_buffer* cpp_pop_buffer PARAMS ((cpp_reader *, cpp_expand_info *pcei));
 
 extern cpp_hashnode* cpp_lookup PARAMS ((cpp_reader*, const U_CHAR*,
