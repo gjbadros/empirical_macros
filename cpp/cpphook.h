@@ -3,7 +3,7 @@
 
 #include "cpplib.h"
 
-#ifdef 0
+#if 0
 #define gjb_printf(s...) do { fflush(stdout); fprintf(stderr,##s); } while (0)
 #endif
 
