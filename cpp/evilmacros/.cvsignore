@@ -5,6 +5,7 @@ cppout
 expansions.listing
 macro_expand_stacks
 mapping
+munged
 textprops-source.el
 textprops.el
 token.listing
