@@ -293,7 +293,7 @@ static struct arglist *read_token_list ();
 static void free_token_list ();
 static int safe_read ();
 static void push_macro_expansion PARAMS ((cpp_reader *,
-					  U_CHAR*, int, HASHNODE*));
+					  U_CHAR*, int, HASHNODE*, long, long));
 static struct cpp_pending *nreverse_pending PARAMS ((struct cpp_pending*));
 extern char *xrealloc ();
 extern char *xcalloc ();
@@ -830,17 +830,17 @@ null_cleanup (pbuf, pfile)
 }
 
 int
-macro_cleanup (pbuf, pfile)
-     cpp_buffer *pbuf;
-     cpp_reader *pfile;
+macro_cleanup (cpp_buffer *pbuf, cpp_reader *pfile)
 {
+  int ichSourceStart = pbuf->ichSourceStart;
+  int ichSourceEnd = pbuf->ichSourceEnd;
   HASHNODE *macro = (HASHNODE*)pbuf->data;
   if (macro->type == T_DISABLED)
     macro->type = T_MACRO;
   if (macro->type != T_MACRO || pbuf->buf != macro->value.defn->expansion)
     free (pbuf->buf);
-  gjb_call_hooks_sz(CPP_OPTIONS(pfile),HI_MACRO_CLEANUP,
-		    macro->name);
+  gjb_call_hooks_sz_i_i(CPP_OPTIONS(pfile),HI_MACRO_CLEANUP,
+			macro->name,ichSourceStart,ichSourceEnd);
   free (pbuf->args);
   return 0;
 }
@@ -1919,10 +1919,7 @@ nope:
 
 
 cpp_buffer*
-cpp_push_buffer (pfile, buffer, length)
-     cpp_reader *pfile;
-     U_CHAR *buffer;
-     long length;
+cpp_push_buffer (cpp_reader *pfile, U_CHAR *buffer, long length)
 {
 #ifdef STATIC_BUFFERS
   register cpp_buffer *buf = CPP_BUFFER (pfile);
@@ -1942,6 +1939,7 @@ cpp_push_buffer (pfile, buffer, length)
   buf->underflow = null_underflow;
   buf->buf = buf->cur = buffer;
   buf->alimit = buf->rlimit = buffer + length;
+  buf->ichSourceStart = buf->ichSourceEnd = -1;
   
   return buf;
 }
@@ -2703,6 +2701,38 @@ CbuffersDeep(cpp_reader *pfile)
   return cbuffersDeep;
 }
 
+int
+CchOffset_internal(cpp_reader *pfile)
+{
+  cpp_buffer *buffer = pfile->buffer;
+  int cbuffersDeep = 0;
+  while (buffer != CPP_NULL_BUFFER(pfile)) 
+    {
+    if (buffer->nominal_fname) 
+      break;
+    else
+      {
+      cbuffersDeep++;
+      buffer = CPP_PREV_BUFFER(buffer);
+      }
+    }
+  return buffer->cur - buffer->buf;
+}
+
+int
+CExpansionsDeep(cpp_expand_info *pcei)
+{
+  int cdeep = 0;
+  while (pcei)
+    {
+    cdeep++;
+    pcei=pcei->pceiPrior;
+    }
+  return cdeep;
+}
+
+
+
 /* Expand a macro call.
    HP points to the symbol that is the macro being called.
    Put the result of expansion onto the input stack
@@ -2712,7 +2742,7 @@ CbuffersDeep(cpp_reader *pfile)
    an argument list follows; arguments come from the input stack.  */
 
 static void
-macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchMacroNameStart,
+macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
 	     cpp_expand_info *pcei)
 {
   int nargs;
@@ -2779,12 +2809,12 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchMacroNameStart,
 	      if (i == nargs - 1 && defn->rest_args)
 		rest_args = 1;
 	      args[i].raw = CPP_WRITTEN (pfile);
+	      args[i].offset = CPP_BUFFER(pfile)->cur - CPP_BUFFER(pfile)->buf;
 	      token = macarg (pfile, rest_args);
 	      args[i].raw_length = CPP_WRITTEN (pfile) - args[i].raw;
 	      args[i].newlines = 0; /* FIXME */
 	    }
 	  else {
-
 	    assert(rest_args==0);
 	    token = macarg (pfile, 0);
 	  }
@@ -2960,6 +2990,8 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchMacroNameStart,
 		  cei.argno = ap->argno;
 		  cei.hp  = hp;
 		  cei.pceiPrior = pcei;
+		  cei.offset = args[ap->argno].offset;
+		  cei.length = args[ap->argno].raw_length;
 		  args[ap->argno].expanded = CPP_WRITTEN (pfile);
 		  cpp_expand_to_buffer (pfile,
 					ARG_BASE + args[ap->argno].raw,
@@ -3115,8 +3147,31 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchMacroNameStart,
 
   pfile->output_escapes--;
   {
-  int cchRawCall = CPP_BUFFER(pfile)->cur - pchMacroNameStart;
+  int cchRawCall = CPP_BUFFER(pfile)->cur - pchAfterMacroName;
   int cbuffersDeep = CbuffersDeep(pfile);
+  int ichSourceStart = pcei?(pcei->offset + 1): 
+    (CchOffset_internal(pfile) - cchRawCall - strlen(hp->name) + 1);
+  int ichSourceEnd = ichSourceStart + (pcei?pcei->length:(cchRawCall + strlen(hp->name)));
+  int cexpansionsDeep = CExpansionsDeep(pcei);
+  if (cexpansionsDeep != cbuffersDeep)
+    {
+    int i = cbuffersDeep - cexpansionsDeep;
+    cpp_buffer *buffer = CPP_BUFFER(pfile);
+    assert (i>0);
+    
+    fprintf(stderr,"Expanding an expansion; %d vs %d\n",cexpansionsDeep,cbuffersDeep);
+    while (buffer != CPP_NULL_BUFFER(pfile)) 
+      {
+      assert (buffer->nominal_fname == 0);
+      if (buffer->ichSourceStart >= 0)
+	break;
+      buffer = CPP_PREV_BUFFER(buffer);
+      i--; // FIXGJB: i not needed?
+      }
+    ichSourceStart = buffer->ichSourceStart;
+    ichSourceEnd = buffer->ichSourceEnd;
+    fprintf(stderr," : would use %d - %d\n",ichSourceStart,ichSourceEnd);
+    }
 
   if (cbuffersDeep == 0 || CPP_BUFFER(pfile)->has_escapes) 
     {
@@ -3124,7 +3179,8 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchMacroNameStart,
       {
       gjb_call_hooks_expansion(pfile,HI_IFDEF_MACRO,
 			       hp->name,xbuf+2,xbuf_len-4,xbuf_len-4,
-			       pchMacroNameStart,cchRawCall,
+			       pchAfterMacroName,cchRawCall,
+			       ichSourceStart, ichSourceEnd,
 			       CPP_BUFFER(pfile)->has_escapes,cbuffersDeep,
 			       pcei, nargs<0?0:nargs,
 			       args);
@@ -3133,17 +3189,18 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchMacroNameStart,
       {
       gjb_call_hooks_expansion(pfile,HI_EXPAND_MACRO,
 			       hp->name,xbuf+2,xbuf_len-4,xbuf_len-4,
-			       pchMacroNameStart,cchRawCall,
+			       pchAfterMacroName,cchRawCall,
+			       ichSourceStart,ichSourceEnd,
 			       CPP_BUFFER(pfile)->has_escapes,cbuffersDeep,
 			       pcei, nargs<0?0:nargs,
 			       args);
       }
     }
-  }
-
+  
   /* Now put the expansion on the input stack
      so our caller will commence reading from it.  */
-  push_macro_expansion (pfile, xbuf, xbuf_len, hp, args);
+  push_macro_expansion (pfile, xbuf, xbuf_len, hp, args, ichSourceStart, ichSourceEnd);
+  }
   CPP_BUFFER (pfile)->has_escapes = 1;
 
   /* Pop the space we've used in the token_buffer for argument expansion. */
@@ -3159,12 +3216,15 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchMacroNameStart,
 
 static void
 push_macro_expansion (cpp_reader *pfile, U_CHAR *xbuf, int xbuf_len, 
-		      HASHNODE *hp, struct argdata *args)
+		      HASHNODE *hp, struct argdata *args, long ichSourceStart,
+		      long ichSourceEnd)
 {
   register cpp_buffer *mbuf = cpp_push_buffer (pfile, xbuf, xbuf_len);
   mbuf->cleanup = macro_cleanup;
   mbuf->data = hp;
   mbuf->args = args;
+  mbuf->ichSourceStart = ichSourceStart;
+  mbuf->ichSourceEnd = ichSourceEnd;
 
   /* The first chars of the expansion should be a "@ " added by
      collect_expansion.  This is to prevent accidental token-pasting
@@ -4859,7 +4919,7 @@ cpp_get_token (cpp_reader *pfile, cpp_expand_info *pcei)
   long start_line, start_column;
   enum cpp_token token;
   struct cpp_options *opts = CPP_OPTIONS (pfile);
-  unsigned char *pchMacroNameStart;
+  unsigned char *pchAfterMacroName;
   CPP_BUFFER (pfile)->prev = CPP_BUFFER (pfile)->cur;
  get_next:
   c = GETC();
@@ -5402,7 +5462,7 @@ cpp_get_token (cpp_reader *pfile, cpp_expand_info *pcei)
 	       first skip all whitespace, copying it to the output
 	       after the macro name.  Then, if there is no '(',
 	       decide this is not a macro call and leave things that way.  */
-	    pchMacroNameStart = CPP_BUFFER(pfile)->cur;
+	    pchAfterMacroName = CPP_BUFFER(pfile)->cur;
 	    if (hp->type == T_MACRO && hp->value.defn->nargs >= 0)
 	    {
 	      struct parse_marker macro_mark;
@@ -5444,13 +5504,15 @@ cpp_get_token (cpp_reader *pfile, cpp_expand_info *pcei)
 	      xbuf = (U_CHAR *) xmalloc (xbuf_len + 1);
 	      CPP_SET_WRITTEN (pfile, before_name_written);
 	      bcopy (CPP_PWRITTEN (pfile), xbuf, xbuf_len + 1);
-	      push_macro_expansion (pfile, xbuf, xbuf_len, hp, 0 /* no args */);
+	      push_macro_expansion (pfile, xbuf, xbuf_len, hp, 0 /* no args */,
+				    CPP_WRITTEN(pfile)-strlen(hp->name),
+				    CPP_WRITTEN(pfile));
 	    }
 	    else
 	      {
 		/* Expand the macro, reading arguments as needed,
 		   and push the expansion on the input stack.  */
-		macroexpand (pfile, hp, pchMacroNameStart, pcei);
+		macroexpand (pfile, hp, pchAfterMacroName, pcei);
 		CPP_SET_WRITTEN (pfile, before_name_written);
 	      }
 
