@@ -38,6 +38,7 @@ New options marked with *; options with ':', above, take an argument
   -L [file]  output the file's lines/functions information to file
   -C [file]  output categorizations to file
   -P [file]  output dependence info to file
+  -p [file]  output property info to file
   -c [file]  output cond. compilation directive statistics to file
 * -l [file]  output macro lint information to file
   -E [file]  send evil macros to file instead of stdout
@@ -447,6 +448,17 @@ sub output_stats ()
     }
   }
 
+  if ($opt_p)
+    { if ($opt_v) { print STDOUT "properties..."; }
+      select PROP;
+      print "#Macro definition property info\n";
+      my %prop_histogram = HistogramNumericFromList(@mdef_properties);
+      foreach my $prop (sort {$prop_histogram{$b} <=> $prop_histogram{$a}}
+			keys %prop_histogram) {
+	print "$prop_histogram{$prop} ", string_from_prop($prop) . "\n";
+      }
+    }
+
   if ($opt_P)
     { if ($opt_v) { print STDOUT "depend..."; }
       select DEPEND;
@@ -836,6 +848,15 @@ sub output_stats ()
 }
 
 
+sub HistogramNumericFromList (@) {
+  my %histogram = ();
+  foreach my $item (@_) {
+    local $WARNING = 0;
+    $histogram{$item}++;
+  }
+  return %histogram;
+}
+
 # Returns a categorization string describing how the macro was used
 # (one of eight (was four)); in alphabetical order:
 #   Code CodeCond CodeMacro CodeMacroCond Cond Macro MacroCond NoUses
@@ -1139,6 +1160,10 @@ if ($opt_d) {
     open(DEPEND,">$dir/${basename}depend") || die "Failed opening $!";
   }
 
+  if (!$opt_p) {
+    open(PROP,">$dir/${basename}prop") || die "Failed opening $!";
+  }
+
   if (!$opt_c) {
     open(CCDSTATS,">$dir/${basename}ccd") || die "Failed opening $!";
   }
@@ -1159,6 +1184,7 @@ if ($opt_D) { open(DEFINES,">$opt_D") || die "Failed opening $opt_D"; }
 if ($opt_M) { open(MACROS,">$opt_M") || die "Failed opening $opt_M"; }
 if ($opt_C) { open(CATEG,">$opt_C") || die "Failed opening $opt_C"; }
 if ($opt_P) { open(DEPEND,">$opt_P") || die "Failed opening $opt_P"; }
+if ($opt_p) { open(PROP,">$opt_p") || die "Failed opening $opt_p"; }
 if ($opt_c) { open(CCDSTATS,">$opt_c") || die "Failed opening $opt_c"; }
 if ($opt_l) { open(LINT,">$opt_l") || die "Failed opening $opt_l"; }
 if ($opt_I) { $fIgnoreIncludes = $true; }
@@ -1177,6 +1203,7 @@ if ($opt_d) {
   $opt_L = $true;
   $opt_C = $true;
   $opt_P = $true;
+  $opt_p = $true;
   $opt_c = $true;
   $opt_l = $true;
 }
