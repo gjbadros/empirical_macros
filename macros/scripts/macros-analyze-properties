@@ -1,0 +1,5 @@
+#!/uns/bin/zsh -f
+# This is obsoleted by the properties stuff in em_reports, em_analyze
+awk -F, '/^@mdef_properties = \(/, /^\);$/ { print $1 }' | egrep '^ *[0-9]+$' | histogram-numeric
+
+  

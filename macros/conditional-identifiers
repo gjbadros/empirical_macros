@@ -1,0 +1,262 @@
+# These notes were used to construct the regexps used for
+# conditional compilation directive categorization --gjb
+
+o #if vs. #ifdef/#ifndef
+o of #if-s, are arguments expressions or just single defined(foo)/!defined(foo)?
+o Histogram of # of cases
+   #if ... #endif has 1
+   #if #else #endif has 2
+   #if #elif #endif has 2.5 or 3
+   #if #elsif #else #endif has 3
+  etc.
+o How deeply are #if-s nested
+  (can we ignore multiple-inclusion prevention from this?)
+o Rough intent of purpose (see below categories and examples)
+o Bodies (enclosed "scope")
+   * No. of lines
+   * CPP only, C only, Both
+
+
+Commenting
+ 0
+ 1
+ TRUE
+ FALSE
+ XXX_FIXME_WHEN_RCSMERGE_IS_FIXED
+ NOT_C_CODE
+
+Debugging Versioning
+ .*DEBUG.*
+ DEBUG(GING)?
+ NDEBUG
+ XDEBUG
+ YYDEBUG
+ DEBUG.*
+ .*_DEBUG
+
+Feature Versioning  (This doesn't catch most of them)
+ YY_USE_.+
+ USE_.+
+ WANT_._
+
+Portability by Machine/OS
+ __i960__
+ __clipper__
+ __gmicro__
+ __hppa
+ _PA_RISC1_1
+ SPARCV9
+ MOTOROLA
+ .*SUN_FPA.*
+ sgi
+ IRIS[234]D
+ APOLLO
+ ALLIANT(_2800)?
+ CRAY
+ CRAY_STACK
+ CRAY2
+ Cray([12]|[XY]MP)
+ tandem
+ cadmus
+ USG
+ USG5_4
+ USGr4_2
+ OS2
+ __OSF1__
+ __hp_osf
+ __osf__
+ pdp11
+ __i860
+ __PARAGON
+ __PARAGON__
+ Sun386i
+ __386BSD__
+ cadmus
+ __AIXESA
+ __ibmesa
+ ibm032
+ ibmrt
+ interdata
+ is68k
+ _AIX
+ HPUX(_[56789]|_10)?
+ HP(2648|26|76|GL)
+ MSDOS
+ amiga(dos)?
+ AMIGA_SC_6_1
+ AMIGA_AC_5
+ Minix
+ (__)?hpux(_9)?
+ hp9000s[23578]00
+ hppa
+ __hppa
+ __hpux
+ HPOSF1
+ NeXT
+ _CX_UX
+ _M88K
+ convex
+ __bsdi__
+ UnixPC
+ unix
+ vax
+ VMS
+ __VMS_POSIX
+ Ultrix
+ ultrix
+ mips
+ MIPSEB
+ MIPSEL
+ MIPS_SYSV
+ i386
+ __i370__
+ _SEQUENT_
+ sequent
+ tower32
+ TOPS20
+ apollo
+ __powerpc__
+ __pyr__
+ __ibm032__
+ __z8000__
+ SunOS4
+ SunOS5
+ M_UNIX
+ _?M_XENIX
+ Xenix(_2[23])?
+ Xenix286
+ qnx
+ SYSV3
+ SYSV_EXT
+ __Lynx__
+ m68k
+ NEWSOS5
+ mc680[01234]0
+ mc68k32
+ m88000
+ sysV68
+ __NetBSD__
+ hp300
+ OSF_ALPHA
+ OSF_OS
+ hp9000
+ Irix[34567]
+ BSD(4_[1234])?
+ _AIX(RT)?
+ AIX_13
+ AIX3_2
+ RISC6000
+ _IBMR2
+ _IBMESA
+ u370
+ _AIX370
+ att3b
+ att386
+ MULTIMAX
+ UMAXV
+ __m88k
+ _M**KBCS_TARGET
+ _CX_UX
+ Tek4132
+ Tek4300
+ drs6000
+ is68k
+ luna88k
+ alpha
+ alliant
+ aix
+ aixpc
+ butterfly
+ BFLY1
+ DGUX
+ Xenix
+ sparc
+ sun([23])?
+ tower32
+ __linux__
+ Linux
+ __SVR4_2__
+ __WIN32__
+ WINDOWSNT
+ DOS_NT
+ WINDOWS95
+ __32BIT__
+ MACOS
+ TOPS20
+ ATARI
+ atarist
+ pdp11
+ macintosh
+ __POWERPC__
+ _Windows
+ _MAXPORT
+ MAC_TCL
+
+Portability by Feature
+ STACK_DIRECTION
+ STACK_GROWS_DOWNWARD
+ STACK_GROWTH_DOWN
+ arch_is_big_endian
+ arch_is_little_endian
+ arch_ints_are_short
+ arch_arith_rshift
+ BYTEORDER
+ HAVE_.+   (but not HAVE_PROTOS)
+ HAVE_CONFIG_H
+ .+_MISSING
+ BROKEN_.+
+ NO_FCNTL
+ _POSIX_VERSION
+ READLINE_LIBRARY
+ BSD_SIGNALS
+ POSIX_SIGNALS
+ SYSTYPE_SYSV
+ SYSTYPE_BSD
+ __ELF__
+ COFF
+ .+_BUG
+
+
+Language/Compiler
+ VAXC
+ __TURBOC__
+ __BORLANDC__
+ _MSC_VER
+ __cplusplus
+ __STDC__
+ __GNUC__
+ __GNU_LIBRARY__
+ __MWERKS__
+ __MSC__
+ __ZTC__
+ __PUREC__
+ applec
+ THINK_C
+ __SC__
+ STDC
+ STDC_HEADERS
+ HAVE_GCC
+ lint
+ LINT
+ NeedFunctionPrototypes
+ FUNCPROTO
+ _NO_PROTO
+ HAVE_PROTOS
+ __DJGPP___
+ KR_headers
+ NON_UNIX_STDIO
+ __DECC
+ __DECCXX
+
+Multiple Inclusion Prevention
+ .+_H_?
+
+Misc. System
+ __.+
+
+
+Warning suppresion for redefinition
+  The idiom is
+  #ifdef FOO
+  #undef FOO
+  #define FOO BAR
