@@ -3921,11 +3921,20 @@ sub mindex_from_name_file_line {
   my ($name,$file,$line) = check_args(3,"mindex_from_name_file_line",caller,@_);
   
   my $cDefs = $macros{$name}[0];
-  my $i = 0;
+  my $i = 1;
 
   while ( $i <= $cDefs ) {
     my $mi = $macros{$name}[$i];
-    if ($mfile[$mi] eq $file && $mline[$mi] == $line) {
+    my $c_phys_lines = $mplines[$mi];
+    my $first_phys_line = $mline[$mi];
+
+    #if ($name eq "NEXTBYTE" || $name eq "NLENGTH") {
+    #  print STDERR "l,c,f: $line,$c_phys_lines,$first_phys_line\n";
+    #}
+    
+    #FIX: I'm not convinced about why it needs to be $first_phys_line-1
+    if ($mfile[$mi] eq $file && 
+	($line >= $first_phys_line-1 && $line <= $first_phys_line + $c_phys_lines)) {
       return $mi;
     }
     $i++;
@@ -4029,6 +4038,7 @@ sub update_cpp_directives_for {
   #to correctly not parse the { as an open block
 
   # This code avoids warnings about using uninitialized values
+  no strict 'refs';  #FIX: Must I do this?
   if (!defined($ {$rg_cppcmdcounts[$current_ft_index]}{$cpp_cmd})) {
     $ {$rg_cppcmdcounts[$current_ft_index]}{$cpp_cmd} = 0;
   }
