@@ -5,6 +5,10 @@
 # <gjb@cs.washington.edu>
 # Seattle, WA  USA
 # http://www.cs.washington.edu/homes/gjb
+# Creates cat-[categ].freq{use,def}_cum files
+# Where categ is the name of the first meta-category in
+# the @mcat_XXX list from em_constants.pm
+# (This gets fixed in Excel)
 
 require 5.000;
 use Getopt::Std;
