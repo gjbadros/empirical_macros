@@ -1,0 +1,58 @@
+FWIW, #ifdef FOO  is *not* an expansion of the macro FOO, and
+      #if    FOO  is not treated as an expansion, either
+i.e., ccd lines must be handled using the old mechanism for now.
+
+How To Use Pcp3 To Preprocess A Package
+---------------------------------------
+
+0) Use Linux for the configuration; we used that for the first run of numbers.
+   Your path should contain ~gjb/bin/share/gcc-pcp3, ~gjb/bin/linux/pcp3, and
+   possibly other scripts in ~gjb/bin/share.
+   Set environment variable lgjb to /scratch/gjb; do one of
+     setenv lgjb /scratch/gjb
+     export lgjb=/scratch/gjb
+
+1) Run `./configure' or `xmkmf -a'
+
+2) Use gcc-pcp3 instead of a compiler; do one of
+    * Use "make -k CC=gcc-pcp3"
+    * Edit Makefiles (edit CC=gcc variable); may need to remove other
+      spurious compile flags that cpp doesn't understand, e.g., -O, or -g.
+      Find makefiles with "findfile Makefile"; or use
+      perl -ibak and a tricky zsh pattern like **/Makefile 
+
+3) make -k in all appropriate directories -- the link step will fail
+3b) rm -f **/*.o(.) #find . -type f -name "*.o" -exec rm \; 
+
+4) cd to the top level directory
+
+5) Use pcp3-compare-exps-vs-c to check to make sure we have all the
+   appropriate .exps files (1 per .c file)
+5b) for each file remaining, create the .exps file by making that .o file
+   (may need to rm the .o file first)
+
+6) use pcp3-combine-expansions to create expansions.lst
+
+7) Run:
+
+denote-expansions expansions.lst 2>denote-expansions.err
+
+to create munged/* directory hierarchy with preprocessed files
+
+8) cd into munged, and create a new c-files-list and
+compare to the old c-files-listings:
+find-c-no-usr >c-files-listing
+diff =(sort c-files-listing) =(sort ../c-files-listing)    #zsh-syntax
+
+"Do the right thing" with header files
+-- either copy the header file into munged/ (if it's included but has no expansions), or
+-- do nothing (if it is not included by any source file)
+
+Regenerate c-files-listing:
+find-c >c-files-listing
+
+
+9) rm -fr munged/usr munged/uns
+
+
+10) run em_analyze over the munged directory and pray
