@@ -18,7 +18,9 @@ while (<>) {
   $cum[$F[0]] = $F[1];
 }
 
-@buckets = (1,2,3,4,5,6,7,8,9);
+# Remind has some macros w/ 14 definitions, so
+# go all the way up to there
+@buckets = (1,2,3,4,5,6,7,8,10,12,14);
 
 print "$file\n";
 foreach $i (@buckets) {
