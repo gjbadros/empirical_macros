@@ -1,27 +1,14 @@
-Attached is a point-by-point response to Reviewer 3's comments.  (We also
-direct your attention to our March 31 cover letter, which addresses many of
-the high-level points.)  Section numbers and pages refer to the revision
-unless otherwise noted.
+Attached is a point-by-point response to Reviewer 3's comments.  (Also see
+our March 31 cover letter, which addresses many of the high-level points.)
+Section numbers and pages refer to the revision unless otherwise noted.
 
 While we carefully and seriously considered each suggestion and implemented
-most of them, in some cases we chose not to make changes.  This was due to
-two factors.  First, this reviewer asked questions about a specific set of
-points.  As we note in our cover letter, we were asked to expand each
-section of the paper by at least one reader, and we do not have room to
-accommodate all these requests in the current paper.  Second, in some cases
-when only one reader was unclear about a point, while all the others (not
-just the reviewers) understood it, we chose not to make changes (though in
-many cases we still modified the text for additional clarity).
-
-DN: After some careful thinking (and two attempts to rewrite the
-"Second, ..." part), I think we need to eliminate the "Second, ..."
-part.  It isn't that it reads in a complicated way (which is does),
-but rather that I can only see the reviewer taking this as an insult.
-My specific suggestion is to rephrase the second and third sentences
-as:  "This was primarily due to the fact that, collectively, the
-referees requested expansion of each section in the paper.  While we
-were able to handle many, if not most, of the requests, we were unable
-to address each and every concern of all the referees."
+most of them, in some cases we chose not to make changes.  This was
+primarily due to the fact that, collectively, the referees (and other
+readers) requested expansion of each section in the paper, and occasionally
+the suggestions were in conflict.  Where we do not give a specific page
+number, we generally did not make a change, though the explanatory text
+here may serve if the issue is critical or remains unclear.
 
 > This paper presents an experimental study of the use of the C
 > preprocessor.  The paper makes two contributions: it presents a
@@ -71,9 +58,7 @@ explain the methodology more precisely and thoroughly.
 
 These general points, too, are addressed elsewhere or in our cover letter.
 The paper generally comments on these issues where they arise rather than
-dumping it all in one place.
-
-DN: Replace "dumping" with "placing".
+in one location.
 
 > It's hard to tell from your paper if your taxonomy is flat.  For
 > example, is ``extra-linguistic'' a taxon that is divided into other
@@ -84,9 +69,6 @@ from the fact that it doesn't appear in section 5.1).  Rather, it is
 orthogonal to those categories.  Section 5.2 shows that extra-linguistic
 capabilities stem from a variety of sources by enumerating the various
 kinds of extra-linguistic constructs.
-
-DN: Did we add a comment about this in the paper?  If so, we should
-mention it.  
 
 > Don't measure just for the sake of measuring; convince us that what
 > you are measuring is meaningful.  For example, you might
@@ -110,17 +92,10 @@ We do more of this now, in the expanded sections 9 and 10.
 > does not make sense to lump Makefiles and other non-C code in with the
 > C programs in the experimental measurements.)
 
-We never did so.  We did process some files containing many macro
-definitions, some of which were primarily used in C code and some of which
-were primarily used in Makefiles or elsewhere.  You might argue that this
-is bad style, but nevertheless it occurs in practice, and so we reported
-it.
-
-DN: I don't like starting with the "We never did so."  I'd suggest
-eliminating that sentence entirely; an alternative would be to say,
-"We did not in general do so."  I'd also rewrite the last sentence a
-bit: "Although this is undoubtedly bad style, it nevertheless occurs
-in practice, as we've made clear in the paper."
+We process some files containing many macro definitions, some of which were
+primarily used in C code and some of which were primarily used in Makefiles
+or elsewhere.  This does occurs in practice (for instance, for
+configuration), as we've made clear in the paper.
 
 > A serious weakness of your paper is that your taxons are not defined
 > precisely.  You do not explain exactly what your analyzer computes or
@@ -160,10 +135,8 @@ Paragraph 3 of section 3 discusses how we accomplish this.
 >     this analysis.
 
 Paragraph 4 of section 3 discusses how we accomplish this (using a modified
-Cpp, as you suggest).  The change to the data was not significant, but the
-added precision is welcome.
-
-DN: Replace "welcome" with "an improvement".
+Cpp, per the suggestion).  The change to the data was not significant, but
+the added precision is an improvement.
 
 > In general, tell us exactly how well or how badly you are doing in
 > your analyses.
@@ -185,13 +158,8 @@ We have extended and clarified sections 5.1 and 5.2, and retitled section
 > short definitions (and examples if they'll fit) might be helpful.
 > Give readers every aid in understanding and remembering your taxonomy.
 
-There is now an example (often several) for every taxon.  A table wouldn't
-fit, nor did it improve over the current lists (in figures and in the text)
-in our view.
-
-DN: I'd replace the second sentence with: "Despite several serious
-efforts, we were unable to find a format for a table that was both of
-reasonable and also clear."
+There is now an example (often several) for every taxon.  We were unable to
+find a format for a table that was both of reasonable size and also clear.
 
 > You claim on page 3 that your taxonomy identifies innocuous and
 > problematic macro usages.  I don't see this claim borne out in the
@@ -262,14 +230,9 @@ We ran LCLint, now, and discuss those results in section 8.3, paragraph
 
 While changing C programs to make less use of the preprocessor is a worthy
 goal (and one mentioned in the abstract of both the original draft and the
-revised one), it is not the only motivation for our work.  We consider
-development of tools to manipulate current programs also valid, particuarly
-since, much as we might like it, it is unreasonable to rewrite or
-restructure all existing C code.
-
-DN: I would rewrite the last sentence as: "As one other example, we
-consider development of tools to manipulate current programs as
-another important motivation."
+revised one), it is not the only motivation for our work.  As one other
+example, we consider development of tools to manipulate current programs as
+another important motivation.
 
 In order to motivate the work earlier and more clearly, we have expanded
 and rewritten the abstract and split it into two paragraphs, and expanded
@@ -284,15 +247,8 @@ and rewritten the introduction and split it into two sections.
 >    _Bulletin of the American Association of Petroleum Geologists_,
 >    50(9):1992--1993.
 
-We have reworded and expanded the abstract.  However, It is impossible to
-distill all the results of the paper into a few brief sentences, both
-because of the amount of data and because different readers will find
-different parts of it most interesting, relevant, or surprising.  Also see
-point 11 of our cover letter.
-
-DN: I would shorten this to the first sentence alone, possible with a
-parenthetical including the final sentence that refers to the cover
-letter. 
+We have reworded and expanded the abstract.  (Also see point 11 of our
+cover letter.)
 
 > It might help your readers' understanding to pick one or two tools or
 > applications (e.g., a debugger, a test-coverage analyzer), and as you
@@ -300,14 +256,8 @@ letter.
 > the taxonomy and the data relate to the construction or use of such
 > tools.
 
-We do this some throughout section 5, but we've also tried to be more
-explicit and give more examples to aid the reader.
-
-DN: Replace "section 5, but we've also tried" with "section 5; we've
-also tried".  (It is often the case that "but" is puts people off.
-When one can use "and" instead, it's better.  Indeed, it might be
-worth a global search on "but" in your responses.  A little
-ass-kissing here might help.)
+We do this some throughout section 5.  We've also tried to be more explicit
+and give more examples to aid the reader.
 
 > This paper presents lots of data in the form of graphs and tables, so
 > you must make extraordinary efforts to help your readers comprehend
@@ -329,28 +279,21 @@ Most captions have been expanded and clarified.
 > The abstract claims an analysis taking cpp into account is
 > preferable.  Why?  Make your case or withdraw the claim.
 
-This is discussed in section 2 ("Background").  The abstract is long
-already, and we did not feel that we could justify a detailed argument
-for a proposition that is self-evident to most programmers.
-
-DN: Again, I'd eliminate everything but the first sentence.
+This is discussed in section 2 ("Background").
 
 > What does it mean to say cpp can define new syntax?
 
 Cpp can create operators (macros) which differ from any pre-existing
-language constructs -- say, by taking types as arguments.
-
-DN: Never response directly to him/her; always focus on what's in the
-paper (or not in the paper).  Do we mention it in the paper?
+language constructs -- say, by taking types as arguments.  The current
+draft doesn't spell this out, but we can add this if desired.
 
 > What does it mean to say cpp permits system dependencies to be made
 > explicit and tested?
 
 An explicit #if is superior to, say, instructions in a README file about
 different ways to build a program on different platforms.  The Cpp macros
-and tests reify those system dependences.
-
-DN: Repeat my previous comment.
+and tests reify those system dependences.  Again, this is not included in
+the current draft but can easily be added if necessary.
 
 > What is `disciplined' use of the preprocessor?  Who decides?  Which of
 > the usages in the paper are disciplined?  Connect the usages with
@@ -358,16 +301,13 @@ DN: Repeat my previous comment.
 
 Disciplined use avoids error-prone and difficult-to-understand constructs.
 The remainder of the paper investigates which constructs those are.  They
-will depend to some extent on specific circumstances and needs.
+will depend to some extent on specific circumstances and needs and as such
+are difficult to formalize.
 
-We chose not to change this terminology because, in the second paragraph of
-the introduction, we are attempting to introduce our work, and the intent
-of this word was clear to other readers (not just the other reviewers).
+We chose not to change this terminology in the paper; our intent of using
+this term in the introductory material was to evoke a general notion,
+rather than a precise definition.
 
-DN: I'd rewrite the last paragraph as: "We chose not to change this
-terminology in the paper; our intent of using this term in the
-introductory material was to evoke a general notion, rather than a
-precise definition."
 > Page 2:
 > 
 > What is ``attempting to emulate the preprocessor''?
@@ -404,17 +344,14 @@ three subsections.
 > too vague and general.  Try to improve or prune the list.  Definitely
 > give a concrete example of each.
 
-We give an example of each.  Every example in our paper comes from the
-packages we studied; none of these are problems of our own invention.
-
-DN: Rewrite as: "We give an example of each, with each example taken
-directly from one of the packages we studied."
+We give an example of each, with each example taken directly from one of
+the packages we studied.
 
 > Why is high total use problematic?  Computers are good at doing
 > the same thing over and over.
 
 People are not, however; the text referred to humans as well as tools.
-More directly to your point, one might hypothesize that the approach chosen
+More directly to the point, one might hypothesize that the approach chosen
 by most tools -- to ignore macros -- would work well if there are few
 macros.  (The problems with such approaches -- for instance, the tool
 reports errors if the tool tries to treat macros as variables or functions,
@@ -424,27 +361,19 @@ immediately above.  A small amount of such problems might be acceptable to
 a user; a large amount is likely not to.)  The quantity of preprocessor use
 is directly relevant to that hypothesis.
 
-DN: "to your point" => "to the point".  
-
 > What's a complicated body?  Does your analysis tell you which bodies
 > are complicated?  How do you measure complexity?
 > Explain stringization, pasting, and free variables.
 
 We have added references to the relevant sections, where more substantial
-discussion occurs.  We don't have room for, and it is not appropriate to
-include, such detailed explanations in this outline.
-
-DN: Eliminate the second sentence.
+discussion occurs.
 
 > Some of the value of macros comes from multiple definitions (e.g., for
 > portability or dialects).  Why is this a problem?  Make your case.
 
-The problem, as noted in the text, is when the definitions are incompatible.
-They apparently have different intended uses, and such name clashes can
-lead to either bugs or difficulties in understanding the code.
-
-DN: Change "as noted" to "as now noted" (even it is was before, this
-is accurate).
+The problem, as now noted in the text, is when the definitions are
+incompatible.  They apparently have different intended uses, and such name
+clashes can lead to either bugs or difficulties in understanding the code.
 
 > Page 3:
 > 
@@ -454,16 +383,17 @@ is accurate).
 > claim, make it as precise as possible and provide supporting evidence.
 
 This paragraph (which has been moved to page 2 in the new draft, keeping it
-in the introduction) has been rewritten to avoid the offensive terms.  It
-also explains the broad outlines of the results a bit more, but at this
-point it is premature to try to introduce long definitions and explanations
-which appear later in the paper.  Here were are merely presenting intuition
-and flavor; the more precise results belong in the body proper.
+in the introduction) has been rewritten to avoid the offensive terms and to
+better explains the broad outlines of the results.  Because here we are
+presenting intuition and flavor, we postponed detailed definitions and
+explanations to the body of the paper, where the more precise results
+appear.
 
 > Begin Section 2 by saying how the analysis was done.  At this point
 > I'm still wondering if it was done by hand.
 
-We will convert "We analyzed" to "We used programs we wrote to analyze".
+Our source (though not your draft) converts "We analyzed" to "We used
+programs we wrote to analyze".
 
 The bulk of section 3 (in the new draft; was section 2 in the original
 draft) is about how the analysis was done.
@@ -487,12 +417,8 @@ No.  This is discussed in section 3.
 This is a feature, not a disclaimer.  (The large number of library macros
 overshadows use in the package, rendering the results meaningless for
 learning about how the package uses Cpp.  After we discovered this, we
-suppressed library macros from our results.)  However, per your suggestion,
+suppressed library macros from our results.)  However, per this suggestion,
 we have moved it to a paragraph of its own.
-
-DN: "Per your" to "per this".  (My goal is to depersonalize the
-response as much as necessary.  Where we disagree, it has to be with
-the comment, not the person, for instance.)
 
 > Page 4:
 > 
@@ -503,9 +429,7 @@ the comment, not the person, for instance.)
 The relationship between GNU programs and the GNU Coding Standards is
 tenuous at best.  Most GNU programs do not appear to have been written with
 an eye to the standards.  Additionally, the standards barely mention Cpp.
-We mentioned this in Section 8.1.
-
-DN: "mentioned" => "mention" (or "now mention").
+We mention this in Section 8.1.
 
 >   2) Where does one get these packages?
 
@@ -528,11 +452,11 @@ omitted them.
 >        - tcl implementation
 >        - Hanson's C Interfaces and Implementations
 
-We had many other candidates as well, but with well over a million lines of
-code already under analysis, we decided that we didn't need any more
-programs.  Additionally, we did not wish to introduce even further
-variation into our population (say, by including partial programs or
-libraries).
+These are good suggestions; we had many other candidates as well.  With
+well over a million lines of code already under analysis, we decided that
+we didn't need any more programs.  Additionally, we did not wish to
+introduce even further variation into our population (say, by including
+partial programs or libraries).
 
 > I found I didn't learn anything from the fact that different packages
 > had different profiles.  I was disappointed.  Did you learn anything?
@@ -684,11 +608,7 @@ of page 10).
 
 > Remind us what stringization and pasting are.  
 
-We will add brief descriptions here.
-
-DN: What does this mean?  That we'll add them in the paper later on?
-(If so, say: "We neglected to fix this in the current version, but
-will do so after the refereeing process is finished.")
+Our current source (though not your draft) adds brief descriptions here.
 
 > Page 10:
 > 
@@ -719,8 +639,8 @@ uses on average than macros that do not use pasting.
 Per the third sentence of the paragraph (in both drafts), extra-linguistic
 capabilities provide a feature unavailable in the C language.  By contrast,
 macros categorized as syntactic act as punctuation.  Since these are
-orthogonal classifications, some syntactic macros will provide
-extra-linguistic capabilities (such as dynamic binding), but not all will.
+orthogonal classifications, some but not all syntactic macros will provide
+extra-linguistic capabilities (such as dynamic binding).
 
 > How did you develop your list of macro pitfalls?  Aren't these
 > well known in the C literature?  How does your work relate?
@@ -739,8 +659,6 @@ We have found no other list as comprehensive as ours, though most of the
 items appear on some other list of macro errors or recommendations.
 (Exceptions include free variables (a potential, not certain, error),
 inconsistent arity, and null body with arguments.)
-
-DN: You need to run "spell" once more, Mike.
 
 All of our examples come from the packages we studied, and we culled our
 list by eliminating warnings we considered uninteresting or which did not
@@ -815,8 +733,9 @@ described in Section 3.
 > Why not just count bodies?  Explain why it might be interesting or
 > important to classify macro names.
 
-We will add a note about this to the introduction to section 5 and to
-Figure 6.  We continue to postpone the details to Figure 7.
+Our current source (though not your draft) adds a note about this to the
+introduction to section 5 and to Figure 6.  We continue to postpone the
+details to Figure 7.
 
 > ``Failed classification'' seems an artifact of your classification
 > scheme.  Does this indicate a flaw in your work or a genuine problem
@@ -854,9 +773,8 @@ be more comprehensible.
 
 > The first paragraph of section 4.6 is another mystery.
 
-We will rewrite this to make it clearer.
-
-DN: Does this mean we have, or we neglected to and could?
+This is slightly modified in the current draft; and in our current source,
+reworded for further improvement.
 
 > Give examples of places where you've identified changes that should be
 > made to package code.  Exactly how did you identify these places?
@@ -1111,7 +1029,7 @@ We expanded this point (on page 26 of the new draft).
 
 Paragraph 2 of Section 8.2 discusses Spencer and Collyer's recommendations
 in detail.  For the most part, they address structuring the code rather
-than specfic macro usage.
+than specific macro usage.
 
 > If so, how frequent are
 > those usages according to your data?  Does the frequency vary by
@@ -1168,10 +1086,10 @@ this effect if it would be helpful.
 > Define `problematic' uses.
 
 Uses are problematic if they are likely to inhibit some task, such as
-correct execution, program understanding, or automatic analysis.
-In particular, erroneous macros and those that expand as a sequence of
-tokens rather than a whole language construct fall under this rubric, but
-others may, too, depending on the context.
+correct execution, program understanding, or automatic analysis.  In
+particular, erroneous macros and those that expand as a sequence of tokens
+rather than a whole language construct fall under this rubric; others may,
+too, depending on the context.
 
 We have eliminated many uses of this word, often substituting
 "error-prone", but that does not capture the full connotations of
@@ -1216,8 +1134,8 @@ section 9.
 Section 5.3 shows specific problems caused by erroneous macros.  Other
 problems are often too lengthy for a concrete example.  Our arguments about
 understandability and ease of programming would require a very substantial
-study and then would still be open to doubt; but many experienced
-programmers have found them persuasive in their current form.
+study and then would still be open to doubt; many experienced programmers
+have found them persuasive in their current form.
 
 We also expanded this section to add more references to others' lists; some
 of those lists are also detailed in the previous section.
@@ -1226,7 +1144,8 @@ of those lists are also detailed in the previous section.
 > from this paper in its present form.  Distill the information from the
 > rest of the paper that you believe to be relevant to language design.
 
-We will refer the reader to Section 9.
+Our source (though not the draft you have) refers the reader to Section 9
+(in the new draft, which was Section 8 in the old draft).
 
 > Elaborate on the third paragraph of section 9.
 
