@@ -26,6 +26,7 @@ int ct_yywrap();
 #include "nmetab.h"
 #include "symtab.h"
 #include "heap.h"
+#include "cpplib.h"
 
 FILE *yyin;
 char line_buf[MAX_TOKN_LEN];
@@ -734,8 +735,9 @@ pp_line         ^{whitespace}*"#"{whitespace}*[0-9]
 
 .                      { /* Any unknown char is an error */
                         fprintf(stderr,
-                            "Error: Line %d: Illegal Character",
+                            "Error: Line %d: Illegal Character: ",
                             Parse_TOS->yylineno);
+			cpp_print_file_and_line(&parse_in);
                         if ((yytext[0] >= ' ') && (yytext[0] <= '~'))
                             fprintf(stderr,": '%c'\n", yytext[0]);
                         else
@@ -777,6 +779,9 @@ void get_lineno()
     char *pnt;
     int   ln = 0;
 
+    /* FIXGJB: this does not work since line_buf is not used; instead
+       cpp_get_token is used, but that does not have a line lookahead as this
+       expects */
     pnt = strchr(line_buf,'#');
 
     do {
@@ -813,7 +818,7 @@ void get_lineno()
 
     } while(0);
 
-    ct_yywarn("Malformed #line directive");
+//    ct_yywarn("Malformed #line directive");
 }
 
 /***********************************************************************/
@@ -839,6 +844,7 @@ void ct_yywarn(char *s)
     fprintf(stderr,"%s%s:%d: Warning - %s:\n%s",SzIsSpeculative(),
          Parse_TOS->filename, Parse_TOS->yylineno, s, line_buf); 
     print_caret(line_buf,Parse_TOS->yycolno);
+    cpp_print_file_and_line(&parse_in);
 }
 
 /***********************************************************************/
@@ -848,6 +854,7 @@ int ct_yyerr(char *s)
     fprintf(stderr,"%s%s:%d: %s:\n%s",SzIsSpeculative(),
          Parse_TOS->filename, Parse_TOS->yylineno, s, line_buf); 
     print_caret(line_buf,Parse_TOS->yycolno);
+    cpp_print_file_and_line(&parse_in);
 
     if (FIsSpeculative()) {
 	return 0;
@@ -865,12 +872,13 @@ int ct_yyerr(char *s)
 
 int ct_yyerror(char *s)
 {
-        /* Insure temination */
+    /* Ensure temination */
     line_buf[MAX_TOKN_LEN-1] = '\0';
     fprintf(stderr,"%s%s:%d: Parse error before '%s'\n%s",SzIsSpeculative(),
          Parse_TOS->filename, Parse_TOS->yylineno, toksym(err_tok,0),
          line_buf); 
     print_caret(line_buf,Parse_TOS->yycolno);
+    cpp_print_file_and_line(&parse_in);
 
     if (FIsSpeculative()) {
 	return 0;
