@@ -28,11 +28,11 @@
 % etc., produced much worse results than the plain PostScript files.
   $$
   \begin{array}{c}
-    \mbox{\epsfig{file=tiberius-coin.ps,height=2.75in}}
+    \mbox{\epsfig{file=tiberius-coin.eps,height=2.75in}}
   \end{array}
   \mbox{~~~~~}
   \begin{array}{c}
-    \mbox{\epsfig{file=caligula-coin.ps,height=2.75in}}
+    \mbox{\epsfig{file=caligula-coin.eps,height=2.75in}}
   \end{array}
   $$
 
@@ -266,7 +266,7 @@ Empty note.
 % \slidetitle{Cpp use}
 \raisedslidetitle{Cpp use}
 
-\centerline{\epsfig{file=directives.eps,height=6in}}
+\centerline{\epsfig{file=directives-breakdown.eps,height=6in}}
 
 Lots of Cpp use
 
@@ -320,7 +320,7 @@ define, and conditionals (duh).
 \begin{slide}
 \raisedslidetitle{Definitions per Cpp identifier}
 
-\centerline{\epsfig{file=num-defs.eps,height=6in}}
+\centerline{\epsfig{file=freq-def.eps,height=6in}}
 
 Many macros multiply defined
 
@@ -341,7 +341,7 @@ identifier rather than by macro definition), if I can do it in time.)
 \begin{slide}
 \raisedslidetitle{Expansions per Cpp macro}
 
-\centerline{\epsfig{file=num-uses.eps,height=6in}}
+\centerline{\epsfig{file=freq-use.eps,height=6in}}
 
 Many macros never used \slbreak
 Many macros used many times
@@ -360,7 +360,7 @@ never uses itself -- they're intended for external consumption.
 \begin{slide}
 \slidetitle{Where macros are used}
 
-\centerline{\epsfig{file=how-used.eps,height=6in}}
+\centerline{\epsfig{file=where-used.eps,height=6in}}
 
 Few macros used in both Cpp and code
 \end{slide}
@@ -379,7 +379,7 @@ Constant: {\tt \#define \verb|ARG_MAX| 131072} \slbreak
 
 Expression: {\tt \#define sigmask(x) (1 << ((x)-1))}
 
-Statement: {\tt \#define FREE(s) if (s) free (s);}
+Statement: {\tt \#define FREE(s) if (s) free(s);}
 
 Stringization and pasting: \slbreak
   {\tt \#define \verb|__CONCAT|(x,y) x \#\# y}
@@ -413,7 +413,7 @@ function not returning void.
 \begin{slide}
 \raisedslidetitle{Macro body categorizations}
 
-\centerline{\epsfig{file=category.eps,height=6in}}
+\centerline{\epsfig{file=def-categories.eps,height=6in}}
 
 Most are simple \slbreak
 Many are complicated
