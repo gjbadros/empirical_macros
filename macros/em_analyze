@@ -5100,9 +5100,13 @@ sub categorize_macro_def ( $ )
 	  $type = $mntype{$body}; }
       else
 	{ $category = $catSYMBOL_UNKNOWN; } }
+  # FIX: elements of $body may be ordinary symbols, if they expand to macros
+  # with definitions in $catCOMMAND_LINE.
   elsif (($body =~ /^(-\w[a-zA-Z0-9_.,\/]*([= ][a-zA-Z0-9_.,\/]*)?\s*)+$/)
-	 || ($body =~ /(\/$identifier_re)+/)
-	 || ($body =~ /\$[\(\{]/))
+	 || ($body =~ /^(\/$identifier_re)+$/) # pathname (didn't used to have ^$; why?)
+	 || ($body =~ /^[-_a-zA-Z0-9]+\.[os]$/)	# .o or .s filename
+	 || ($body =~ /\$[\(\{]/) # use of "$()" or "${}"
+	 )
     { $category = $catCOMMAND_LINE; }
   elsif (contains_mismatch($body))
     { $category = $catUNBALANCED; }

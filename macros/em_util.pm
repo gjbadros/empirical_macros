@@ -115,6 +115,8 @@ sub percent2 ( $$ ) {
 # Not currently appropriate for values above 100.
 sub two_significant_digits ( $ )
 { my ($x) = check_args(1, @_);
+  if ($x > 100) { die "two_significant_digits: argument $x too large"; }
+  if ($x == 100) { return "100"; }
   my $result = sprintf "%6.02g", $x;
   $result =~ s/^\s+//;
   # If only one significant digit, fix.
