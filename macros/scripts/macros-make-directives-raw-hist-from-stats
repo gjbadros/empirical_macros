@@ -1,5 +1,5 @@
 #!/uns/bin/zsh
-
+# -*-zsh-*-
 # This computes directive use for all lines.
 # To get only header lines, use DIRECTIVES_HNI.
 # To get only non-header (ie, code) lines, use DIRECTIVES_CNI.
