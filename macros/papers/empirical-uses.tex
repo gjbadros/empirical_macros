@@ -51,7 +51,7 @@ Seattle, WA  98195-2350\\
   of defined macros, the relationship between C functions and their use of
   macros, and the macros that are difficult to express in terms of other C
   or C++ language features.  We report on the analysis, in particular
-  illustrating data that are material when considering the definition of
+  illustrating data that are material when considering the development of
   tools for C or C++.  The results (and the supporting framework) lay the
   foundation for developing a tool to reduce usage of the preprocessor by
   translating from C to C++.
@@ -66,7 +66,7 @@ The C programming language~\cite{ansi} is intimately connected to its macro
 preprocessor, Cpp~\cite[Ch.3]{Harbison91}.  Preprocessor facilities such as
 file inclusion, defining constants and macros, and conditional compilation
 are present in essentially every C program.   
-While the preprocessor can be used in a simple or well-structured way to
+While the preprocessor can be used in simple or well-structured ways to
 improve portability, performance, or readability, it also lends itself to 
 arbitrary source code manipulations that complicate understanding of the
 program by both software engineers and tools.
@@ -86,7 +86,8 @@ Tools may ignore macro definitions altogether, accept only preprocessed
 code (perhaps by running Cpp on their input), or attempt to emulate the
 preprocessor.
 
-Ignoring preprocessor directives is an option for approximate tools, but
+Ignoring preprocessor directives is an option for approximate tools (that
+is, those that are based on lexical or approximate parsing technique), but
 accurate information about function extents, scope nesting, declared
 variables and functions, and so forth requires addressing the preprocessor.
 
@@ -112,12 +113,12 @@ error-prone situation.
 
 A tool that first preprocesses code, or insists on preprocessed code as
 input, cannot be run on a non-syntactic program or one that will not
-preprocess (or produces nonsense) on the system on which the tool is being
+preprocess (or produces nonsense) on the platform on which the tool is being
 run.  These constraints complicate porting and maintenance, two of the
 situations in which program understanding and transformation tools are most
-likely to be desired.  Additionally, a tool supplied with only one preprocessed
+likely to be needed.  Additionally, a tool supplied with only one preprocessed
 instantiation of the source code cannot reason about the program as a
-whole, only that version that results from one particular set of
+whole, only about that version that results from one particular set of
 preprocessor variables.  (For instance, a bug in one configuration may not
 be discovered despite exhaustive testing of other configurations that do
 not incorporate particular code or do not admit particular paths through
@@ -127,12 +128,11 @@ The third option, emulating the preprocessor, is fraught with difficulty.
 Macro definitions consist of complete tokens but need not be complete
 expressions or statements.  Conditional compilation and alternative macro
 definitions lead to very different results from a single original program
-text.  Tradeoffs must be made between performing preprocessing and
-maintaining the code in as close to its original form as possible.
-Preprocessing also adds complexity to an implementation.  Despite these
-problems, in many
-situations only performing some sort of preprocessing can produce correct
-answers.
+text.  Preprocessing also adds complexity to an implementation.  So,
+tradeoffs must be made between performing preprocessing and maintaining the
+code in as close to its original form as possible.  Despite these problems,
+in many situations only performing some sort of preprocessing can produce
+useful answers.
 
 All three approaches would be unnecessary if programs did not use
 preprocessor directives.  This is exactly what Stroustrup suggests:
@@ -156,8 +156,23 @@ is another path for partial elimination of Cpp.
 
 As a step toward such preprocessor elimination, we empirically analyzed
 preprocessor usage in 23 C packages comprising nearly one million lines of
-code.  Section~\ref{sec:gathering} lists the packages and their sizes.  The
-analysis is intended to build a better understanding of how the
+code.  Figure~\ref{fig:packages} lists the packages and their sizes.
+For each package we also report the physical line count---the
+number of lines (or newline characters) in the file---and the non-comment,
+non-blank (NCNB) line count, which disregards lines consisting of only
+comments or whitespace.  The remainder of the analysis uses only the NCNB
+length, since that focuses more clearly on the essential source text of a
+package.
+
+\begin{figure}
+{\small
+  \setlength{\tabcolsep}{.25em}
+  \input{package_and_sizes-tbl.tex}
+}
+\caption{Analyzed Packages and Sizes\label{fig:packages}}
+\end{figure}
+
+The analysis is intended to build a better understanding of how the
 preprocessor is used.  In turn, this will help us to build a C to C++
 conversion tool with two attractive properties: it will take as input C
 programs complete with preprocessor directives, and it will map
@@ -167,8 +182,6 @@ features.\footnote{It is not practical to eliminate all uses of Cpp.  For
   directive.} Our framework for analyzing preprocessor usage provides a
 basis for the development of such a conversion tool.
 
-[fix: is this list complete?]
-This paper reports on several specific analyses we performed.
 \begin{itemize}\itemsep 0pt \parskip 0pt
 
 \item We computed the percentage of original C source code lines that
@@ -176,7 +189,7 @@ were preprocessor directives, including a breakdown of the frequency
 of specific directives such as \verb+#define+ (see
 Section~\ref{sec:directives}). It was not unusual to find C programs 
 in which over 10\% of the total lines were preprocessor directives, and 
-three of the 23 packages had over 20\% directives.
+three of the 23 packages had directives as over 20\% of their lines.
 
 \item We computed how often each macro was
 defined,  undefined, and
@@ -228,7 +241,7 @@ guidance on how to use C macros effectively, provide tools for
 checking macro usage for given programs, etc.
 
 Carroll and Ellis state that ``almost all uses of macros can be
-eliminated from C++ libraries.''~\cite[p.146]{Carroll95} 
+eliminated from C++ libraries''~\cite[p.146]{Carroll95}. 
 They list eight categories of macro usage and explain how to convert
 these types of constructs into C++ mechanisms.  They do not
 discuss automatic conversion, but  focus on instructing the
@@ -256,7 +269,7 @@ compiler and also the preprocessor.
 LCLint, a recently developed tool
 at MIT, handles many of the checks that lint does; furthermore, LCLint
 allows the programmer to add annotations that then permit additional
-checks to be performed~\cite{Evans-fse94,Evans-pldi96}.
+checks to be performed~\cite{Evans-pldi96,Evans-fse94}.
 Examples of checks that LCLint can optionally perform on function-like
 macros---that is, those which take arguments---include checking for
 macro arguments on the left hand side of assignments, checking for statements
@@ -282,45 +295,39 @@ constructs.  We are more interested in analyzing, describing, and
 automatically removing such uses so that tools can better process existing
 code without requiring human interaction or producing misleading results.
 
-
-\section{The Programs}\label{sec:gathering}
-
-Figure~\ref{fig:packages} shows the packages we analyzed, along with their
-sizes.  For each package we also report the physical line count---the
-number of lines (or newline characters) in the file---and the non-comment,
-non-blank (NCNB) line count, which disregards lines consisting of only
-comments or whitespace.  The remainder of the analysis uses only the NCNB
-length, since that focuses more clearly on the essential source text of a
-package.
-
-\begin{figure}
-{\small
-  \setlength{\tabcolsep}{.25em}
-  \input{package_and_sizes-tbl.tex}
-}
-\caption{Analyzed Packages and Sizes\label{fig:packages}}
-\end{figure}
-
 %% FIX: If we could also list the platforms for which each can compile,
 %% that would be great, but I doubt the benefit is worth the effort for now
+
+Krone and Snelting use mathematical foundations analysis to determine the
+conditional compilation structure of code~\cite{Krone94}.  They determine,
+for each line, which preprocessor macros it depends upon, and display that
+information in a lattice.  They do not determine how macros depend upon one
+another directly, only by their nesting in \verb|#if|, and the information
+conveyed is about the program as a whole.
+
 
 \section{Occurrence of Preprocessor Directives}\label{sec:directives}
 
 The first question we asked was simple: how often do
 preprocessor directives appear in C programs?
 Figure~\ref{fig:directives} shows the data for the packages we
-analyzed.  The figure contains six rows, *****
-There are five rows in the figure, each of which has a
-separate bar for each of the packages we analyzed.  The topmost row
-shows the total percentage of lines in the package that represent
-preprocessor directives.  The rows below the topmost one show the
-percentage of lines in the package attributed to a subset of
-preprocessor directives: (a) \verb+#undef+ is the next row down, (b)
-\verb+#include+ is the next row down, (c) \verb+#define+ is the next
-row down, (d) the conditional compilation directives (\verb+#ifdef+,
-\verb+#ifndef+, \verb+#if+, \verb+#endif+, \verb+#else+, and
-\verb+#elif+) are combined into a single group shown in the next row,
-and (e) any other directives in the bottom row. 
+analyzed.  Each group of bars in the figure represents the percentage of
+NCNB lines attributed to the specified category of directives, with each
+individual bar showing the percentage for a specific package.  Conditional
+compilation directives are grouped together, as are ``other'' directives.
+
+%The figure contains six rows, *****
+%There are five rows in the figure, each of which has a
+%separate bar for each of the packages we analyzed.  The topmost row
+%shows the total percentage of lines in the package that represent
+%preprocessor directives.  The rows below the topmost one show the
+%percentage of lines in the package attributed to a subset of
+%preprocessor directives: (a) \verb+#undef+ is the next row down, (b)
+%\verb+#include+ is the next row down, (c) \verb+#define+ is the next
+%row down, (d) the conditional compilation directives (\verb+#ifdef+,
+%\verb+#ifndef+, \verb+#if+, \verb+#endif+, \verb+#else+, and
+%\verb+#elif+) are combined into a single group shown in the next row,
+%and (e) any other directives in the bottom row. 
 
 \begin{figure}
 goes here [FIX: blank page for insertion?]
@@ -344,40 +351,40 @@ conditional compilation directives by a factor of about 16.
 \section{Frequency of Defined Macro Usage}\label{sec:usage}
 
 The second question we asked was: where and how often are macros
-defined and used in practice?  Specifically, for each macro we
-determined:
-\begin{itemize}\itemsep 0pt \parskip 0pt
+defined and used in practice?  
+%Specifically, for each macro we
+%determined:
+%\begin{itemize}\itemsep 0pt \parskip 0pt
+%
+%\item How many times it was \verb+#define+d.
+%\item How many times it was \verb+#undef+ed.
+%\item How many arguments (if any) it takes.
+%\item How many times (and where) it was mentioned in C source code.
+%\item How many times (and where) it was mentioned in other
+%preprocessor directives.
+%
+%\end{itemize}
+%[FIX: gjb: This is redundant with the same information in paragraph
+%form, above]
 
-\item How many times it was \verb+#define+d.
-\item How many times it was \verb+#undef+ed.
-\item How many arguments (if any) it takes.
-\item How many times (and where) it was mentioned in C source code.
-\item How many times (and where) it was mentioned in other
-preprocessor directives.
+%[FIX: gjb: I'd also like to see info about how often define-d to the same
+%expansion, or not, etc.]
 
-\end{itemize}
-[FIX: gjb: This is redundant with the same information in paragraph
-form, above]
-
-[FIX: gjb: I'd also like to see info about how often define-d to the same
-expansion, or not, etc.]
-
-
-We display some of these data here, in several different forms.
 Figure~\ref{fig:define_count} shows a histogram with cumulative
 percentages of the number of times each identifier is \verb+define+d
 in each of the packages.  The leftmost column lists the number of
-times an identifier is \verb+define+d, with the one through ten counts
-listed explicitly and all counts greater than ten collapsed into a
-single bin.  For example, looking at the \verb+bc+ package, 98.72\% of
-the identifiers were \verb+#define+d between one and six times.
+times an identifier is \verb+define+d, with the one through nine counts
+listed explicitly and all counts ten or greater collapsed into a
+single bin.  
+For example, looking at the \verb+Python+ package, 94.18\% of
+the identifiers were \verb+#define+d six or fewer times.  
 
 \begin{figure}
 {\small
   \setlength{\tabcolsep}{.25em}
   \input{freq_of_def-tbl.tex}%
 }
-\caption{Frequency of Definition\label{fig:define_count}}
+\caption{Cumulative Definition Percentage\label{fig:define_count}}
 \end{figure}
 
 The \verb+#undef+ counts are generally extremely low; the maximum
