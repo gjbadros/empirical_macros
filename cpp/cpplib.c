@@ -2815,6 +2815,18 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
 
   nargs = defn->nargs;
   pchRawCall = CPP_BUFFER(pfile)->cur;
+  {
+  int cchRawCall = CPP_BUFFER(pfile)->cur - pchAfterMacroName;
+  int ichSourceStart = pcei?(pcei->offset + 1): 
+    (CchOffset_internal(pfile) - cchRawCall - strlen(hp->name) + 1);
+  int ichSourceEnd = ichSourceStart + (pcei?pcei->length:(cchRawCall + strlen(hp->name)));
+  cpp_buffer *prev_buffer = CPP_PREV_BUFFER(pfile->buffer);
+  if (prev_buffer != CPP_NULL_BUFFER(pfile) && prev_buffer->prev != 0 && prev_buffer->ichSourceStart >= 0) {
+//     ichSourceStart += prev_buffer->ichSourceStart;
+//     ichSourceEnd += prev_buffer->ichSourceStart;
+  }
+  CPP_BUFFER(pfile)->ichSourceStart = ichSourceStart;
+  }
 
   if (nargs >= 0)
     {
@@ -3187,29 +3199,24 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
 
   pfile->output_escapes--;
   {
+#ifdef 0
   int cchRawCall = CPP_BUFFER(pfile)->cur - pchAfterMacroName;
   int cbuffersDeep = CbuffersDeep(pfile);
   int ichSourceStart = pcei?(pcei->offset + 1): 
-    (CchOffset_internal(pfile) - cchRawCall - strlen(hp->name) + 1);
   int ichSourceEnd = ichSourceStart + (pcei?pcei->length:(cchRawCall + strlen(hp->name)));
+    (CchOffset_internal(pfile) - cchRawCall - strlen(hp->name) + 1);
   int cexpansionsDeep = CExpansionsDeep(pcei);
-  if (cexpansionsDeep != cbuffersDeep)
-    {
-    int i = cbuffersDeep - cexpansionsDeep;
-    cpp_buffer *buffer = CPP_BUFFER(pfile);
-    assert (i>0);
-    
-    while (buffer != CPP_NULL_BUFFER(pfile)) 
-      {
-      assert (buffer->nominal_fname == 0);
-      if (buffer->ichSourceStart >= 0)
-	break;
-      buffer = CPP_PREV_BUFFER(buffer);
-      i--; // FIXGJB: i not needed?
-      }
-    ichSourceStart = buffer->ichSourceStart;
-    ichSourceEnd = buffer->ichSourceEnd;
-    }
+  int cchRawCall = CPP_BUFFER(pfile)->cur - pchAfterMacroName;
+#endif
+  int cchRawCall = CPP_BUFFER(pfile)->cur - pchAfterMacroName;
+  int cbuffersDeep = CbuffersDeep(pfile);
+  int ichSourceStart = CPP_BUFFER(pfile)->ichSourceStart;
+  int ichSourceEnd = ichSourceStart + (pcei?pcei->length:(cchRawCall + strlen(hp->name)));
+  cpp_buffer *prev_buffer = CPP_PREV_BUFFER(pfile->buffer);
+  if (CExpansionsDeep(pcei) > 1 && prev_buffer != CPP_NULL_BUFFER(pfile) && prev_buffer->prev != 0 && prev_buffer->ichSourceStart >= 0) {
+     ichSourceStart += prev_buffer->ichSourceStart - 1;
+     ichSourceEnd += prev_buffer->ichSourceStart - 1;
+  }
 
   if (cbuffersDeep == 0 || CPP_BUFFER(pfile)->has_escapes) 
     {

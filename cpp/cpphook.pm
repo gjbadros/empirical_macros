@@ -364,8 +364,11 @@ sub expand_macro {
   my $call_length = length("$mname$raw_call");
   my $fname = cpp::Fname();
   my $old = select;
-  annotate_definition_with_use($mname,$fname,$expansion,$s_start,$s_end,$cbuffersDeep);
-  add_use($mname,$fname,$expansion,$s_start,$s_end,$cbuffersDeep);
+  my @MEH = cpp::MacroExpansionHistory();
+  if (scalar (@MEH) == 0) {
+    annotate_definition_with_use($mname,$fname,$expansion,$s_start,$s_end,$cbuffersDeep);
+    add_use($mname,$fname,$expansion,$s_start,$s_end,$cbuffersDeep);
+  }
   select CPP;
 
   print "\nexpand_macro $mname = ", cpp::ExpansionLookup($mname), ", source offset: $s_start - $s_end, $cbuffersDeep [$has_escapes]; ", 
@@ -373,7 +376,7 @@ sub expand_macro {
   print " : expansion of $mname => $expansion (length $length:offset $start - $end [$cBytesOutput + $exp_offset + 1])\n";
 #  print " : argof = ", cpp::ArgOf(), "\n"; FIXGJB obsoleted
   print " : nests = ", join("->",@nests), "\n";
-  print " : MEH = ", join("<-",cpp::MacroExpansionHistory()),"\n";
+  print " : MEH = ", join("<-",@MEH),"\n";
   chomp $raw_call;
   print " : was \"$mname$raw_call\" with $cargs args, length = ", $call_length, "\n";
   my $state_stack = join(",",cpp::ParseStateStack());
@@ -393,6 +396,7 @@ sub expand_macro {
       print TPSOURCE "#$fname:(put-face-property-if-none $s_start $s_end \'italic)\n";
       print TPSOURCE "#$fname:(put-mouse-face-property-if-none $s_start $s_end \'highlight)\n";
     }
+    print TPSOURCE "#$fname:(add-text-property $s_start $s_end \'exp \"$mname => $expansion\")\n";
   }
   select $old;
 }
