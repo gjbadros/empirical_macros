@@ -12,7 +12,11 @@
 #                   it is also called an NI (not-included) file
 #   system file == a file that got parsed because another file
 #                  #include-d it
-
+#   ncnb == non-comment, non-blank; a line containing code
+#   c_ == count of, an integer variable
+#   rg_ = region, an array of indices for extracting slices from another array
+#   _ni = non-include; for a file, means it was on command line (?)
+#   mi = method of inclusion; why this file is being processed
 
 # FIXMERNST: handle #define /* badly-placed-comment */ MACRONAME  properly
 # FIX: getline should probably always return a simplified and an
@@ -31,7 +35,7 @@ my $getopts_option_letters = "ihvtIAau1d:D:M:S:F:C:E:";
 
 sub usage {
   die "@_\nUsage: $0 [-$getopts_option_letters] <files>
-New options marked with *, options with ':', above, take an argument
+New options marked with *; options with ':', above, take an argument
   -i  use files listed on stdin [one per line] in addition to any on cmd line
   -h  display this help message
   -v  be verbose and list files as they are processed to stderr
@@ -41,7 +45,9 @@ New options marked with *, options with ':', above, take an argument
   -a  do macro statistics on all files, not just those passed in
   -u  ignore usage
   -1  do only the first pass (don't do function parsing, usage)
+	This a a numeral 1, not a lowercase L.
 * -d [directory:prefix]  use standard filenames under the given directory
+	The prefix is a basename to which \".\" an a suffix will be appended.
   -D [file]  output the names of the macros (and number of times defined)
   -U [file]  output macro usage information
   -S [file]  output the per directive statistics to file
@@ -88,8 +94,166 @@ find-c | evilmacros -iv -d ~/macros/data/stable
 ### To do
 ###
 
-## Temporarily moved into my notes-macros file.
+# fixgjb:
+#  * document relationship among ncnb, blank, comment lines; how to
+#    compute them (or whether they can't be -- eg, no count of lines
+#    containing a comment).  Perhaps ditch the concept of a
+#    logical line.  Change current_line_no() into two functions which return
+#    the first and last physical lines associated with the current lines being
+#    processed; in general, prefer the former to the latter, except when
+#    the end of a function definition, etc.
 
+
+# FIXGJB: Update and organize this list.
+
+# Greg:
+#  Write mdie, like die, but also gives file&line number in file being
+# 	parsed, and change appropriate calls.
+#  cppcmdcount is not getting set any longer
+#  getline():
+#    new global variable $current_lineno or some such, like $.
+#    for each PHYSICAL line, accumulate into counts of:
+# 	blank lines, comment lines, and code lines.  (Sum will
+# 	be more than total, since lines can contain both comments and code,
+# 	or both comments and preprocessor directives.)
+#  % #def/cpp-directives for .c files and .h files separately.
+#  # of preprocessor directives
+#    preprocessor directives as % of lines
+#         (logical and physical) (all and noncomment-nonblank)
+#  arrange to process #include files as well as those specified on the
+#     command line.  Deal with
+#     #include <> as well as #include "".  Make the value of
+#     $file_inclusion_method{$filename} indicate whether this file occurred in the command
+#     line or not, and if not whether it was a "" or a <> included file.  If
+#     you wanted to build a dag of #include links while you were at it, that
+#     would be nice (we'll need to eventually), but it isn't essential yet.
+#  count calls to macros; process to determine which functions they are in
+# 
+# Small code stuff:
+#  * when body = expression + semicolon, warn; but check that every use of
+# 	the macro is followed by a semicolon, and if so, eliminate the one
+# 	in the body
+#  * Maybe look at whole functions at a time rather than being line-oriented,
+#    or break on semicolons or braces instead of newlines.  But sometimes
+#    when we're confused, restarting at the next newline is the right thing to do.
+# 
+# 
+# Small projects:
+#  * Warn about "#define foo(bar)".  Legal, but probably a mistake.
+#  * Recognize macros that build assembly code, and treat/report specially?
+# 	(What % of interesting macros are such?)
+#  * Look for __XXX__ (eg, built-in macro __LINE__) in the files.  In general,
+# 	we can't know all the things that are macros, but can try; look at
+# 	Makefiles and such.
+#  * Warn if missing parens around arg in body, or missing parens around
+# 	whole body.
+#  * Keep track of the current conditional compilation constraints
+#  * Warn about multi-line comments/strings in macro definitions.  (Plus
+# 	option to turn this off.)
+# 	Presently getline() removes the newlines silently; it shouldn't warn
+# 	since it is called for every line, not just those in macro defs.
+#  * Try other (non-gcc) preprocessors on the problematic stuff, to see if they
+# 	deal with it identically.
+#  * Get more packages (eg GNAT), until nishin:/tmp is full.  Then stop.
+# 	Ask support about /tmp policy.
+#  * Add additional pass for function and global types before inferring macro
+# 	invocation types.  Does a tool already exist to compute this for us?
+# 
+# Major projects:
+#  * [GREG] get better representation for types, make that work
+# 	Deal with types of wide character and string constants.
+# 	Need something that will parse a declarator into a type and identifier.
+# 	Need a special typeZERO
+# 	Perhaps separate usual_binary_conversions from a type_lub which is
+# 		used for coalescing multiple definitions/uses.
+#  * convert from macros into language constructs; see if code still works
+# 	Perhaps do this by hand for some small codebase
+# 	Need to worry about new files, #include, extern, etc.
+#  * dependentmacros, showing which macros' values depend on the values of
+# 	other macros.  Perhaps only the non-dependent ones need to be true
+# 	macros, while the others can be turned into consts.
+#  * classify as expression or not (not if "{ }", or if "foo; bar[;]"
+#  * classify when/where set (in Makefile, via -D, has default or not, etc.)
+#  * ignore code commented out via #ifdef 0 ... #endif
+#  * do type inference for macro arguments, type lookup for globals and functions.
+# 	This entails checking for free variables and more.
+#  * write has_default (which checks dependent_on)
+#  * find all non-dependent macros -- including those mentioned in #if lines.
+#  * write type and side-effect specifications for library functions (maybe
+# 	do this automatically by reading lots of standard header files?
+# 	Then note which header files have been read so we don't reread them.)
+#  * process #include files -- but only once per file
+#  * check for side effects in macros (eg, function calls in an argumentless
+# 	macro probably prevent it from being turned into a const, unless
+# 	the call is to a known side-effect-less library function
+#  * perhaps permit assignment, but remember whether it's to a macro arg (in
+# 	which case it must be passed by reference) or to a global (which is
+# 	hunky-dory) or to a local (which is evil).
+#  * Check for/recognize template-like macros (that take a type as an argument).
+#    2 cases where macros provide polymorphism:
+#     * type argument
+#     * use of ad-hoc polymorphism inherited from underlying operators, eg
+# 	min works on both floats & ints, or both shorts & longs (the latter
+# 	can't be converted to long w/o loss of efficiency)
+#    Can't capture this without templates -- can't even tell when it is
+#    really being used, though could avoid doing some type promotion (say,
+#    beyond int or unsigned int).
+#  * for lightweight (non-parsing) tool, determine the effect a macro would
+# 	have on parser state, e.g. like a function call, a block, a
+# 	statement, a constant, etc.
+#  * Move conditional compilation into inline functions (to unclutter source)
+#  * Analysis of purpose of each define and other preprocessor command (eg,
+# 	portability, efficiency, etc.), like that done by hand for gzip.
+
+# Parse Makefile-s and look for -DMACROS and have a way of adding them in
+# as well; also get list of files from Makefile, maybe.
+
+# #  Classify macros as expression-like (possibly subcategorize as function-like
+# #	if expression-like and takes argument), statement-like, or neither
+# #	(ie, that change the state of the parser)
+# #    Check for the semicolon-swallowing problem.
+# #    Check for multiple statements, like
+# #        #define double(stmt)    stmt;stmt;
+# #        double(i=5) =>   i=5;i=5;
+# 
+# Perhaps do something special about macros that expand into reserved words.
+# 
+# 
+# I want to recognize that these are type macros (probably hard) and that
+# for each the two alternate definitions are equivalent.
+# #  define EXTERN(type, array)  extern type * near array
+# #  define DECLARE(type, array, size)  type * near array
+# #  define EXTERN(type, array)  extern type array[]
+# #  define DECLARE(type, array, size)  type array[size]
+# 
+# deflate.c defines check_match sometimes as a macro and sometimes as a
+# function.  (This is for debugging, but one can imagine other reasons.)
+# Perhaps remember what the macro is dependenton and if exclusive with the
+# definition, don't conflict; also cope with this later.
+# 
+# PreventMI line count should include the #ifdef and the #endif.
+# 
+# Look for shadowed globals, also for whether specific globals are ever
+# assigned (which is irrelevant for function-like macros, but essential for
+# const-like macros).
+# 
+# Another use of macros is to either "import" or "export" in a header file
+# depending on whether you are that DLL or some other user.
+
+
+### Un-understood preprocessor behavior.
+
+# These seem to happen to pass commas into macros that will stringify?
+# 
+# WEIRD: ## with comma on one side:
+# ./glibc-1.09.1/hurd/hurd/fd.h:241: dangerous: ## pasting in
+#     static const struct ioctl_handler handler##_ioctl_handler =  { (first), (last), (int (*) (int, int, __gnuc_va_list)) (handler),  (&(handler), &(handler##_ioctl_handler), NULL) };  text_set_element (_hurd_ioctl_handler_lists, ##handler##_ioctl_handler)
+# ./glibc-1.09.1/sysdeps/m68k/m68020/asm-syntax.h:63: dangerous: ## pasting in INSN:
+#     2(mnemonic,size_suffix,dst,src)mnemonic.size_suffix src##,dst
+# 
+# WEIRD: # with comma:
+# ./glibc-1.09.1/sysdeps/unix/sysv/sysv4/solaris2/sparc/sysdep.h:28: dangerous: stringization in poundfnc:
+#     cat(#,function)
 
 
 ###########################################################################
@@ -101,9 +265,7 @@ find-c | evilmacros -iv -d ~/macros/data/stable
 #  * it is declared with "my" or appears in a use vars qw( ... ) declaration.
 use strict;
 
-# "use English" lets or requires (I don't know) use of $line or some such
-# in place of $. and so forth.)
-# Why is it not turned on?
+# Permit use of $MATCH for $& and so forth.
 use English;
 
 
@@ -166,10 +328,10 @@ my $catMACROFUN = 11;
 my $catMACROTYPE = 12;
 
 my @categoryname = (
-		    'uncategorized', 'being categorized', 
-		    'multiply categorized', 'null define', 
+		    'uncategorized', 'being categorized',
+		    'multiply categorized', 'null define',
 		    'expression', 'expression with free variables',
-		    'literal', 'constant', 'some constant', 
+		    'literal', 'constant', 'some constant',
 		    'failed categorization', 'has type argument',
 		    'macro as function', 'macro as type',
 		   );
@@ -187,9 +349,9 @@ sub category_lub
 ###
 
 # Use /o in matches for these, so interpolation/compilation occurs just once.
-# Use single, not  double, quotes so as not to lose the backslashes.
+# Use single, not double, quotes so as not to lose the backslashes.
 # But note that \\ and \' are interpolated in single-quoted strings.
-# "\b" prevents two words from running up against one another
+# "\b" prevents two words from running up against one another.
 # These regexps are intended not to include any leading or trailing space
 
 ### Reserved words
@@ -516,67 +678,72 @@ sub parse_type
 ## Integers:
 
 ## Five different kinds of line counts that we care about are:
-# (physical,logical,ncnb_phys,cpp_phys,cpp_phys_code)
+# (physical,logical,ncnb_phys,cpp_phys,cpp_phys_ncnb)
 # We care about these five line counts, %cppcmdcount, $cpp_cmds
 # in each of the 8 possible kinds of file-types
 # Dimension 1: header file vs code file (use regexp-s)
 # Dimension 2: method of inclusion: (input,arg,#include<>,#include"")
-#              maybe only care about first 2 kinds vs. last 2 kinds
+#              Maybe only care about first 2 kinds vs. last 2 kinds.
+#	       Currently the former are distinguished because we can do
+#              so easily, and it might come in handy some day, to generate
+#              separate statistics for arbitrary subset of files.
 # Note: #include"" or <> is only our filetype if the file was included
-# from another file we parsed and it was not given as an input/arg file
-# Generalize the variables for each of these to be lists of eight values
+# from another file we parsed and it was not given as an input/arg file.
+# Generalize the variables for each of these to be lists of eight values.
 
 # This enumeration gives indices into the lists
 
 # 2 (1st dim) times 4 (2nd dim) file types
-my $c_ft = 2 * 4;
+my $c_ftype = 2 * 4;
 
-my @ft_ALL = (0..$c_ft-1);
+my @ftype_ALL = (0..$c_ftype-1);
 
-my ($ft_HEAD_INPUT, $ft_HEAD_ARG, $ft_HEAD_INCB, $ft_HEAD_INCQ,
-    $ft_CODE_INPUT, $ft_CODE_ARG, $ft_CODE_INCB, $ft_CODE_INCQ) = @ft_ALL;
+my ($ftype_HEADER_INPUT, $ftype_HEADER_ARG, $ftype_HEADER_INCB, $ftype_HEADER_INCQ,
+    $ftype_NONHEADER_INPUT, $ftype_NONHEADER_ARG, $ftype_NONHEADER_INCB, $ftype_NONHEADER_INCQ) = @ftype_ALL;
 
-my %InclusionMethod_to_Index = 
-  ("FromCmdLine" => $ft_HEAD_ARG,
-   "FromStdin" => $ft_HEAD_INPUT,
-   "FromInclude<>" => $ft_HEAD_INCB,
-   "FromInclude\"\"" => $ft_HEAD_INCQ);
+my %InclusionMethod_to_Index =
+  ("FromCmdLine" => $ftype_HEADER_ARG,
+   "FromStdin" => $ftype_HEADER_INPUT,
+   "FromInclude<>" => $ftype_HEADER_INCB,
+   "FromInclude\"\"" => $ftype_HEADER_INCQ);
 
-my $ft_HEAD_Start = $ft_HEAD_INPUT;
-my $ft_CODE_Start = $ft_CODE_INPUT;
+my $ftype_HEADER_Start = $ftype_HEADER_INPUT;
+my $ftype_NONHEADER_Start = $ftype_NONHEADER_INPUT;
 
 # make slices for common uses
-my @ft_CODE = ($ft_HEAD_INPUT..$ft_HEAD_INCQ);
-my @ft_HEAD = ($ft_CODE_INPUT..$ft_CODE_INCQ);
-my @ft_NOT_INCLUDED = ($ft_HEAD_INPUT,$ft_HEAD_ARG,$ft_CODE_INPUT,$ft_CODE_ARG);
-my @ft_INCLUDED = ($ft_HEAD_INCB,$ft_HEAD_INCQ,$ft_CODE_INCB,$ft_CODE_INCQ);
-my @ft_CODE_NOT_INCLUDED = ($ft_CODE_INPUT,$ft_CODE_ARG);
-my @ft_CODE_INCLUDED = ($ft_CODE_INCB,$ft_CODE_INCQ);
-my @ft_HEAD_NOT_INCLUDED = ($ft_HEAD_INPUT,$ft_HEAD_ARG);
-my @ft_HEAD_INCLUDED = ($ft_HEAD_INCB,$ft_HEAD_INCQ);
+my @ftype_CODE = ($ftype_HEADER_INPUT..$ftype_HEADER_INCQ);
+my @ftype_HEAD = ($ftype_NONHEADER_INPUT..$ftype_NONHEADER_INCQ);
+my @ftype_NOT_INCLUDED = ($ftype_HEADER_INPUT,$ftype_HEADER_ARG,$ftype_NONHEADER_INPUT,$ftype_NONHEADER_ARG);
+my @ftype_INCLUDED = ($ftype_HEADER_INCB,$ftype_HEADER_INCQ,$ftype_NONHEADER_INCB,$ftype_NONHEADER_INCQ);
+my @ftype_NONHEADER_NOT_INCLUDED = ($ftype_NONHEADER_INPUT,$ftype_NONHEADER_ARG);
+my @ftype_NONHEADER_INCLUDED = ($ftype_NONHEADER_INCB,$ftype_NONHEADER_INCQ);
+my @ftype_HEADER_NOT_INCLUDED = ($ftype_HEADER_INPUT,$ftype_HEADER_ARG);
+my @ftype_HEADER_INCLUDED = ($ftype_HEADER_INCB,$ftype_HEADER_INCQ);
 
-my @rg_logl_lines = (0) x $c_ft;
-my @rg_phys_lines = (0) x $c_ft;
-my @rg_ncnb_lines = (0) x $c_ft;
-my @rg_cp_phys_lines = (0) x $c_ft;
-my @rg_cp_phys_code_lines = (0) x $c_ft;
+my @rg_logl_lines = (0) x $c_ftype;
+my @rg_phys_lines = (0) x $c_ftype;
+my @rg_ncnb_lines = (0) x $c_ftype;
+my @rg_cpp_phys_lines = (0) x $c_ftype;
+my @rg_cpp_phys_ncnb_lines = (0) x $c_ftype;
 
-my @rg_cpp_cmds = (0) x $c_ft;
+my @rg_cpp_cmds = (0) x $c_ftype;
 
-my @rg_cppcmdcounts = { "define" => 0 } x $c_ft;
+# fixgjb: try omitting this and other pre-initializations, or comment why
+# the initialization is necessary.
+my @rg_cppcmdcounts = { "define" => 0 } x $c_ftype;
 
 #my $logical_lines = 0;		# line continuation doesn't increment
 #my $physical_lines = 0;		# as they appear to tools
 #my $ncnb_physical_lines = 0;	# non-comment, non-blank lines
 #my $cpp_physical_lines = 0;	# cpp physical lines
-#my $cpp_physical_code_lines = 0; # cpp physical lines
+#my $cpp_physical_ncnb_lines = 0; # cpp physical lines
 #
 ## Not-include file version of the above
 #my $logical_lines_ni = 0;	# line continuation doesn't increment
 #my $physical_lines_ni = 0;	# as they appear to tools
 #my $ncnb_physical_lines_ni = 0;	# non-comment, non-blank lines
 #my $cpp_physical_lines_ni = 0;	# cpp physical lines
-#my $cpp_physical_code_lines_ni = 0; # cpp physical lines
+#my $cpp_physical_ncnb_lines_ni = 0; # cpp physical lines
 
 
 ### These variables (cppBLAH) now get summed
@@ -590,8 +757,8 @@ my $cpp_cmds_h_ni;
 my $cpp_cmds_c;
 my $cpp_cmds_c_ni;
 
-# Initialize cppcmdcount{"define"} so that we don't get uninitialized values
-# when we try processing the macros (in case there were no macros)
+# Initialize cppcmdcount{"define"} to avoid uninitialized values
+# when processing the macros (in case there were no macros).
 my %cppcmdcount = (); # number of uses of each cpp command
 # cppcmdcount_ni is like cppcmdcount, but only for files listed on cmd line
 # ni == "not includes"
@@ -600,33 +767,30 @@ my %cppcmdcount_h_ni = (); # number of uses of each cpp command, header NI
 my %cppcmdcount_c_ni = (); # number of uses of each cpp command, code NI
 
 
-my $symtab_scopes = 0;		# the number of scopes, less the global scope
+my $symtab_scopes = 0;	# the number of enclosing scopes, less the global scope
 ## Strings:
 my $line = "";			# current line
-# $lastline = "";			# the prior line
-# $mname = 0;
-# $margs = 0;
-# $mdef = 0;
 
-my $cBuiltinMacros = 0;		# The number of macros that we define
-				# before parsing-- need to be sure not
-				# to use the first $cBuiltinMacros elements of 
-				# @mXXXXX arrays
+# Number of macros defined before parsing -- don't reuse the first
+# $cBuiltinMacros elements of @mdef_XXXXX arrays
+my $cBuiltinMacros = 0;
 my $cMacrosInTables = 0;
-# Highly unlikely filename, used for $mfile[$i] for builtin macros
-my $szBuiltInFakeFile = "%Built In%";
+# Highly unlikely filename, used for $mdef_file[$i] for builtin macros
+my $built_in_fake_file = "%Built In%";
 
-# %files_lines is a hash from filename to a list of elements like:
+# %files_lines is a hash from filename to an in-order list of elements like:
 # (start_line, function_name, end_line)
 my %files_lines;
 
-# %functions is a hash from function name to a list of lists of (file,start,end)
-my %functions;
+# fixgjb: Is this comment correct?
+# %function_to_locs is a hash from function name to a list of lists of
+#   (file,start,end), one per definition of that function.
+my %function_to_locs;
 
 
 # If remove "current" from these names, look for other vars of those names.
 my $current_file;		# the current file name
-my $current_ft_index;		# the index of the @ft_'s for the current file
+my $current_ftype_index;		# the index of the @ftype_'s for the current file
 
 # current_line_no is now a function
 #my $current_line_no;		# the current line number
@@ -634,19 +798,11 @@ my $current_function;		# the current function
 my $current_function_start_line; # the first line of the current function
 				# (sometimes function headers span lines)
 
-# cached values for which_function
-# FIX: perhaps we can simulate static function variables
-# by putting functions that need them after a "package" declaration
-# to change their scope.  We might then need to access globals explicitly,
-# but it could be worth it-- definitely if we move to separate files
-my $wf_last_filename = "%EMPTY CACHE%";
-my $wf_last_line_no = -1;
-my $wf_last_index = -1;
-
 # @files contains the list of files we want to process
-# %files tells where the file got added
+# %file_inclusion_method, a string like "#include<>", tells where file got added
 my @files;
-my %files;
+my %file_inclusion_method;
+# fixgjb: Is this already fixed?
 # files that are included should be pushed onto both @files and
 # @files_included -- the latter is used only to prevent multiple inclusion
 # @files, not this-- but that doesn't work right now for some reason.
@@ -660,11 +816,11 @@ use vars '@include_path';
 
 
 ## Note that the %macrosXXX are annotations per macro,
-## whereas @mXXXX arrays are annotations per macro *definition*
+## whereas @mdef_XXXX arrays are annotations per macro *definition*.
 
 # perhaps make %macros proper just index into other arrays.
 
-# FIX: this data structure is especially HACKY
+# FIX: this data structure is especially HACKY.  Fix after paper deadline...
 my %macros = ();	  # for each macro, list of indexes for info about it
 			  # (first list element is number of following elements)
 
@@ -681,12 +837,12 @@ my %macros_uses = ();		# hashes macro names to an array
 # count of uses is half the number of keys in %macros_file_line_uses
 my %macros_file_line_uses = ();	# hashes macro names to an array
 				# where consecutive elements
-                                # list the filename and line
+                                # list the filename and physical line
 				# on which it appears
 
 # can compute the number of uses at global scope with macros_uses and
 # the length of the list in macros_used_in_functions
-my %macros_used_in_functions = (); # hashes macro names to list of 
+my %macros_used_in_functions = (); # hashes macro names to list of
 				# file/functions that use it.  Will
 				# contain same function name
 				# repeatedly if the macro is used more
@@ -694,14 +850,29 @@ my %macros_used_in_functions = (); # hashes macro names to list of
 
 # Also want to have summary info true about all definitions...
 # FIX: This data structure of parallel arrays needs to be improved
-use vars qw(@mname @margs @mbody @mfile @mline @mplines @mpclines
-	    @mbody_noc %mfreevars @mfreefuns
-	    @mdependenton @mexpansionuses @mtype @mcategory @mevilness);
+my @mdef_name;
+my @mdef_args;
+my @mdef_body;
+my @mdef_file;
+my @mdef_line;
+my @mdef_physical_lines;
+my @mdef_physical_ncnb_lines;
+my @mdef_body_noc;
+my %mdef_freevars;
+my @mdef_freefuns;
+my @mdef_dependenton;
+my @mdef_expansion_uses;
+my @mdef_type;
+my @mdef_category;
+my @mdef_evilness;
 
-# These are for aggregate information.  Keep it for all macros, or just
-# those multiply defined?  Or put it in the other arrays?  (No.)
-use vars qw(%mntype %mncategory);
+# These are for aggregate information -- that is, information about a macro
+# gleaned by combining information about all its definitions.
+# fix: "mn" stands for "macro name".
+my %mntype;
+my %mncategory;
 
+# This is a hack.
 # Macros which expand to their argument or the empty list, for function arg decls.
 my %fun_decl_arg_macros;
 
@@ -714,13 +885,13 @@ my $debug_parse_function = $false;
 
 ## Command-line processing
 use vars qw($opt_i $opt_I $opt_h $opt_v $opt_t $opt_d
-	    $opt_D $opt_M $opt_S $opt_F $opt_C $opt_E 
+	    $opt_D $opt_M $opt_S $opt_F $opt_C $opt_E
 	    $opt_u $opt_1 $opt_A $opt_a);
 my $fIgnoreIncludes = $false;
 
 
 ###########################################################################
-### Main loop routines
+### Pass 1: collect information about preprocessor use
 ###
 
 # These indicate the pass, for getline_handle_preprocessor_command.
@@ -737,12 +908,9 @@ $getline_nocomment = $false;
 $getline_simplify = $false;
 $getline_nocpp = $false;
 my @getline_ungotlines = ();
-#gd# my @getline_ungotdependenton = ();
 
+# List of #if conditions for the current line.
 my @dependenton = ();
-# Need a stack of old dependentons, for use by ungetline?  Or maybe just
-# let peek_line take an optional argument.  No, I decided against having
-# peek_line do any macro processing.
 
 
 ### Read files, save info about macros
@@ -752,24 +920,24 @@ sub find_macro_definitions
   if ($finding_macro_defs)
     { mdie("Called find_macro_definitions, but already finding macrodefs"); }
   local $finding_macro_defs = $true;
-  my $ifiles = 0;
 # Do not use a foreach, since we're pushing on to the end of @files,
 #   and the list foreach uses does not get updated
 #  foreach $this_file (@files)
-  for (; $ifiles <= $#files; $ifiles++)
+  my $ifiles;
+  for ($ifiles = 0; $ifiles <= $#files; $ifiles++)
     { $current_file = $files[$ifiles];
-      $current_ft_index = compute_current_ft_index($current_file);
+      $current_ftype_index = compute_ftype_index($current_file);
 
-      print STDERR "file: \"$current_file\"" if $opt_v;  
+      print STDERR "file: \"$current_file\"" if $opt_v;
       if (!open(INPUT,$current_file)) {
+	# fix: Shouldn't we print to STDERR unconditionally?
+	# fix: Add quiet option; then this will occur unless that is set.
 	print STDERR " -- failed open\n" if $opt_v;
 	next; # skip to next file if open fails
       } else {
 	print STDERR "\n" if $opt_v;
       }
 
-      # Commented out to quiet compiler
-      # $files{$current_file} = 1;
       if (@dependenton > 0)
 	{ mdie("In \#if at beginning of file: @dependenton"); }
       while ($line = getline())
@@ -783,19 +951,21 @@ sub find_macro_definitions
     }
 }
 
-# Given a macro definition (everything after "#define", with no leading,
-# trailing space), enter it into the appropriate global arrays
+# Given a macro definition (everything after "#define", with no leading or
+# trailing space), enter it into the appropriate global arrays.
 sub process_macro_definition
 {
-  my ($def,$macro_physical_lines,$macro_physical_code_lines) = check_args(3, "process_macro_definition", caller, @_);
+  # fix: should this be "ncnb" instead of "code"?
+  my ($def,$macro_physical_lines,$macro_physical_code_lines)
+    = check_args(3, "process_macro_definition", caller, @_);
   # print "process_macro_definition <<$def>>\n";
   my ($name, $args, $body) = macroparse($def);
   # print STDERR "PARSED: $name\n";
   if (!defined($args)) { $args = ""; }
   # print "parsed: |$name|$args|$body|\n";
   # Do not just use $cppcmdcount{"define"}, since our builtins require
-  # some space in the @mXXXXX arrays
-  my ($thisnum) = next_available_macro_index();
+  # some space in the @mdef_XXXXX arrays
+  my $this_macro_index = next_available_macro_index();
 
   # initialize all the parallel arrays here,
   # so that we don't have to check the defined-ness later
@@ -809,18 +979,18 @@ sub process_macro_definition
 
 
   $macros{$name}[0] += 1;
-  $macros{$name}[$macros{$name}[0]] = $thisnum;
+  $macros{$name}[$macros{$name}[0]] = $this_macro_index;
   # print "def number $macros{$name}[0]:";
   # for ($i = 1; $i <= $macros{$name}[0]; $i++)
   #   { print " $macros{$name}[$i]"; }
   # print "\n";
-  $mname[$thisnum] = $name;
-  $margs[$thisnum] = $args;
-  $mbody[$thisnum] = $body;
+  $mdef_name[$this_macro_index] = $name;
+  $mdef_args[$this_macro_index] = $args;
+  $mdef_body[$this_macro_index] = $body;
 
   # We track both the physical lines in a macro definition
-  # (mplines) which is the extent of the macro (where it appears
-  # in the file) and the physical code lines (mpclines)
+  # (mdef_physical_lines) which is the extent of the macro (where it appears
+  # in the file) and the physical code lines (mdef_physical_ncnb_lines)
   # which does not count comment only lines in a macro definition
   # eg.
   # --begin, non-inclusive--
@@ -832,35 +1002,41 @@ sub process_macro_definition
   # would count as 4 physical lines, 1 ncnb (non-comment,non-blank)
   # line, 1 cpp_physical_code_line, and 4 cpp_physical_lines
 
-  $mplines[$thisnum] = $macro_physical_lines;
-  $mpclines[$thisnum] = $macro_physical_code_lines;
+  $mdef_physical_lines[$this_macro_index] = $macro_physical_lines;
+  $mdef_physical_ncnb_lines[$this_macro_index] = $macro_physical_code_lines;
   # FIX: this is a hack
-  # @mdependenton[$thisnum] = @dependenton;
+  # @mdef_dependenton[$this_macro_index] = @dependenton;
   { my $i;
-    $mdependenton[$thisnum][0] = @dependenton;
+    $mdef_dependenton[$this_macro_index][0] = @dependenton;
     for $i (0..$#dependenton)
-      { $mdependenton[$thisnum][$i] = $dependenton[$i]; } }
+      { $mdef_dependenton[$this_macro_index][$i] = $dependenton[$i]; } }
   if (!defined($current_file))
-    { mdie("undefined current_file"); }
-  $mfile[$thisnum] = $current_file;
-  $mline[$thisnum] = current_line_no();
+    { mdie("undefined current_file while processing $name"); }
+  $mdef_file[$this_macro_index] = $current_file;
+  $mdef_line[$this_macro_index] = current_line_no();
   # PERLNOTE: be careful not to do
-  # $mexpansionuses[$thisnum] = ();  ##WRONG
+  # $mdef_expansion_uses[$this_macro_index] = ();  ##WRONG
   # you'll get a wierd error message at the point of use
-  @{$mexpansionuses[$thisnum]} = ();
+  @{$mdef_expansion_uses[$this_macro_index]} = ();
 }
 
 
-# process_macro_undefinition is called to handle #undef-s
+# process_macro_undefinition handles #undef-s
 sub process_macro_undefinition {
   my ($cpp_cmd_args) = check_args(1,"process_macro_undefinition",caller,@_);
 
   # Pull out first word
-  $cpp_cmd_args =~ /^(\w+)\b/;
-  my $macro_name  = $1;
+  if (!($cpp_cmd_args =~ /^$identifier_re/o))
+    { mdie("No macro name follows #undef: $cpp_cmd_args"); }
+  my $macro_name  = $MATCH;
 
   $macros_c_undefs{$macro_name}++;
 }
+
+
+###########################################################################
+### Dependenton processing
+###
 
 # Given a macro name, try to merge the dependentons for all its definitions,
 # and return a single dependenton or $false.
@@ -868,48 +1044,62 @@ sub process_macro_undefinition {
 sub macro_dependenton
 {
   my ($macro_name, @dependenton) = check_args_at_least(1, "macro_dependenton", caller, @_);
+  # ***** FIX:  Is this right at all?  Should it be @{$macros{$macro_name}} ??
   my @indices = @macros{$macro_name};
-  shift(@indices);
+  shift(@indices);		# eliminate the count of size
   my @result = ($false);
   # scratch indices, since I must pass in at least one index.
+  # (I don't yet know how to pass two arrays.)
+  # ***** problem: this increments the global count.  Probably get rid of
+  # this function and just use that global variable.
   my $extraindexmin = next_available_macro_index() + 10;
   my $extraindexmax = $extraindexmin-1;
   if (@dependenton > 0)
     { $extraindexmax++;
       # FIX: this is a hack
-      # @mdependenton[$extraindexmax] = @dependenton;
+      # @mdef_dependenton[$extraindexmax] = @dependenton;
       { my $i;
-	$mdependenton[$extraindexmax][0] = @dependenton;
+	$mdef_dependenton[$extraindexmax][0] = @dependenton;
 	for $i (0..$#dependenton)
-	  { $mdependenton[$extraindexmax][$i] = $dependenton[$i]; } }
+	  { $mdef_dependenton[$extraindexmax][$i] = $dependenton[$i]; } }
       push(@indices, $extraindexmax); }
+  # Perhaps use a named loop instead of the gotos.
 MDLOOP:
   if (@indices == 1)
-    { @result = @mdependenton[$indices[0]]; # protect from undef below
+    { @result = @mdef_dependenton[$indices[0]]; # protect from undef below
       goto MDDONE; }
+  ## ***** This can't work at all!
+  ## If failure, should try next pair, not fail completely.  Test this!
+  # Try to find two definitions that can be merged.
   my $index1;
-  my $index2;
   for $index1 (0..$#indices-1)
-    { for $index2 ($index1+1..$#indices)
+    { my $index2;
+      for $index2 ($index1+1..$#indices)
 	{ my @merged = merge_dependenton($index1, $index2);
 	  if ((@merged == 1) && !$merged[0])
 	    { goto MDDONE; }
 	  else
 	    { $extraindexmax++;
 	      # FIX: this is a hack
-	      # @mdependenton[$extraindexmax] = @merged;
+	      # @mdef_dependenton[$extraindexmax] = @merged;
 	      { my $i;
-		$mdependenton[$extraindexmax][0] = @merged;
+		$mdef_dependenton[$extraindexmax][0] = @merged;
 		for $i (0..$#dependenton)
-		  { $mdependenton[$extraindexmax][$i] = $merged[$i]; } }
+		  { $mdef_dependenton[$extraindexmax][$i] = $merged[$i]; } }
 	      goto MDLOOP; } } }
 
 MDDONE:
  { my $i;
    for $i ($extraindexmin..$extraindexmax)
-     { undef $mdependenton[$i][0]; } }
+     { undef $mdef_dependenton[$i][0]; } }
 
-  # Is there any point to this??
+  # This does not work, because I sometimes call this in scalar context to
+  # determine compatibility,  not what the dependenton would be
+  # # If failure, the result is a list of $false.
+  # return @result;
+
+  # In list context, there's no point to this.  In scalar context, these
+  # results really are different.
   if ((@result == 1) && !$result[0])
     { return $false; }
   else
@@ -919,18 +1109,18 @@ MDDONE:
 
 # Takes an index and a dependenton array.
 # If the dependentons are the same for all but the last element, return all
-# but thatlast element.  Otherwise return $false.
+# but that last element.  Otherwise return $false.
 sub merge_dependenton
-{ my($index, @do2) = check_args_at_least(1, "merge_dependenton", caller, @_);
+{ my ($index, @do2) = check_args_at_least(1, "merge_dependenton", caller, @_);
   if (!dependenton_single_difference($index, @do2))
     { return $false; }
   # Return @do1.
   my @do1;
   # FIX: this is a hack
-  # @do1 = @mdependenton[$index];
+  # @do1 = @mdef_dependenton[$index];
   { my $i;
-    for $i (0..$mdependenton[$index][0])
-      { $do1[$i] = $mdependenton[$index][$i]; } }
+    for $i (0..$mdef_dependenton[$index][0])
+      { $do1[$i] = $mdef_dependenton[$index][$i]; } }
   pop(@do1);
   return @do1;
 }
@@ -940,12 +1130,12 @@ sub dependenton_single_difference
 { my($index, @do2) = check_args_at_least(1, "merge_dependenton", caller, @_);
   my @do1;
   # FIX: this is a hack
-  # @do1 = @mdependenton[$index];
+  # @do1 = @mdef_dependenton[$index];
   { my $i;
-    for $i (0..$mdependenton[$index][0])
-      { $do1[$i] = $mdependenton[$index][$i]; } }
+    for $i (0..$mdef_dependenton[$index][0])
+      { $do1[$i] = $mdef_dependenton[$index][$i]; } }
   if ((@do2 == 1) && is_num($do2[0]))
-    { @do2 = @mdependenton[$do2[0]]; }
+    { @do2 = @mdef_dependenton[$do2[0]]; }
 
   if ($#do1 != $#do2)
     { return $false; }
@@ -953,7 +1143,7 @@ sub dependenton_single_difference
     for $i (0..$#do1-1)
       { if ($do1[$i] ne $do2[$i])
 	  { return $false; } } }
-  if ($do1[$index] ne negate_if_condition($do2[$index]))
+  if ($do1[$index] ne negate_cpp_if_condition($do2[$index]))
     { return $false; }
   return $true;
 }
@@ -982,23 +1172,26 @@ sub dependenton_identical
 
 
 # potential problem:  if arg == "!(!(...))", then  (nif(nif($arg)) ne $arg)
-sub negate_if_condition
+sub negate_cpp_if_condition
 {
-  my ($cond) = check_args(1, "negate_if_condition", caller, @_);
+  my ($cond) = check_args(1, "negate_cpp_if_condition", caller, @_);
   if ($cond =~ /^!\((.*)\)$/)
     { return $MATCH; }
   else
     { return "!($cond)"; }
 }
 
-# Print all the output statistics to the various streams
+###########################################################################
+### Print output statistics
+###
+
 # FIX: these sub-parts might better be broken up into functions
 # FIX: use "select" instead of print FILEHANDLE repeatedly
 #FIX: Get stats on number of macros only #undef-d, etc.
 sub output_stats
 {
   check_args(0, "output_stats", caller, @_);
-  
+
   if (defined($outOFS)) {
     $OFS = $outOFS;
   } else {
@@ -1008,46 +1201,46 @@ sub output_stats
   my $logical_lines = sum_array(@rg_logl_lines);
   my $physical_lines = sum_array(@rg_phys_lines);
   my $ncnb_physical_lines = sum_array(@rg_ncnb_lines);
-  my $cpp_physical_lines = sum_array(@rg_cp_phys_lines);
-  my $cpp_physical_code_lines = sum_array(@rg_cp_phys_code_lines);  
+  my $cpp_physical_lines = sum_array(@rg_cpp_phys_lines);
+  my $cpp_physical_ncnb_lines = sum_array(@rg_cpp_phys_ncnb_lines);
 
-  my $logical_lines_ni = 
-    sum_array(@rg_logl_lines[@ft_NOT_INCLUDED]);
+  my $logical_lines_ni =
+    sum_array(@rg_logl_lines[@ftype_NOT_INCLUDED]);
   my $physical_lines_ni =
-    sum_array(@rg_phys_lines[@ft_NOT_INCLUDED]);
+    sum_array(@rg_phys_lines[@ftype_NOT_INCLUDED]);
   my $ncnb_physical_lines_ni =
-    sum_array(@rg_ncnb_lines[@ft_NOT_INCLUDED]);
+    sum_array(@rg_ncnb_lines[@ftype_NOT_INCLUDED]);
   my $cpp_physical_lines_ni =
-    sum_array(@rg_cp_phys_lines[@ft_NOT_INCLUDED]);
-  my $cpp_physical_code_lines_ni =
-    sum_array(@rg_cp_phys_code_lines[@ft_NOT_INCLUDED]);  
+    sum_array(@rg_cpp_phys_lines[@ftype_NOT_INCLUDED]);
+  my $cpp_physical_ncnb_lines_ni =
+    sum_array(@rg_cpp_phys_ncnb_lines[@ftype_NOT_INCLUDED]);
 
-  my $logical_lines_h_ni = 
-    sum_array(@rg_logl_lines[@ft_HEAD_NOT_INCLUDED]);
+  my $logical_lines_h_ni =
+    sum_array(@rg_logl_lines[@ftype_HEADER_NOT_INCLUDED]);
   my $physical_lines_h_ni =
-    sum_array(@rg_phys_lines[@ft_HEAD_NOT_INCLUDED]);
+    sum_array(@rg_phys_lines[@ftype_HEADER_NOT_INCLUDED]);
   my $ncnb_physical_lines_h_ni =
-    sum_array(@rg_ncnb_lines[@ft_HEAD_NOT_INCLUDED]);
+    sum_array(@rg_ncnb_lines[@ftype_HEADER_NOT_INCLUDED]);
   my $cpp_physical_lines_h_ni =
-    sum_array(@rg_cp_phys_lines[@ft_HEAD_NOT_INCLUDED]);
-  my $cpp_physical_code_lines_h_ni =
-    sum_array(@rg_cp_phys_code_lines[@ft_HEAD_NOT_INCLUDED]);  
+    sum_array(@rg_cpp_phys_lines[@ftype_HEADER_NOT_INCLUDED]);
+  my $cpp_physical_ncnb_lines_h_ni =
+    sum_array(@rg_cpp_phys_ncnb_lines[@ftype_HEADER_NOT_INCLUDED]);
 
-  my $logical_lines_c_ni = 
-    sum_array(@rg_logl_lines[@ft_CODE_NOT_INCLUDED]);
+  my $logical_lines_c_ni =
+    sum_array(@rg_logl_lines[@ftype_NONHEADER_NOT_INCLUDED]);
   my $physical_lines_c_ni =
-    sum_array(@rg_phys_lines[@ft_CODE_NOT_INCLUDED]);
+    sum_array(@rg_phys_lines[@ftype_NONHEADER_NOT_INCLUDED]);
   my $ncnb_physical_lines_c_ni =
-    sum_array(@rg_ncnb_lines[@ft_CODE_NOT_INCLUDED]);
+    sum_array(@rg_ncnb_lines[@ftype_NONHEADER_NOT_INCLUDED]);
   my $cpp_physical_lines_c_ni =
-    sum_array(@rg_cp_phys_lines[@ft_CODE_NOT_INCLUDED]);
-  my $cpp_physical_code_lines_c_ni =
-    sum_array(@rg_cp_phys_code_lines[@ft_CODE_NOT_INCLUDED]);  
-  
+    sum_array(@rg_cpp_phys_lines[@ftype_NONHEADER_NOT_INCLUDED]);
+  my $cpp_physical_ncnb_lines_c_ni =
+    sum_array(@rg_cpp_phys_ncnb_lines[@ftype_NONHEADER_NOT_INCLUDED]);
+
   if ($logical_lines == 0) {
     print STDERR "No lines read! Perhaps you meant to use the -i option?\n";
     return;
-  } 
+  }
 
   if ($opt_S) {
     my ($h, $v);
@@ -1141,14 +1334,14 @@ sub output_stats
     print STATS "\n";
 
 
-    
-    print STATS "#LINES#: physical logical ncnb_phys cpp_phys cpp_phys_code\n";
-    print STATS "$physical_lines $logical_lines $ncnb_physical_lines $cpp_physical_lines $cpp_physical_code_lines\n";
-    print STATS "#LINESNI#: physical logical ncnb_phys cpp_phys cpp_phys_code\n";
-    print STATS "$physical_lines_ni $logical_lines_ni $ncnb_physical_lines_ni $cpp_physical_lines_ni $cpp_physical_code_lines_ni\n";
+
+    print STATS "#LINES#: physical logical ncnb_phys cpp_phys cpp_phys_ncnb\n";
+    print STATS "$physical_lines $logical_lines $ncnb_physical_lines $cpp_physical_lines $cpp_physical_ncnb_lines\n";
+    print STATS "#LINESNI#: physical logical ncnb_phys cpp_phys cpp_phys_ncnb\n";
+    print STATS "$physical_lines_ni $logical_lines_ni $ncnb_physical_lines_ni $cpp_physical_lines_ni $cpp_physical_ncnb_lines_ni\n";
     print STATS "\n";
   }
-  
+
   # -M = dump the macro stats
   if ($opt_M) {
     my $name;
@@ -1159,7 +1352,7 @@ sub output_stats
       #print STDERR "MNAME=$name, @{$macros{$name}}\n";
       my $i = $macros{$name}[1];
       die "i not defined for $name" if (!defined($i));
-      next if ($mfile[$i] eq $szBuiltInFakeFile);
+      next if ($mdef_file[$i] eq $built_in_fake_file);
       die if (!defined($macros_uses{$name}));
       die if (!defined($macros_c_undefs{$name}));
       die if (!defined($macros_uses{$name}));
@@ -1169,7 +1362,7 @@ sub output_stats
       # in a print
 
       print "$name", $macros{$name}[0], $macros_c_undefs{$name},
-      $macros_uses{$name}[$i_usage_code], 
+      $macros_uses{$name}[$i_usage_code],
       $macros_uses{$name}[$i_usage_cpp], "\n%" .
         join("\n%",@{$macros_used_in_functions{$name}}),
         "\n";
@@ -1188,16 +1381,16 @@ sub output_stats
       my $iDef = 1;
       for ( ; $iDef <= $macros{$name}[0]; $iDef++ ) {
 	my $i = $macros{$name}[$iDef];
-	if ($mfile[$i] ne $szBuiltInFakeFile) {
+	if ($mdef_file[$i] ne $built_in_fake_file) {
 	  #print STDERR "NAME=$name,", join(", ",@{$macros{$name}}),"\n";
-	  print "$name", $iDef, $i, $mfile[$i], $mline[$i], count_macro_args($margs[$i]),
-	  $mplines[$i], $mpclines[$i], "\n%" . 
-	    join("\n%",@{$mexpansionuses[$i]}), "\n";
+	  print "$name", $iDef, $i, $mdef_file[$i], $mdef_line[$i], count_macro_args($mdef_args[$i]),
+	  $mdef_physical_lines[$i], $mdef_physical_ncnb_lines[$i], "\n%" .
+	    join("\n%",@{$mdef_expansion_uses[$i]}), "\n";
 	}
       }
     }
   }
-  
+
   # -F = dump the function information
   if ($opt_F) {
     my $filename;
@@ -1205,81 +1398,25 @@ sub output_stats
       print FUNCTIONS "file: $filename\n", join("\n ",@{$files_lines{$filename}}), "\n";
     }
     my $function;
-    foreach $function (sort keys %functions) {
+    foreach $function (sort keys %function_to_locs) {
       my $info;
       print FUNCTIONS "function: $function ";
-      foreach $info (@{$functions{$function}}) {
+      foreach $info (@{$function_to_locs{$function}}) {
 	print FUNCTIONS join(', ',@$info);
       }
       print FUNCTIONS "\n";
     }
-    
+
     # FIXPERL: Why does this give me an unitialized variable warning?
     # undef $OFS if (defined($OFS));
   }
 }
 
 
-# pct2(x) returns an integer corresponding to a pct of the first arg of the 2nd arg
-sub pct2 {
-  my ($x,$w) = check_args(2, "pct2", caller, @_);
-  if ($w <= 0) { 
-    print STDERR "pct2: Divisor out of range: $x / $w\n";
-    return 0;
-  }
-  if ($x < 0 || $x > $w) {
-    print STDERR "pct2: Percentage out of range: $x / $w\n";
-  }
-  return (100*$x/$w);
-}
-
-
-# sum_array just sums all the elements of an array
-# pass in a slice if you only want part of the array summed
-sub sum_array {
-  check_args_at_least(0,"sum_array", caller, @_);
-  my $sum = 0;
-  my $i = 0;
-  for (; $i <= $#_; $i++) {
-    $sum += $_[$i];
-  }
-  return $sum;
-}
-
-# FIX: Comment this better
-sub test_typedecl_regexp
-{
-  check_args(0, "test_typedecl_regexp", caller, @_);
-  my $ifiles = 0;
-#  foreach $this_file (@files)
-  for (; $ifiles <= $#files; $ifiles++)
-    { $current_file = $files[$ifiles];
-      $current_ft_index = compute_current_ft_index($current_file);
-      if ($opt_v)
-	{ print STDERR $current_file . "\n"; }
-      open(INPUT,$current_file) or next; # skip to next file if open fails
-      # Commented out to quiet compiler
-      # $files{$current_file} = 1;
-      if (@dependenton > 0)
-	{ mdie("In \#if at beginning of file: @dependenton"); }
-      while ($line = getline())
-	{ if ($line =~ /^$type_specifier_re/o)
-	    { print "ts: <<$MATCH>> $line"; }
-	  if ($line =~ /^$type_declarator_re/o)
-	    { print "td: <<$MATCH>> $line"; }
-	  if ($line =~ /^$type_declarator_re\s*[,=;\(]/o)
-	    { print "td+: $line"; }
-	}
-      if (@dependenton > 0)
-	{ mdie("Still in \#if at end of file: @dependenton"); }
-      close(INPUT);
-    }
-}
-
 
 
 ###########################################################################
-### Parsing
+### Read lines
 ###
 
 my $incomment = $false;		# in /* */ style comment
@@ -1326,21 +1463,19 @@ sub getline
   if ((@getline_ungotlines > 0) && (!$dont_pop))
     { # print "popping getline_ungotlines $getline_ungotlines[$#getline_ungotlines]"; # no newline: it ends with one
       # print "all ungotlines: <<", join(">><<", @getline_ungotlines), ">>\n";
-      #gd# @dependenton = shift(@getline_ungotdependenton);
-      #gd# return shift(@getline_ungotlines);
       $result = shift(@getline_ungotlines);
       $getline_physical_lines++;
     }
   else
-    { if (not ($result = <INPUT>)) #do not update physical lines -- failed read
+    { if (not ($result = <INPUT>)) # do not update physical lines -- failed read
 	{ return $result; }
       $getline_physical_lines++;
       if ($finding_macro_defs) {
-	$rg_logl_lines[$current_ft_index]++;
+	$rg_logl_lines[$current_ftype_index]++;
       }
 
       $result = updateinvars($result);
-      # perhaps check for $mname and mention it in message if it's set
+      # perhaps check for $mdef_name and mention it in message if it's set
       while ($incomment || $instring || ($result =~ m/\\$/))
 	{
 	  # splice lines
@@ -1354,8 +1489,8 @@ sub getline
 		{ $getline_physical_lines++;
 		  # Not a logical line-- do not increment it
 		  $nextline = updateinvars($nextline);
+		  # append_lines trims trailing spaces, prettying the message.
 		  $result = append_lines($result, $nextline);
-		  # The append_lines trims trailing spaces, prettying the message.
 		  if ($nextline =~ m/^\s*$/)
 		    {		# No \n at end: $result ends in a newline
 		      evilprint("dangerous: blank line follows continuation character:\n    $result"); }
@@ -1370,7 +1505,7 @@ sub getline
 	      if ($nextline = <INPUT>)
 		{ $getline_physical_lines++;
 		  if ($finding_macro_defs) {
-		    $rg_logl_lines[$current_ft_index]++;
+		    $rg_logl_lines[$current_ftype_index]++;
 		  }
 		  $nextline = updateinvars($nextline);
 		  $result = append_lines($result, $nextline); }
@@ -1385,7 +1520,7 @@ sub getline
 	      if ($nextline = <INPUT>)
 		{ $getline_physical_lines++;
 		  if ($finding_macro_defs) {
-		    $rg_logl_lines[$current_ft_index]++;
+		    $rg_logl_lines[$current_ftype_index]++;
 		  }
 		  $nextline = updateinvars($nextline);
 		  # Strict ANSI C does not permit newlines in string constants;
@@ -1400,7 +1535,7 @@ sub getline
 
   #print STDERR "GETLINE $getline_physical_lines, $finding_macro_defs: $result";
   if ($finding_macro_defs) {
-    $rg_phys_lines[$current_ft_index] += $getline_physical_lines;
+    $rg_phys_lines[$current_ftype_index] += $getline_physical_lines;
   }
 
   # FIX: maybe we should have variables $firstPass, $secondPass, or $pass_num
@@ -1410,7 +1545,7 @@ sub getline
   if ($getting_macro_call_types) {
     # and also only if -a is set or this is a project file
     # don't do it if -u is set (user want to ignore usage)
-    if (!$opt_u && ($opt_a || !current_file_was_included())) {
+    if (!$opt_u && ($opt_a || !file_was_included($current_file))) {
       analyze_for_macro_use($result);
     }
   }
@@ -1418,9 +1553,9 @@ sub getline
   if (($result =~ /^\#/) && !$getline_nocpp)
     { # Preprocessor line; usually just return "\n";
       if ($finding_macro_defs) {
-	$rg_cp_phys_lines[$current_ft_index] +=
+	$rg_cpp_phys_lines[$current_ftype_index] +=
 	  $getline_physical_lines;
-	$rg_cp_phys_code_lines[$current_ft_index] +=
+	$rg_cpp_phys_ncnb_lines[$current_ftype_index] +=
 	  $getline_physical_code_lines;
       }
       return getline_handle_preprocessor_line($result);
@@ -1432,56 +1567,33 @@ sub getline
   return $result;
 }
 
-# Users shouldn't use this, because they won't be able to correctly set
-# getline_ungotdependenton.
-# sub ungetline
-# {
-#   my ($ungotline) = @_;
-#   check_args(0, "ungetline", caller, @_);
-#   push (@getline_ungotlines, $ungotline);
-# }
-
-#gd# This clever saving and restoring of @dependenton is neat and all that, but
-#gd# perhaps misguided.  Instead, change the contract of peek_line to never do
-#gd# any preprocessor processing, and have getline do it when the line is gotten
-#gd# for real.
 sub peek_line
 {
   my ($arg) = check_args(1, "peek_line", caller, @_);
-  if (!defined($arg))
-    { $arg = 1; }
-
-  #gd# if (@getline_ungotlines != @getline_ungotdependenton)
-  #gd#   { mdie("different lengths for ungot{lines,dependenton} " . scalar(@getline_ungotlines) . " @getline_ungotlines ||| " . scalar(@getline_ungotdependenton) . " @getline_ungotdependenton"); }
 
   if ($arg <= @getline_ungotlines)
     { # We have previously peeked at the line in question
       my $index = @getline_ungotlines-$arg;
-      #gd#       return($getline_ungotlines[$index], $getline_ungotdependenton[$index]);
       return($getline_ungotlines[$index]); }
   else
     { if ($arg < (@getline_ungotlines + 1))
-	{ # Recursively fill up the arrays
-	  # Actually, this should never happen:  why  would one look two
+	{
+	  # This should never happen:  why would one look two
 	  # lines ahead before checking the next line?
-	  mdie("Why look far ahead when you haven't looked near?  $arg " . scalar(@getline_ungotlines))
-;
-	  peek_line($arg-1); }
+	  mdie("Why look far ahead when you haven't looked near?  $arg " . scalar(@getline_ungotlines));
+	  # # Recursively fill up the arrays
+	  # peek_line($arg-1);
+	}
       if ($arg != (@getline_ungotlines + 1))
-	{ mdie("This can't happen"); }
+	{ die "arg $arg != getline_ungotlines+1 ", (@getline_ungotlines + 1); }
 
       # Do the real work.
-      #gd# local @dependenton = @dependenton; # tricky!
-      #gd# if (@getline_ungotdependenton == 0)
-      #gd#   { @dependenton = $getline_ungotdependenton[$#getline_ungotdependenton]; }
       my $nextline;
       { local $getline_nocpp = $true;
 	# print "peeking about to call getline\n";
 	$nextline = getline("don't pop"); }
       # print "peeking found $nextline";
-      #gd# $getline_ungotdependenton[$#getline_ungotdependenton+1] = @dependenton;
       push (@getline_ungotlines, $nextline);
-      #gd# return($nextline, @dependenton);
       # print "peek_line($arg) returning $nextline";
       return($nextline); }
 }
@@ -1527,11 +1639,11 @@ sub paren_change
   return ($result_num == 0) ? $false : $result_chars;
 }
 
-# Return index of first close paren which doesn't match a preceding open
-# paren in the argument string, and the argument string.  Ignores strings, braces, etc.
+# Return index of first close paren which doesn't match a preceding open paren
+# in the argument string, and the argument string.  Ignores strings, braces, etc.
 # Optional second argument says where to start (right after the open, usually).
-# Optional third argument says whether to read lines to try to balance (in which
-# case the second return value can differ from the first).
+# Optional third argument says whether to read lines to try to balance (in
+# which case the second return value can differ from the first input value).
 sub find_close_paren
 { my ($exp, $pos, $read) = check_args_range(1, 3, "find_close_paren", caller, @_);
   if (!defined($pos))
@@ -1690,11 +1802,11 @@ sub updateinvars
 	    { $result .= $remaining; }
 	   goto UIV_RETURN; }
     }
-  
-  UIV_RETURN: 
+
+  UIV_RETURN:
   if ($uiv_seen_code) {
     if ($finding_macro_defs) {
-      $rg_ncnb_lines[$current_ft_index]++;
+      $rg_ncnb_lines[$current_ftype_index]++;
     }
     $getline_physical_code_lines++;
     #print STDERR "SC: $result" if $finding_macro_defs;
@@ -1775,7 +1887,7 @@ sub getline_handle_preprocessor_line
       $line = $POSTMATCH;
       $line =~ s/\s+$//;	# remove trailing whitespace
       return getline_handle_preprocessor_command($cpp_cmd, $line); }
-  elsif ($line =~ m/^\#\s*\d+\s*\".*\"\s*$/) 
+  elsif ($line =~ m/^\#\s*\d+\s*\".*\"\s*$/)
     { #FIX: should we count these
       evilprint("File might be preprocessor's output--line marker found at $current_file:" . current_line_no() . "\n");
     }
@@ -1841,12 +1953,12 @@ sub getline_handle_preprocessor_command
     { if (@dependenton == 0)
 	{ mdie("improperly nested \#else"); }
       my $last = pop(@dependenton);
-      push(@dependenton, negate_if_condition($last)); }
+      push(@dependenton, negate_cpp_if_condition($last)); }
   elsif ($cpp_cmd eq "elif")
     { if (@dependenton == 0)
 	{ mdie("improperly nested \#elif"); }
       my $last = pop(@dependenton);
-      push(@dependenton, negate_if_condition($last)); }
+      push(@dependenton, negate_cpp_if_condition($last)); }
   elsif ($cpp_cmd eq "define")
     { if ($finding_macro_defs)
 	{ process_macro_definition($cpp_cmd_arg,$getline_physical_lines,$getline_physical_code_lines); }
@@ -1872,7 +1984,7 @@ sub getline_handle_preprocessor_command
 
 	  # if we resolved the filename to a real file,
 	  # and we've not already added the file to our list we need to parse
-	  if (defined($complete_filename) 
+	  if (defined($complete_filename)
 	      && scalar(grep($_ eq $complete_filename, @files_included)) == 0) {
 	    # FIX: may want to insert this where we are
 	    # or do some sort of recursive reading of *all* included files
@@ -1880,9 +1992,9 @@ sub getline_handle_preprocessor_command
 	    #      when I use @files instead of @files_included
 	    push @files, $complete_filename;
 	    push @files_included, $complete_filename;
-	    $files{$complete_filename} = "FromInclude" . 
+	    $file_inclusion_method{$complete_filename} = "FromInclude" .
 	      ($angled_include? "<>" : '""');
-	    # print STDERR "Adding \"$complete_filename\" as $files{$complete_filename}\n";
+	    # print STDERR "Adding \"$complete_filename\" as $file_inclusion_method{$complete_filename}\n";
 	  }
 	}
       }
@@ -1909,7 +2021,7 @@ sub discard_to_endif
     { if (not ($line = <INPUT>))
 	{ mdie("File ends in \#ifdef 0"); }
       if ($finding_macro_defs) {
-	$rg_logl_lines[$current_ft_index]++;
+	$rg_logl_lines[$current_ftype_index]++;
       }
       # I'll trust that no comment or string contains anything that
       # looks like a preprocessor command.  Strictly speaking, I should
@@ -2125,7 +2237,7 @@ sub macroparse
   # print "macroparse $line\n";
   # Match zero or more, not one or more, spaces before definition.
   # (Perhaps warn if zero are matched.)
-  my @result = ($line =~ m/^(\w+)(\([^\)]*\))?\s*(.*)\s*$/);
+  my @result = ($line =~ m/^($identifier_re)(\([^\)]*\))?\s*(.*?)\s*$/o);
   if ($#result != 2)		# ($# == 2) => 3 elements
     { mdie("Problem parsing macro `$line'\n"); }
   @result;
@@ -2209,7 +2321,7 @@ sub parse_exp
   # Cast
   if ($exp =~ /^\s*\(\s*($builtin_type_re)\s*\)/)
     { # print "Found cast $1\n";
-      my ($casttype) = $1;
+      my $casttype = $1;
       my ($type, $remaining) = parse_exp($POSTMATCH);
       if (!$type) { return($typeFAIL,$exp); }
       my $casttypenum = type_to_num($casttype);
@@ -2218,7 +2330,7 @@ sub parse_exp
       return parse_exp_follower($casttypenum, $remaining); }
   # Type in parens followed by (what looks like) paren, number, or identifier
   if ($exp =~ /^\s*\(\s*($type_re)\s*\)\s*([0-9a-z\(])/)
-    { my ($casttype) = $1;
+    { my $casttype = $1;
       $parsetypes{$casttype} = $true;
       # print "Found cast $1 $2\n";
       my ($type, $remaining) = parse_exp($2 . $POSTMATCH);
@@ -2267,7 +2379,7 @@ sub parse_exp
   # This precedes integer because an integer matches the first part of a float
   if (($exp =~ /^$float_literal_whole_re/o)
       || ($exp =~ /^$float_literal_frac_re/o))
-    { my ($type) = $typeDOUBLE;
+    { my $type = $typeDOUBLE;
       if (($2 eq "f") || ($2 eq "F"))
 	{ $type = $typeFLOAT; }
       elsif (($2 eq "l") || ($2 eq "L"))
@@ -2281,8 +2393,8 @@ sub parse_exp
       # hex precedes octal/decimal because the "0" looks like a leading integer
       || ($exp =~ /^$dec_oct_literal_re/o)) # octal or decimal
     { # print "Found integer $1\n";
-      my ($remaining) = $POSTMATCH;
-      my ($type) = infer_int_type($1);
+      my $remaining = $POSTMATCH;
+      my $type = infer_int_type($1);
       # print "inferred type ", type_name($type), "\n";
       if ($2 =~ /[uU]/)
 	{ $type = type_unsigned($type); }
@@ -2293,8 +2405,8 @@ sub parse_exp
 
   # Variable
   elsif ($exp =~ /^$identifier_re/o)
-    { my ($var) = $MATCH;
-      my ($remaining) = $POSTMATCH;
+    { my $var = $MATCH;
+      my $remaining = $POSTMATCH;
       categorize_macro_name($var); # huh??
       my $vartype = $mntype{$var};
       if (!defined($vartype))
@@ -2389,7 +2501,6 @@ sub parse_function_decl_args
   # definition or declaration, so perhaps pass that information in.
   # Disambiguate later.
   # print "looking for type or type declarator in $text\n";
-  # GJBCHANGE: added \.\.\. for ellipses
   while ($text =~ /^\s*(($type_declarator_re)|($type_re)|(\.\.\.))\s*[,\)]/o)
     { push(@arg_decls, $1);
       $text = $POSTMATCH;
@@ -2462,7 +2573,7 @@ sub parse_exp_follower
 	{ mdie("Non-integral type ", type_name($subscrtype), " in subscript\n");
 	  return ($typeFAIL, $follow); }
       if ($closebracket =~ /\s*\]/)
-	{ my ($remaining) = $POSTMATCH;
+	{ my $remaining = $POSTMATCH;
 	  return parse_exp_follower(type_dereference($type), $remaining); }
       else
 	{ return ($typeFAIL, $follow); } }
@@ -2475,7 +2586,7 @@ sub parse_exp_follower
   if ($follow =~ /^(\+\+|--)/)
     { return parse_exp_follower($type, $POSTMATCH); }
   # Structure selectors
-  if ($follow =~ /^\s*(\.|->)\w+\b/)
+  if ($follow =~ /^\s*(\.|->)$identifier_re/o)
     { return parse_exp_follower($typeUNKNOWN, $POSTMATCH); }
 
   # Binary operators:  multi-char operators must precede single-char ones
@@ -2547,22 +2658,23 @@ sub get_macro_call_types
       # FIX: don't assert this
       die if defined($files_lines{$current_file});
       @{$files_lines{$current_file}} = ();
-      $current_ft_index = compute_current_ft_index($current_file);
+      $current_ftype_index = compute_ftype_index($current_file);
       if ($opt_v) {
-	print STDERR "file: \"$current_file\" ($files{$current_file})"; 
+	print STDERR "file: \"$current_file\" ($file_inclusion_method{$current_file})";
       }
       # do not do the second pass on included files
-      if ( current_file_was_included() && !$opt_A) {
+      if ( file_was_included($current_file) && !$opt_A) {
 	print STDERR " -- skipping (use -A option to not skip)\n" if $opt_v;
 	next;
       } elsif (!open(INPUT,$current_file)) {
+	# fix: Shouldn't we print to STDERR unconditionally?
+	# fix: Add quiet option; then this will occur unless that is set.
 	print STDERR " -- open failed\n" if $opt_v;
 	next;
       } else {
 	print STDERR "\n" if $opt_v;
       }
-      # Commented out to quiet compiler
-      # $files{$current_file} = 1;
+
       if (@dependenton > 0)
 	{ mdie("In \#if at beginning of file: @dependenton"); }
       # Perhaps I should use a variant of getline that insists that parens
@@ -2672,7 +2784,7 @@ PROCESSLINE:
 		      { mdie("must be identifier or type declarator: $identifier_or_typedecl\n"); } }
 		  if ($debug_type_match)
 		    { print "matched type declarator <$typespec><$declarator>\n"; }
-		  # print "maybe matched type declarator <$1><$2><$3><$4><$5><$6><$7><$8><$9> <<", defined($macros{$6}[0]), (defined($macros{$6}[0]) ? (">><<$macros{$6}[0] $macros{$6}[1] |$mname[$macros{$6}[1]]|$margs[$macros{$6}[1]]|$mbody[$macros{$6}[1]]|$mfile[$macros{$6}[1]]|$mline[$macros{$6}[1]]|") : ""), ">>\n";
+		  # print "maybe matched type declarator <$1><$2><$3><$4><$5><$6><$7><$8><$9> <<", defined($macros{$6}[0]), (defined($macros{$6}[0]) ? (">><<$macros{$6}[0] $macros{$6}[1] |$mdef_name[$macros{$6}[1]]|$mdef_args[$macros{$6}[1]]|$mdef_body[$macros{$6}[1]]|$mdef_file[$macros{$6}[1]]|$mdef_line[$macros{$6}[1]]|") : ""), ">>\n";
 
 		  # Fallthroughs below depend on the fact that this is the last
 		  # clause in the elsif chain: there's nothing else we would
@@ -2694,12 +2806,15 @@ PROCESSLINE:
 		  elsif (($nextchar eq "(")
 			 # Implied by "defined($macros{$declarator}[0])"
 			 # && ($declarator =~ /^$identifier_re$/o)
-			 && defined($macros{$declarator})
-			 # FIX: might not need below line, now that we have above line
-			 && defined($macros{$declarator}[0])
-			 && (!macro_dependenton($declarator, @dependenton)))
+			 && exists($macros{$declarator})
+			 # This test is intended to skip over macros that
+			 # can't be active right now.
+			 && (!macro_dependenton($declarator, @dependenton))
+			 )
 		    { # The function being defined is actually a macro.
 		      # Try to expand it, else fall through.
+		      # print "Found macro masquerading as declarator $declarator\n";
+
 		      my $identifier = $declarator;
 
 		      my $close_paren_pos;
@@ -2710,7 +2825,7 @@ PROCESSLINE:
 		      # There is only one expansion for the macro.  Expand it.
 		      # This isn't quite right if the dependentons aren't
 		      # compatible.
-		      if (exists $macros{$identifier} && 
+		      if (exists $macros{$identifier} &&
 			  $macros{$identifier}[0] == 1)
 			{ # ... expand macro ...;
 			  # goto PROCESSLINE;
@@ -2895,13 +3010,13 @@ ATCOMMA:
 			if ($symtab_scopes == 1 && defined($current_function)) {
 			  my $end_line = current_line_no();
 			  # update our per-file list of function locations
-			  push @{$files_lines{$current_file}}, 
+			  push @{$files_lines{$current_file}},
 			  ($current_function_start_line,"$current_function",
 			   $end_line);
 			  #print STDERR "FN: $current_function $current_file [$current_function_start_line,", current_line_no(), "]\n";
 			  # update our per-function list of [file,startline,endline]
-			  push @{$functions{$current_function}}, 
-			  [$current_file, $current_function_start_line, 
+			  push @{$function_to_locs{$current_function}},
+			  [$current_file, $current_function_start_line,
 			   current_line_no() ];
 			}
 			exit_scope();
@@ -2971,6 +3086,7 @@ sub process_function_definition_or_declaration
 {
   my ($type, $identifier, $remaining)
     = check_args(3, "process_function_definition_or_declaration", caller, @_);
+  # print "process_fun_def_or_decl $type $identifier (", exists($macros{$identifier}), ") $remaining\n";
 
   # found (start of) function definition or prototype
   # Only need to check the new stuff, not the whole thing.
@@ -3216,7 +3332,7 @@ sub exit_scope
   if ($debug_scopes) { show_symtab("exited scope $symtab_scopes"); }
   $symtab_scopes--;
   if ($symtab_scopes == 0) {
-    undef $current_function; 
+    undef $current_function;
     undef $current_function_start_line;
   }
 }
@@ -3279,12 +3395,12 @@ sub symtab_lookup
 #
 sub test_categorize_macro
 { my ($body) = check_args(1, "test_categorize_macro", caller, @_);
-  $mbody[1000] = $body;
-  $mname[1000] = "dummy";
-  $margs[1000] = "(arg)";
-  undef $mcategory[1000];
+  $mdef_body[1000] = $body;
+  $mdef_name[1000] = "dummy";
+  $mdef_args[1000] = "(arg)";
+  undef $mdef_category[1000];
   categorize_macro(1000);
-  print $categoryname[$mcategory[1000]] . "\n";
+  print $categoryname[$mdef_category[1000]] . "\n";
 }
 
 # Takes macro name as argument; categorizes each of the macro's definitions
@@ -3316,14 +3432,14 @@ sub categorize_macro_name
   my $category;
   { my $i;
     for ($i = 1; $i <= $numdefs; $i++)
-      { if (!defined($mcategory[$macros{$name}[$i]]))
+      { if (!defined($mdef_category[$macros{$name}[$i]]))
 	  { categorize_macro($macros{$name}[$i]);
 	    if (!defined($type))
-	      { $type = $mtype[$i];
-		$category = $mcategory[$i]; }
+	      { $type = $mdef_type[$i];
+		$category = $mdef_category[$i]; }
 	    else
-	      { $type = type_lub($type, $mtype[$i]);
-		$category = category_lub($category, $mcategory[$i]); } } } }
+	      { $type = type_lub($type, $mdef_type[$i]);
+		$category = category_lub($category, $mdef_category[$i]); } } } }
   $mntype{$name} = $type;
   $mncategory{$name} = $category;
 }
@@ -3334,16 +3450,16 @@ sub categorize_macro_name
 sub categorize_macro
 { my ($index) = check_args(1, "categorize_macro", caller, @_);
 
-  # print "Categorizing $index $mname[$index]$margs[$index] $mbody[$index]\n";
+  # print "Categorizing $index $mdef_name[$index]$mdef_args[$index] $mdef_body[$index]\n";
 
-  if (defined($mcategory[$index]))
-    { # print "Already categorized! $mcategory[$index] $categoryname[$mcategory[$index]]\n";
+  if (defined($mdef_category[$index]))
+    { # print "Already categorized! $mdef_category[$index] $categoryname[$mdef_category[$index]]\n";
       return; }
-  $mcategory[$index] = $catINPROCESS;
+  $mdef_category[$index] = $catINPROCESS;
 
-  my $body = remove_comments($mbody[$index]);
-  $mbody_noc[$index] = $body;
-  $fDebugCommentRemoval && print STDERR "body = '$mbody[$index]'\nbody_noc = '$body'\n";
+  my $body = remove_comments($mdef_body[$index]);
+  $mdef_body_noc[$index] = $body;
+  $fDebugCommentRemoval && print STDERR "body = '$mdef_body[$index]'\nbody_noc = '$body'\n";
 
   my $category;
   my $type;
@@ -3365,7 +3481,7 @@ sub categorize_macro
 	{ $category = $catEXP;
 	  # print "category = $category; found expression $body\n";
 	  { my $arg;
-	    foreach $arg (split(/[\(, \t]*/, $margs[$index]))
+	    foreach $arg (split(/[\(, \t]*/, $mdef_args[$index]))
 	      { delete $parsevars{$arg};
 		if (defined($parsetypes{$arg}))
 		  { $category = $catTYPEARG;
@@ -3390,24 +3506,24 @@ sub categorize_macro
 	  # print "category posttype = $category\n";
 	  # For each free variable, check its type.
 	  { my $var;
-	    foreach $var (keys %mfreevars)
-	      { # print "examining free var $var ($mname[$index])\n";
+	    foreach $var (keys %mdef_freevars)
+	      { # print "examining free var $var ($mdef_name[$index])\n";
 		if (defined($macros{$var}))
 		  { my $varclass;
 		    my $i;
 		    foreach $i ($macros{$var})
-		      { if ($mcategory[$i] == $catNOTYET)
+		      { if ($mdef_category[$i] == $catNOTYET)
 			  { categorize_macro($i); }
 			if (!defined($varclass))
-			  { $varclass = $mcategory[$i]; }
-			elsif ((($mcategory[$i] == $catLITERAL)
-				|| ($mcategory[$i] == $catCONSTANT)
-				|| ($mcategory[$i] == $catSOMECONSTANT))
+			  { $varclass = $mdef_category[$i]; }
+			elsif ((($mdef_category[$i] == $catLITERAL)
+				|| ($mdef_category[$i] == $catCONSTANT)
+				|| ($mdef_category[$i] == $catSOMECONSTANT))
 			       && (($varclass == $catLITERAL)
 				   || ($varclass == $catCONSTANT)
 				   || ($varclass == $catSOMECONSTANT)))
 			  { $varclass = $catSOMECONSTANT; }
-			elsif ($varclass != $mcategory[$i])
+			elsif ($varclass != $mdef_category[$i])
 			  { $category = $catFAILURE;
 			    goto CATEGORIZED; }
 			else
@@ -3440,24 +3556,24 @@ sub categorize_macro
  CATEGORIZED:
   # print "categorized as $category = $categoryname[$category]\n";
   if ($opt_C)
-    { # print defined($index), " ", defined($mfile[$index]), " ", defined($mline[$index]), " ", defined($category), " ", defined($categoryname[$category]), " ", defined($mname[$index]), " ", defined($margs[$index]), " ", defined($mbody[$index]), "\n";
-     # print "$mfile[$index]:$mline[$index]: $category = $categoryname[$category]: $mname[$index]$margs[$index] $mbody[$index]\n";
-#      if (!defined($mfile[$index])) {
-#	print STDERR "mfile[index] not defined\n"
-#      } elsif (!defined($mline[$index])) {
-#	print STDERR "mline[index] not defined\n"
+    { # print defined($index), " ", defined($mdef_file[$index]), " ", defined($mdef_line[$index]), " ", defined($category), " ", defined($categoryname[$category]), " ", defined($mdef_name[$index]), " ", defined($mdef_args[$index]), " ", defined($mdef_body[$index]), "\n";
+     # print "$mdef_file[$index]:$mdef_line[$index]: $category = $categoryname[$category]: $mdef_name[$index]$mdef_args[$index] $mdef_body[$index]\n";
+#      if (!defined($mdef_file[$index])) {
+#	print STDERR "mdef_file[index] not defined\n"
+#      } elsif (!defined($mdef_line[$index])) {
+#	print STDERR "mdef_line[index] not defined\n"
 #      } elsif (!defined($categoryname[$category])) {
 #	print STDERR "categoryname[category] not defined\n";
 #      }
-      print CATEG "$mfile[$index]:$mline[$index]: $categoryname[$category]";
+      print CATEG "$mdef_file[$index]:$mdef_line[$index]: $categoryname[$category]";
       if (($category == $catEXP)
 	  || ($category == $catEXPFREE)
 	  || ($category == $catLITERAL)
 	  || ($category == $catCONSTANT)
 	  || ($category == $catSOMECONSTANT))
 	{ print CATEG "(", type_name($type), ")"; }
-      print CATEG ": $mname[$index]$margs[$index] $mbody[$index]\n"; }
-  $mcategory[$index] = $category;
+      print CATEG ": $mdef_name[$index]$mdef_args[$index] $mdef_body[$index]\n"; }
+  $mdef_category[$index] = $category;
 
 
 #   if (defined($args)) {
@@ -3492,7 +3608,7 @@ sub categorize_macro
 sub is_fun_decl_arg_macro
 { my ($identifier) = check_args(1, "is_fun_decl_arg_macro", caller, @_);
 
-#  print STDERR "is_fun_decl_arg_macro: $identifier $macros{$identifier}[0] ", join(', ',(map {$margs[$macros{$identifier}[$_]]} (1..$macros{$identifier}[0]))), "\n";
+#  print STDERR "is_fun_decl_arg_macro: $identifier $macros{$identifier}[0] ", join(', ',(map {$mdef_args[$macros{$identifier}[$_]]} (1..$macros{$identifier}[0]))), "\n";
 
   # don't require only 2 definitions-- require > 1 and
   # check that all definitions
@@ -3515,12 +3631,12 @@ sub is_fun_decl_arg_macro
   my $one_expanded_to_itself = $false;
 
   foreach (1..$macros{$identifier}[0]) {
-    if (count_macro_args($margs[$macros{$identifier}[$_]]) != 1) {
+    if (count_macro_args($mdef_args[$macros{$identifier}[$_]]) != 1) {
 #      print STDERR "=> false1 at $_\n";
       return $false;
     }
-    my $args = $margs[$macros{$identifier}[$_]];
-    my $body = $mbody[$macros{$identifier}[$_]];
+    my $args = $mdef_args[$macros{$identifier}[$_]];
+    my $body = $mdef_body[$macros{$identifier}[$_]];
     #FIX: better way to remove comments?
     # Remove comments
     $body =~ s%//.*$%%g;
@@ -3775,7 +3891,7 @@ sub check_macro_body
 ###
 
 # like die, but with file and line number prefix
-# May also redefine this so that it doesn't die, but just prints a 
+# May also redefine this so that it doesn't die, but just prints a
 # warning to a severe error stream
 # Still use regular die for real fatal errors
 sub mdie {
@@ -3800,31 +3916,31 @@ sub current_line_no {
   return ($. - $#getline_ungotlines - 1);
 }
 
-# return the index into the @ft_ arrays for the current filename
+# return the index into the @ftype_ arrays for the current filename
 # consider how it was included, and whether it's a header or code
-sub compute_current_ft_index {
-  my ($filename) = check_args(1,"compute_current_ft_slice",caller,@_);
+sub compute_ftype_index {
+  my ($filename) = check_args(1,"compute_ftype_index",caller,@_);
 
-  my $offset = current_file_is_header()? $ft_HEAD_Start: $ft_CODE_Start;
+  my $offset = file_is_header($filename) ? $ftype_HEADER_Start : $ftype_NONHEADER_Start;
 
-  die "compute_current_ft_index can't determine an index for an inclusion method" 
-    if !exists $InclusionMethod_to_Index{$files{$filename}};
+  die "compute_ftype_index can't determine an index for an inclusion method"
+    if !exists $InclusionMethod_to_Index{$file_inclusion_method{$filename}};
 
-  return $offset + $InclusionMethod_to_Index{$files{$filename}};
+  return $offset + $InclusionMethod_to_Index{$file_inclusion_method{$filename}};
 }
 
 
 # Tell us if the current file was added by a #include directive
 # (as opposed to passed in to evilmacros on the cmd line or in STDIN w/ -i )
-sub current_file_was_included {
-  check_args(0,"current_file_not_included",caller,@_);
-  if ($files{$current_file} =~ /^FromInclude/) { return $true; }
+sub file_was_included {
+  my ($filename) = check_args(1,"file_was_included",caller,@_);
+  if ($file_inclusion_method{$filename} =~ /^FromInclude/) { return $true; }
   return $false;
 }
 
 # Tell if the current filename looks like a header file
-sub current_file_is_header {
-  check_args(0,"current_file_not_included",caller,@_);
+sub file_is_header {
+  my ($filename) = check_args(1,"file_is_header",caller,@_);
   if ($current_file =~ /.[hH].?.?$/) { return $true; }
   return $false;
 }
@@ -3847,8 +3963,8 @@ sub count_macro_args {
   return $retval;
 }
 
-# Return the next available macro index for 
-# the @mXXXX arrays
+# Return the next available macro index for
+# the @mdef_XXXX arrays
 sub next_available_macro_index {
   check_args(0,"next_available_macro_index",caller,@_);
   return $cMacrosInTables++;
@@ -3856,8 +3972,6 @@ sub next_available_macro_index {
 
 # Initialize the macros structures for the builtin macros of gcc
 # FIX: Should generalize so that it works for non-gcc compilers
-# Also, it'd be great to parse Makefile-s and look for -DMACROS 
-# and have a way of adding them in as well.
 # This list is not necessarily comprehensive even for gcc
 # I got it with:
 # uni,p1:~/macros% strings /usr/lib/gcc-lib/i486-linux/2.7.2/cpp | more
@@ -3865,41 +3979,41 @@ sub next_available_macro_index {
 sub initialize_builtin_macros {
   check_args(0,"initialize_builtin_macros",caller,@_);
   my @empty_def_macros = (
-    qw(__LINE__ __DATE__ __FILE__ __BASE_FILE__ __INCLUDE_LEVEL__ __VERSION__ 
-     __SIZE_TYPE__ __PTRDIFF_TYPE__  __WCHAR_TYPE__ __USER_LABEL_PREFIX__ 
-     __REGISTER_PREFIX__ __IMMEDIATE_PREFIX__ __TIME__ __STDC__ 
+    qw(__LINE__ __DATE__ __FILE__ __BASE_FILE__ __INCLUDE_LEVEL__ __VERSION__
+     __SIZE_TYPE__ __PTRDIFF_TYPE__  __WCHAR_TYPE__ __USER_LABEL_PREFIX__
+     __REGISTER_PREFIX__ __IMMEDIATE_PREFIX__ __TIME__ __STDC__
      __STDC_VERSION__ __OBJC__) );
 
   my @string_def_macros = (
-    qw(__BASE_FILE__  __VERSION__ __SIZE_TYPE__  __PTRDIFF_TYPE__ 
+    qw(__BASE_FILE__  __VERSION__ __SIZE_TYPE__  __PTRDIFF_TYPE__
        __WCHAR_TYPE__  __DATE__  __TIME__ ) );
 
   my @num_def_macros = ( qw( __STDC__  __OBJC__ ) );
 
   foreach (@empty_def_macros) {
     $macros{$_} = [1,$cBuiltinMacros];
-    $mname[$cBuiltinMacros] = $_;
-    $margs[$cBuiltinMacros] = "";
-    $mbody[$cBuiltinMacros] = "";
-    $mfile[$cBuiltinMacros] = $szBuiltInFakeFile;
+    $mdef_name[$cBuiltinMacros] = $_;
+    $mdef_args[$cBuiltinMacros] = "";
+    $mdef_body[$cBuiltinMacros] = "";
+    $mdef_file[$cBuiltinMacros] = $built_in_fake_file;
     $cBuiltinMacros++;
   }
 
   foreach (@string_def_macros) {
     $macros{$_} = [1,$cBuiltinMacros];
-    $mname[$cBuiltinMacros] = $_;
-    $margs[$cBuiltinMacros] = "";
-    $mbody[$cBuiltinMacros] = "\"\"";
-    $mfile[$cBuiltinMacros] = $szBuiltInFakeFile;
+    $mdef_name[$cBuiltinMacros] = $_;
+    $mdef_args[$cBuiltinMacros] = "";
+    $mdef_body[$cBuiltinMacros] = "\"\"";
+    $mdef_file[$cBuiltinMacros] = $built_in_fake_file;
     $cBuiltinMacros++;
   }
 
   foreach (@num_def_macros) {
     $macros{$_} = [1,$cBuiltinMacros];
-    $mname[$cBuiltinMacros] = $_;
-    $margs[$cBuiltinMacros] = "";
-    $mbody[$cBuiltinMacros] = "1";
-    $mfile[$cBuiltinMacros] = $szBuiltInFakeFile;
+    $mdef_name[$cBuiltinMacros] = $_;
+    $mdef_args[$cBuiltinMacros] = "";
+    $mdef_body[$cBuiltinMacros] = "1";
+    $mdef_file[$cBuiltinMacros] = $built_in_fake_file;
     $cBuiltinMacros++;
   }
 
@@ -3934,7 +4048,7 @@ sub initialize_builtin_macros {
 sub analyze_for_macro_use {
   my ($line) = check_args(1,"analyze_for_macro_use",caller,@_);
 
-  die "Shouldn't be analyzing for macro use when finding defs!" 
+  die "Shouldn't be analyzing for macro use when finding defs!"
     if $finding_macro_defs;
 
   # study $line;  # use this if you're gonna do lots of pattern matches
@@ -3958,11 +4072,12 @@ sub analyze_for_macro_use {
 
   # FIX: does this handle #define /* */ TEST properly?
   # ie. have comments been removed for us already by getline
-  if ($line =~ /^\# *define\s+(\w+)\b/) {
+  if ($line =~ /^\# *define\s+($identifier_re)/o) {
     $cpp_defining_macro_name = $1;
     #print STDERR "Defining $cpp_defining_macro_name\n";
   }
 
+  # \W+ is probably more efficient than \b for the split criterion.
   foreach $word (split /\W+/,$line) {
     if (defined($macros{$word}) && (!defined($cpp_defining_macro_name) ||
 				    $cpp_defining_macro_name ne "$word")) {
@@ -3978,69 +4093,22 @@ sub analyze_for_macro_use {
 	my $mi = mindex_from_name_file_line($cpp_defining_macro_name,
 					    $current_file,
 					    current_line_no());
-	push @{$mexpansionuses[$mi]}, $word;
+	push @{$mdef_expansion_uses[$mi]}, $word;
 	# print STDERR "Macro $cpp_defining_macro_name expands to something with $word-- using index $mi\n";
       }
       push @{$macros_file_line_uses{$word}}, ($current_file,current_line_no());
     }
   }
-}    
-
-#FIX: write this
-sub compute_macros_used_in_functions {
-  check_args(0,"compute_macros_used_in_functions",caller,@_);
-
-  my ($macro,$uses_ref);
-
-  while ( ($macro,$uses_ref) = each %macros_file_line_uses) {
-    my $i = 0;
-    # FIX: this is a bit of a hack; we need to empty the cache
-    # when we start looking at a different macro's uses, since
-    # we can't just continue from our last point if the use
-    # happens to be in the same file
-    $wf_last_filename = "%EMPTY CACHE%";
-    # print STDERR "Handling $macro\n";
-    for ( ; $i+1 <= $#{$uses_ref}; $i+=2 ) {
-      my ($file,$line) = @{$uses_ref}[$i,$i+1];
-      my $function_name;
-      if (!($function_name = which_function($file,$line))) {
-	$function_name = "%global%";
-      }
-      # print STDERR "USEIN: $function_name\n";
-      push @{$macros_used_in_functions{$macro}}, "$file:$line:$function_name";
-    }
-  }
 }
 
-# return the index into the @mXXX arrays for the macro definition described
-sub mindex_from_name_file_line {
-  my ($name,$file,$line) = check_args(3,"mindex_from_name_file_line",caller,@_);
-  
-  my $cDefs = $macros{$name}[0];
-  my $i = 1;
-
-  while ( $i <= $cDefs ) {
-    my $mi = $macros{$name}[$i];
-    my $c_phys_lines = $mplines[$mi];
-    my $first_phys_line = $mline[$mi];
-
-    #if ($name eq "NEXTBYTE" || $name eq "NLENGTH") {
-    #  print STDERR "l,c,f: $line,$c_phys_lines,$first_phys_line\n";
-    #}
-    
-    #FIX: I'm not convinced about why it needs to be $first_phys_line-1
-    if ($mfile[$mi] eq $file && 
-	($line >= $first_phys_line-1 && $line <= $first_phys_line + $c_phys_lines)) {
-      return $mi;
-    }
-    $i++;
-  }
-
-  die "couldn't find mindex for $name $file $line";
-
-  return undef;
-}
-
+# cached values for which_function
+# FIX: perhaps we can simulate static function variables
+# by putting functions that need them after a "package" declaration
+# to change their scope.  We might then need to access globals explicitly,
+# but it could be worth it-- definitely if we move to separate files
+my $wf_last_filename = "%EMPTY CACHE%";
+my $wf_last_line_no = -1;
+my $wf_last_index = -1;
 
 # Note: which_function can only be used after a complete second parse
 # if you want to be sure you get things right
@@ -4088,7 +4156,7 @@ sub which_function {
   if ($i >= 3) {
     $i -= 3;
   }
-  
+
   # three possibilities:
   # 1) $i > $#{$listref} => return undef, since it's past all the fns listed
   # 2) $line_no is in the range $$listref[$i] thru $$listref[$i+2] (inclusive),
@@ -4114,13 +4182,70 @@ $i $#{$listref}\n";
 #  } else {
 #    print STDERR "function at $filename:$line_no => %NONE%";
 #  }
-    
+
 
   ($wf_last_filename, $wf_last_line_no ) = ($filename,$line_no);
   $wf_last_index = $i;
 
   return $fn_name;
 }
+
+
+#FIX: write this
+sub compute_macros_used_in_functions {
+  check_args(0,"compute_macros_used_in_functions",caller,@_);
+
+  my ($macro,$uses_ref);
+
+  while ( ($macro,$uses_ref) = each %macros_file_line_uses) {
+    my $i = 0;
+    # FIX: this is a bit of a hack; we need to empty the cache
+    # when we start looking at a different macro's uses, since
+    # we can't just continue from our last point if the use
+    # happens to be in the same file
+    $wf_last_filename = "%EMPTY CACHE%";
+    # print STDERR "Handling $macro\n";
+    for ( ; $i+1 <= $#{$uses_ref}; $i+=2 ) {
+      my ($file,$line) = @{$uses_ref}[$i,$i+1];
+      my $function_name;
+      if (!($function_name = which_function($file,$line))) {
+	$function_name = "%global%";
+      }
+      # print STDERR "USEIN: $function_name\n";
+      push @{$macros_used_in_functions{$macro}}, "$file:$line:$function_name";
+    }
+  }
+}
+
+# return the index into the @mdef_XXX arrays for the macro definition described
+sub mindex_from_name_file_line {
+  my ($name,$file,$line) = check_args(3,"mindex_from_name_file_line",caller,@_);
+
+  my $cDefs = $macros{$name}[0];
+  my $i = 1;
+
+  while ( $i <= $cDefs ) {
+    my $mi = $macros{$name}[$i];
+    my $c_phys_lines = $mdef_physical_lines[$mi];
+    my $first_phys_line = $mdef_line[$mi];
+
+    #if ($name eq "NEXTBYTE" || $name eq "NLENGTH") {
+    #  print STDERR "l,c,f: $line,$c_phys_lines,$first_phys_line\n";
+    #}
+
+    #FIX: I'm not convinced about why it needs to be $first_phys_line-1
+    if ($mdef_file[$mi] eq $file &&
+	($line >= $first_phys_line-1 && $line <= $first_phys_line + $c_phys_lines)) {
+      return $mi;
+    }
+    $i++;
+  }
+
+  die "couldn't find mindex for $name $file $line";
+
+  return undef;
+}
+
 
 
 ###########################################################################
@@ -4135,35 +4260,35 @@ sub update_cpp_directives_for {
 
   # This code avoids warnings about using uninitialized values
   no strict 'refs';  #FIX: Must I do this?
-  if (!defined($ {$rg_cppcmdcounts[$current_ft_index]}{$cpp_cmd})) {
-    $ {$rg_cppcmdcounts[$current_ft_index]}{$cpp_cmd} = 0;
+  if (!defined($ {$rg_cppcmdcounts[$current_ftype_index]}{$cpp_cmd})) {
+    $ {$rg_cppcmdcounts[$current_ftype_index]}{$cpp_cmd} = 0;
   }
-  $ {$rg_cppcmdcounts[$current_ft_index]}{$cpp_cmd}++;
-  
-  $rg_cpp_cmds[$current_ft_index]++;
-  #print STDERR "GOTCPP: $cpp_cmd, for $current_ft_index, so have $rg_cpp_cmds[$current_ft_index]\n";
+  $ {$rg_cppcmdcounts[$current_ftype_index]}{$cpp_cmd}++;
+
+  $rg_cpp_cmds[$current_ftype_index]++;
+  #print STDERR "GOTCPP: $cpp_cmd, for $current_ftype_index, so have $rg_cpp_cmds[$current_ftype_index]\n";
 }
 
 # compute $cpp_cmds, $cpp_cmds_ni
 # %cppcmpdcount, %cppcmdcount_ni
 sub compute_global_cpp_sums {
   check_args(0,"compute_global_cpp_sums",caller,@_);
-  
-  $cpp_cmds = sum_array(@rg_cpp_cmds[@ft_ALL]);
-  $cpp_cmds_ni = sum_array(@rg_cpp_cmds[@ft_NOT_INCLUDED]);
 
-  $cpp_cmds_c = sum_array(@rg_cpp_cmds[@ft_CODE]);
-  $cpp_cmds_c_ni = sum_array(@rg_cpp_cmds[@ft_CODE_NOT_INCLUDED]);
+  $cpp_cmds = sum_array(@rg_cpp_cmds[@ftype_ALL]);
+  $cpp_cmds_ni = sum_array(@rg_cpp_cmds[@ftype_NOT_INCLUDED]);
 
-  $cpp_cmds_h = sum_array(@rg_cpp_cmds[@ft_HEAD]);
-  $cpp_cmds_h_ni = sum_array(@rg_cpp_cmds[@ft_HEAD_NOT_INCLUDED]);
-  
+  $cpp_cmds_c = sum_array(@rg_cpp_cmds[@ftype_CODE]);
+  $cpp_cmds_c_ni = sum_array(@rg_cpp_cmds[@ftype_NONHEADER_NOT_INCLUDED]);
+
+  $cpp_cmds_h = sum_array(@rg_cpp_cmds[@ftype_HEAD]);
+  $cpp_cmds_h_ni = sum_array(@rg_cpp_cmds[@ftype_HEADER_NOT_INCLUDED]);
+
   my $hashref;
   my $key;
 
   my $i = 0;
   no strict 'refs';  #FIX: Must I do this?
-  foreach $hashref (@rg_cppcmdcounts[@ft_ALL]) {
+  foreach $hashref (@rg_cppcmdcounts[@ftype_ALL]) {
     #  for (;  $i < $#rg_cppcmdcounts; $i++) {
     #    foreach $key (keys %{$rg_cppcmdcounts[$i]}) {
     foreach $key (keys %{$hashref}) {
@@ -4175,7 +4300,7 @@ sub compute_global_cpp_sums {
     }
   }
 
-  foreach $hashref (@rg_cppcmdcounts[@ft_NOT_INCLUDED]) {
+  foreach $hashref (@rg_cppcmdcounts[@ftype_NOT_INCLUDED]) {
     foreach $key (keys %{$hashref}) {
       if (!defined($cppcmdcount_ni{$key})) {
 	$cppcmdcount_ni{$key} = 0;
@@ -4184,7 +4309,7 @@ sub compute_global_cpp_sums {
     }
   }
 
-  foreach $hashref (@rg_cppcmdcounts[@ft_CODE_NOT_INCLUDED]) {
+  foreach $hashref (@rg_cppcmdcounts[@ftype_NONHEADER_NOT_INCLUDED]) {
     foreach $key (keys %{$hashref}) {
       if (!defined($cppcmdcount_c_ni{$key})) {
 	$cppcmdcount_c_ni{$key} = 0;
@@ -4193,7 +4318,7 @@ sub compute_global_cpp_sums {
     }
   }
 
-  foreach $hashref (@rg_cppcmdcounts[@ft_HEAD_NOT_INCLUDED]) {
+  foreach $hashref (@rg_cppcmdcounts[@ftype_HEADER_NOT_INCLUDED]) {
     foreach $key (keys %{$hashref}) {
       if (!defined($cppcmdcount_h_ni{$key})) {
 	$cppcmdcount_h_ni{$key} = 0;
@@ -4203,8 +4328,6 @@ sub compute_global_cpp_sums {
   }
 
 }
-
-  
 
 
 
@@ -4218,8 +4341,8 @@ sub compute_global_cpp_sums {
 # and parsing the output.
 sub get_include_path {
   check_args(0,"getincludepath",caller,@_);
-  @include_path = ( 
-		   "/usr/local/include",		
+  @include_path = (
+		   "/usr/local/include",
 		   "/usr/local/.contrib/gcc-2.7.2/i586-unknown-linux/include",
 		   "/usr/local/.contrib/gcc-2.7.2/lib/gcc-lib/i586-unknown-linux/2.7.2/include",
 		   "/usr/include",
@@ -4250,6 +4373,36 @@ sub complete_include_pathname {
   return $complete_file;
 }
 
+
+###########################################################################
+### Utilities
+###
+
+# pct2(x) returns a percentage (not a fraction) which corresponds to arg1/arg2.
+sub pct2 {
+  my ($x,$w) = check_args(2, "pct2", caller, @_);
+  if ($w <= 0) {
+    # Should this die or mdie instead?
+    print STDERR "pct2: Bad divisor: $x / $w\n";
+    return 0;
+  }
+  if ($x < 0 || $x > $w) {
+    print STDERR "pct2: Percentage out of range: $x / $w\n";
+  }
+  return (100*$x/$w);
+}
+
+
+# sum_array sums all its inputs, typically the elements of an array.
+# Pass in a slice of the array in order to sum that part.
+sub sum_array {
+  my (@args) = check_args_at_least(0,"sum_array", caller, @_);
+  my $sum = 0;
+  { my $elt = 0;
+    foreach $elt (@args)
+      { $sum += $elt; } }
+  return $sum;
+}
 
 
 
@@ -4349,6 +4502,35 @@ sub complete_include_pathname {
 # exit;
 
 
+# Print all lines that look like declarations.
+sub test_typedecl_regexp
+{
+  check_args(0, "test_typedecl_regexp", caller, @_);
+  my $ifiles = 0;
+#  foreach $this_file (@files)
+  for (; $ifiles <= $#files; $ifiles++)
+    { $current_file = $files[$ifiles];
+      $current_ftype_index = compute_ftype_index($current_file);
+      if ($opt_v)
+	{ print STDERR $current_file . "\n"; }
+      open(INPUT,$current_file) or next; # skip to next file if open fails
+      if (@dependenton > 0)
+	{ mdie("In \#if at beginning of file: @dependenton"); }
+      while ($line = getline())
+	{ if ($line =~ /^$type_specifier_re/o)
+	    { print "ts: <<$MATCH>> $line"; }
+	  if ($line =~ /^$type_declarator_re/o)
+	    { print "td: <<$MATCH>> $line"; }
+	  if ($line =~ /^$type_declarator_re\s*[,=;\(]/o)
+	    { print "td+: $line"; }
+	}
+      if (@dependenton > 0)
+	{ mdie("Still in \#if at end of file: @dependenton"); }
+      close(INPUT);
+    }
+}
+
+
 ###########################################################################
 ### Main loop
 ###
@@ -4369,7 +4551,7 @@ if ($opt_i) {
     next if /^-.*$/;
     chop ($_);
     push @files,$_;
-    $files{$_} = "FromStdin";
+    $file_inclusion_method{$_} = "FromStdin";
   }
 }
 
@@ -4445,7 +4627,7 @@ $fDebugCmdProcessing && print "@ARGV";
 # Add the rest of the arguments to the files list
 foreach $_ (@ARGV) {
   push @files,$_;
-  $files{$_} = "FromCmdLine";
+  $file_inclusion_method{$_} = "FromCmdLine";
 }
 
 # Testing
@@ -4456,7 +4638,7 @@ initialize_builtin_macros();
 
 # Begin Processing files
 
-print STDERR "Processing at least ", $#files+1, " files (plus possible \#included files)...\n";
+print STDERR "Processing ", $#files+1, " files (plus \#included files)...\n";
 
 find_macro_definitions();	# also counts other preprocessor usage
 
@@ -4469,7 +4651,7 @@ find_macro_definitions();	# also counts other preprocessor usage
 
 # { my $ofdefs;
 #   for $ofdefs (1..$macros{"OF"}[0])
-#     { print "|", join("|", $mname[$macros{"OF"}[$ofdefs]], $margs[$macros{"OF"}[$ofdefs]], $mbody[$macros{"OF"}[$ofdefs]], $mfile[$macros{"OF"}[$ofdefs]], $mline[$macros{"OF"}[$ofdefs]]), "|\n"; } }
+#     { print "|", join("|", $mdef_name[$macros{"OF"}[$ofdefs]], $mdef_args[$macros{"OF"}[$ofdefs]], $mdef_body[$macros{"OF"}[$ofdefs]], $mdef_file[$macros{"OF"}[$ofdefs]], $mdef_line[$macros{"OF"}[$ofdefs]]), "|\n"; } }
 
 
 # Print number of definitions for each macro
@@ -4487,19 +4669,22 @@ compute_macros_used_in_functions();
 
 ### All the files have been read; now process the macros
 # We initialized $cppcmdcount{"define"}, so it will be defined
+# FIXGJB: Actually, we don't do so any longer.
+if (!exists($cppcmdcount{"define"}))
+{ die "No defines found and cppcmdcount{\"define\"} doesn't exist." }
 print STDERR "Processing " . $cppcmdcount{"define"} . " macros\n";
 { my $i;
-  # FIX: throughout coode, use explicit for-loop-s instead-- 
+  # FIX: throughout coode, use explicit for-loop-s instead--
   # this builds an array and has extra overhead in both space and time
-  for ($i = $cBuiltinMacros; 
-       $i <= $cppcmdcount{"define"} + $cBuiltinMacros-1; 
+  for ($i = $cBuiltinMacros;
+       $i <= $cppcmdcount{"define"} + $cBuiltinMacros-1;
        $i++ )
-    { # print "$i: $mbody[$i]\n";
-      #   print &parse_expression($mbody[$i]) . ": ";
+    { # print "$i: $mdef_body[$i]\n";
+      #   print &parse_expression($mdef_body[$i]) . ": ";
       #   foreach $var (keys(%parsevars)) { print $var . " "; }
-      #   print "\n  $mname[$i]";
-      #   if (defined($margs[$i])) { print $margs[$i]; }
-      #   print " $mbody[$i]\n";
+      #   print "\n  $mdef_name[$i]";
+      #   if (defined($mdef_args[$i])) { print $mdef_args[$i]; }
+      #   print " $mdef_body[$i]\n";
       categorize_macro($i);
     } }
 
