@@ -698,7 +698,7 @@
 # These def files added since they get #included by C code
 ./cp/tree.def
 ./bc-typecd.def
-./bytecode.def
+#./bytecode.def   # this doesn't actually get #included
 ./machmode.def
 ./modemap.def
 ./objc-tree.def
