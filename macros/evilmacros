@@ -1,4 +1,5 @@
-#!/uns/bin/perl -w
+#!/usr/local/bin/perl -w
+# $Id$
 # evilmacros
 
 # Invoke like this:   evilmacros `find-c`
@@ -31,6 +32,7 @@
 # However, continuation line pasting apparently occurs before comment removal.
 
 # To do:
+#  Add comments describing complex regular expressions
 #  Classify macros as expression-like (possibly subcategorize as function-like
 #	if expression-like and takes argument), statement-like, or neither
 #	(ie, that change the state of the parser)
@@ -51,7 +53,7 @@
 #  Perhaps extract some of the utility code into a library or separate file.
 #  Check for/recognize template-like macros (that take a type as an argument).
 
-
+
 ###########################################################################
 ### Variables
 ###
@@ -71,29 +73,75 @@ $instring = 0;
 # Shouldn't be in a character constant across lines.
 # $incharconst = 0;
 
+# Though this would work:
+#foreach $v (values %macroCommands) {
+#  $$v = 0;
+#}
+# We need to suppress warnings about vars used only once:
+$cAssert = 0; $cCpu = 0;
+$cDefine = 0; $cElif = 0;
+$cElse = 0;   $cError = 0;
+$cIdent = 0;  $cIf = 0;
+$cIfdef = 0;  $cIfndef = 0;
+$cImport = 0; $cInclude = 0;
+$cLine = 0;   $cMachine = 0;
+$cPragma = 0; $cSystem = 0;
+$cUnassert = 0;$cUndef = 0;
+$cWarning = 0;
+
+%macroCommands = 
+  ( "assert" => \$cAssert,
+    "cpu" => \$cCpu,
+    "define" => \$cDefine,
+    "elif" => \$cElif,
+    "else" => \$cElse,
+    "error" => \$cError,
+    "ident" => \$cIdent,
+    "if" => \$cIf,
+    "ifdef" => \$cIfdef,
+    "ifndef" => \$cIfndef,
+    "import" => \$cImport,
+    "include" => \$cInclude,
+    "line" => \$cLine,
+    "machine" => \$cMachine,
+    "pragma" => \$cPragma,
+    "system" => \$cSystem,
+    "undef" => \$cUndef,
+    "unassert" => \$cUnassert,
+    "warning" => \$cWarning,
+  );
+
+
 ###########################################################################
 ### Usage
 ###
 
 # Updated by gjb
 sub usage {
-   die "@_\nUsage: $0 [-i] <files>\n\
--i means use files listed on stdin [one per line]\n
-in addition to those (if any) on cmd line\n";
+   die "@_\nUsage: $0 [-ihvDsS] <files>
+-i use files listed on stdin [one per line]
+   in addition to those (if any) on cmd line
+-h display this help message
+-v be verbose and list files as they are processed to stderr
+-D dump the names of the macros upon conclusion
+-s suppress the summary statistics
+-S show the per directive statistics
+";
 }
 
+
 ###########################################################################
 ### Code
 ###
 
 use Getopt::Std;
-use vars qw( $opt_i $opt_h $opt_v );
+use vars qw( $opt_i $opt_h $opt_v $opt_D $opt_s $opt_S );
 $fDebugCmdProcessing = 0;
 
 # use strict;
 # use English;
 
-getopts('ihv');
+getopts('ihvDsS');
 usage() if ($opt_h);
 
 if ($opt_i) {
@@ -119,6 +167,7 @@ foreach $file (@ARGV)
       # check for macros
       if ($line =~ m/^\#[ \t]*define[ \t]*/)
 	{ $macrodefs++;
+	  $cDefine++;
 	  $line = $';
 	  # remove trailing newline
 	  chop($line);
@@ -126,20 +175,53 @@ foreach $file (@ARGV)
 	  ($mname, $margs, $mdef) = macroparse($line);
 	  # if (!defined($margs)) { $margs = ""; } # avoid uninitialized variable warning
 	  # print "parsed: |$mname|$margs|$mdef|\n";
+
+	  # save the name of the macro and its args and definitions
+	  # FIX: want to do something about checking whether the
+	  # macro has been redefined, or whatever
+	  $macros{$mname}[0] = $margs;
+	  $macros{$mname}[1] = $mdef;
+
 	  # Nothing to check if this is just making the macro defined w/o a body.
-	  if (defined($mdef))
-	    { checkmacrobody($mdef); }
+	  if (defined($mdef)) {
+	    checkmacrobody($mdef);
 	  }
-      elsif ($line =~ m/^\#/)
-	{ $cpp_cmds++; }
+	}
+      elsif ($line =~ m/^\#[ \t]*([^ ]*)[ \t]*/) {
+	$ {$macroCommands{$1}}++ if exists $macroCommands{$1}; 
+	$cpp_cmds++;
+      }
     }
   close(INPUT);
 }
-if ($lines == 0)
+if ($lines == 0) {
   # This is useful for testing, I guess.
-  { print "No lines read!\n"; }
-else
-  { print "$macrodefs macro defs (", sprintf("%2.2f%", 100*$macrodefs/$lines), ") and $cpp_cmds other cpp directives (", sprintf("%2.2f%", 100*$cpp_cmds/$lines), ") in $lines lines (", sprintf("%2.2f%", 100*($macrodefs+$cpp_cmds)/$lines), ") in ", $#ARGV+1, " files\n"; }
+  print "No lines read! Perhaps you meant to use the -i option?\n"; 
+} else {
+  if ($opt_S) {
+    while ( ($h,$v) = each(%macroCommands) ) {
+      printf "$h = $$v (%2.2f%%)\n", (100*$$v/$lines);
+    }
+  }
+
+  if (!$opt_s) {
+    printf "$macrodefs define-s (%2.2f%) , $cpp_cmds other (%2.2f%) , $lines lines (%2.2f%) , %d files\n", 100*$macrodefs/$lines, 100*$cpp_cmds/$lines, 
+      100*($macrodefs+$cpp_cmds)/$lines, $#ARGV+1;
+  }
+
+  # -D = dump the defines
+  if ($opt_D) {
+    print "----\n";
+    foreach $mname (keys %macros) {
+      print "$mname\n";
+    }
+  }
+}
+
+
+###########################################################################
+### Subroutines
+###
 
 
 # Read the next logical line from <INPUT>, until no continuation char
@@ -259,8 +341,10 @@ sub appendlines
   $arg1 . $arg2;
 }
 
+
+
 ###########################################################################
-### Parse and check macros
+### Parse and check macros subroutines
 ###
 
 # Return an array of three elements: name, args, def
@@ -357,7 +441,7 @@ sub checkmacrobody
 	  $postmatch =~ m/\*\//;
 	  $body = $';
 	  if ($precedingabuts && ($body =~ m/^\w/))
-	    { print "$currentfile:$.: illegal: comment pasting in $mname:\n    $_[0]\n"; } }
+	    { print "$currentfile:$.: obsoleted: comment pasting in $mname:\n    $_[0]\n"; } }
       elsif ($match eq "//")
         { # print "$currentfile:$.: evil: //-style comment in $mname:\n    $_[0]\n";
           $body = ""; }
