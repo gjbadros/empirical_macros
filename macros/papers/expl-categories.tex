@@ -57,9 +57,9 @@ case for expression macros with arguments).
 % These aren't great examples (not from actual code); but so be it, as the
 % actual examples are *very* long.
 \item[Statement]  The macro body is a complete statement such as
-  ``{\tt plu = ".";}'', ``{\tt if (x) \verb|{|free(x); x=NULL;\verb|}|'' or
-    ``{\tt \verb|{| int c; while ((c = getc(fp)) != '\n' && c != EOF);
-    \verb|}|''.  Such a macro is like a function 
+  ``{\tt plu = ".";}'', ``{\tt if (x) \verb|{|free(x); x=NULL;\verb|}|}'' or
+    ``{\tt \verb|{| int c; while ((c = getc(fp)) != '\verb|\|n' \verb|&&| c != EOF);
+    \verb|}|}''.  Such a macro is like a function 
     returning {\tt void}, except that uses should not be followed by a
     semicolon (see section~\ref{sec:lint}).
     
