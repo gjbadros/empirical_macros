@@ -84,6 +84,7 @@ CATDDFCUM  := cat-*.freqddf_cum
 PERR := $(addsuffix .perr,$(PKGS))
 
 TEXT_TABLES :=	tbl-package-sizes \
+		tbl-package-sizes-with-uses \
 		tbl-def-frequency \
 		tbl-ddf-frequency \
 		tbl-use-frequency \
@@ -159,6 +160,9 @@ text_tables:	$(TEXT_TABLES)
 
 tbl-package-sizes: $(STAT)
 	macros-make-package-sizes-tbl-from-stat $^ > $@
+
+tbl-package-sizes-with-uses: tbl-package-sizes
+	macros-make-tbl-package-sizes-with-uses $^ > $@
 
 # To add commas, do this in Emacs:
 # (query-replace-regexp "\\([0-9]\\)\\([0-9][0-9][0-9]\\)\\([^0-9]\\)" "\\1,\\2\\3" nil)
