@@ -6,6 +6,7 @@ require Exporter;
 @ISA = (Exporter);
 @EXPORT = qw(check_args check_args_range check_args_at_least);
 use strict;
+use Carp;
 
 =head1 NAME
 
@@ -51,16 +52,20 @@ sub check_args ($@)
 {
   my ($num_formals, @args) = @_;
   my ($pack, $file_arg, $line_arg, $subname, $hasargs, $wantarr) = caller(1);
-  if (@_ < 1) { die "check_args needs at least 7 args, got ", scalar(@_), ": @_\n"; }
+  if (@_ < 1) { croak "check_args needs at least 7 args, got ", scalar(@_), ": @_\n "; }
   if ((!wantarray) && ($num_formals != 0))
-    { my ($package, $filename, $line) = caller;
-      die "$filename:$line: check_args called in scalar context by $subname: @args\n"; }
+    { # my ($package, $filename, $line) = caller;
+      # die "$filename:$line: check_args called in scalar context by $subname: @args";
+      croak "check_args called in scalar context";
+    }
+  # Can't use croak below here: it would only go out to caller, not its caller
   my $num_actuals = @args;
   if ($num_actuals != $num_formals)
     { die "$file_arg:$line_arg: function $subname expected $num_formals argument",
-      ($num_formals == 1) ? "" : "s",
+      (($num_formals == 1) ? "" : "s"),
       ", got $num_actuals",
-      ($num_actuals == 0) ? "" : ": @args", "\n"; }
+      (($num_actuals == 0) ? "" : ": @args"),
+      "\n"; }
   my $index;
   for $index (0..$#args)
     { if (!defined($args[$index]))
@@ -72,10 +77,13 @@ sub check_args_range ($$@)
 {
   my ($min_formals, $max_formals, @args) = @_;
   my ($pack, $file_arg, $line_arg, $subname, $hasargs, $wantarr) = caller(1);
-  if (@_ < 2) { die "check_args_range needs at least 8 args, got ", scalar(@_), ": @_\n"; }
+  if (@_ < 2) { croak "check_args_range needs at least 8 args, got ", scalar(@_), ": @_"; }
   if ((!wantarray) && ($max_formals != 0) && ($min_formals !=0) )
-    { my ($package, $filename, $line) = caller;
-      die "$filename:$line: check_args_range called in scalar context: @args\n"; }
+    { # my ($package, $filename, $line) = caller;
+      # die "$filename:$line: check_args_range called in scalar context: @args\n";
+      croak "check_args_range called in scalar context";
+    }
+  # Can't use croak below here: it would only go out to caller, not its caller
   my $num_actuals = @args;
   if (($num_actuals < $min_formals) || ($num_actuals > $max_formals))
     { die "$file_arg:$line_arg: function $subname expected $min_formals-$max_formals arguments, got $num_actuals",
@@ -94,11 +102,13 @@ sub check_args_at_least ($@)
   # Don't do this, because we want every sub to start with a call to check_args*
   # if ($min_formals == 0)
   #   { die "Isn't it pointless to check for at least zero args to $subname?\n"; }
-  if (@_ < 1) { die "check_args_at_least needs at least 7 args, got ", scalar(@_), ": @_\n"; }
+  if (@_ < 1) { croak "check_args_at_least needs at least 7 args, got ", scalar(@_), ": @_"; }
   if ((!wantarray) && ($min_formals != 0))
-    { my ($package, $filename, $line) = caller;
-      die "$filename:$line: check_args_at_least called in scalar context: @args\n";
+    { # my ($package, $filename, $line) = caller;
+      # die "$filename:$line: check_args_at_least called in scalar context: @args\n"
+      croak "check_args_at_least called in scalar context";
     }
+  # Can't use croak below here: it would only go out to caller, not its caller
   my $num_actuals = @args;
   if ($num_actuals < $min_formals)
     { die "$file_arg:$line_arg: function $subname expected at least $min_formals argument",
