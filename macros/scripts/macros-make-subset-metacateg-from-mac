@@ -19,7 +19,7 @@ BEGIN {
 
   use vars qw($opt_d $opt_a $opt_h %categoryname $cCategoryNames);
 
-  my $i = 0;
+  my $i = -1;
 # we need to use $i+0, or else the value pointed to
 # by the first handful keeps getting incremented, and
 # we get uncategorized => 21, or whatever
@@ -28,7 +28,7 @@ BEGIN {
 
 # FIX: this table must be kept in sync with the table
 # headings in latexify-meta-mark-table
-  %categoryname = ();
+  %categoryname = ("NoDefinitions" => $i++ );
 
   make_mapping_for($i++,@mcat_FAILURE);
   make_mapping_for($i++,@mcat_NULL);
@@ -64,7 +64,9 @@ sub marks_for_categories {
       if (!defined($offset)) {
 	die "Couldn't map category \"$c\" to a meta category!";
       }
-      substr($str,$offset,1) = "*";
+      if ($offset >= 0 ) {
+	substr($str,$offset,1) = "*";
+      }
     }
   }
   return $str;
