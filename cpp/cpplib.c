@@ -839,6 +839,8 @@ macro_cleanup (pbuf, pfile)
     macro->type = T_MACRO;
   if (macro->type != T_MACRO || pbuf->buf != macro->value.defn->expansion)
     free (pbuf->buf);
+  gjb_call_hooks_sz(CPP_OPTIONS(pfile),HI_MACRO_CLEANUP,
+		    macro->name);
   return 0;
 }
 
@@ -2221,9 +2223,7 @@ output_line_command (pfile, conditional, file_change)
  */
 
 static enum cpp_token
-macarg (pfile, rest_args)
-     cpp_reader *pfile;
-     int rest_args;
+macarg (cpp_reader *pfile, int rest_args)
 {
   int paren = 0;
   enum cpp_token token;
