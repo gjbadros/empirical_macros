@@ -7,6 +7,18 @@
  */
 
 #line 1 "cpp.xs"
+/* $Id$
+ * By Greg J. Badros, Aug. 27 1997
+ * 
+ * These are simple functions to expose some C data structures
+ * to the perl callbacks called from pcpp
+ *
+ * FIXGJB: Need the below information available:	
+   is_system_include_file()
+   system_include_depth()
+ */
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -24,13 +36,13 @@ XS(XS_cpp_hello)
     if (items != 0)
 	croak("Usage: cpp::hello()");
     {
-#line 18 "cpp.xs"
-#line 18 "cpp.xs"
-#line 19 "cpp.xs"
+#line 30 "cpp.xs"
+#line 30 "cpp.xs"
+#line 31 "cpp.xs"
 	fprintf(stdout,"Hello world!\n");
-#line 19 "cpp.xs"
-#line 19 "cpp.xs"
-#line 19 "cpp.xs"
+#line 31 "cpp.xs"
+#line 31 "cpp.xs"
+#line 31 "cpp.xs"
     }
     XSRETURN_EMPTY;
 }
@@ -42,13 +54,13 @@ XS(XS_cpp_print_token_kind)
 	croak("Usage: cpp::print_token_kind(i)");
     {
 	int	i = (int)SvIV(ST(0));
-#line 24 "cpp.xs"
-#line 24 "cpp.xs"
-#line 25 "cpp.xs"
+#line 36 "cpp.xs"
+#line 36 "cpp.xs"
+#line 37 "cpp.xs"
 	print_token_kind((enum cpp_token) i);
-#line 25 "cpp.xs"
-#line 25 "cpp.xs"
-#line 25 "cpp.xs"
+#line 37 "cpp.xs"
+#line 37 "cpp.xs"
+#line 37 "cpp.xs"
     }
     XSRETURN_EMPTY;
 }
@@ -59,16 +71,16 @@ XS(XS_cpp_fname)
     if (items != 0)
 	croak("Usage: cpp::fname()");
     {
-#line 29 "cpp.xs"
+#line 41 "cpp.xs"
 	char *	RETVAL;
-#line 29 "cpp.xs"
-#line 30 "cpp.xs"
+#line 41 "cpp.xs"
+#line 42 "cpp.xs"
 	RETVAL = parse_in.buffer->fname;
-#line 32 "cpp.xs"
+#line 44 "cpp.xs"
 	ST(0) = sv_newmortal();
 	sv_setpv((SV*)ST(0), RETVAL);
-#line 32 "cpp.xs"
-#line 32 "cpp.xs"
+#line 44 "cpp.xs"
+#line 44 "cpp.xs"
     }
     XSRETURN(1);
 }
@@ -79,16 +91,38 @@ XS(XS_cpp_nominal_fname)
     if (items != 0)
 	croak("Usage: cpp::nominal_fname()");
     {
-#line 36 "cpp.xs"
+#line 48 "cpp.xs"
 	char *	RETVAL;
-#line 36 "cpp.xs"
-#line 37 "cpp.xs"
+#line 48 "cpp.xs"
+#line 49 "cpp.xs"
 	RETVAL = parse_in.buffer->nominal_fname;
-#line 39 "cpp.xs"
+#line 51 "cpp.xs"
 	ST(0) = sv_newmortal();
 	sv_setpv((SV*)ST(0), RETVAL);
-#line 39 "cpp.xs"
-#line 39 "cpp.xs"
+#line 51 "cpp.xs"
+#line 51 "cpp.xs"
+    }
+    XSRETURN(1);
+}
+
+XS(XS_cpp_lookup)
+{
+    dXSARGS;
+    if (items != 1)
+	croak("Usage: cpp::lookup(sz)");
+    {
+	char *	sz = (char *)SvPV(ST(0),na);
+#line 56 "cpp.xs"
+	char *	RETVAL;
+#line 56 "cpp.xs"
+#line 57 "cpp.xs"
+	HASHNODE *hp = cpp_lookup(&parse_in,sz,-1,-1);
+	RETVAL = hp->value.defn->expansion;
+#line 60 "cpp.xs"
+	ST(0) = sv_newmortal();
+	sv_setpv((SV*)ST(0), RETVAL);
+#line 60 "cpp.xs"
+#line 60 "cpp.xs"
     }
     XSRETURN(1);
 }
@@ -107,6 +141,7 @@ XS(boot_cpp)
         newXS("cpp::print_token_kind", XS_cpp_print_token_kind, file);
         newXS("cpp::fname", XS_cpp_fname, file);
         newXS("cpp::nominal_fname", XS_cpp_nominal_fname, file);
+        newXS("cpp::lookup", XS_cpp_lookup, file);
     ST(0) = &sv_yes;
     XSRETURN(1);
 }
