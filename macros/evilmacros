@@ -360,14 +360,16 @@ my $constant_exp_re = '[-lLuUxX0-9() \t<>+=*|&%!]+';
 my $constant_or_upcase_exp_re = '[-a-zA-Z_lLuUxX0-9() \t<>+=*|&%!]+';
 
 # Numeric literals
-# floating-point number (two variants): $1 = exponent, $2 = suffix (fFlL)
+# floating-point number (four variants): $1 = exponent, $2 = suffix (fFlL)
 my $float_literal_whole_re = '[-+]?\d+\.\d*([eE][-+]?\d+)?([fFlL]?)'; # decimal 2.
 my $float_literal_frac_re = '[-+]?\d*\.\d+([eE][-+]?\d+)?([fFlL]?)'; # fraction .2
+my $float_literal_exp_re = '[-+]?\d+([eE][-+]?\d+)([fFlL]?)'; # exponent 1e37
+my $float_literal_noexp_re = '[-+]?\d+()([fF])'; # no exponent 22f
 # integer regexp: $1 = number, $2 = suffix (uUlL); permit two L's for GNU extension
 my $hex_literal_re = '(0[xX][0-9a-fA-F]+)([uUlL]?[uUlL]?[uUlL]?)'; # regexp failed with \d for 0-9
 my $dec_oct_literal_re = '(\d+)([uUlL]?[uUlL]?[uUlL]?)';
 # Using this is probably ill-advised.
-my $number_literal_re = '((' . join(')|(', $float_literal_whole_re, $float_literal_frac_re, $hex_literal_re, $dec_oct_literal_re) . '))';
+my $number_literal_re = '((' . join(')|(', $float_literal_whole_re, $float_literal_frac_re, $float_literal_exp_re, $float_literal_noexp_re, $hex_literal_re, $dec_oct_literal_re) . '))';
 
 # Character and string literals
 # NOTE: GJB changed the below to {1,3}, but ANSI requires exactly 3 --
@@ -383,6 +385,7 @@ my $string_literal_re = 'L?\"(|.*?[^\\\\])(\\\\\\\\)*\"'; # string literal
 # Types and declarations/definitions.
 # In general, use $identifier_re in preference to "\w+"
 my $identifier_no_dollar_re = '\b[a-zA-Z_]\w*\b';	# 0 groups
+# Fix: $ as first character doesn't work: the leading \b won't match.
 my $identifier_re = '\b[a-zA-Z_\$][a-zA-Z0-9_\$]*\b';	# 0 groups
 my $type_specifier_re = $identifier_re . '(?:\s+' . $identifier_re. ')*'; # 0 groups
 # Gross special case.  I'm sorry.  [I think this isn't necessary any more.]
@@ -2964,8 +2967,9 @@ sub parse_exp ($;$)
       if (!is_number($casttypenum))
 	{ $parsetypes{$casttypenum} = $true; }
       return parse_exp_follower($casttypenum, $remaining); }
-  # Type in parens followed by (what looks like) paren, number, or identifier
-  if (($exp =~ /^\(\s*($type_re)\s*\)\s*([0-9a-zA-Z_\(])/)
+  # Type in parens followed by (what looks like) paren, number, identifier, or
+  # unary operator (without a binary counterpart: no +-!&*)
+  if (($exp =~ /^\(\s*($type_re)\s*\)\s*([0-9a-zA-Z_\(~])/)
       || ($exp =~ /^\(\s*($type_re\s*\*+)\s*\)\s*(.)/) # ends with *: pointer
       # identifier ending with _t: type
       || ($exp =~ /^\(\s*([a-zA-Z_\$][a-zA-Z0-9_\$]*_t)\s*\)\s*(.)/)
@@ -3041,7 +3045,9 @@ sub parse_exp ($;$)
   # Literal floating-point
   # This precedes integer because an integer matches the first part of a float
   if (($exp =~ /^$float_literal_whole_re/o)
-      || ($exp =~ /^$float_literal_frac_re/o))
+      || ($exp =~ /^$float_literal_frac_re/o)
+      || ($exp =~ /^$float_literal_exp_re/o)
+      || ($exp =~ /^$float_literal_noexp_re/o))
     { my $type = $typeDOUBLE;
       if (($2 eq "f") || ($2 eq "F"))
 	{ $type = $typeFLOAT; }
@@ -3085,9 +3091,14 @@ sub parse_exp ($;$)
     }
 
   # Variable
-  elsif ($exp =~ /^$identifier_re/o)
+  elsif (($exp =~ /^$identifier_re/o)
+	 # Hack for identifiers with leading $
+	 || ($exp =~ /^\$+$identifier_re/o))
     { my $var = $MATCH;
       my $remaining = $POSTMATCH;
+      # Fix: don't do this if the identifier is a macro argument.
+      # Otherwise the definition of A in /sysdeps/mach/hurd/i386/__sigret.c
+      # fouls up glibc:/malloc/realloc.c:96:  min(A, B) ((A) < (B) ? (A) : (B))
       # See if this is a macro, and if so try to categorize it now.
       # (This assumes that parse_exp isn't called until all macros bodies
       # have been discovered; I think this is reasonable, as the first pass
@@ -3403,7 +3414,8 @@ sub parse_exp_follower ($$)
   if (($type eq $typeSTRING)
       && (($follow =~ /^\"/)
 	  || (($follow =~ /^$identifier_re/)
-	      # Perhaps ought to call categorize_macro_name here.
+	      # Call categorize_macro_name here for side effect.
+	      && (categorize_macro_name($MATCH) || $true)
 	      && defined($mntype{$MATCH})
 	      && ($mntype{$MATCH} eq $typeSTRING))))
     { my ($followtype, $followfollow) = parse_exp($follow);
@@ -4167,7 +4179,7 @@ sub process_function_definition_or_declaration ($$$)
 		$arg_names[$i] = "UNNAMED_REST_ARG"; }
 	    else
 	      { # We add to @arg_decls only things parsed as one of the above.
-		parse_error("Can't parse as type or type declarator: '$decl'\nspecial = $type_re_special");
+		parse_error("Can't parse as type or type declarator: '$decl'\n  special = $type_re_special");
 		$arg_types[$i] = $typeINT;
 		$arg_names[$i] = "Couldn't parse";
 	      } } }
@@ -4622,7 +4634,7 @@ sub categorize_macro_def ($)
     { # print "found string";
       $category = $catLITERAL;
       $type = $typeSTRING; }
-  elsif ($body =~ /^($float_literal_whole_re|$float_literal_frac_re)$/)
+  elsif ($body =~ /^($float_literal_whole_re|$float_literal_frac_re|float_literal_exp_re|float_literal_noexp_re)$/)
     { $category = $catLITERAL;
       $type = $typeFLOAT; }
   elsif ($body =~ /^($hex_literal_re|$dec_oct_literal_re)$/)
@@ -4638,6 +4650,11 @@ sub categorize_macro_def ($)
       $category = $catRESDWORD;
       evilprint("expands to reserved word: $body\n");
     }
+  elsif (($body =~ /^$identifier_re$/)
+	 && (categorize_macro_name($body) || $true) # for side effect
+	 && (defined($mncategory{$body})))
+    { $category = $mncategory{$body};
+      $type = $mntype{$body}; }
   else
     { my $remaining;
       reset_parse_vars();
@@ -5133,7 +5150,7 @@ sub check_macro_body ($) {
       $failure_type = "no_match";
       $category = harder_category($category,$catMISMATCH);
       evilprint("evil: no match for ", @nesting, ":\n    $full_body\n"); }
-  if (($failure_type eq "unknown") && ($full_body =~ /^[\(\);, .]*$/))
+  if (($failure_type eq "unknown") && ($full_body =~ /^[\(\);, .\*\?]*$/))
     { # Not harder_category, lest ";" be called "statement".
       # $category = harder_category($category,$catSYNTAX);
       $category = $catSYNTAX;
@@ -5220,6 +5237,18 @@ sub current_line_no () {
     return $current_macro_line_number;
   }
 }
+
+
+sub forbidden_file ($)
+{ my ($filename) = check_args(1, @_);
+  # bash/machines.h is for use by the makefile, not C code
+  # glibc/asm-syntax.h and glibc/sysdep.h are assembly, not C code
+  return ((($opt_d =~ /bash/) && ($filename eq "./machines.h"))
+	  || (($opt_d =~ /glibc/) && (($filename eq "/usr/include/linux/linkage.h")
+				      || ($filename =~ /\/asm-syntax\.h$/)
+				      || ($filename =~ /\/sysdep\.h$/))));
+}
+
 
 # Return the index into the @ftype_ arrays for the current filename.
 # Consider how it was included, and whether it's a header or code.
@@ -5342,6 +5371,7 @@ sub initialize_builtin_macros () {
     $mdef_line[$cBuiltinMacros] = 0;
     $mdef_physical_lines[$cBuiltinMacros] = 0;
     $mdef_category[$cBuiltinMacros] = 0;
+    $mncategory{$mac} = $catNULLDEFINE;
 
 # FIX: initialize all the mdef_XXX arrays, here and below cases
 #    $mdef_physical_ncnb_lines[$cBuiltinMacros] = 0;
@@ -5364,6 +5394,8 @@ sub initialize_builtin_macros () {
     $mdef_line[$cBuiltinMacros] = 0;
     $mdef_physical_lines[$cBuiltinMacros] = 0;
     $mdef_category[$cBuiltinMacros] = 0;
+    $mncategory{$mac} = $catLITERAL;
+    $mntype{$mac} = $typeSTRING;
 
     $cBuiltinMacros++;
   }
@@ -5378,6 +5410,9 @@ sub initialize_builtin_macros () {
     $mdef_line[$cBuiltinMacros] = 0;
     $mdef_physical_lines[$cBuiltinMacros] = 0;
     $mdef_category[$cBuiltinMacros] = 0;
+    $mncategory{$mac} = $catLITERAL;
+    # This isn't quite right; some are long, some float.
+    $mntype{$mac} = $typeINT;
 
     $cBuiltinMacros++;
   }
@@ -5886,10 +5921,33 @@ sub test_parse_expressions ()
   # Should be int, not bool; it's (5 > 4) ? 3 : 2, not 5 > (4 ? 3 : 2).
   # This leads me down the slippery slope of coping with operator precedence...
   test_parse_expression("int", "5 > 4 ? 3 : 2");
-  test_parse_expression("int", "((B) - 1)");
   test_parse_expression("unsigned long", "2ULL");
   test_parse_expression("unsigned long", "(LONG_LONG_MAX * 2ULL + 1)");
   test_parse_expression("unsigned long", "0X7FFFFFFFL");
+
+  # Floating-point literals
+  test_parse_expression("float", "2.f");
+  test_parse_expression("float", ".2f");
+  test_parse_expression("float", "2.2f");
+  test_parse_expression("float", "2.e3f");
+  test_parse_expression("float", ".2e-4f");
+  test_parse_expression("float", "2.2e8f");
+  test_parse_expression("float", "2e22f");
+  test_parse_expression("float", "22f");
+  test_parse_expression("double", "2.");
+  test_parse_expression("double", ".2");
+  test_parse_expression("double", "2.2");
+  test_parse_expression("double", "2.e3");
+  test_parse_expression("double", ".2e-4");
+  test_parse_expression("double", "2.2e8");
+  test_parse_expression("double", "2e22");
+  test_parse_expression("long double", "2.l");
+  test_parse_expression("long double", ".2l");
+  test_parse_expression("long double", "2.2l");
+  test_parse_expression("long double", "2.e3l");
+  test_parse_expression("long double", ".2e-4l");
+  test_parse_expression("long double", "2.2e8l");
+  test_parse_expression("long double", "2e22l");
 
   # Casts and named types
   test_parse_expression("char *", "(char*)NULL");
@@ -5908,12 +5966,15 @@ sub test_parse_expressions ()
   test_parse_expression("XColormapEvent *", "(XColormapEvent *)&Event");
   test_parse_expression("unsigned", "(unsigned)(1<<HASH_BITS)");
   test_parse_expression("__sighandler_t", "((__sighandler_t)-1)");
+  test_parse_expression("size_t", "((size_t) &((TYPE *)0)->MEMBER)");
+  test_parse_expression("Dimension", "((Dimension)~0)");
 
   # Characters
   test_parse_expression("char", "'\\'");
   test_parse_expression("char *", "\"foo\"");
   test_parse_expression("char *", "flush_block(block_start >= 0L ? (char*)&window[(unsigned)block_start] :  (char*)NULL, (long)strstart - block_start, (eof))");
   test_parse_expression("char *", "\"foo\" \"bar\"");
+  test_parse_expression("char *", "\"foo\" \"bar\" \"baz\"");
 
   # Boolean
   test_parse_expression("bool", "inptr < insize");
@@ -5929,6 +5990,7 @@ sub test_parse_expressions ()
   test_parse_expression("typeUNKNOWN", "{  { LONG_MAX, LONG_MAX },  { LONG_MAX, LONG_MAX }, }");
 
   # Unknown
+  test_parse_expression("typeUNKNOWN", "((B) - 1)");
   test_parse_expression("typeUNKNOWN", "tab_prefix[i]");
   test_parse_expression("typeUNKNOWN", "&window");
   test_parse_expression("typeUNKNOWN", "NULL");
@@ -5936,11 +5998,11 @@ sub test_parse_expressions ()
   test_parse_expression("typeUNKNOWN", "memset ((voidp)(s), 0, (n))");
   test_parse_expression("typeUNKNOWN", "malloc((size_t)(items)*(size_t)(size))");
   test_parse_expression("typeUNKNOWN", "inbuf[inptr++]");
+  test_parse_expression("typeUNKNOWN", "((A) < (B) ? (A) : (B))");
   test_parse_expression("typeUNKNOWN", "(inptr < insize ? inbuf[inptr++] : fill_inbuf(0))");
   test_parse_expression("typeUNKNOWN", "fill_inbuf(0)");
   test_parse_expression("typeUNKNOWN", "BLOCK_SIGNAL (SIGCHLD, nvar, ovar)");
   test_parse_expression("typeUNKNOWN", "_elf_data_set_element(set, symbol)");
-  test_parse_expression("typeUNKNOWN", "((size_t) &((TYPE *)0)->MEMBER)");
   test_parse_expression("typeUNKNOWN", "symbol_set_declare(set)");
   test_parse_expression("typeUNKNOWN", "_elf_text_set_element(set, symbol)");
   test_parse_expression($typeUNKNOWN, "get_byte()");
@@ -5959,6 +6021,8 @@ sub test_parse_expressions ()
   test_parse_expression($typeUNKNOWN, "O_WRONLY | O_CREAT | O_EXCL | O_BINARY");
   test_parse_expression($typeUNKNOWN, "(foo ? string2[startpos - size1]  : string1[startpos])");
   test_parse_expression($typeUNKNOWN, "(size1 == 0 || startpos >= size1 ? string2[startpos - size1]  : string1[startpos])");
+  test_parse_expression($typeUNKNOWN, '$$PsectAttributes_NOSHR$$environ');
+  test_parse_expression($typeUNKNOWN, "pthread_run->error_p =(x)");
 }
 
 sub test_parse_expression ($$)
@@ -6085,8 +6149,7 @@ if ($opt_i) {
   while (<STDIN>) {
     next if /^-.*$/;
     chop ($_);
-    # bash/machines.h is for use by the makefile, not C code
-    if (!(($_ eq "./machines.h") && ($opt_d =~ /bash/)))
+    if (!forbidden_file($_))
       { push @files,$_;
 	$file_inclusion_method{$_} = "FromStdin"; }
   }
@@ -6216,8 +6279,7 @@ $fDebugCmdProcessing && print "@ARGV";
 # Add the rest of the arguments to the files list
 { my $file;
   foreach $file (@ARGV) {
-    # bash/machines.h is for use by the makefile, not C code
-    if (!(($file eq "./machines.h") && ($opt_d =~ /bash/)))
+    if (!forbidden_file($file))
       { push @files,$file;
 	$file_inclusion_method{$file} = "FromCmdLine"; }
   } }
@@ -6261,8 +6323,8 @@ if ($opt_v) { print STDERR "Computing macro/function use relations...\n"; }
 compute_macros_used_in_functions();
 
 ### All the files have been read; now process the macros
-# FIX: Why +1?  This doesn't seem to be right at all.
-print STDERR "Categorizing " . ($cMacrosInTables - $cBuiltinMacros + 1) . " macros\n";
+# Expression used to have +1, but that wasn't right.
+print STDERR "Categorizing " . ($cMacrosInTables - $cBuiltinMacros) . " macros\n";
 { my $i;
   local $categorizing_macros = $true;
   for ($i = $cBuiltinMacros;
