@@ -889,24 +889,30 @@ declaration: decl_specs opt_init_decl_list SEMICOLON
                    since it doesn't give the ident for complex
                    types (like arrays). */
                 rm = find_typedef_name($$);
-                if (rm && (rm->tok == IDENT))
+                if (rm && (rm->tok == IDENT)) {
                   if (ParseStack->contxt)
                     {
                     symtab_insert(ParseStack->contxt->syms,
                                   mk_typedef(rm->data.sval, $$)); 
                     }
+		  gjb_call_hooks_sz(CPP_OPTIONS(&parse_in),HI_TYPEDEF,
+				    rm->data.sval->str);
+		}
               } else {
                 /* Find the identifier for a normal declaration. */
                 treenode *here, *rest;
                 here = $$;
                 do {
                   rm = find_ident_name(here,&rest);
-                  if (rm && (rm->tok == IDENT))
+                  if (rm && (rm->tok == IDENT)) {
                     if (ParseStack->contxt)
                       {
                       symtab_insert(ParseStack->contxt->syms,
                                     mk_vardecl(rm->data.sval, $$)); 
                       }
+		    gjb_call_hooks_sz(CPP_OPTIONS(&parse_in),HI_VARDECL,
+				      rm->data.sval->str);
+		  }
                   here = rest;
                 } while (here != NULL);
               }
