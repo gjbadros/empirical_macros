@@ -1680,9 +1680,9 @@ create_definition (buf, limit, pfile, predefinition)
   mdef.symlen = sym_length;
 
   if (predefinition)
-    gjb_call_hooks_szl_defn(opts,CREATE_PREDEF,mdef.symnam,mdef.symlen,defn);
+    gjb_call_hooks_szl_sz_defn(opts,CREATE_PREDEF,mdef.symnam,mdef.symlen,bp,defn);
   else
-    gjb_call_hooks_szl_defn(opts,CREATE_DEF,mdef.symnam,mdef.symlen,defn);
+    gjb_call_hooks_szl_sz_defn(opts,CREATE_DEF,mdef.symnam,mdef.symlen,bp,defn);
 
   return mdef;
 

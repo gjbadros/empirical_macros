@@ -157,6 +157,7 @@ main (int argc, char **argv, char **env)
   char *p;
   int i;
   int argi = 1;  /* Next argument to handle. */
+  int perl_exit_status = 0;
   struct cpp_options *opts = &options;
 
   /* Perl startup code */
@@ -164,7 +165,10 @@ main (int argc, char **argv, char **env)
   my_perl = perl_alloc();
   perl_construct( my_perl );     
   perl_parse(my_perl, NULL, 5, startup_code, NULL);
-  perl_run(my_perl);
+  perl_exit_status = perl_run(my_perl);
+  // FIXGJB: why does this not exit on compile errors???
+  if (perl_exit_status)
+    die("Problem use-ing cpphook!");
 
   gjb_call_hooks_void(opts,STARTUP);
 

@@ -21,6 +21,7 @@ void gjb_call_hooks_void(struct cpp_options *, HOOK_INDEX);
 
 void gjb_call_hooks_sz(struct cpp_options *, HOOK_INDEX, char *);
 
-void gjb_call_hooks_szl_defn(struct cpp_options *, HOOK_INDEX, char *, int, DEFINITION *);
+void gjb_call_hooks_szl_sz_defn(struct cpp_options *, HOOK_INDEX, char *, 
+				int, char *, DEFINITION *);
 
 #endif
