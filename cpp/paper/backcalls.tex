@@ -61,10 +61,12 @@ file for a listing of what the numbers correspond to.
 Resets the current stack of parse states so that it is @parse\_\-state\_\-list.
 This has the potential to break the parse, and often will outside
 of the trivial case of setting the stack of states to what it already is.
-\backcall{}{PushBuffer}{\$source\_\-code\_\-string}
+\backcall{}{PushBuffer}{\$source\_\-code\_\-string, \$s\_\-start}
 Adds \$source\_\-code\_\-string to the being-processed text 
 as if it existed in the input at the
-current location in the current file.
+current location in the current file. \$s\_\-start tells
+where the code to be processed is in the current source
+file, or is negative if it does not exist there.
 \backcall{}{EnterScope}{}
 Enters a new scoping level; useful in combination
 with PushBuffer() for causing code to be parsed without
