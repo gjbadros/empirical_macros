@@ -4,7 +4,7 @@
 %% TODO:
 % package and put code up at ftp site
 % add personal.sty package
-% get references in the right order
+% --11/13/99 gjb get references in the right order
 % any grants to add?
 % new astlog-example-inspired section?  see FIXME
 % floppies
@@ -19,7 +19,7 @@
 \usepackage{graphicx}
 \usepackage{rotating}
 \usepackage{lscape}
-%\usepackage{personal}
+\usepackage{personal}
 
 \renewcommand{\baselinestretch}{2}
 \newcommand{\B}{\discretionary{}{}{}}
@@ -1259,7 +1259,8 @@ parser state).
 %\nocite{Griswold96}
 %\nocite{Atkinson96}
 
-\bibliographystyle{abbrv}
+\bibliographystyle{unsrt}
+%\bibliographystyle{abbrv}
 %\bibliographystyle{alpha}
 \bibliography{library,articles,cpp-aware-c-analyses}
 
