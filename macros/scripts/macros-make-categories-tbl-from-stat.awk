@@ -6,12 +6,12 @@ function pct(x) {
 
 BEGIN {
 #Null
-  null_define=17;
+  null_define=18;
 
 #Literal
   constant=4;
   literal=12;
-  some_constant=19;
+  some_constant=20;
     
 #Expressions
   expression=7;
@@ -21,31 +21,31 @@ BEGIN {
 
 #Statement
   assembly_code=2;
-  statement=20;
+  statement=21;
 
 #Syntax
   expands_to_reserved_word=5;
   mismatched_entities=15;
-  syntax_tokens=22;
+  syntax_tokens=23;
 
 #Stringization and Pasting
-  stringization=21;
-  token_pasting=23;
+  stringization=22;
+  token_pasting=24;
 
 #Fail
   being_categorized=3;
   failed_categorization=10;
-  uncategorized=24;
+  uncategorized=25;
   multiply_categorized=16;
-
+  never_defined=17;
 #Type
   expands_to_type=6;
   has_type_argument=11;
   macro_as_type=14;
-  uses_type_argument=25;
+  uses_type_argument=26;
 
 #Recursive
-  recursive=18;
+  recursive=19;
 
   if (usepct) { OFMT="%2.3f" } 
   if (nolatex) { OFS="\t"; } 

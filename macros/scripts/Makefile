@@ -26,8 +26,8 @@ MAC  := $(addsuffix .mac,$(PKGS))
 CCD  := $(addsuffix .ccd,$(PKGS))
 USECUM  := $(addsuffix .frequse_cum,$(PKGS))
 DEFCUM  := $(addsuffix .freqdef_cum,$(PKGS))
-CATUSECUM  := $(wildcard cat-*.frequse_cum)
-CATDEFCUM  := $(wildcard cat-*.freqdef_cum)
+CATUSECUM  := cat-*.frequse_cum
+CATDEFCUM  := cat-*.freqdef_cum
 
 PERR := $(addsuffix .perr,$(PKGS))
 
@@ -96,10 +96,10 @@ tbl-def-frequency: $(DEFCUM)
 tbl-use-frequency: $(USECUM)
 	macros-make-tbl-frequsedef-from-cum $^ > $@
 
-tbl-cat-def-frequency: made-catdefuse $(CATDEFCUM)
+tbl-cat-def-frequency: made-catdefuse
 	macros-make-tbl-frequsedef-from-cum $(CATDEFCUM) > $@
 
-tbl-cat-use-frequency: made-catdefuse $(CATUSECUM)
+tbl-cat-use-frequency: made-catdefuse
 	macros-make-tbl-frequsedef-from-cum $(CATUSECUM) > $@
 
 tbl-where-used: $(MAC)
@@ -110,7 +110,7 @@ tbl-ccd-categories: $(CCD)
 
 # this file is just a note that we have the cat-* files around, now
 made-catdefuse:	$(DEFCUM) $(USECUM)
-	rm *.*-* cat-* # careful w/ what this deletes!
+	rm -f *.*-* cat-* # careful w/ what this deletes!
 	macros-extract-defuse-categories $^
 	date > made-catdefuse
 
@@ -131,10 +131,10 @@ tbl-directives-breakdown: raw-directives-hist
 ### LaTeX tables
 ###
 
-tbl-def-categories.tex: $(STATE)
+tbl-def-categories.tex: $(STAT)
 	macros-make-categories-tbl-from-stat $^ > $@
 
-tbl-def-categories: $(STATE)
+tbl-def-categories: $(STAT)
 	macros-make-categories-tbl-from-stat -t -p $^ > $@
 
 tbl-subset-categories: $(MAC)
