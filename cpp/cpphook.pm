@@ -2,30 +2,9 @@
 #$Id$
 # Requirements:
 #   filter-for-file-prefix   --- used for demuxing the textprops output
-use English;
-#use strict;
 
-use hook_index_constants;
-use hook_datatypes;
-use enum_node_type;
-use em_util;
-use vars qw( *CHOUT @Hooks );
-use Boolean;
+use pcp3;
 #use Data::Dumper;
-
-
-sub AddHook {
-  my ($indexname,$fnref) = @_;
-  if (!defined($$indexname)) {
-    die "Cannot find hook named $indexname";
-  }
-  push @{$Hooks[$$indexname]}, $fnref;
-# Below line would still work, but uses the less general, 
-# single hook interface  --10/02/97 gjb
-#  $Hooks[$$indexname] = $fnref;
-}
-
-
 my %macro_name;
 
 # got_c_token array tracks whether we have gotten c tokens
@@ -34,40 +13,6 @@ my @got_c_token;
 my @s_start_ifdefs;
 my @s_end_ifdefs;
 
-
-# List of empirically identified "Ok" states for the parsers stack in order
-# to insert a declaration
-my @state_stacks_decl_allowable = ( [],
-				    [0],
-				    [0,26] );
-
-# Note, for efficiency this is a hash, so the 0s are dummies
-my %non_c_tokens = qw(CPP_HSPACE 0 CPP_VSPACE 0 CPP_POP 0 CPP_DIRECTIVE 0);
-
-# From The C++ Programming Language, 3rd Edition, p. 817
-my @new_cpp_keywords = 
-  qw(
-     and and_eq asm bitand bitor bool catch class compl const_cast
-     delete dynamic_cast explicit false friend inline mutable namespace 
-     new not not_eq operator or or_eq private protected public reinterpret_cast
-     static_cast template this throw true try typeid typename using virtual wchar_t
-     xor xor_eq );
-			
-
-sub FIsDeclAllowable {
-  my @state_stack;
-  if (@_) {
-    @state_stack = @_;
-  } else {
-    @state_stack = cpp::ParseStateStack();
-  }
-  foreach my $stackref (@state_stacks_decl_allowable) {
-    # String interpolation of an array works for comparing them
-    # iff the elements are all numeric [otherwise might work if you change $"
-    return TRUE if "@$stackref" eq "@state_stack";
-  }
-  return FALSE;
-}
 
 # For testing of more general multiple hook mechanism
 sub Startup2 {
@@ -78,7 +23,7 @@ sub Startup {
   # Parse debugging (bison's yydebug variable) is on by default,
   # so turn it off
   cpp::ResetParseDebugging();
-  print TRACE "STARTUP...\n";
+  print STDERR "STARTUP...\n";
   open(CPP,">cpp.listing") || die "Could not open output file: $!";
   open(CHOUT,">chout.listing") || die "Could not open output file: $!";
   open(TRACE,">trace") || die "Could not open output file: $!";
@@ -306,7 +251,7 @@ sub macro_cleanup {
 # FIXGJB: Obsoleted, methinks --10/08/97 gjb
 sub macro_arg_exp  {
   my ($mname,$raw,$number) = @_;
-  print TRACE "macro_arg_exp $mname of $raw (arg $number)\n";
+  die "Unexpected hook, MACARG_EXP!\n";
 }
 
 sub annotate_definition_message {
@@ -454,7 +399,7 @@ sub do_if {
   @state_stack = cpp::ParseStateStack();
   print CPP ": Stack: @state_stack\n";
   if ($value == 0 && $conditional ne "0") {
-    handle_unincluded_block($s_branch_start,$s_branch_end,$skipped);
+    handle_unincluded_block($s_branch_start,$s_branch_end,$skipped,"If",$conditional);
   }
   push @got_c_token, 0;
 }
@@ -468,7 +413,8 @@ sub do_elif {
 }
 
 sub handle_unincluded_block {
-  my ($s_branch_start,$s_branch_end,$skipped) = @_;
+ # return; # FIXGJB: do not handle these for now
+  my ($s_branch_start,$s_branch_end,$skipped,$kind,$conditional) = @_;
   my $fname = cpp::Fname();
   print TPSOURCE "#$fname:(put-face-property-if-none $s_branch_start $s_branch_end \'font-lock-reference-face)\n";
   print TPSOURCE "#$fname:(add-text-property $s_branch_start $s_branch_end \'doc \"Skipped due to $kind $conditional\")\n";
@@ -481,7 +427,7 @@ sub handle_unincluded_block {
   if ($skipped ne $old_skipped) {
     print TRACE "Removed some #include-s from speculative branch\n";
   }
-  print TRACE "Pushing skipped branch\n";
+  print TRACE "Pushing skipped branch : [[ $skipped ]]\n";
   print TRACE ": ParseStateStack: ", join(",",cpp::ParseStateStack()), "\n";
   cpp::YYPushStackState();
   cpp::EnterScope();
@@ -499,7 +445,7 @@ sub do_xifdef {
   # This copy is for seeing if parse state changes at endif
   cpp::YYPushStackState();
   if ($fSkipping) {
-    handle_unincluded_block($s_branch_start,$s_branch_end,$skipped);
+    handle_unincluded_block($s_branch_start,$s_branch_end,$skipped,$kind,$conditional);
   }
   push @got_c_token, 0;
 }
@@ -613,7 +559,7 @@ sub Got_token {
 
   my $end = cpp::CchOutput()+1;
   my $start = $end-length($raw);
-  @history = @nests; # FIXGJB: this is a hack, since stuff not getting passed
+#  @history = @nests;  FIXGJB: this is a hack, since stuff not getting passed
   if ($#history >= 0) {
     print TP "#out:(put-face-property-if-none $start $end \'italic)\n";
     print TP "#out:(put-mouse-face-property-if-none $start $end \'highlight)\n";
@@ -626,12 +572,6 @@ sub Got_token {
     }
   }
 }
-
-#FIXGJB Obsoleted
-#sub annotate {
-#  my ($szBefore,$cdeepBefore,$szAfter,$cdeepAfter, $pad) = @_;
-#  print "ANNOTATE: $szBefore\[$cdeepBefore\]; $szAfter\[$cdeepAfter\] : $pad\n";
-#}
 
 sub do_function {
   my ($szName,$fStatic) = @_;
