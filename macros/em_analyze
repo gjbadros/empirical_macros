@@ -1644,19 +1644,19 @@ sub ccd_lexical_category ($) {
 
 #  print STDERR "Trying '$mname'\n";
 
-  if ($mname =~ /^.*DEBUG.*$/) {
+  if ($mname =~ /^.*(TRACE|DEBUG).*$/) {
     return $ccatDEBUG;
   }
-  if ($mname =~ /^(VAXC|TURBOC|BORLANDC|MSC_VER|cplusplus|BUGGY_MSC|STDC|GNUC|GNU_LIBRARY|MWERKS|MSC|ZTC|PUREC|applec|THINK_C|Think_C|SC|STDC|STDC_HEADERS|HAVE_GCC|(I_)?(STD|VAR)ARGS?|lint|LINT|(NeedFunctionP|has_p)rototypes|FUNCPROTO|NO_PROTO|HAS_BOOL|(HAVE|USE)_PROTO(TYPE)?S|DJGPP|KR_headers|STANDARD_C|DECC|DECCXX)$/) {
+  if ($mname =~ /^(VAXC|c_plusplus|TURBOC|BORLANDC|WATCOMC|MSC_VER|cplusplus|LIBC|BUGGY_MSC|STDC|GNUC|GNU_LIBRARY|MWERKS|MSC|ZTC|PUREC|applec|THINK_C|Think_C|SC|STDC|STDC_HEADERS|HAVE_GCC|(I_)?(STD|VAR)ARGS?|lint|LINT|(NeedFunctionP|has_p)rototypes|HaveProtos|PROTOTYPE|FUNCPROTO|(NO_)?PROTO|HAS_BOOL|(HAVE|USE)_PROTO(TYPE)?S|DJGPP|KR_headers|STANDARD_C|DECC|DECCXX)$/) {
     return $ccatPORT_LANLIB;
   }
   if ($mname =~ /^(const|static|inline|volatile|signed|unsigned)$/) {
     return $ccatPORT_LANMACRO;
   }
-  if ($mname =~ /^(STACK_DIRECTION|STACK_GROWS_DOWNWARD|STACK_GROWTH_DOWN|arch_is_big_endian|arch_is_little_endian|arch_ints_are_short|X1[01](R[23456])?|arch_arith_rshift|BYTEORDER|HAVE_.+|SEVEN_?BIT|NOSTDHDRS|NON_UNIX_STDIO|NO_?(STDLIB|UNISTD|LIMITS)|.+_MISSING|BROKEN_.+|NO_FCNTL|_POSIX_VERSION|READLINE_LIBRARY|BSD_SIGNALS|POSIX_SIGNALS|SYSTYPE_SYSV|SYSTYPE_BSD|ELF|COFF|.+_BUG|(I_)?(MEMORY|STRING|UNISTD|NET_ERRNO|STDLIB|UTIME|FCNTL|SYS_FILE|SYS_TIME(S|_KERNEL))|HAS_[_A-Z0-9]+)|has_[_a-z0-9]+|bad_(create0|unlink|fchmod)$/) {
+  if ($mname =~ /^(STACK_DIRECTION|STACK_GROWS_DOWNWARD|STACK_GROWTH_DOWN|arch_is_big_endian|arch_is_little_endian|arch_ints_are_short|X1[01](R[23456])?|arch_arith_rshift|BYTEORDER|HAVE_.+|SEVEN_?BIT|NOSTDHDRS|NON_UNIX_STDIO|NO_?(STDLIB|UNISTD|LIMITS)|.+_MISSING|BROKEN_.+|NO_FCNTL|_POSIX_VERSION|READLINE_LIBRARY|BSD_SIGNALS||(SYSV|BSD)_SIGNALS|POSIX_(SOURCE|SIGNALS|VERSION)|ELF|COFF|.+_BUG|(I_)?(MEMORY|STRING|UNISTD|NET_ERRNO|STDLIB|UTIME|NON_BLOCKING_IO|FCNTL|SYS_FILE|SYS_TIME(S|_KERNEL))|HAS_[_A-Z0-9]+)|has_[_a-z0-9]+|bad_(create0|unlink|fchmod)$/) {
     return $ccatPORT_FEATURE;
   }
-  if ($mname =~ /^(strr?chr|errno|SIG[0-9A-Z]{2,6}|S_I(READ|RWXU(SR)?|RWXG(RP)?|RWXO(T[HR])?|[FS](MT|SOCK|LNK|REG|BLK|DIR|CHR|F?IFO|[UG]ID|VTX|))|TIOC[0-9A-Z]{1,9})$/) {
+  if ($mname =~ /^(strr?chr|errno|SIG_?[0-9A-Z]{2,8}|S_I(READ|WRITE|EXEC)|S_I([RWX](USR|GRP|OTH(ER)?))|S_I([RWX]UGO|READ|RWXU(SR)?|RWXG(RP)?|RWXO(T[HR])?|O_(CREAT|BINARY|(SH|EX)LOCK|EXCL|RDONLY|APPEND|WRONLY|NONBLOCK|NDELAY)|[ug]id_t|[FS](MPB|NWK|MPC|MT|SOCK|LNK|REG|BLK|DIR|CHR|F?IFO|[UG]ID|VTX|))|TIOC[0-9A-Z]{1,9}|r?index||(b|mem)(cmp|copy|zero)|is(alnum|alpha|cntrl|digit|lower|upper|space|punct|print|xdigit|blank|graph|ascii)|to(upper|lower|ascii)|(U?CHAR|LONG|INT|DOUBLE|FLOAT|SHORT)_(MAX|MIN)|(MIN|MAX)(SHORT|INT|LONG|FLOAT|DOUBLE)|(CHAR|SHORT|INT|LONG|PTR|DOUBLE|FLOAT)BITS|E(PERM|NOENT|SRCH|INTR|IO|NXIO|2BIG|NOEXEC|BADE|BADF|BADMSG|BADR|CHILD|AGAIN|NOMEM|ACCES|FAULT|NOTBLK|CONN(ABORTED|REFUSED|RESET)|BUSY|EXIST|XDEV|NODEV|NOTDIR|ISDIR|ALIGN|ALREADY|INVAL|NFILE|NOTTY|TXTBSY|FBIG|NOSPC|SPIPE|ROFS|MLINK|PIPE|DOM|DUPPKG|(NET|HOST)(DOWN|UNREACH)|RANGE|DEADLK|NAMETOOLONG|NOLCK|NOSYS|NOTEMPTY|LOOP|WOULDBLOCK|DESTADDRREQ|NOMSG|IDRM|CHRNG|BFONT|NOSTR|NOLINK|REMOTE|NOTSOCK)|FD?_((SET|GET)FD|CLOEXEC)|XK_.*)$/) {
     return $ccatPORT_SYSMACRO;
   }
 
@@ -1667,7 +1667,7 @@ sub ccd_lexical_category ($) {
 
   $mname =~ tr/[A-Z]/[a-z]/;
 
-  if ($mname =~ /^(systype_)?(hpux|.*sun_fpa.*|32bit|386bsd|bsd[34][123456]|solaris2|usl|sony|newsos[123456]m_xenix|aix(rt|370|3_2|_13|esa|pc)?|alliant(_2800)?|alpha|i(80)?[234567]86|amiga(dos|_ac_5|_sc_6_1)?|apollo|atari(st)?|att(386|3b)|bfly1|bsd(i|4_[1234])?|butterfly|cadmus|clipper|convex|luna|utek|cray([12]|[xy]mp|_stack)?|cx_ux|dgux|dos_nt|drs6000|gmicro|hp(2648|26|76|gl|300|9000|s[2345678]00|_?osf1?|pa|ux(_[156789])?)?|i370|i386|i860|i960|ibm(032|esa|r2|rt)?|interdata|iris[234567]d?|is68k|linux|luna88k|lynx|.*kbcs_target|m68k|m88(k|000)|m_unix|mac_tcl|macintosh|macos|maxport|mc680[01234]0|mc68k32|minix|mips(_sysv|eb|el)?|motorola|msdos|multimax|netbsd|newsos5|next|os2|osf(1|_alpha|_os)|pa_risc1_1|paragon|pdp11|powerpc|pyr|qnx|risc6000|sequent|sgi|sparc(v9)?|sun([23])?|sun386i|sunos[45]|svr4(_[123])?|sysv((3?86|68)|_ext)?|tandem|tek(4132|4300)|tops20|tower32|u370|ultrix|umaxv|unix(pc)?|usg(5_4|4_2)?|vax(_vms)|vms|vms_posix|win(dows(nt|95)?|32|16)?|xenix(_2[23]|286)?|z8000|isc386)$/) {
+  if ($mname =~ /^(systype_)?(hpux[4-9]|.*sun_fpa.*|32bit|386bsd|bsd[34][123456]|solaris2?(_[1234567])?|usl|sony|newsos[123456]m_xenix|(ibm)?aix(4|rt|370|3_2|_13|esa|pc)?|alliant(_2800|_1)?|alpha|i(80)?[234567]86|amiga(dos|_ac_5|_sc_6_1)?|apollo|atari(st)?|att(386|3b)|bfly1|bsd(i|4_[1234])?|butterfly|cadmus|clipper|convex|luna|utek|cray([12]|[xy]mp|_stack)?|systype_sysv|systype_bsd|cx_ux|dgux|dos_nt|drs6000|gmicro|hp(2648|26|76|gl|300|9000(s[23456789]00)?|_?osf1?|pa|ux(_[156789])?)?|i370|i386|i860|i960|ibm(032|esa|r2|rt)?|interdata|iri[sx]_?[234567]d?|is68k|linux|luna88k|lynx|.*kbcs_target|m68(k|000)?|m88(k|000)|m_unix|mac_tcl|macintosh|macos|mach|v3x|maxport|mc[3576]000?|mc680[01234]0|mc68k32|minix|mips(2|_sysv|eb|el|_bsd)?|motorola|msdos|ms_?win(16|32|95|nt|3|3_?1)?|dos386|(dosx|(m_)?i|iapx)286|microport|multimax|netbsd|bsd386|newsos5|next|os2|osf(1|_alpha|_os)|pa_risc1_1|concurrent|ardent|titan|eunice|ps2|dmert|gcos|gcx|gould|hbullx20|hcx|paragon|pdp11|celerity|powerpc|pyr|qnx|risc6000|ksr1|n16|scs|sequent|sgi|sparc(v9)?|sun([234])?|u3b([25]|20d|15)|sun386i?|sunos_?[45]|svr4(_[123])?|sysv3|sysv((3?86|68|88)|_ext)?|tandem|tek(4132|4300)|tops20|tower32|u370|ultrix([1-6][1-9])?|umaxv|unix(pc)?|usg?r?([345](_[234])?)?|vax(_vms)|vms([1-9](_[1-9])?)?|vms_posix|win(dows(nt|95)?|32|16)?|xenix(_2[23]|286)?|z8000|isc386)$/) {
     return $ccatPORT_MACHINE;
   }
 
@@ -1683,7 +1683,8 @@ sub ccd_lexical_category ($) {
     return $ccatMI_PREVENTION;
   }
 
-  if ($mname eq "true" || $mname eq "false" || $mname eq "1" || $mname eq "0") {
+  if ($mname eq "true" || $mname eq "false" || $mname eq "1" || $mname eq "0" 
+      || $mname eq "NOT_C_CODE") {
     return $ccatCOMMENTING;
   }
 
