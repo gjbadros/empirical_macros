@@ -8,6 +8,7 @@
 
 # Typical usage:
 #   make data_analyze
+#   # remove/rename .dstate to suppress dependence processing for a package
 #   make data_reports
 #   make
 #   make copy
@@ -177,7 +178,7 @@ foo: $(DEFCUM)
 #     Get symbols; ignore any errors, including "Is a directory" and "File format not recognized"
 #       rm -f symbols.gjbmde; find . -name "*.o" -o -perm +u+x | xargs nm | cleanup-nm-output > symbols.gjbmde
 #   Copy the symbols.gjbmde files into the main munged directories and
-#   rerun "make data_analyze", etc.
+#     rerun "make data_analyze", etc.
 
 
 ###########################################################################
@@ -404,6 +405,7 @@ copyorig: $(PAPER_TABLES)
 	perl -pi.bak -e 's/z*<total>/Total/g' $(PAPER_TABLES)
 	cp -p $(PAPER_TABLES) $(PAPER_ORIG_DIR)
 
+# Version of scripts which is faster but does less checking.
 fast:	$(SCRIPTSPATH)
 	for i in $(SCRIPTSPATH); do bn=$(FAST_DIR)/`basename $$i`; rm -f $$bn; remove_check_args $$i > $$bn; chmod +x $$bn; chmod -w $$bn; done
 	@echo "Ensure $(FAST_DIR) is first on your path, and rehash if you changed it!"
