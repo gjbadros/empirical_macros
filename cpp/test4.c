@@ -10,6 +10,7 @@ int
 main(char **argv, 
      int argc)
 {
+  int foo = FOO;
   fprintf(stderr,"Hello World! FOO = %d",FOO);
   return 0;
 }
