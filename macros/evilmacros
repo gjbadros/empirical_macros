@@ -4,11 +4,8 @@
 
 # Test: $foo isn't defined
 
-BEGIN { if (defined $foo)
-	  { unshift(@INC, split(/[ :]+/, $foo)); }
-	if (defined $ENV{"foobar"})
-	  { unshift(@INC, split(/[ :]+/, $ENV{"foobar"})); }
-	if (defined $ENV{"PERLINC"})
+# Can't use "use", as it is executed upon parsing even if in guard.
+BEGIN { if (defined $ENV{"PERLINC"})
 	  { unshift(@INC, split(/[ :]+/, $ENV{"PERLINC"})); } }
 
 # Report "evil" CPP macros:
@@ -85,7 +82,7 @@ use strict;
 # "use English" lets or requires (I don't know) use of $line or some such
 # in place of $. and so forth.)
 # Why is it not turned on?
-# use English;
+use English;
 
 
 
@@ -166,8 +163,37 @@ sub category_lub
 # "\b" prevents two words from running up against one another
 # These regexps are intended not to include any leading or trailing space
 
+### Reserved words
+
+# can appear in a type
+my $c_reserved_type_word_re = '\b(char|const|double|enum|extern|float|int|long|register|short|signed|static|struct|union|unsigned|void|volatile)\b';
+# can't appear in a type
+my $c_reserved_nontype_word_re = '\b(asm|auto|break|case|continue|default|do|else|entry|for|fortran|goto|if|return|sizeof|switch|typedef|while)\b';
+my $c_plus_plus_reserved_word_re = '\b(asm|bool|catch|class|const_cast|delete|dynamic_cast|false|friend|inline|mutable|namespace|new|operator|private|protected|public|reinterpret_cast|static_cast|template|this|throw|true|try|typeid|using|virtual)\b';
+
+### Literals
+
 # FIX: this regexp is lame-- L,x,U needed for 0x80 << 1LU
 my $constant_exp_re = '[-LxU0-9() \t<>+=*|&%!]+';	# note this matches whitespace
+# $like constant_exp_re, but supposed to match macro uses too.
+my $constant_or_upcase_exp_re = '[-A-Z_LxU0-9() \t<>+=*|&%!]+';
+
+# Numeric literals
+# floating-point number (two variants): $1 = exponent, $2 = suffix (fFlL)
+my $float_literal_whole_re = '[-+]?\d+\.\d*([eE][-+]?\d+)?([fFlL]?)'; # decimal 2.
+my $float_literal_frac_re = '[-+]?\d*\.\d+([eE][-+]?\d+)?([fFlL]?)'; # fraction .2
+# integer regexp: $1 = number, $2 = suffix (uUlL)
+my $hex_literal_re = '(0x[0-9a-fA-F]+)([uUlL]?[uUlL]?)';
+my $dec_oct_literal_re = '(\d+)([uUlL]?[uUlL]?)';
+
+# Character and string literals
+my $char_literal_contents_re = '(\\\\?.|\\\\[0-7][0-7][0-7])';
+my $char_literal_re = "L?'" . $char_literal_contents_re . "'";
+my $non_escaped_double_quote_re = '(^|[^\\\\])(\\\\\\\\)*\"';
+# non-greedy '.*?' because '.*' matches too much, skips over intervening quotes
+my $string_literal_re = 'L?\"(|.*?[^\\\\])(\\\\\\\\)*\"'; # string literal
+
+### Types
 
 # Types and declarations/definitions.
 # These should be $identifier_re, not "\w+"
@@ -180,7 +206,7 @@ my $type_re = $type_specifier_re . '(?:\s*(?:\*|\[\s*\]))*'; # 0 groups
 # Declarators are actually rather more complicated than this:  see H&S p. 85.
 my $type_qualifier_re = '\b(?:const|volatile)\b'; # 0 groups
 my $pointer_declarator_prefix_re = '\*(?:\s*' . $type_qualifier_re . ')*'; # 0 groups
-my $array_declarator_suffix_re = '\[(?:' . $constant_exp_re . ')?\]'; # 0 groups
+my $array_declarator_suffix_re = '\[(?:' . $constant_or_upcase_exp_re . ')?\]'; # 0 groups
 # $function_declarator_suffix_re = ...;
 # declaratorsuffix = $array_declarator_suffix_re plus $function_declarator_suffix_re
 my $declarator_unparenthesized_re = '(?:' . $pointer_declarator_prefix_re . '\s*)*'
@@ -199,21 +225,6 @@ my $type_declarator_re = '(' . $type_specifier_re . ')\s*' . $declarator_re;
 # $pointer_declarator_re = '\*(\s*' . $type_qualifier_re . ')*\s*' . $direct_declarator_re;
 # $declarator_re = '(' . $pointer_declarator_re . '|' . $direct_declarator_re . ')';
 # type plus identifier:  $1 = type, $5 = identifier
-
-# Numeric literals
-# floating-point number (two variants): $1 = exponent, $2 = suffix (fFlL)
-my $float_literal_whole_re = '[-+]?\d+\.\d*([eE][-+]?\d+)?([fFlL]?)'; # decimal 2.
-my $float_literal_frac_re = '[-+]?\d*\.\d+([eE][-+]?\d+)?([fFlL]?)'; # fraction .2
-# integer regexp: $1 = number, $2 = suffix (uUlL)
-my $hex_literal_re = '(0x[0-9a-fA-F]+)([uUlL]?[uUlL]?)';
-my $dec_oct_literal_re = '(\d+)([uUlL]?[uUlL]?)';
-
-# Character and string literals
-my $char_literal_contents_re = '(\\\\?.|\\\\[0-7][0-7][0-7])';
-my $char_literal_re = "L?'" . $char_literal_contents_re . "'";
-my $non_escaped_double_quote_re = '(^|[^\\\\])(\\\\\\\\)*\"';
-# non-greedy '.*?' because '.*' matches too much, skips over intervening quotes
-my $string_literal_re = 'L?\"(|.*?[^\\\\])(\\\\\\\\)*\"'; # string literal
 
 # Does not handle enum, struct, union, and function types
 my $numeric_type_word_re = '\b(short|signed|unsigned|long|int|char|float|double)\b';
@@ -335,7 +346,7 @@ sub type_dereference
   if ($type == $typeSTRING)
     { return $typeCHAR; }
   if ($type =~ /(\*|\[\])\s*$/)
-    { return $`; }
+    { return $PREMATCH; }
   return $typeUNKNOWN;
 }
 
@@ -441,16 +452,16 @@ sub parse_declarator
 { my ($basetype, $declarator) = check_args(2, "parse_declarator", caller, @_);
   if (!($declarator =~ /$identifier_re/o))
     { die "no word in declarator $declarator"; }
-  my $id = $&;
-  my $prefix = $`;
-  my $suffix = $';
+  my $id = $MATCH;
+  my $prefix = $PREMATCH;
+  my $suffix = $POSTMATCH;
   while ($id =~ /^$type_qualifier_re$/o)
     { if (!($suffix =~ /$identifier_re/o))
 	{ die "no non-type-qualifier word in declarator $declarator"; }
-      $id = $&;
-      $prefix .= $`;
-      $suffix = $'; }
-  if ($suffix =~ /$identifier_re/o)
+      $id = $MATCH;
+      $prefix .= $PREMATCH;
+      $suffix = $POSTMATCH; }
+  if (($suffix =~ /$identifier_re/o) && !($PREMATCH =~ /\[/))
     { die "multiple words in declarator $declarator"; }
   return ("$prefix($basetype)$suffix", $id);
 }
@@ -587,11 +598,141 @@ sub process_macro_definition
   $mname[$thisnum] = $name;
   $margs[$thisnum] = $args;
   $mbody[$thisnum] = $body;
-  $mdependenton[$thisnum] = @dependenton;
+  # @mdependenton[$thisnum] = @dependenton;
+  { my $i;
+    $mdependenton[$thisnum][0] = @dependenton;
+    for $i (0..$#dependenton)
+      { $mdependenton[$thisnum][$i] = $dependenton[$i]; } }
   if (!defined($currentfile))
     { die "undefined currentfile"; }
   $mfile[$thisnum] = $currentfile;
   $mline[$thisnum] = $.;
+}
+
+
+# Given a macro name, try to merge the dependentons for all its definitions,
+# and return a single dependenton or $false.
+# Hack: optionally takes an additional @dependenton to merge with the macros.
+sub macro_dependenton
+{
+  my ($macro_name, @dependenton) = check_args_at_least(1, "macro_dependenton", caller, @_);
+  my @indices = @macros{$macro_name};
+  shift(@indices);
+  my @result = ($false);
+  # scratch indices, since I must pass in at least one index.
+  my $extraindexmin = $cppcmdcount{"define"}+10;
+  my $extraindexmax = $extraindexmin-1;
+  if (@dependenton > 0)
+    { $extraindexmax++;
+      # @mdependenton[$extraindexmax] = @dependenton;
+      { my $i;
+	$mdependenton[$extraindexmax][0] = @dependenton;
+	for $i (0..$#dependenton)
+	  { $mdependenton[$extraindexmax][$i] = $dependenton[$i]; } }
+      push(@indices, $extraindexmax); }
+MDLOOP:
+  if (@indices == 1)
+    { @result = @mdependenton[$indices[0]]; # protect from undef below
+      goto MDDONE; }
+  my $index1;
+  my $index2;
+  for $index1 (0..$#indices-1)
+    { for $index2 ($index1+1..$#indices)
+	{ my @merged = merge_dependenton($index1, $index2);
+	  if ((@merged == 1) && !$merged[0])
+	    { goto MDDONE; }
+	  else
+	    { $extraindexmax++;
+	      # @mdependenton[$extraindexmax] = @merged;
+	      { my $i;
+		$mdependenton[$extraindexmax][0] = @merged;
+		for $i (0..$#dependenton)
+		  { $mdependenton[$extraindexmax][$i] = $merged[$i]; } }
+	      goto MDLOOP; } } }
+
+MDDONE:
+ { my $i;
+   for $i ($extraindexmin..$extraindexmax)
+     { undef $mdependenton[$i][0]; } }
+
+  # Is there any point to this??
+  if ((@result == 1) && !$result[0])
+    { return $false; }
+  else
+    { return @result; }
+}
+
+
+# Takes an index and a dependenton array.
+# If the dependentons are the same for all but the last element, return all
+# but thatlast element.  Otherwise return $false.
+sub merge_dependenton
+{ my($index, @do2) = check_args_at_least(1, "merge_dependenton", caller, @_);
+  if (!dependenton_single_difference($index, @do2))
+    { return $false; }
+  # Return @do1.
+  my @do1;
+  # @do1 = @mdependenton[$index];
+  { my $i;
+    for $i (0..$mdependenton[$index][0])
+      { $do1[$i] = $mdependenton[$index][$i]; } }
+  pop(@do1);
+  return @do1;
+}
+
+
+sub dependenton_single_difference
+{ my($index, @do2) = check_args_at_least(1, "merge_dependenton", caller, @_);
+  my @do1;
+  # @do1 = @mdependenton[$index];
+  { my $i;
+    for $i (0..$mdependenton[$index][0])
+      { $do1[$i] = $mdependenton[$index][$i]; } }
+  if ((@do2 == 1) && is_num($do2[0]))
+    { @do2 = @mdependenton[$do2[0]]; }
+
+  if ($#do1 != $#do2)
+    { return $false; }
+  { my $i;
+    for $i (0..$#do1-1)
+      { if ($do1[$i] ne $do2[$i])
+	  { return $false; } } }
+  if ($do1[$index] ne negate_if_condition($do2[$index]))
+    { return $false; }
+  return $true;
+}
+
+
+# These dependenton functions take a macro name and a dependenton array and
+# compare the macro's dependenton to the one passed in.  Perhaps also permit
+# the passed in array to instead itself be a macro name.
+
+## This isn't really enough; we need to canonicalize macro dependence
+## information, perhaps even make it order-independent.
+sub dependenton_identical
+{
+  my ($macro_name, @depend) = check_args_at_least(1, "dependenton_identical", caller, @_);
+  my @macro_depend = macro_dependenton($macro_name);
+  if ($#depend != $#macro_depend)
+    { return $false; }
+  { my $i;
+    for $i (0..$#depend)
+      { if ($depend[$i] ne $macro_depend[$i])
+	  { return $false; } } }
+  return $true;
+}
+
+
+
+
+# potential problem:  if arg == "!(!(...))", then  (nif(nif($arg)) ne $arg)
+sub negate_if_condition
+{
+  my ($cond) = check_args(1, "negate_if_condition", caller, @_);
+  if ($cond =~ /^!\((.*)\)$/)
+    { return $MATCH; }
+  else
+    { return "!($cond)"; }
 }
 
 
@@ -683,9 +824,9 @@ sub test_typedecl_regexp
 	{ die "In \#if at beginning of file: @dependenton"; }
       while ($line = getline())
 	{ if ($line =~ /^$type_specifier_re/o)
-	    { print "ts: <<$&>> $line"; }
+	    { print "ts: <<$MATCH>> $line"; }
 	  if ($line =~ /^$type_declarator_re/o)
-	    { print "td: <<$&>> $line"; }
+	    { print "td: <<$MATCH>> $line"; }
 	  if ($line =~ /^$type_declarator_re\s*[,=;\(]/o)
 	    { print "td+: $line"; }
 	}
@@ -756,7 +897,7 @@ sub getline
 	    {			# block to localize match data
 	      { if ($result =~ m/\\\Z(?!\n)/) # backslash, end of string, no newline
 		  { print EVIL "$currentfile:$.: evil: file ends with backslash (no newline)\n"; } }
-	      $result = $`;	# remove backslash and possibly newline
+	      $result = $PREMATCH;	# remove backslash and possibly newline
 	      my $nextline;
 	      if ($nextline = <INPUT>)
 		{ $nextline = updateinvars($nextline);
@@ -871,14 +1012,14 @@ sub brace_change
   my $result_num = 0;
   my $result_chars = "";
   while ($line =~ /[\{\}]/)
-    { $result_chars .= $&;
-      if ($& eq "\{")
+    { $result_chars .= $MATCH;
+      if ($MATCH eq "\{")
 	{ $result_num++; }
-      elsif ($& eq "\}")
+      elsif ($MATCH eq "\}")
 	{ $result_num--; }
       else
-	{ die "What match? $&"; }
-      $line = $'; }
+	{ die "What match? $MATCH"; }
+      $line = $POSTMATCH; }
   return ($result_num == 0) ? $false : $result_chars;
 }
 
@@ -892,14 +1033,14 @@ sub paren_change
   my $result_num = 0;
   my $result_chars = "";
   while ($line =~ /[\(\)]/)
-    { $result_chars .= $&;
-      if ($& eq "\(")
+    { $result_chars .= $MATCH;
+      if ($MATCH eq "\(")
 	{ $result_num++; }
-      elsif ($& eq "\)")
+      elsif ($MATCH eq "\)")
 	{ $result_num--; }
       else
-	{ die "What match? $&"; }
-      $line = $'; }
+	{ die "What match? $MATCH"; }
+      $line = $POSTMATCH; }
   return ($result_num == 0) ? $false : $result_chars;
 }
 
@@ -914,8 +1055,7 @@ sub find_close_paren
     { $pos = 0; }
   if (!defined($read))
     { $read = $false; }
-  ;
-  # print "paren_change $line";
+  print "find_close_paren: $exp\n";
   my $opens = 1;
   my $brace_pos;			# undefined if no brace found
   { my $open_pos = index($exp, "\{", $pos);
@@ -927,21 +1067,27 @@ sub find_close_paren
   while ($opens > 0)
     { my $next_open = index($exp, "\(", $pos);
       my $next_close = index($exp, "\)", $pos);
-      if (($next_open == -1) && ($next_close == -1))
-	{ die "no closing paren can be found in $exp"; }
-      elsif (($next_open == -1) || ($next_close < $next_open))
+      print "next_open $next_open next_close $next_close\n";
+      if (($next_close != -1)
+	  && (($next_open == -1) || ($next_close < $next_open)))
 	{ if (defined($brace_pos) && ($next_close > $brace_pos))
 	    { die "Found brace before matching paren in $exp"; }
 	  $opens--;
 	  $pos = $next_close+1; }
-      elsif (($next_close == -1) || ($next_open < $next_close))
+      elsif (($next_open != -1)
+	     && (($next_close == -1) || ($next_open < $next_close)))
 	{ if (defined($brace_pos) && ($next_open > $brace_pos))
 	    { die "Found brace before matching paren in $exp"; }
 	  $opens++;
-	  $pos = $next_open+1; }
+	  $pos = $next_open+1;
+	  print "open paren at $next_open, opens = $opens, pos = $pos\n";
+	}
       else
-	{ if (!$read)
-	    { die "find_close_paren: no matcing paren"; }
+	{ if (!(($next_open == -1) && ($next_close == -1)))
+	    { die "bad values for next_open $next_open and next_close $next_close"; }
+	  print "didn't find next paren, opens = $opens\n";
+	  if (!$read)
+	    { die "insufficient closing parens in $exp"; }
 	  if (defined($brace_pos))
 	    { die "Found brace before matching paren in $exp"; }
 	  my $nextline = getline();
@@ -949,9 +1095,10 @@ sub find_close_paren
 	  if ($nextline =~ /[\{\}]/)
 	    { if (!defined($brace_pos))
 		{ $brace_pos = length($exp); }
-	      $brace_pos += length($`);
+	      $brace_pos += length($PREMATCH);
 	      if (!(substr($exp . $nextline, $brace_pos, 1) =~ /[\{\}]/))
 		{ die "I just found a brace at position $brace_pos of $exp$nextline"; } }
+	  print "find_close_paren appending $nextline";
 	  $exp .= $nextline; } }
   return ($pos - 1, $exp);
 }
@@ -978,8 +1125,8 @@ sub updateinvars
     { if ($incomment)
 	{ if ($remaining =~ /\*\//)
 	    { if ($computeresult && !$getline_nocomment)
-		{ $result .= $` . $&; }
-	      $remaining = $';
+		{ $result .= $PREMATCH . $MATCH; }
+	      $remaining = $POSTMATCH;
 	      $incomment = 0; }
 	  else
 	    { if ($computeresult && !$getline_nocomment)
@@ -989,35 +1136,35 @@ sub updateinvars
 	{ # print "in string, processing $remaining";
 	  if ($remaining =~ m/$non_escaped_double_quote_re/o)
 	    # Found a non-escaped double quote
-	    { # print "non-escaped double quote: $result|$remaining|$`|$&|$'\n";
+	    { # print "non-escaped double quote: $result|$remaining|$PREMATCH|$MATCH|$POSTMATCH\n";
 	      if ($computeresult)
 		{ if ($getline_simplify)
 		    { $result .= "\""; }
 		  else
-		    { $result .= $` . $&; } }
+		    { $result .= $PREMATCH . $MATCH; } }
 	      # print "post-nonescdquote: $result|$remaining\n";
-	      $remaining = $';
+	      $remaining = $POSTMATCH;
 	      $instring = 0; }
 	  else
 	    { # print "$currentfile:$.: in string after line $_[0]";
 	      if ($computeresult && !$getline_simplify)
-		{ $result .= $` . $&; }
+		{ $result .= $PREMATCH . $MATCH; }
 	      return $result; } }
       # If not instring, \" suffices instead of the more complicated
       # regexp that checks for leading backslashes.
       elsif ($remaining =~ m/\/[\*\/]|[\'\"]/) #'FIXCOLOR
-	{ my $match = $&;
-	  my $postmatch = $';
+	{ my $match = $MATCH;
+	  my $postmatch = $POSTMATCH;
 	  if ($computeresult)
-	    { $result .= $`; }
+	    { $result .= $PREMATCH; }
 	  if ($match eq "\'")
 	    { if ($postmatch =~ m/^$char_literal_contents_re\'/o)
 		{ if ($computeresult)
 		    { if ($getline_simplify)
 			{ $result .= "'a'"; }
 		      else
-			{ $result .= "'" . $&; } }
-		  $remaining = $'; }
+			{ $result .= "'" . $MATCH; } }
+		  $remaining = $POSTMATCH; }
 	      else
                 # No newline, since $_[0] has one.
 		{ print EVIL "$currentfile:$.: bad character constant $match$postmatch\n    in $_[0]";
@@ -1026,14 +1173,14 @@ sub updateinvars
 			{ if ($getline_simplify)
 			    { $result .= "'a'"; }
 			  else
-			    { $result .= "'" . $&; } }
-		      $remaining = $'; }
+			    { $result .= "'" . $MATCH; } }
+		      $remaining = $POSTMATCH; }
 		  else
 		    { $remaining = $postmatch; } } }
 	  elsif ($match eq "\"")
 	    { if ($computeresult)
 		{ $result .= $match; }
-	      $remaining = $';
+	      $remaining = $POSTMATCH;
 	      $instring = 1; }
 	  elsif ($match eq "//")
 	    { if ($computeresult && !$getline_nocomment)
@@ -1042,7 +1189,7 @@ sub updateinvars
 	  elsif ($match eq "/*")
 	    { if ($computeresult && !$getline_nocomment)
 		{ $result .= $match . $postmatch; }
-	      $remaining = $';
+	      $remaining = $POSTMATCH;
 	      $incomment = 1; }
 	  else
 	    { die "$currentfile:$.: updateinvars: what match?  $match in $_[0]\n"; } }
@@ -1086,30 +1233,25 @@ sub remove_comments
 #   while (($line =~ m/[\"\']/) #'FIXCOLOR
 # 	 # should regexp-quote $token
 # 	 || ($line =~ m/\Q$token\E/))
-#     { my $match = $&;
-#       $line = $';
+#     { my $match = $MATCH;
+#       $line = $POSTMATCH;
 #       print "has_token($token) matched $match before $line\n";
 #       if ($match eq $token)
 # 	{ return $true; }
 #       elsif ($match eq "\"")
 # 	{ if ($line =~ /$non_escaped_double_quote_re/o)
-# 	    { $line = $'; }
+# 	    { $line = $POSTMATCH; }
 # 	  else
 # 	    { die "Didn't find end of string literal $line.\n"; } }
 #       elsif ($match eq "'")
 # 	{ if ($line =~ /^$char_literal_contents_re\'/o)
-# 	    { $line = $'; }
+# 	    { $line = $POSTMATCH; }
 # 	  else
 # 	    { die "Didn't find end of character literal $line.\n"; } }
 #       else
 # 	{ die "What match $match in $line\n"; } }
 #   return $false;
 # }
-
-# *****
-# sub getline_to_token
-# {
-#   my ($
 
 
 # Returns the line that should be the getline result, usually "\n";
@@ -1128,7 +1270,7 @@ sub getline_handle_preprocessor_line
   elsif ($line =~ m/^\#\s*($identifier_re)\s*/o)
     { # Found a real preprocessor command
       my $cpp_cmd = $1;
-      $line = $';
+      $line = $POSTMATCH;
       $line =~ s/\s+$//;	# remove trailing whitespace
       return getline_handle_preprocessor_command($cpp_cmd, $line); }
   else
@@ -1197,12 +1339,12 @@ sub getline_handle_preprocessor_command
     { if (@dependenton == 0)
 	{ die "improperly nested \#else"; }
       my $last = pop(@dependenton);
-      push(@dependenton, "!($last)"); }
+      push(@dependenton, negate_if_condition($last)); }
   elsif ($cpp_cmd eq "elif")
     { if (@dependenton == 0)
 	{ die "improperly nested \#elif"; }
       my $last = pop(@dependenton);
-      push(@dependenton, "(!($last)) && ($cpp_cmd_arg)"); }
+      push(@dependenton, negate_if_condition($last)); }
   elsif ($cpp_cmd eq "define")
     { if ($finding_macro_defs)
 	{ process_macro_definition($cpp_cmd_arg); }
@@ -1342,7 +1484,8 @@ ELSEPART:
 	$all_same = ($first_part eq $other_part);
 	$index++; }
     if ($all_same)
-      { for $index (1..$prev_sizes)
+      { my $i;
+	for $i (1..$prev_sizes)
 	  { print "discarding ", getline(); }
 	print "returning one of ", scalar(@parts), " identical parts: $first_part";
 	return $first_part; } }
@@ -1371,30 +1514,30 @@ sub merge_brace_unbalanced_lines
   my $pieces = length($braces)+1;
 
   my @split_lines = ();
-  { my $index;
-    for $index (0..$#lines)
-      { my @this_pieces = split(/[\{\}]/, $lines[$index]);
+  { my $i;
+    for $i (0..$#lines)
+      { my @this_pieces = split(/[\{\}]/, $lines[$i]);
 	# Does this work?  Don't risk it...
-	# $split_lines[$index] = @this_pieces;
+	# $split_lines[$i] = @this_pieces;
 	{ my $piece;
 	  for $piece (0..$#this_pieces)
-	    { $split_lines[$index][$piece] = $this_pieces[$piece]; } }
+	    { $split_lines[$i][$piece] = $this_pieces[$piece]; } }
 	if ($pieces != @this_pieces)
-	  { die "should have $pieces, not ", scalar(@this_pieces), ", pieces: $lines[$index]"; } } }
+	  { die "should have $pieces, not ", scalar(@this_pieces), ", pieces: $lines[$i]"; } } }
 
   my $result = "";
   { my $piece;
     for $piece (0..$pieces-1)
-      { { my $index;
-	  for $index (0..$#lines)
-	    { if (!defined($split_lines[$index][$piece]))
+      { { my $i;
+	  for $i (0..$#lines)
+	    { if (!defined($split_lines[$i][$piece]))
 		{ my $p;
 		  for $p (0..$pieces)
 		    { my $i;
 		      for $i (0..$#lines)
 			{ print "$p $i <<$split_lines[$i][$p]>>\n"; } }
-		  die "piece $piece, index $index not defined"; }
-	      $result .= $split_lines[$index][$piece]; } }
+		  die "piece $piece, index $i not defined"; }
+	      $result .= $split_lines[$i][$piece]; } }
 	if ($piece != $pieces)
 	  { $result .= substr($braces, $piece, $piece+1); } } }
   $result;
@@ -1524,7 +1667,7 @@ sub parse_exp
   if ($exp =~ /^\s*\(\s*($builtin_type_re)\s*\)/)
     { # print "Found cast $1\n";
       my ($casttype) = $1;
-      my ($type, $remaining) = parse_exp($');
+      my ($type, $remaining) = parse_exp($POSTMATCH);
       if (!$type) { return($typeFAIL,$exp); }
       my $casttypenum = type_to_num($casttype);
       if (!is_number($casttypenum))
@@ -1535,29 +1678,29 @@ sub parse_exp
     { my ($casttype) = $1;
       $parsetypes{$casttype} = $true;
       # print "Found cast $1 $2\n";
-      my ($type, $remaining) = parse_exp($2 . $');
+      my ($type, $remaining) = parse_exp($2 . $POSTMATCH);
       if (!$type) { return($typeFAIL,$exp); }
       return parse_exp_follower($casttype,$remaining); }
 
   # Parens as grouping
   if ($exp =~ m/^\s*\(/)
-    { my ($type, $remaining) = parse_exp_commaop($');
+    { my ($type, $remaining) = parse_exp_commaop($POSTMATCH);
       if (!$type) { return($typeFAIL,$exp); }
       if ($remaining =~ m/^\s*\)/)
-	{ return parse_exp_follower($type, $'); }
+	{ return parse_exp_follower($type, $POSTMATCH); }
       else
 	{ return($typeFAIL,$exp); } }
 
   # Unary prefix operators
   if ($exp =~ /^\s*(\+\+|--|[-~!+&*])/)
-    { my ($type, $remaining) = parse_exp($');
+    { my ($type, $remaining) = parse_exp($POSTMATCH);
       if (!$type) { return($typeFAIL,$exp); }
       return parse_exp_follower($type,$remaining); }
   # [^\)] was [ \ta-zA-Z0-9*]
   if ($exp =~ /^\s*sizeof\s*\(\s*([^\)]+)\)/)
     { my $sizeoftype = $1;
       $sizeoftype =~ s/\s+$//;
-      my $remaining = $';
+      my $remaining = $POSTMATCH;
       if (!($sizeoftype =~ /^$type_re$/o))
 	{ die "sizeof($sizeoftype) doesn't look like a type"; }
       return parse_exp_follower(type_to_num($sizeoftype),$remaining); }
@@ -1571,11 +1714,11 @@ sub parse_exp
     # Should look for a following string, to concatenate the two.
     # Perhaps special-case:  look for symbol (which is macro with typeSTRING)
     # or literal string.
-    { return ($typeSTRING, $'); }
+    { return ($typeSTRING, $POSTMATCH); }
 
   # Literal character
   if ($exp =~ /^$char_literal_re/o)
-    { return parse_exp_follower($typeCHAR, $'); }
+    { return parse_exp_follower($typeCHAR, $POSTMATCH); }
 
   # Literal floating-point
   # This precedes integer because an integer matches the first part of a float
@@ -1586,7 +1729,7 @@ sub parse_exp
 	{ $type = $typeFLOAT; }
       elsif (($2 eq "l") || ($2 eq "L"))
 	{ $type = $typeLDOUBLE; }
-      return parse_exp_follower($type,$'); }
+      return parse_exp_follower($type,$POSTMATCH); }
 
   # Literal integer (octal)
   # Don't need leading [-+]? because they are always unary operators, never
@@ -1595,7 +1738,7 @@ sub parse_exp
       # hex precedes octal/decimal because the "0" looks like a leading integer
       || ($exp =~ /^$dec_oct_literal_re/o)) # octal or decimal
     { # print "Found integer $1\n";
-      my ($remaining) = $';
+      my ($remaining) = $POSTMATCH;
       my ($type) = infer_int_type($1);
       # print "inferred type ", type_name($type), "\n";
       if ($2 =~ /[uU]/)
@@ -1607,8 +1750,8 @@ sub parse_exp
 
   # Variable
   elsif ($exp =~ /^$identifier_re/o)
-    { my ($var) = $&;
-      my ($remaining) = $';
+    { my ($var) = $MATCH;
+      my ($remaining) = $POSTMATCH;
       categorize_macro_name($var); # huh??
       my $vartype = $mntype{$var};
       if (!defined($vartype))
@@ -1619,7 +1762,7 @@ sub parse_exp
       # Perhaps do something different if the categorization was successful.
       if ($remaining =~ /^\s*\(/)
 	{ $parsefuns{$var} = $true;
-	  return parse_arglist($vartype, $');
+	  return parse_arglist($vartype, $POSTMATCH);
 	}
       else
 	{ $parsevars{$var} = $true;
@@ -1642,13 +1785,13 @@ sub parse_arglist
       if (!$thisargtype) { return($typeFAIL, $arglist); }
       # push $thisargtype somewhere
       if ($comma =~ /^\s*,/)
-	{ $arglist = $'; }
+	{ $arglist = $POSTMATCH; }
       elsif ($comma =~ /^\s*\)/)
 	{ $arglist = $comma; }
       else
 	{ die "Neither comma nor close paren followed well-formed arg $arglist\n";
 	  return($typeFAIL, $arglist); } }
-  return parse_exp_follower($ftype,$');
+  return parse_exp_follower($ftype,$POSTMATCH);
 }
 
 # $initializer already has leading brace stripped
@@ -1662,7 +1805,7 @@ sub parse_array_initializer
     { my ($thisinittype, $comma);
       # print "current initlist = $initlist"; # $initlist ends in newline
       if ($initlist =~ /^\s*\{/)
-	{ ($thisinittype, $comma) = parse_array_initializer($');
+	{ ($thisinittype, $comma) = parse_array_initializer($POSTMATCH);
 	  # transform subinittype from array to scalar type
 	}
       else
@@ -1672,14 +1815,14 @@ sub parse_array_initializer
       if (!$thisinittype) { return($typeFAIL, $initlist); }
       # push $thisinittype somewhere
       if ($comma =~ /^\s*,/)
-	{ $initlist = $'; }
+	{ $initlist = $POSTMATCH; }
       elsif ($comma =~ /^\s*\}/)
-	{ return ($thisinittype, $'); }
+	{ return ($thisinittype, $POSTMATCH); }
       else
 	{ die "Neither comma nor close brace followed well-formed init $initlist\n";
 	  return($typeFAIL, $initlist); } }
   # don't call parse_exp_follower
-  return ($typeUNKNOWN,$');
+  return ($typeUNKNOWN,$POSTMATCH);
 }
 
 # Returns a success boolean, the post-closeparen string, and the declarations.
@@ -1690,36 +1833,27 @@ sub parse_array_initializer
 sub parse_function_decl_args
 {
   my ($text) = check_args(1, "parse_function_decl_args", caller, @_);
+  print "parsing arg decls in $text\n";
+
   my @arg_decls = ();
 
-  print "parsing next arg decl in $text\n";
-  # used to use parse_exp_nocommaop, but it's not expressions we're parsing...
-  while (!($text =~ /^\s*[,\)]/))
-    { # I have no way of preferring to parse as a typedecl vs. as
-      # a type vs as a bare identifier (don't know if this is function
-      # definition or declaration, so perhaps pass that information in.
-      # Fix the disambiguation later.
-      print "looking for type or type declarator\n";
-      if ($text =~ /^\s*($type_declarator_re)\s*[,\)]/)
-	{ push(@arg_decls, $1);
-	  $text = substr($&, -1) . $';
-	  print "new text $text\n";
-	}
-      elsif ($text =~ /^\s*($type_re)\s*[,\)]/) # also catches just identifier
-	{ push(@arg_decls, $1);
-	  $text = substr($&, -1) . $';
-	  print "new text $text\n";
-	}
-      else
-	{ die "Couldn't parse function arg declaration $text"; }
-    }
-  # print "match: $`|$&|$'\n";
-  if (!defined($'))
-    { die "postmatch not defined.\n"; }
-  my $postmatch = $';
-  if (!defined($postmatch))
-    { die "postmatch not defined.\n"; }
-  return ($true, $', @arg_decls);
+  if ($text =~ /^\s*\)/)
+    # No arguments
+    { return ($true, $POSTMATCH, @arg_decls); }
+
+  # I have no way of preferring to parse as a typedecl vs. as
+  # a type vs as a bare identifier (don't know if this is function
+  # definition or declaration, so perhaps pass that information in.
+  # Disambiguate later.
+  print "looking for type or type declarator in $text\n";
+  while ($text =~ /^\s*(($type_declarator_re)|($type_re))\s*[,\)]/)
+    { push(@arg_decls, $1);
+      $text = $POSTMATCH;
+      if (substr($MATCH, -1) eq "\)")
+	{ print "parse_function_decl_args returning ", join(', ', @arg_decls), "\n";
+	  return ($true, $text, @arg_decls); }
+      print "new text $text\n"; }
+  die "Couldn't parse function arg declaration $text";
 }
 
 # Need this be global?
@@ -1738,21 +1872,25 @@ sub parse_KandR_function_arg_decls
 	{ die "Couldn't parse K&R-style type declarator $argdecls\n"; }
       my $typespec = $1;
       my $declarator = $2;
-      my $nextchar = substr($&, length($&)-1);
-      $argdecls = $';
+      my $nextchar = $LAST_PAREN_MATCH;
+      $argdecls = $POSTMATCH;
       my ($type, $identifier) = parse_declarator($typespec, $declarator);
       $argnametype{$identifier} = $type;
       while ($nextchar eq ",")
 	{ if (!($argdecls =~ /^\s*$declarator_re\s*([,;])/))
 	    { die "Couldn't parse declarator following comma after '$typespec $declarator $nextchar': $argdecls\n"; }
 	  $declarator = $1;
-	  $nextchar = substr($&, length($&)-1);
-	  $argdecls = $';
+	  $nextchar = $LAST_PAREN_MATCH;
+	  $argdecls = $POSTMATCH;
 	  ($type, $identifier) = parse_declarator($typespec, $declarator);
 	  $argnametype{$identifier} = $type; } }
 
-  # print "after K&R, remainder $'\n";
-  return $';
+  # This doesn't work; rematch the open brace
+  # print "after K&R, remainder $POSTMATCH\n";
+  # return $POSTMATCH;
+  if (!($argdecls =~ /^\s*\{/))
+    { die "didn't find open brace previously found in $argdecls\n"; }
+  return $POSTMATCH;
 }
 
 
@@ -1771,7 +1909,7 @@ sub parse_exp_follower
 
   # Array subscript
   if ($follow =~ /^\[/)
-    { my $subscript = $';
+    { my $subscript = $POSTMATCH;
       my ($subscrtype, $closebracket) = parse_exp($subscript);
       if (!$subscrtype) { return($typeFAIL,$subscript); }
       if (!(type_integral_p($subscrtype) || ($subscrtype == $typeUNKNOWN)))
@@ -1779,27 +1917,27 @@ sub parse_exp_follower
 	{ die "Non-integral type ", type_name($subscrtype), " in subscript\n";
 	  return ($typeFAIL, $follow); }
       if ($closebracket =~ /\s*\]/)
-	{ my ($remaining) = $';
+	{ my ($remaining) = $POSTMATCH;
 	  return parse_exp_follower(type_dereference($type), $remaining); }
       else
 	{ return ($typeFAIL, $follow); } }
 
   # Function call (might this be some other use of parens??)
   if ($follow =~ /^\(/)
-    { return parse_arglist($type, $'); }
+    { return parse_arglist($type, $POSTMATCH); }
 
   # Unary postfix operators
   if ($follow =~ /^(\+\+|--)/)
-    { return parse_exp_follower($type, $'); }
+    { return parse_exp_follower($type, $POSTMATCH); }
   # Structure selectors
   if ($follow =~ /^\s*(\.|->)\w+\b/)
-    { return parse_exp_follower($typeUNKNOWN, $'); }
+    { return parse_exp_follower($typeUNKNOWN, $POSTMATCH); }
 
   # Binary operators:  multi-char operators must precede single-char ones
   if (($follow =~ /^(<<|>>|[<=>!]=|&&|\|\||[-*\/%+&^|<>])/)
       || ($commaop && ($follow =~ /^(,)/)))
     { my $op = $1;
-      my $arg2 = $';
+      my $arg2 = $POSTMATCH;
       if ($op eq ",")
 	{ # print "found a comma operator, commaop = $commaop\n";
 	}
@@ -1814,11 +1952,11 @@ sub parse_exp_follower
 
   # Ternary operator ?:
   if ($follow =~ /^\?/)
-    { my $then = $';
+    { my $then = $POSTMATCH;
       my ($thentype, $colon) = parse_exp($then);
       if (!$thentype) { return ($typeFAIL, $then); }
       if (!($colon =~ /^\s*:/)) { return ($typeFAIL, $colon); }
-      my ($elsetype, $remaining) = parse_exp($');
+      my ($elsetype, $remaining) = parse_exp($POSTMATCH);
       if (!$elsetype) { return ($typeFAIL, $colon); }
       return (type_lub($thentype, $elsetype), $remaining); }
 
@@ -1879,6 +2017,8 @@ sub get_macro_call_types
       my $line;
       while ($line = getline())
 	{
+	  my $indented = ($line =~ /^[ \t]/);
+	  # print "GOTLINE (indented = $indented) <<$line>>\n";
 	  # The line number $. isn't quite right, as we may have peeked ahead
 	  # print "line $.: $line"; # no newline, since $line contains one
 	  if ($line =~ /^\s*$/)
@@ -1891,11 +2031,18 @@ sub get_macro_call_types
 	      # print "not empty or a preprocessor line $line"; # $line has newline
 	      chop($line);	# remove trailing newline
 	      # In a scope, must be indented or: close brace, comment, label
-	      if (($symtab_scopes != 0)
-		  && (!(($line =~ m/^(\s|\/[\/\*]|$identifier_re\s*:)/o)
-			|| (($symtab_scopes == 1)
-			    && (($line =~ m/^\}/)
-				|| ($line =~ m/^(\"|0\};)/))))))
+
+	      # Exceptions to indentation checking.
+	      # Perhaps should strip labels here rather than just overlook them.
+	      if ((!$indented)
+		  && (($line =~ m/^($identifier_re\s*:)/o)
+		      || (($symtab_scopes == 1)
+			  && ($line =~ m/^(\}|\"|0\};)/))))
+		{ print "setting line to indented: $line\n";
+		  $indented = $true; }
+	      # Checks for any improperly unindented line.  Later, we
+	      # make sure that every properly unindented line was processed.
+	      if ((!$indented) && ($symtab_scopes != 0))
 		{ die "Non-indented line $line at bracedepth $symtab_scopes"; }
 
 	      # Check for improper indentation later, complaining only
@@ -1921,7 +2068,19 @@ PROCESSLINE:
 		}
 	      elsif ($line =~ /^\s*typedef\s+/)
 		{		# process typedefs
-		  print "typedef line $.\n";
+		  print "typedef line $.: $line\n";
+		  $line = $POSTMATCH;
+# This is wrong because typedefs can have semicolons inside braces.
+#		  my $semi_pos;
+# 		  # use index(), because ($line =~ /;/) gave trouble here
+# 		  while (-1 == ($semi_pos = index($line, ";")))
+# 		    {		# print "no semicolon, so appending a line to $remaining\n";
+# 		      $line = append_lines($line, getline()); }
+# 		  my $typedef = substr($line, 0, $semi_pos-1); # omits "typedef", ";"
+# 		  # process_typedef($typedef);
+# 		  $line = substr($line, $semi_pos+1);
+		  print "after typedef $PREMATCH, set line to $line\n";
+		  goto PROCESSLINE;
 		}
 	      elsif (($line =~ /^$type_specifier_re\s*$/o)
 		     # this call to peek_line ignores the @dependenton argument
@@ -1929,29 +2088,54 @@ PROCESSLINE:
 		{ # Function definition split over multiple lines
 		  $line .= " " . getline();
 		  goto PROCESSLINE; }
-	      elsif ($line =~ /^\s*$type_declarator_re\s*([,=;\(])/o)
+	      elsif (($line =~ /^\s*($type_declarator_re)\s*([,=;\(])/o)
+		     # must check this second, to get "int (*foo) (arg1, arg2)"
+		     || ($line =~ /^($identifier_re)\s*(\()/o))
 		{
-		  # Looks like a type declarator, but might not really be one.
-		  print "matched type declarator <$1><$2>\n";
+		  # problem: we don't know whether we matched $identifier_re
+		  # or $type_declarator_re.  So we have to rematch, which is
+		  # wasteful.
+		  my $nextchar = $LAST_PAREN_MATCH;
+		  if (!(($nextchar eq ",") || ($nextchar eq "=") || ($nextchar eq ";") || ($nextchar eq "\(")))
+		    { die "what nextchar? '$nextchar'\n"; }
+		  my $remaining = $POSTMATCH;
+		  my $typespec;
+		  my $declarator;
+		  { my $identifier_or_typedecl = $1;
+		    # Do the easy case first here; order doesn't matter.
+		    if ($identifier_or_typedecl =~ /^$identifier_re$/)
+		      { $typespec = "int";
+			$declarator = $identifier_or_typedecl; }
+		    elsif ($identifier_or_typedecl =~ /^$type_declarator_re$/o)
+		      { $typespec = $1;
+			$declarator = $2; }
+		    else
+		      { die "must be identifier or type declarator: $identifier_or_typedecl\n"; } }
+		  print "matched type declarator <$typespec><$declarator>\n";
 		  # print "maybe matched type declarator <$1><$2><$3><$4><$5><$6><$7><$8><$9> <<", defined($macros{$6}[0]), (defined($macros{$6}[0]) ? (">><<$macros{$6}[0] $macros{$6}[1] |$mname[$macros{$6}[1]]|$margs[$macros{$6}[1]]|$mbody[$macros{$6}[1]]|$mfile[$macros{$6}[1]]|$mline[$macros{$6}[1]]|") : ""), ">>\n";
-
-		  my $typespec = $1;
-		  my $declarator = $2;
-		  my $nextchar = substr($&, length($&)-1);
-		  my $remaining = $';
 
 		  # Fallthroughs below depend on the fact that this is the last
 		  # clause in the elsif chain: there's nothing else we would
 		  # try to do here if we didn't have a type declarator.
-		  if (($typespec eq "return") # "return foo;"
-		      || ($typespec eq "else") # "else if (...)"
-		      )
-		    { # fall through
+
+		  if (($typespec eq "Call") && ($declarator eq "UPDATE_HASH"))
+		    { # gzip-1.2.4/deflate.c line 633 (I don't want to give up
+		      # on complete parsing yet, but don't want to die here).
+		      print "rejected special case";
+		    }
+		  elsif ($typespec =~ /$c_reserved_nontype_word_re/o)
+		    { # "else if (...)", "return foo;", "sizeof(buf)", etc.
 		      print "rejected typespec $typespec\n";
 		    }
+		  elsif ($declarator =~ /$c_reserved_nontype_word_re/o)
+		    {
+		      print "rejected declarator $declarator\n";
+		    }
 		  elsif (($nextchar eq "(")
-			 && ($declarator =~ /^$identifier_re$/o)
-			 && defined($macros{$declarator}[0]))
+			 # Implied by "defined($macros{$declarator}[0])"
+			 # && ($declarator =~ /^$identifier_re$/o)
+			 && defined($macros{$declarator}[0])
+			 && (!macro_dependenton($declarator, @dependenton)))
 		    { # The function being defined is actually a macro.
 		      # Try to expand it, else fall through.
 		      my $identifier = $declarator;
@@ -1960,24 +2144,10 @@ PROCESSLINE:
 		      # if parens aren't balanced, read enough text to balance them.
 		      ($close_paren_pos, $remaining) = find_close_paren($remaining, 0, $true);
 
-# 		      # First,
-# 		      print "Make sure parens are balanced $remaining\n";
-# 
-# 		      if ($remaining =~ /[\{\}]/)
-# 			{ if (paren_change($nextchar . $`))
-# 			    { die "unbalanced parenthesis before brace $nextchar$remaining"; } }
-# 		      else
-# 			{ # Temporarily prepend $nextchar to $remaining
-# 			  $remaining = $nextchar . $remaining;
-# 			  while (paren_change($remaining))
-# 			    { $remaining .= " " . getline();
-# 			      if ($remaining =~ /[\{\}]/)
-# 				{ if (paren_change($`))
-# 				    { die "unbalanced parenthesis before brace $nextchar$remaining"; } } }
-# 			  $remaining = substr($remaining, 1); }
-
 		      # Case 1:
 		      # There is only one expansion for the macro.  Expand it.
+		      # This isn't quite right if the dependentons aren't
+		      # compatible.
 		      if ($macros{$identifier}[0] == 1)
 			{ # ... expand macro ...;
 			  # goto PROCESSLINE;
@@ -2001,7 +2171,11 @@ PROCESSLINE:
 			  print "expanding empty-paren macro to $line";
 			  goto PROCESSLINE;
 			}
-		      # fall through
+
+		      # fall through, but don't reset line, because we want
+		      # to consider this a call or process arguments, etc.
+		      print "rejected macro $identifier\n";
+
 		    }
 		  else
 		    { # This actually is a valid type declarator
@@ -2013,7 +2187,7 @@ PROCESSLINE:
 			  # (want to reject function defs but not decls; how to do?)
 			  && (@dependenton == 0))
 			{
-			  print "potential indentation problem; nextchar '$nextchar'\n";
+			  print "potential indentation problem; nextchar '$nextchar', line $line\n";
 			  # Hack for gzip-1.2.4/deflate.c.
 			  # If a few improperly indented lines containing no braces
 			  # are followed by a property unindented line, don't die.
@@ -2040,8 +2214,6 @@ PROCESSLINE:
 
 		      if ($nextchar eq "(")
 			{	# found (start of) function definition or prototype
-			  if ($symtab_scopes != 0)
-			    { die "Function definition or prototype $& at bracedepth $symtab_scopes.\n"; }
 			  # Only need to check the new stuff, not the whole thing.
 			  while (!($remaining =~ /\)/))
 			    { print "no close paren, so appending a line to $remaining\n";
@@ -2057,66 +2229,75 @@ PROCESSLINE:
 			  #   K&R-style function definition
 			  #   ANSI-style function definition
 			  # odd; "my ($success, $remaining) = ..." doesn't work.
-			  my $success;
 			  my @arg_decls;
-			  my @arg_names; # These two will be set from arg_decls when
-			  my @arg_types; #   we know whether this was a def or decl.
-			  ($success, $remaining, @arg_decls) = parse_function_decl_args($remaining);
-			  if (!defined($remaining))
-			    { die "remaining not defined after parse_function_decl_args => @arg_decls"; }
-			  if (!$success)
-			    { $line = $remaining;
-			      goto PROCESSLINE; }
+			  { my $success;
+			    ($success, $remaining, @arg_decls) = parse_function_decl_args($remaining);
+			    print "parse_function_decl_args => ", join(', ', @arg_decls), "; remaining = $remaining\n";
+			    if (!defined($remaining))
+			      { die "remaining not defined after parse_function_decl_args => @arg_decls"; }
+			    if (!$success)
+			      { $line = $remaining;
+				goto PROCESSLINE; } }
 			  # $remaining is what follows the close paren
 			  while ($remaining =~ /^\s*$/)
 			    {	# print "no semi or brace, so appending a line to $remaining\n";
-			      my $nextline = getline();
-			      $remaining = append_lines($remaining, $nextline); }
+			      $remaining = getline(); }
+
+			  my @arg_names; # These two will be set from arg_decls when
+			  my @arg_types; #   we know whether this was a def or decl.
 			  # $remaining is nonempty; if first character is
 			  # semicolon, then this is a declaration, else a definition
 			  if ($remaining =~ /^\s*;/)
 			    { # declaration
+			      # gzip-1.2.4/sample/sub.c line 51
+			      #   puts a prototype in scope 1.
+			      if ($symtab_scopes != 0)
+				# Print to EVIL, maybe.
+				{ print "Function definition or prototype $MATCH at bracedepth $symtab_scopes.\n"; }
+
 			      # enter this in the global symbol table, perhaps
 			      # (to be done)
-			      $remaining = $';
+			      $remaining = $POSTMATCH;
 			      # set @arg_{names,types}; arg_decls is a list of
 			      # strings, each a type or a type declarator
-			      my $index;
-			      for $index (0..$#arg_decls)
-				{ my $decl = $arg_decls[$index];
-				  if ($decl =~ /^$type_declarator_re$/)
-				    { my $type_specifier = $1;
-				      my $declarator = $2;
-				      ($arg_types[$index], $arg_names[$index]) = parse_declarator($type_specifier, $declarator); }
-				  elsif ($decl =~ /^$type_re$/)
-				    { $arg_types[$index] = parse_type($decl);
-				      # leave $arg_names[$index] undefined
-				    }
-				  else
-				    { die "Can't parse as type or type declarator: $decl\n"; } }
+			      { my $i;
+				for $i (0..$#arg_decls)
+				  { my $decl = $arg_decls[$i];
+				    if ($decl =~ /^$type_declarator_re$/)
+				      { my $type_specifier = $1;
+					my $declarator = $2;
+					($arg_types[$i], $arg_names[$i]) = parse_declarator($type_specifier, $declarator); }
+				    elsif ($decl =~ /^$type_re$/)
+				      { $arg_types[$i] = parse_type($decl);
+					# leave $arg_names[$i] undefined
+				      }
+				    else
+				      { die "Can't parse as type or type declarator: $decl\n"; } } }
 			    }
 			  else
 			    {	# function definition
 			      print "found function definition $identifier; remaining $remaining\n";
+			      if ($symtab_scopes != 0)
+				{ die "Function definition at bracedepth $symtab_scopes.\n"; }
 			      if ($remaining =~ /^\s*\{/)
 				{ # ANSI-style definition
-				  $remaining = $';
+				  $remaining = $POSTMATCH;
 
 				  # set @arg_{names,types}; arg_decls is a list of
 				  # strings, each an identifier or a type declarator
-				  my $index;
-				  for $index (0..$#arg_decls)
-				    { my $decl = $arg_decls[$index];
-				      if ($decl =~ /^$identifier_re$/)
-					{ $arg_names[$index] = $decl;
-					  # leave $arg_types[$index] undefined
-					}
-				      elsif ($decl =~ /^$type_declarator_re$/)
-					{ my $type_specifier = $1;
-					  my $declarator = $2;
-					  ($arg_types[$index], $arg_names[$index]) = parse_declarator($type_specifier, $declarator); }
-				      else
-					{ die "Can't parse as identifier or type declarator: $decl\n"; } }
+				  { my $i;
+				    for $i (0..$#arg_decls)
+				      { my $decl = $arg_decls[$i];
+					if ($decl =~ /^$identifier_re$/)
+					  { $arg_names[$i] = $decl;
+					    # leave $arg_types[$i] undefined
+					  }
+					elsif ($decl =~ /^$type_declarator_re$/)
+					  { my $type_specifier = $1;
+					    my $declarator = $2;
+					    ($arg_types[$i], $arg_names[$i]) = parse_declarator($type_specifier, $declarator); }
+					else
+					  { die "Can't parse as identifier or type declarator: $decl\n"; } } }
 				}
 			      else
 				{ # K&R-style definition
@@ -2126,14 +2307,14 @@ PROCESSLINE:
 
 				  # set @arg_{names,types}; arg_decls is a list of
 				  # strings, each an identifier or a type declarator
-				  my $index;
-				  for $index (0..$#arg_decls)
-				    { my $decl = $arg_decls[$index];
-				      if (!($decl =~ /^$identifier_re$/))
-					{ die "K&R-style function definition, but non-identifier arg declarator $decl"; }
-				      $arg_names[$index] = $decl;
-				      # leave $arg_types[$index] undefined
-				    }
+				  { my $i;
+				    for $i (0..$#arg_decls)
+				      { my $decl = $arg_decls[$i];
+					if (!($decl =~ /^$identifier_re$/))
+					  { die "K&R-style function definition, but non-identifier arg declarator $decl"; }
+					$arg_names[$i] = $decl;
+					# leave $arg_types[$i] undefined
+				      } }
 
 				  # Only need to check the new stuff, not the whole thing.
 				  while (!($remaining =~ /\{/))
@@ -2141,14 +2322,22 @@ PROCESSLINE:
 				      $remaining = append_lines($remaining, getline()); }
 				  $remaining = parse_KandR_function_arg_decls($remaining);
 				  # Make sure that the argument list matches the declarators
-				  { { my $index;
-				      foreach $index (0..$#arg_names)
+
+				  { print "parse_KandR_function_arg_decls returned\n";
+				    my $key;
+				    my $value;
+				    while (($key, $value) = each %argnametype)
+				      { print "  $key=$value\n"; }
+				    print " remaining $remaining\n"; }
+
+				  { { my $i;
+				      foreach $i (0..$#arg_names)
 					{ # print "arg names: ", @arg_names, "\narg types: ", @arg_types, "\n";
-					  my $thistype = $argnametype{$arg_names[$index]};
+					  my $thistype = $argnametype{$arg_names[$i]};
 					  if (!defined($thistype))
-					    { die "No K&R-style declarator for $arg_names[$index]\n"; }
-					  $arg_types[$index] = $thistype;
-					  delete $argnametype{$arg_names[$index]};
+					    { die "No K&R-style declarator for $arg_names[$i]\n"; }
+					  $arg_types[$i] = $thistype;
+					  delete $argnametype{$arg_names[$i]};
 					} }
 				    # argnametype should be empty now
 				    { my $name;
@@ -2174,9 +2363,9 @@ PROCESSLINE:
 
 			      # 2. enter a scope
 			      enter_scope();
-			      { my $index;
-				for $index (0..$#arg_names)
-				  { symtab_add($arg_names[$index], $arg_types[$index]); } }
+			      { my $i;
+				for $i (0..$#arg_names)
+				  { symtab_add($arg_names[$i], $arg_types[$i]); } }
 
 			      # Done with function definition
 			    }
@@ -2211,8 +2400,8 @@ ATCOMMA:
 				  symtab_add($identifier, $type);
 				  # Now cope with this one.
 				  $declarator = $1;
-				  $nextchar = substr($&, length($&)-1);
-				  $remaining = $';
+				  $nextchar = $LAST_PAREN_MATCH;
+				  $remaining = $POSTMATCH;
 				  ($type, $identifier) = parse_declarator($typespec, $declarator);
 				  goto PROCESSVARDEF; }
 			      elsif ($remaining =~ /^\s*$type_declarator_re\s*([,\)])/o)
@@ -2223,14 +2412,14 @@ ATCOMMA:
 				  # declarator we just found.  And, we don't do
 				  # symtab_add($identifier, $type);
 				  # which was deferred from above.  What's up?
-				  $remaining = $';
+				  $remaining = $POSTMATCH;
 				  if ($remaining =~ /[\{;]/)
-				    { if ($& eq ";")
-					{ $remaining = $'; }
+				    { if ($MATCH eq ";")
+					{ $remaining = $POSTMATCH; }
 				      else
-					{ $remaining = $& . $'; } }
+					{ $remaining = $MATCH . $POSTMATCH; } }
 				  elsif ($remaining =~ /\)/)
-				    { $remaining = $'; }
+				    { $remaining = $POSTMATCH; }
 				  else
 				    { die "No semicolon or brace after function declarator?  It can't be!\n"; }
 				  $line = $remaining;
@@ -2246,16 +2435,30 @@ ATCOMMA:
 				  # parsing of the expression failed
 				  die "Failed to parse initializer $remaining\n"; }
 			      elsif ($postexp =~ /\s*;/)
-				{ $line = $';
+				{ $line = $POSTMATCH;
 				  goto PROCESSLINE; }
 			      elsif ($postexp =~ /\s*,/)
-				{ $remaining = $';
+				{ $remaining = $POSTMATCH;
 				  goto ATCOMMA; }
 			      else
 				{ die "After skipping well-formed initializer, didn't find comma or semicolon.\n"; } }
 			  else
 			    { die "Bad nextchar $nextchar.\n"; } }
 		    } }
+
+	      # Alternative to variable $indented is making sure that loops
+	      #   back to PROCESSLINE append a space to the front of lines
+	      #   that were oringally indented, but a portion of which must
+	      #   be reprocessed.  (Actually, that wouldn't even be enough,
+	      #   since we want to treat bar as unindented in unindented
+	      #   "foo; bar;".) This isn't foolproof, but probably close
+	      #   enough.
+	      if ((!$indented)
+		  && (!($line =~ /^\s*$/))
+		  # Hack.   Should really expand it and try again.
+		  && (!($line =~ /^($identifier_re)\s*\(/) && defined($macros{$1})))
+		{ die "properly unindented line was never processed: $line"; }
+
 	      # Line didn't match $type_declarator_re
 	      # Parse it looking for:
 	      #  * open and close braces to keep track of scopes
@@ -2268,14 +2471,14 @@ ATCOMMA:
 		    { die "extern \"C\" not at top level"; }
 		  if ($in_extern_C)
 		    { die "extern \"C\" inside extern \"C\""; }
-		  $line = $';
+		  $line = $POSTMATCH;
 		  $in_extern_C = $true;
 		}
 	      while ($line =~ m/[\({}\"\';]/) #'FIXCOLOR
 		# Found brace, open paren, quote, comment, or semicolon
-		{		# print "Found brace, open paren, quote, comment, or semicolon: $&$'\n";
-		  my $match = $&;
-		  $line = $';
+		{		# print "Found brace, open paren, quote, comment, or semicolon: $MATCH$POSTMATCH\n";
+		  my $match = $MATCH;
+		  $line = $POSTMATCH;
 		  if ($match eq "{")
 		    { enter_scope();
 		      goto PROCESSLINE; }
@@ -2288,7 +2491,7 @@ ATCOMMA:
 		  elsif ($match eq ";")
 		    { goto PROCESSLINE; }
 		  elsif ($match eq "(")
-		    { if ($` =~ /$identifier_re\s*$/o)
+		    { if ($PREMATCH =~ /$identifier_re\s*$/o)
 			{	# found something that looks like a function call
 			  # process it
 			}
@@ -2299,12 +2502,12 @@ ATCOMMA:
 		    }
 		  elsif ($match eq "\"")
 		    { if ($line =~ /$non_escaped_double_quote_re/o)
-			{ $line = $'; }
+			{ $line = $POSTMATCH; }
 		      else
 			{ die "Didn't find end of string literal $line.\n"; } }
 		  elsif ($match eq "'")
 		    { if ($line =~ /^$char_literal_contents_re\'/o)
-			{ $line = $'; }
+			{ $line = $POSTMATCH; }
 		      else
 			{ die "Didn't find end of character literal $line.\n"; } }
 		  else
@@ -2329,11 +2532,12 @@ sub simple_macro_substitute
   my $fdmacro;
   # Using "for" instead of foreach gives me 'Use of "" without parens is ambiguous'!
   foreach $fdmacro (keys %fun_decl_arg_macros)
-    { if ($text =~ /\b$fdmacro\s*\(/)	# no /o here, as $macro varies
-	{ my $prematch = $`;
-	  my $postmatch = $';
+    { if ($text =~ /\b$fdmacro\s*\(/)	# no /o here, as $fdmacro varies
+	{ my $prematch = $PREMATCH;
+	  my $postmatch = $POSTMATCH;
 	  my $close_paren_pos;
 	  ($close_paren_pos, $postmatch) = find_close_paren($postmatch, 0, $true);
+	  print "close paren at $close_paren_pos in $postmatch\n";
 	  my $result = $prematch . substr($postmatch, 0, $close_paren_pos)
 	    . substr($postmatch, $close_paren_pos+1);
 	  print "simple_macro_substitute $text\n ===> $result\n";
@@ -2353,7 +2557,7 @@ sub skip_expression_nocommaop
   # print "skipping expression $input\n";
 
   if ($input =~ /^\s*\{/)
-    { ($type, $remaining) = parse_array_initializer($');
+    { ($type, $remaining) = parse_array_initializer($POSTMATCH);
       print "parse_array_initializer returned $type $remaining\n";
     }
   else
@@ -2444,10 +2648,10 @@ sub symtab_add
 sub symtab_lookup
 {
   my ($var) = check_args(1, "symtab_lookup", caller, @_);
-  my $index;
-  for ($index = $#symtab_identifiers; $index >= 0; $index--)
-    { if ($var eq $symtab_identifiers[$index])
-	{ return $symtab_types[$index]; } }
+  { my $i;
+    for ($i = $#symtab_identifiers; $i >= 0; $i--)
+      { if ($var eq $symtab_identifiers[$i])
+	  { return $symtab_types[$i]; } } }
   return $typeFAIL;
 }
 
@@ -2781,8 +2985,8 @@ sub check_macro_body
   my @nesting = ();
   while ($body =~ m/[\]\[(){}\"\'\#]|\/\/|\/\*|\*\//) #'FIXCOLOR
     # Found paren, quote, cpp directive, or comment
-    { my $match = $&;
-      my $body = $';
+    { my $match = $MATCH;
+      my $body = $POSTMATCH;
       # print "$match ||| $body\n";
       if ($match =~ /[\[\(\{]/)
         { push(@nesting,$match); }
@@ -2801,19 +3005,19 @@ sub check_macro_body
         { if ($body =~ m/$non_escaped_double_quote_re/o)
             # Empty string OK only if that is the entire body.
             { if ($false	# turn off the test for now
-		  && ((length($`) + length($1) + length($2)) == 0)
+		  && ((length($PREMATCH) + length($1) + length($2)) == 0)
 		  && (length($body) > 2))
                 { $result |= $DANGER;
 		  print EVIL "$currentfile:$.: dangerous: empty string:\n    $body\n"; }
-              $body = $'; }
+              $body = $POSTMATCH; }
           else
            { $result |= $ILLEGAL;
-	     print EVIL "$currentfile:$.: illegal: unterminated string $&:\n    $body\n"; } }
+	     print EVIL "$currentfile:$.: illegal: unterminated string $MATCH:\n    $body\n"; } }
       elsif ($match eq "\'")
         { if (($body =~ m/^\\''/) || ($body =~ m/\'/))
 	    { # do this first because we're going to do more matching
-	      $body = $';
-	      my $char = $` . $&;
+	      $body = $POSTMATCH;
+	      my $char = $PREMATCH . $MATCH;
               chop($char);	# remove trailing '
 	      # Perhaps don't bother with this test; getline already checked
 	      # for illegal character constants.
@@ -2823,42 +3027,42 @@ sub check_macro_body
     	       }
           else
             { $result |= $ILLEGAL;
-	      print EVIL "$currentfile:$.: illegal: unterminated character constant $&:\n    $body\n";
+	      print EVIL "$currentfile:$.: illegal: unterminated character constant $MATCH:\n    $body\n";
               $body = ""; } }
       elsif ($match eq "#")
-	{ if (substr($', 0, 1) eq "#")
+	{ if (substr($POSTMATCH, 0, 1) eq "#")
 	    { $result |= $DANGER;
 	      print EVIL "$currentfile:$.: dangerous: ## pasting:\n    $body\n";
 	      $body = substr($body, 1); }
 	  # This list from GNU C preprocessor manual
 	  # It's not complete, since #assert introduces new preprocessor commands.
-	  elsif ($' =~ m/(assert|cpu|define|elif|else|error|ident|if|ifdef|ifndef|import|include|include_next|line|machine|pragma|system|unassert|warning)\b/)
+	  elsif ($POSTMATCH =~ m/(assert|cpu|define|elif|else|error|ident|if|ifdef|ifndef|import|include|include_next|line|machine|pragma|system|unassert|warning)\b/)
 	    { $result |= $DANGER;
-	      print EVIL "$currentfile:$.: dangerous: preprocessor directive #$&:\n    $body\n"; }
+	      print EVIL "$currentfile:$.: dangerous: preprocessor directive #$MATCH:\n    $body\n"; }
 	  else
 	    { $result |= $DANGER;
 	      print EVIL "$currentfile:$.: dangerous: stringization:\n    $body\n"; } }
       elsif ($match eq "/*")
 	# This test probably fails for a/**//**/b.  Oh, well.
-        { my $postmatch = $';
-	  my $precedingabuts = ($` =~ m/\w$/);
+        { my $postmatch = $POSTMATCH;
+	  my $precedingabuts = ($PREMATCH =~ m/\w$/);
 	  while (not ($postmatch =~ m!\*/!))
 	    { my $nextline;
 	      if ($nextline = getline())
 		# Get some more text, and look for the comment close there.
 		{ $body = append_lines($body, $nextline);
-		  $postmatch = append_lines($', $nextline);
+		  $postmatch = append_lines($POSTMATCH, $nextline);
 		}
 	      else
 		{ $result |= $EVIL;
 		  print EVIL "$currentfile:$.: evil: unterminated comment:\n    $body\n";
 		  $body = "";
 		  $postmatch = ""; } }
-	  # print "Setting $body to $'; $`; $&.\n";
+	  # print "Setting $body to $POSTMATCH; $PREMATCH; $MATCH.\n";
 	  # Redo this because the one in the while test is considered
 	  #   in the block, so we lost the (localized) match data.
 	  $postmatch =~ m/\*\//;
-	  $body = $';
+	  $body = $POSTMATCH;
 	  if ($precedingabuts && ($body =~ m/^\w/))
 	    { $result |= $OBSOLETE;
 	      print EVIL "$currentfile:$.: obsoleted: comment pasting:\n    $body\n"; } }
@@ -2896,7 +3100,7 @@ sub check_macro_body
 
 # { my $argdecls = "int argc;char **argv;{";
 #   if ($argdecls =~ /^\s*$type_declarator_re\s*([,;])/)
-#     { print "$1|$3|$7|$9|$'\n"; } }
+#     { print "$1|$3|$7|$9|$POSTMATCH\n"; } }
 
 # print "<<" . parse_expression ("(uch)get_byte()") . "\n";
 # print "<<" . parse_expression ("get_byte()") . "\n";
@@ -2948,7 +3152,7 @@ sub check_macro_body
 # test_categorize_macro("((ush)(uch)((p)[0]) | ((ush)(uch)((p)[1]) << 8))");
 # test_categorize_macro("((ulg)(SH(p)) | ((ulg)(SH((p)+2)) << 16))");
 # test_categorize_macro("malloc((size_t)(items)*(size_t)(size))");
-# $foo = "x"; $foo =~ /x/; print defined($'), defined($'), defined($'), "\n";
+# $foo = "x"; $foo =~ /x/; print defined($POSTMATCH), defined($POSTMATCH), defined($POSTMATCH), "\n";
 # print ("" eq "\n"), "\n";
 # test_categorize_macro("(inptr < insize ? inbuf[inptr++] : fill_inbuf(0))");
 # print type_name(parse_expression("(inptr < insize ? inbuf[inptr++] : fill_inbuf(0))")) . "\n";
@@ -2957,7 +3161,7 @@ sub check_macro_body
 # # This is failing because of the function call, I suppose.
 # print type_name(parse_expression("fill_inbuf(0)")) . "\n";
 # print scalar("int fill_inbuf(eof_ok)" =~ /^\s*$type_declarator_re\s*([,=;\(])/o), "\n";
-# "abaababb" =~ /(((a+)(b+))*)/; print "<<$1>><<$2>><<$3>><<$4>><<$&>>\n";
+# "abaababb" =~ /(((a+)(b+))*)/; print "<<$1>><<$2>><<$3>><<$4>><<$MATCH>>\n";
 # print scalar("static char  *license_msg[] =" =~ /^\s*$type_declarator_re\s*([,=;\(])/o), "\n";
 # print scalar("static char *license_msg[] =" =~ /^\s*$type_declarator_re\s*([,=;\(])/o), "\n";
 # print scalar("static char" =~ /^\s*$type_specifier_re$/o), "\n";
@@ -2972,6 +3176,13 @@ sub check_macro_body
 # print type_name(parse_expression("(ct_data near *)0")), "\n";
 # print scalar("(ct_data near *)" =~ /^\s*\(\s*$type_re\s*\)\s*$/o), "\n";
 # print parse_array_initializer("bl_tree, (ct_data near *)0, extra_blbits, 0,      BL_CODES, MAX_BL_BITS, 0};\n"), "\n";
+# print scalar("(*sig_type)" =~ /^$declarator_re$/o), "\n";
+# print scalar("char z_suffix[MAX_SUFFIX+1];" =~ /^\s*$type_declarator_re\s*([,=;\(])/o), "\n";
+# print scalar("z_suffix[MAX_SUFFIX+1]" =~ /^$declarator_re$/o), "\n";
+# print scalar("[MAX_SUFFIX+1]" =~ /^$array_declarator_suffix_re$/o), "\n";
+# print scalar("[1]" =~ /^$array_declarator_suffix_re$/o), "\n";
+# print join(' -- ', parse_declarator("char", "z_suffix[MAX_SUFFIX+1]")), "\n";
+# my @foo = (3,4,5,6); my @bar = @foo; $foo[0] = "new"; print @foo, "\n", @bar, "\n";
 # exit;
 
 
@@ -3035,15 +3246,15 @@ get_macro_call_types();
 
 ### All the files have been read; now process the macros
 print "Processing " . $cppcmdcount{"define"} . " macros\n";
-{ my $index;
-  for $index (0..$cppcmdcount{"define"}-1)
-    { # print "$index:  . "" . $mbody[$index] . "\n";
-      #   print &parse_expression($mbody[$index]) . ": ";
+{ my $i;
+  for $i (0..$cppcmdcount{"define"}-1)
+    { # print "$i:  . "" . $mbody[$i] . "\n";
+      #   print &parse_expression($mbody[$i]) . ": ";
       #   foreach $var (keys(%parsevars)) { print $var . " "; }
-      #   print "\n  $mname[$index]";
-      #   if (defined($margs[$index])) { print $margs[$index]; }
-      #   print " $mbody[$index]\n";
-      categorize_macro($index);
+      #   print "\n  $mname[$i]";
+      #   if (defined($margs[$i])) { print $margs[$i]; }
+      #   print " $mbody[$i]\n";
+      categorize_macro($i);
     } }
 
 # 	  # Nothing to check if this is just making the macro defined w/o a body.
