@@ -1,6 +1,10 @@
-*.log
 *.aux
 *.bbl
 *.blg
 *.dvi
 *.html
+*.log
+*.texi
+*.info
+data
+test
