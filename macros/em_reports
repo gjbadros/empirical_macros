@@ -1376,8 +1376,7 @@ if ($opt_d) {
 
   open(FREQDEF,">$dir/${basename}freqdef_cum") || die "Failed opening $!";
   open(FREQUSE,">$dir/${basename}frequse_cum") || die "Failed opening $!";
-  open(FREQDEF_DISTINCT,">$dir/${basename}freqdef_cum_distinct") || die "Failed opening $!";
-  open(FREQUSE_DISTINCT,">$dir/${basename}frequse_cum_distinct") || die "Failed opening $!";
+  open(FREQDEF_DISTINCT,">$dir/${basename}freqddf_cum") || die "Failed opening $!";
 
 }
 
