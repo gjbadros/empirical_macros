@@ -3,6 +3,7 @@
 
 PERL_MODULES := $(wildcard *.pm)
 PERL_SCRIPTS := $(wildcard *.pl)
+PERL_SCRIPTS += evilmacros
 PERL_MODULE_MAN := $(patsubst %.pm,%.man,$(PERL_MODULES))
 PERL_MODULE_HTML := $(patsubst %.pm,%.html,$(PERL_MODULES))
 
@@ -19,10 +20,27 @@ check: $(PERL_MODULES) $(PERL_SCRIPTS)
 	for i in $?; do perl -c $$i; done
 	touch .checked
 
+TAGS:	$(PERL_SCRIPTS) $(PERL_MODULES)
+	perletags $(PERL_SCRIPTS) $(PERL_MODULES)
+
+tags:	TAGS
+
 %.man: %.pm
 	pod2man $< >$@
 
 %.html: %.pm
+	pod2html $< >$@
+
+%.man: %.pl
+	pod2man $< >$@
+
+%.html: %.pl
+	pod2html $< >$@
+
+%.man: %
+	pod2man $< >$@
+
+%.html: %
 	pod2html $< >$@
 
 showvars:
@@ -31,4 +49,4 @@ showvars:
 	echo $(PERL_MODULE_MAN)
 	echo $(PERL_MODULE_HTML)
 
-.PHONY: all module_man check showvars
+.PHONY: all module_man check showvars tags
