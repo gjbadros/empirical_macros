@@ -54,6 +54,7 @@ BEGIN {
   }
 }
 
+
 my $cdefs_min_filter = $opt_d || 0;   # only output stats with more than this many defintions
 sub marks_for_categories {
   $listref = $_[0];
@@ -68,6 +69,10 @@ sub marks_for_categories {
       if ($offset >= 0 ) {
 	substr($str,$offset,1) = "*";
       }
+    }
+    my $lubcat = lub_category_array(@$listref);
+    if ($lubcat == $catFAILURE || $lubcat == $catMULTIPLE) {
+      substr($str,$cCategoryNames+1,1) = "<";
     }
   }
   return $str;
@@ -86,3 +91,12 @@ if ($opt_a || $row =~ m/\*/) {
   print $row;
 }
 print "\n";
+
+sub lub_category_array( @ ) {
+  my (@cats) = check_args_at_least(1,@_);
+  my $result = $catNO_DEF;
+  foreach my $categ (@cats) {
+    $result = category_lub( $result, $categ );
+  }
+  return $result;
+}
