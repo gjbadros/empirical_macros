@@ -1,0 +1,80 @@
+
+%// FROM gs262/gxfill.c
+\begin{verbatim}
+#include "gxcpath.h"
+
+/* Import the fixed * fixed / fixed routine from gxdraw.c. */
+/* The second argument must be less than or equal to the third; */
+/* all must be non-negative, and the last must be non-zero. */
+extern fixed fixed_mult_quo(P3(fixed, fixed, fixed));
+
+/* Define the structure for keeping track of active lines. */
+typedef struct active_line_s active_line;
+struct active_line_s {
+	gs_fixed_point start;		/* x,y where line starts */
+	gs_fixed_point end;		/* x,y where line ends */
+	fixed dx;			/* end.x - start.x */
+#define al_dx(alp) ((alp)->dx)
+#define al_dy(alp) ((alp)->end.y - (alp)->start.y)
+	fixed y_fast_max;		/* can do x_at_y in fixed point */
+					/* if y <= y_fast_max */
+#define set_al_points(alp, startp, endp)\
+  (alp)->dx = (endp).x - (startp).x,\
+  (alp)->y_fast_max = max_fixed /\
+    (((alp)->dx >= 0 ? (alp)->dx : -(alp)->dx) | 1) + (startp).y,\
+  (alp)->start = startp, (alp)->end = endp
+#define al_x_at_y(alp, yv)\
+  ((yv) == (alp)->end.y ? (alp)->end.x :\
+   ((yv) <= (alp)->y_fast_max ?\
+    ((yv) - (alp)->start.y) * al_dx(alp) / al_dy(alp) :\
+    (stat(n_slow_x),\
+     fixed_mult_quo(al_dx(alp), (yv) - (alp)->start.y, al_dy(alp)))) +\
+   (alp)->start.x)
+	fixed x_current;		/* current x position */
+	fixed x_next;			/* x position at end of band */
+	const segment *pseg;		/* endpoint of this line */
+	int direction;			/* direction of line segment */
+#define dir_up 1
+#define dir_down (-1)
+/* "Pending" lines (not reached in the Y ordering yet) use next and prev */
+/* to order lines by increasing starting Y.  "Active" lines (being scanned) */
+/* use next and prev to order lines by increasing current X, or if the */
+/* current Xs are equal, by increasing final X. */
+	active_line *prev, *next;
+/* Link together active_lines allocated individually */
+	active_line *alloc_next;
+};
+
+/* Define the ordering criterion for active lines. */
+/* The xc argument is a copy of lp2->x_current. */
+#define x_precedes(lp1, lp2, xc)\
+  (lp1->x_current < xc || lp1->x_current == xc &&\
+   (lp1->start.x > lp2->start.x || lp1->end.x < lp2->end.x))
+
+#ifdef DEBUG
+/* Internal procedures for printing active lines */
+private void
+print_active_line(char *label, active_line *alp)
+{	dprintf5("[f]%s %lx(%d): x_current=%f x_next=%f\n",
+	         label, (ulong)alp, alp->direction,
+	         fixed2float(alp->x_current), fixed2float(alp->x_next));
+	dprintf5("    start=(%f,%f) pt_end=%lx(%f,%f)\n",
+	         fixed2float(alp->start.x), fixed2float(alp->start.y),
+	         (ulong)alp->pseg,
+	         fixed2float(alp->end.x), fixed2float(alp->end.y));
+	dprintf2("    prev=%lx next=%lx\n",
+		 (ulong)alp->prev, (ulong)alp->next);
+}
+private void
+print_line_list(active_line *flp)
+{	active_line *lp;
+	for ( lp = flp; lp != 0; lp = lp->next )
+	   {	fixed xc = lp->x_current, xn = lp->x_next;
+		dprintf3("[f]%lx(%d): x_current/next=%g",
+		         (ulong)lp, lp->direction,
+		         fixed2float(xc));
+		if ( xn != xc ) dprintf1("/%g", fixed2float(xn));
+		dputc('\n');
+	   }
+}
+\end{verbatim}
