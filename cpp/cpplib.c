@@ -2897,7 +2897,10 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
 
   cchOffsetInternal = CchOffset_internal(pfile);
   if (pcei) {
-    ichSourceStart = CchBufferOffset(pfile) + CchSumPceiOffsets(pcei) + pbuf->cur - pbuf->buf - strlen(hp->name) + 1;
+    char *pchStartSearch = pbuf->cur - strlen(hp->name) - cchRawCall - 1;
+    int ichMacroOffset = (int) ((long) strstr(pchStartSearch, hp->name) - (long) pbuf->buf);
+    /*    ichSourceStart = CchBufferOffset(pfile) + CchSumPceiOffsets(pcei) + pbuf->cur - pbuf->buf - strlen(hp->name) + 1; --12/12/98 gjb */
+    ichSourceStart = CchBufferOffset(pfile) + CchSumPceiOffsets(pcei) + ichMacroOffset + 1;
   } else {
     ichSourceStart = cchOffsetInternal - cchRawCall - strlen(hp->name) + 1;
   }
@@ -3277,7 +3280,8 @@ macroexpand (cpp_reader *pfile, HASHNODE *hp, unsigned char *pchAfterMacroName,
   /*  int cchRawCall = pbuf->cur - pchAfterMacroName; */
   int cbuffersDeep = CbuffersDeep(pfile);
   /*  int ichSourceStart = pbuf->ichSourceStart; */
-  int ichSourceEnd = ichSourceStart + cchRawCall + strlen(hp->name);
+  /*  int ichSourceEnd = ichSourceStart + cchRawCall + strlen(hp->name); --12/13/98 gjb */
+  int ichSourceEnd = ichSourceStart + strlen(hp->name);
   cpp_buffer *prev_buffer = CPP_PREV_BUFFER(pfile->buffer);
   if (CExpansionsDeep(pcei) > 1 && prev_buffer != CPP_NULL_BUFFER(pfile) 
       && prev_buffer->prev != 0 && prev_buffer->ichSourceStart >= 0) {
