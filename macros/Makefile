@@ -4,6 +4,8 @@
 PERL_MODULES := $(wildcard *.pm)
 PERL_SCRIPTS := $(wildcard *.pl)
 PERL_SCRIPTS += evilmacros
+PERL_MODULE_TEXI := $(patsubst %.pm,%.texi,$(PERL_MODULES))
+PERL_MODULE_INFO := $(patsubst %.pm,%.info,$(PERL_MODULES))
 PERL_MODULE_MAN := $(patsubst %.pm,%.man,$(PERL_MODULES))
 PERL_MODULE_HTML := $(patsubst %.pm,%.html,$(PERL_MODULES))
 
@@ -12,6 +14,8 @@ all: module_man check
 module_man: $(PERL_MODULE_MAN)
 
 module_html: $(PERL_MODULE_HTML)
+
+module_texi: $(PERL_MODULE_TEXI)
 
 check: $(PERL_MODULES) $(PERL_SCRIPTS)
 	for i in $^; do perl -c $$i; done
@@ -30,6 +34,9 @@ tags:	TAGS
 
 %.html: %.pm
 	pod2html $< >$@
+
+%.texi: %.pm
+	pod2texinfo $< >$@
 
 %.man: %.pl
 	pod2man $< >$@
