@@ -265,11 +265,12 @@ func_def:  func_spec cmpnd_stemnt
                         mk_funcdef(rm->data.sval, $$), EXTERN_SCOPE))
                     ct_yyerr("Duplicate function.");
                   }
+		if (szName)
+		   gjb_call_hooks_sz_i(CPP_OPTIONS(&parse_in),HI_FUNCTION,
+			 	  szName, lm && (lm->tok == STATIC));
+
                 }
               }
-	    if (szName)
-	      gjb_call_hooks_sz_i(CPP_OPTIONS(&parse_in),HI_FUNCTION,
-			  	  szName, lm && (lm->tok == STATIC));
         }
 
 enter_scope:
@@ -285,6 +286,7 @@ func_spec:  decl_specs declarator opt_decl_list
             tmp_node->test = $2;
             tmp_node->incr = $3;
             $$ = (treenode *) tmp_node;
+ 	    gjb_call_hooks_void(CPP_OPTIONS(&parse_in),HI_FUNC_SPEC);
         }
          |  declarator opt_decl_list
         {
@@ -295,6 +297,7 @@ func_spec:  decl_specs declarator opt_decl_list
             tmp_node->test = $1;
             tmp_node->incr = $2;
             $$ = (treenode *) tmp_node;
+ 	    gjb_call_hooks_void(CPP_OPTIONS(&parse_in),HI_FUNC_SPEC);
         }
 
 opt_decl_list:  /* Nothing */
