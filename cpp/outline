@@ -6,6 +6,9 @@ Date: Thursday, Oct 23, 1997, 10am, Sieg 422
 Practice: Tuesday Oct. 21, 1997, 11:30am, Sieg 422
 Paper: Thursday, October 16, 1997
 
+Thanks to Mike Ernst and David Notkin for their contributions throughout
+this project; their insights proved invaluable to this work. 
+
 * Abstract
 
 * Introduction
@@ -73,6 +76,7 @@ Paper: Thursday, October 16, 1997
 *** ASTs would necessarily not be as clean to cope with some cpp constructs
 *** integrate understanding and transformation;  text is a good universal medium
 ** multiple translation units -- how handled -- textual annotations this is easy
+** 
 
 * Results
 ** Program understanding in light of preprocessor directives
