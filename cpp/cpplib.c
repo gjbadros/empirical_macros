@@ -6916,6 +6916,18 @@ cpp_handle_options (pfile, argc, argv)
         /* Just ignore -O option */
         break;
 
+      case 'a':
+        /* ignore -ansi option */
+        if (strcmp(argv[i],"-ansi") == 0) {
+          fprintf(stderr,"ignoring -ansi option\n");
+        }
+        break;
+
+      case 'r':
+        /* ignore -rXXXX options */
+        fprintf(stderr,"ignoring -r option: %s\n", argv[i]);
+        break;
+
       case 'f':
         /* Just ignore -f options, e.g., -fno-strength-reduce */
         fprintf(stderr,"ignoring -f option: %s\n",argv[i]);
