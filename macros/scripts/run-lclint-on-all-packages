@@ -1,8 +1,0 @@
-#!/uns/bin/zsh
-LCLINT_ARGS=(-I. +weak +posix-lib +trytorecover -usevarargs)
-for i in *(/); do 
-  pushd $i
-  echo $i
-  cat c-files-listing | xargs lclint $LCLINT_ARGS `prefix-glob-with -I *(N/)` 2>/tmp/gjb/lclint-results/${i%%-*}
-  popd
-done

@@ -1,6 +1,0 @@
-# The first matching line (plus the ALL line) is used, so careful w/ordering.
-^CVSROOT mail -s "CVS checkin `date`" gjb mernst
-^macros/papers mail -s "CVS checkin `date`" gjb mernst notkin
-^macros mail -s "CVS checkin `date`" gjb mernst
-#Nothing for ALL or for cpp
-#ALL rsh forbidden zwrite gjb

@@ -1,4 +1,0 @@
-#!/bin/sh
-# This is just an example -- should use the makefile
-cd /tmp/mernst/packages
-nohup zsh -c 'for i in *(/); do pushd $i; echo $i; test -f $TM/${i%%-*}.state || em_analyze <c-files-listing -i -d $TM:${i%%-*} > $TM/${i%%-*}.err 2>&1; popd; done' > $TM/output.listing 2>&1 & 

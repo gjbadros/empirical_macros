@@ -1,4 +1,0 @@
-#!/uns/bin/zsh -
-# Should only take one argument, a .mac file.
-awk < "$1" 'NR>1 && $0 !~ /^[%#]/ && $11 ~ /FromStdin/ {print $9}' | \
-    sort | uniq -c
