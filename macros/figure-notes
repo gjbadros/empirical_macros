@@ -1,0 +1,102 @@
+Contents:
+ * Excel importation notes
+ * Hand-edits to LaTeX figures
+
+===========================================================================
+
+Excel importation notes
+
+1) do 'make clean; make copy' from data/ directory
+
+2) start excel (works well w/ WinDD -- not tested thorougly w/ Hydraw)
+
+3) Load macros/papers/emp-use-all-charts.xls
+
+4) Permit "Enable Macros"
+
+5) Control page up repeatedly to ensure you're on the first sheet
+
+6) Alt-F8 to bring up the list of defined macros
+
+7) Run "OpenFiles" macro which gets a bunch of data files from g:\macros\papers
+  -> make sure g: is mounted properly
+
+8) go back to emp-use-all-charts.xls file using window -> more windows menu
+
+9) for each sheet in e-a-c.xls, copy from corresponding window (one of the files imported by the macro)
+   (file 'tbl-package-sizes-with-uses' corresponds to uses-per-line excel sheet)
+   (drop column "D" of tbl-ccd-categories -- should be all zeros)
+   (dep-byline chart, unhide columns b,c,d before pasting, then re-hide them)
+  a) Ctrl-Home, Ctrl-Shift-End, Ctrl-C
+     (sometimes you have to delete an all-zeros  column before copying)
+  b) switch back to emp-use-all-charts.xls
+  c) MOVE TO RIGHT PLACE -- sometimes NOT paste over 1st or 1st & 2nd rows
+  d) Paste with Ctrl-V (or ENTER)
+  e) watch numbers change, use Ctrl-Z to undo if bad
+  f) Now look for random instructions on worksheet and follow them.
+  g) Update last pasted time
+  h) Delete window of opened files as they are used
+
+10) Do not try to updated sheets with "(obsoleted)" in their sheet name (I
+   edited the macro to not load those data files, and they may have other
+   problems)
+
+11) Ctrl-p to print a graph to psc2es, Ctrl-Shift-P to print a graph to a file (will be prompted for name)
+
+11) Clean up the PostScript
+  a) Remove HPLJ gubbish from beginning and end of each file, if necessary
+  b) Convert PostScript to Encapsulated PostScript (on a Linux machine)
+       setenv PATH /homes/gws/gjb/bin/share:/homes/gws/gjb/bin/linux:$PATH
+       rehash
+       excel-ps-to-eps *.ps
+  c) Fix up the bounding box lines:
+       for i in *.eps; do echo $i && gv =(bbfig $i); done
+     and edit the postscript for each file as it appears.
+
+===========================================================================
+
+Hand-edits to LaTeX figures
+
+tbl-package-sizes.tex:
+  -\begin{tabular}{|l|r|r|r|r|r|r|r|} \hline
+  -Package & Version & Physical lines & NCNB lines & Files & Description \\ \hline
+  +\begin{tabular}{|l|r|r|r|r|l|} \hline
+  +Package & Version & Physical lines & NCNB lines & Files & Description \\ \hline \hline
+
+  -Total &   & 1372619 & 973877 & 2451 &   \\ \hline
+  +\hline \multicolumn{2}{|l|}{Total} & 1372619 & 973877 & 2451 & \numpackages\ packages  \\ \hline
+
+
+tbl-subset-properties.tex:
+  -\begin{tabular}{|r|*{8}{c|}}\hline
+  -\rotatebox{90}{\parbox{1in}{Percentage of~ \\ 26182 macro \\ definitions}~} &
+  -\rotatebox{90}{Free variables~(8.5\%)~} &
+  -\rotatebox{90}{Assignment~(6.5\%)~} &
+  -\rotatebox{90}{Use macro as type~(1.4\%)~} &
+  -\rotatebox{90}{Pass type as argument~(0.46\%)~} &
+  -\rotatebox{90}{Use argument as type~(0.073\%)~} &
+  -\rotatebox{90}{Pasting~(0.038\%)~} &
+  -\rotatebox{90}{Stringization~(0.031\%)~} &
+  -\rotatebox{90}{Self-referential~(0.027\%)~}
+  +\begin{tabular}{|r|*{8}{c|}}
+  +\multicolumn{1}{c}{\begin{rotate}{90}{\parbox{1in}{Percentage of~ \\ 26182 macro \\ definitions}~}\end{rotate}} &
+  +\multicolumn{1}{c}{\begin{rotate}{45}{Free variables~(8.5\%)~}\end{rotate}} &
+  +\multicolumn{1}{c}{\begin{rotate}{45}{Assignment~(6.5\%)~}\end{rotate}} &
+  +\multicolumn{1}{c}{\begin{rotate}{45}{Use macro as type~(1.4\%)~}\end{rotate}} &
+  +\multicolumn{1}{c}{\begin{rotate}{45}{Pass type as argument~(0.46\%)~}\end{rotate}} &
+  +\multicolumn{1}{c}{\begin{rotate}{45}{Use argument as type~(0.073\%)~}\end{rotate}} &
+  +\multicolumn{1}{c}{\begin{rotate}{45}{Pasting~(0.038\%)~}\end{rotate}} &
+  +\multicolumn{1}{c}{\begin{rotate}{45}{Stringization~(0.031\%)~}\end{rotate}} &
+  +\multicolumn{1}{c}{\begin{rotate}{45}{Self-referential~(0.027\%)~}\end{rotate}}
+
+tbl-summarize-frequency.tex:
+  Update by hand from tbl-avg-def-frequency, tbl-avg-ddf-frequency
+
+tbl-subset-categories.tex:
+  Comment out the last half or so of the table which represents very
+  infrequently ocurring combinations.
+
+tbl-where-used.tex:
+  Remove three \hline commands.
+
+===========================================================================
