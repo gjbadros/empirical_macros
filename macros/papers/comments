@@ -11,26 +11,29 @@ x = not done (rejected the suggestion)
 o The one big comment: it's too easy to lose track where one is in the paper.
 o I don't know how to solve this.
 
-o 1) Mike, you should add an acknowledgment of your IBM fellowship.
+^ 1) Mike, you should add an acknowledgment of your IBM fellowship.
+    [Moved to end.]
 
-o 2) Introduction:
+
+  2) Introduction:
 
 o      a) "understanding and transforming" should perhaps read "understanding
 o      and modifying".  I didn't mark it everywhere, but this version still
 o      feels a bit too heavily weighted towards supporting transformation of
 o      C programs (to C++), and I don't think that works so well.
 
-o      b) "but lends itself to arbitrary" => "allowing"
+       b) "but lends itself to arbitrary" => "allowing"
 
-o      c) The period at the end of the p. 424 Stroustrup quotation should, I
-o      think go after the "]".
+x      c) The period at the end of the p. 424 Stroustrup quotation should, I
+x      think go after the "]".
+    [That would work, too, but I (not strongly) prefer the current way.]
 
 o      d) I think we can live without any citations to approximate tools, but
 o      it wouldn't hurt either.
 
-o      e) "approximate tools (such ... techniques)." => "tools that produce
-o      approximate information, such as those based on lexical or on
-o      approximate parsing techniques."
+       e) "approximate tools (such ... techniques)." => "tools that produce
+       approximate information, such as those based on lexical or on
+       approximate parsing techniques."
 
 o      f) The segue from the last bullet ("The final option") to the next
 o      paragraph is weak.  I know, I put it there myself.  I'll suggest
@@ -41,7 +44,7 @@ o           an understanding of how Cpp is used in practice.  That is,
 o           much has been written about Cpp's potential pitfalls, but no
 o           previous work has examined..."
 
-o      g) "that might, if present in practice, compilcate" => that complicate"
+       g) "that might, if present in practice, compilcate" => that complicate"
 
 o      h) After "software engineers and tool builders" I might add the following
 o      text:
@@ -55,7 +58,7 @@ o           feasible."
 o           [OK, the writing sucks.  But something like this might help,
 o           perhaps after the bullets.]
 
-o      i) Make sure that Cpp is consistently capitalized throughout.
+       i) Make sure that Cpp is consistently capitalized throughout.
 
 o      j) I happen to hate the formatting of {description}, but that's life.
 
@@ -64,34 +67,36 @@ o      word "problematic" (or a synonym), to give the sense about what the
 o      specific pitfall is.  As an example, why complicated bodies are a
 o      potential pitfall isn't stated.
 
-o 3) Metholodogy
+  3) Metholodogy
 
 o      a) Do either of you know the difference between "that" and "which"?
 o      (Restrictive vs. unrestrictive, I believe, is the term.)  If so, fix
 o      them in the paper.  Otherwise, don't waste the time now.  (A quick
 o      look at the on-line Strunk & White can give a quick rundown on this.)
+    [Greg will do this.]
 
-o      b) "while others are not, and some are graphical while" => "while
-o      others are not; some are graphical, while"
+       b) "while others are not, and some are graphical while" => "while
+       others are not; some are graphical, while"
 
-o      c) "thoroughgoing" => "thorough"
+       c) "thoroughgoing" => "thorough"
 
-o      d) This [[comment]] on merging Cpp branches should come out,
-o      I think, without replacement by real text.
+^      d) This [[comment]] on merging Cpp branches should come out,
+^      I think, without replacement by real text.
+    [I'm not sure I buy this, but OK.]
 
-o      e) I'm not sure that the paragraph, "We perform approximate
-o      parsing..."  belongs where it is.  I slightly prefer appending it to
-o      the end of the following paragraph (which introduces the tools
-o      themselves), although I don't really like ending the section that way.
-o      OK, so instead insert this paragraph between the two sentences in the
-o      last paragraph.  I think that works.
+       e) I'm not sure that the paragraph, "We perform approximate
+       parsing..."  belongs where it is.  I slightly prefer appending it to
+       the end of the following paragraph (which introduces the tools
+       themselves), although I don't really like ending the section that way.
+       OK, so instead insert this paragraph between the two sentences in the
+       last paragraph.  I think that works.
 
-o      f) "because the input is not a valid C program".  Well, this maybe
-o      should be "because the input may not be a valid C program".
+       f) "because the input is not a valid C program".  Well, this maybe
+       should be "because the input may not be a valid C program".
 
-o      g) "Perk" => "Perl"
+       g) "Perk" => "Perl"
 
-o 4) Occurrence of preprocessor directives
+  4) Occurrence of preprocessor directives
 
 o      a) MAJOR POINT: As I said in earlier email to Mike, I think the
 o      biggest problem with the paper is that it's unbelievably easy to get
@@ -101,69 +106,76 @@ o      aware of where they are.  (I found this worst in Section 4, I think,
 o      which is very long.)  If this were a talk, the kind of icons to track
 o      progress would work; but I don't have a great idea here.
 
-o      b) "non-comment, non-blank (NCNB)" => "NCNB", since it was already
-o      defined and introduced.
+       b) "non-comment, non-blank (NCNB)" => "NCNB", since it was already
+       defined and introduced.
 
-o      c) "One in ten" => "Nearly one in ten"
+@      c) "One in ten" => "Nearly one in ten"
+    [Greg will deal with this.]
 
-o      d) "percentage of #define" => "percentage of #defines" (with proper
-o      typefaces.
+       d) "percentage of #define" => "percentage of #defines" (with proper
+       typefaces.
 
-o      e) FOR ALL THE FIGURES, make sure that there is only one caption,
-o      not one from Excel and one from Latex.
+@      e) FOR ALL THE FIGURES, make sure that there is only one caption,
+@      not one from Excel and one from Latex.
+    [Those are actually x-axis labels, not captions.  Greg will put them in
+    non-bold typeface.]
 
-o      f) Even for Figure 2's caption, I'd add a "fer instance":  "For
-o      example, x.y% of gzip's NCNB lines are #includes, and 4.4% of all
-o      lines across the packages are conditional complation directives."
+       f) Even for Figure 2's caption, I'd add a "fer instance":  "For
+       example, x.y% of gzip's NCNB lines are #includes, and 4.4% of all
+       lines across the packages are conditional complation directives."
 
-o      g) "are easiest to understand and to translate into the programming
-o      language" ...  This is an example of a sentence that needs to be
-o      rewritten.  I'd say something like:
+       g) "are easiest to understand and to translate into the programming
+       language" ...  This is an example of a sentence that needs to be
+       rewritten.  I'd say something like:
 
-o           "are easiest to analyze, understand, and perhaps even
-o           translate into other language constructs; so there is reason
-o           to believe that the 70% of macros whose bodies are
-o           expressions and the 6% that are statements can be handled
-o           relatively easily by people and tools."
+            "are easiest to analyze, understand, and perhaps even
+            translate into other language constructs; so there is reason
+            to believe that the 70% of macros whose bodies are
+            expressions and the 6% that are statements can be handled
+            relatively easily by people and tools."
 
-o      Similarly, the last sentence in the "Type" item focuses too much
-o      on translation and can be similarly rewritten, I believe.
+o      Similarly, the last sentence in the "Type" item ("may be tricky to
+o      understand" focuses too much on translation and can be similarly
+o      rewritten, I believe.
 
-o      h) I found that the Cpp directives in-line worked pretty well most of
-o      the time.  But I found that sometimes, like in "Statement", it didn't
-o      work well, especially with the use of the quotation marks.  I think
-o      in these cases (and perhaps always, although it will length the
-o      paper a tad), the longer directives should be opened up.  For
-o      example (**'s are bullets),
+       h) I found that the Cpp directives in-line worked pretty well most of
+       the time.  But I found that sometimes, like in "Statement", it didn't
+       work well, especially with the use of the quotation marks.  I think
+       in these cases (and perhaps always, although it will length the
+       paper a tad), the longer directives should be opened up.  For
+       example (**'s are bullets),
 
-o           "The macro body is a complete statement such as one
-o           of the following:
+	    "The macro body is a complete statement such as one
+	    of the following:
 
-o                ** plu = ".";
-o                ** if (x) {free(x); x=NULL;}
-o                ** { int...}
+		 ** plu = ".";
+		 ** if (x) {free(x); x=NULL;}
+		 ** { int...}
 
-o           Such a macro..."
+	    Such a macro..."
 
-o      i) Omit any text w.r.t. "[[Not all such are...]]", since it's covered
-o      later.
+       i) Omit any text w.r.t. "[[Not all such are...]]", since it's covered
+       later.
 
-o      j) Make sure all the package names are visible on the vertical
-o      axis for Figure 3.
+@      j) Make sure all the package names are visible on the vertical
+@      axis for Figure 3.
+    [Greg will do this.]
 
-o      k) I was surprised to read (I had probably just forgotten) that
-o      the parser "does not handle uses of pasting".  All uses?  Also,
-o      this reminds me that it's probably worthwhile defining what
-o      stringization and pasting are, perhaps in a footnote.
+^      k) I was surprised to read (I had probably just forgotten) that
+^      the parser "does not handle uses of pasting".  All uses?  Also,
+^      this reminds me that it's probably worthwhile defining what
+^      stringization and pasting are, perhaps in a footnote.
+    [Yes, all uses :-(.  I added a reference to the properties explanation
+    of section 4.3.]
 
-o      l) "were examined" =< "were examined)"
+       l) "were examined" =< "were examined)"
 
-o      m) "elimination of the preprocessor" => "reducing the use of
-o      the preprocessor"
+       m) "elimination of the preprocessor" => "reducing the use of
+       the preprocessor"
 
-o      n) In the example in Stringization (right before 4.3), definitely
-o      put the example on a line of its own, since this parenthetical
-o      ("(the comman is part of the macro body)" really sucks).
+       n) In the example in Stringization (right before 4.3), definitely
+       put the example on a line of its own, since this parenthetical
+       ("(the comman is part of the macro body)" really sucks).
 
 o      o) The transition to 4.3 (macro lint) is a specific place I got
 o      a bit lost.  It's not that the intro to 4.3 isn't clear.  It's a bit
@@ -175,59 +187,60 @@ o      4.3 belong here?"  I think the reason is the "macro lint" is a
 o      bit disruptive; it sounds like a tool is the focus, rather than the
 o      analysis per se.
 
-o      p) "We were surprised that more macros did not take simple..."
-o      This whole sentence can go, since it's handled (better) a bit
-o      later on.
+       p) "We were surprised that more macros did not take simple..."
+       This whole sentence can go, since it's handled (better) a bit
+       later on.
 
-o      q) Check the formatting in the use of TAINT_ENV in "swallows
-o      else"
+       q) Check the formatting in the use of TAINT_ENV in "swallows
+       else"
 
 o      r) I think at the end of 4.3 (macro lint) we need a pointer to
 o      related work (lclint, etc.).
 
-o      s) "under all possible circumstances" => "under all possible
-o      configurations", perhaps?
+       s) "under all possible circumstances" => "under all possible
+       configurations", perhaps?
 
 o      t) "less than 2" => "less than two"
 
-o      u) "redefined In" => "redefined.  In"
+       u) "redefined In" => "redefined.  In"
 
-o      v) "definitions in in" => "definitions in"
+       v) "definitions in in" => "definitions in"
 
-o      w) "intervening #undef", make sure it's formatting properly.
+       w) "intervening #undef", make sure it's formatting properly.
 
-o Figure 6:
+  Figure 6: Move the "(#define directives)" to the first phrase, after
+       "Number of definitions".
 
-o      a) Move the "(#define directives)" to the first phrase, after "Number
-o      of definitions".
+  Section 4:
 
-o Section 4:
+       a) In my version there is a problem (I'd guess a % not a \%) right
+       after the phrase "defined more than 20 times, and"
 
-o      a) In my version there is a problem (I'd guess a % not a \%) right
-o      after the phrase "defined more than 20 times, and"
+       b) In the subsection on "Inconsistent definitions", I wonder if
+       the rules for merging should really go here.  I understand why
+       they are here, but they break the flow a bit.  It's probably right
+       to leave them there, but a long footnote and a short appendix
+       are alternatives.
 
-o      b) In the subsection on "Inconsistent definitions", I wonder if
-o      the rules for merging should really go here.  I understand why
-o      they are here, but they break the flow a bit.  It's probably right
-o      to leave them there, but a long footnote and a short appendix
-o      are alternatives.
+       c) In the third bullet in category merging, the parenthetical has
+       to be rephrased.  Saying "this is the wrong way" isn't a smart
+       idea in a paper.  I can imagine a rephrased footnote as more
+       appropriate, too; it's even reasonably (perhaps best) simply
+       to omit the parenthetical.
 
-o      c) In the third bullet in category merging, the parenthetical has
-o      to be rephrased.  Saying "this is the wrong way" isn't a smart
-o      idea in a paper.  I can imagine a rephrased footnote as more
-o      appropriate, too; it's even reasonably (perhaps best) simply
-o      to omit the parenthetical.
+@      d) I slightly agree with Greg about dropping Figure 7.   I don't
+@      feel strongly here.
+    [Yes, we'll drop it and move figure 11 up.]
 
-o      d) I slightly agree with Greg about dropping Figure 7.   I don't
-o      feel strongly here.
+       e) "plus some complete sentences" => "plus some complete
+       statements".
 
-o      e) "plus some complete sentences" => "plus some complete
-o      statements".
+x      f) In caption of Figure 8: "classified as `failure'" => "classified
+x      as `failure' due to appearance in conflicting categories"
+    [No, they might be classified as failure due only to appearance in one
+    category -- failure.]
 
-o      f) In caption of Figure 8: "classified as `failure'" => "classified
-o      as `failure' due to appearance in conflicting categories"
-
-o Section 5:
+  Section 5:
 
 o      a) In the second sentence it says "one of three things".  A few
 o      sentences down is says "in both ways".  I found this a little
@@ -235,8 +248,9 @@ o      confusing.
 
 o      b) "Overall, half" => "Overall, about half"
 
-o      c) "Interestingly, the four packages" => "Interestingly, but
-o      perhaps coincidentally, the four packages"
+^      c) "Interestingly, the four packages" => "Interestingly, but
+^      perhaps coincidentally, the four packages"
+    [Delete "interestingly"; let the reader draw his/her own conclusions.]
 
 o      d) I wonder about moving the reference to Figure 12
 o      to earlier in 5.2 (macro usage in conditional compilation).
@@ -252,7 +266,7 @@ o      can be present in running text with a few key pieces of
 o      data.  I think that leaving it in makes sense (without the
 o      figure).
 
-o Section 6:
+  Section 6:
 
 o      a) Definitely choose and consistently use a terminology.
 o      It matters far less which terminology you choose.
@@ -265,7 +279,7 @@ o      c) I assume 6.2.1 and 6.2.2 have been rewritten, so I'm
 o      not providing comments.  I'm happy to take another pass
 o      at these (or all of Section 6).
 
-o Section 7 (Related Work):
+  Section 7 (Related Work):
 
 o      a) Fix nits in the initial "Carroll and Ellis" statement.
 
@@ -283,7 +297,7 @@ o      we really produced a macro lint tool, users would get
 o      different answers.  Then you can mention a single specific,
 o      but no more.
 
-o Section 8 (Conclusions):
+  Section 8 (Conclusions):
 
 o      a) I wouldn't recap too much: at most a bullet or two per
 o      data section.  And it needn't be equitable: that is, it is

@@ -59,16 +59,18 @@ case for expression macros with arguments).
 % actual examples are *very* long.
 \item[Statement]\label{item:statement-category}
   The macro body is a complete statement such as
-  ``{\tt plu = ".";}'', ``{\tt if (x) \verb|{|free(x); x=NULL;\verb|}|}'' or
-    ``{\tt \verb|{| int c; while ((c = getc(fp)) != '\verb|\|n' \verb|&&| c != EOF);
-    \verb|}|}''.  Such a macro is like a function 
-    returning {\tt void}, except that uses should not be followed by a
-    semicolon (see section~\ref{sec:lint}).
+\begin{verbatim}
+    #define L_ORDINAL_OVERRIDE plu = ".";
+    #define FREE(x) if (x) {free(x); x=NULL;}
+    #define SWALLOW_LINE(fp) { int c; while ((c = getc(fp)) != '\n' && c != EOF); }
+\end{verbatim}
+  Such a macro is like a function returning {\tt void}, except that uses
+  should not be followed by a semicolon (see section~\ref{sec:lint}).
     
-    To reduce the number of categories in this presentation, the statement
-    category aggregates single statements (comprising 47\% of the category),
-    statements missing their final semicolon (as in {\tt \#define QUIT if
-    (\verb|interrupt_state|) \verb|throw_to_top_level|()}; these account
+  To reduce the number of categories in this presentation, the statement
+  category aggregates single statements (comprising 47\% of the category),
+  statements missing their final semicolon (as in {\tt \#define QUIT if
+  (\verb|interrupt_state|) \verb|throw_to_top_level|()}; these account
   for 45\%), multiple statements (3.0\%), multiple statements where the
   last one is missing its final semicolon (3.5\%), and partial statements
   (as in {\tt \#define ASSERT(p) if (!(p)) botch(\verb|__STRING|(p));
@@ -86,13 +88,12 @@ case for expression macros with arguments).
 \item[Type] 
   These macros expand to a type or partial type (such as a storage class),
   or expand to a declaration (possibly missing its terminating semicolon).
-  [[Not all such are caught in the ``type'' category; some get classified
-  as ``multiple symbols''.]]  Examples include {\tt \#define \verb|__ptr_t|
-  void *}, {\tt \#define \verb|__INLINE| extern inline}, {\tt \#define
-private static}, {\tt \#define \verb|FLOAT_ARG_TYPE| union \verb|flt_or_int|}, and {\tt
-\#define CMPtype SItype}.  As a result, these macros may be tricky to
-understand, and cannot be eliminated via straightforward translation
-(though C++ templates may provide some hope).
+  Examples include {\tt \#define \verb|__ptr_t|
+  void~*}, {\tt \#define \verb|__INLINE| extern inline}, {\tt \#define
+private static}, {\tt \#define \verb|FLOAT_ARG_TYPE| union
+\verb|flt_or_int|}, and {\tt \#define CMPtype SItype}.  As a result, these
+macros may be tricky to understand, and cannot be eliminated via
+straightforward translation (though C++ templates may provide some hope).
 
 
 
@@ -180,16 +181,17 @@ understand, and cannot be eliminated via straightforward translation
   categorization is unlikely to affect our conclusions.
   
   Some failures resulted from limitations of our parser, which does not
-  handle uses of pasting, and does not handle C++ or some non-portable C
-  extensions.  Handling of partial entities is incomplete, so case labels
-  and parts of structure declarations, and partial expressions are left
-  unclassified.  Heuristics for recognizing operating system command lines
-  or flags occasionally fail.  Additional failures result from macro
-  bodies which cannot be unambiguously assigned to another category because
-  their syntactic class depends on their arguments\,---\,such as {\tt
-  \#define EXFUN(name, proto) name proto} and {\tt \#define
+  handle pasting (defined in section~\sec{def:pasting}), C++, or some
+  non-portable C extensions.  Handling of partial entities is incomplete,
+  so case labels, parts of structure declarations, and partial expressions
+  are left unclassified.  Heuristics for recognizing operating system
+  command lines or flags occasionally fail.  Additional failures result
+  from macro bodies which cannot be unambiguously assigned to another
+  category because their syntactic class depends on their
+  arguments\,---\,such as {\tt \#define EXFUN(name, proto) name proto} and
+  {\tt \#define
 \verb|DO_OP|(OP,a,b) (a OP b)}.  Finally, macros in bodies were not
-expanded (though their classifications were examined, causing a small
+expanded (though their classifications were examined), causing a small
 amount of cascading of failures when complicated or unclassified macros
 appeared in other macro definitions.
 

@@ -121,7 +121,7 @@
 \end{verbatim}
         a use like
 \begin{alltt}
-    if ({\em condition})
+    if ({\rm\em{}condition})
       TAINT_ENV();
     else \ldots
 \end{alltt}
@@ -136,15 +136,18 @@
         resulted from a too-complete statement which failed to be
         associated with a textually subsequent token.  The solution is
         similar: either add an else clause with an empty statement, as in
-        {\tt \#define ASSERT(p) if (!(p)) botch(\verb|__STRING|(p)); else}, or
-        wrap statements in {\tt \verb|{| \ldots\ \verb|}|} and wrap partial
-        statements in {\tt do \verb|{| {\rm \ldots}\ \verb|}| while (0)}.
+\begin{verbatim}
+    #define ASSERT(p) if (!(p)) botch(__STRING(p)); else
+\end{verbatim}
+        or wrap statements in {\tt \verb|{| \ldots\ \verb|}|} and wrap
+        partial statements in {\tt do \verb|{| {\rm \ldots}\ \verb|}| while
+        (0)}.
 
 \item[bad formal name]
         The formal name is not a valid identifier or is a reserved word
-        (possibly in another dialect of C).
+        (possibly in another dialect of C), as in
 \begin{verbatim}
-#define CR_FASTER(new, cur) (((new) + 1) < ((cur) - (new)))
+    #define CR_FASTER(new, cur) (((new) + 1) < ((cur) - (new)))
 \end{verbatim}
         This presents no difficulty to Cpp, but a programmer reading the
         body (especially a more complicated one) may become confused.

@@ -44,15 +44,16 @@
   {\tt \#define PTRBITS \verb|__BITS|(char*)}.  Like using a macro result
   as a type, this is impossible in C\@.
 
-\item[Pasting]
+\item[Pasting]\label{def:pasting}
   The body uses symbol pasting ({\tt \#\#}), which treats its arguments not
   as tokens but as strings, constructing a new token out of their
-  concatenation, as in {\tt \#define \verb|_SIZEOF|(x) \verb|sz_|\#\#x}.
-  The resulting symbol might appear literally, or only as a pasted symbol,
-  at its other uses.  Since pasting is often abstracted out into a separate
-  macro\,---\,such as {\tt \#define \verb|__CONCAT|(x,y) x \#\#
-  y}\,---\,the incidence of pasting is higher than the direct uses
-  reflected by this statistic.
+  concatenation, as in {\tt \#define \verb|_SIZEOF|(x) \verb|sz_|\#\#x},
+  after which the macro invocation {\tt \verb|_SIZEOF|(int)} expands to the
+  symbol {\tt sz_int}.  The resulting symbol might appear literally, or
+  only as a pasted symbol, at its other uses.  Since pasting is often
+  abstracted out into a separate macro\,---\,such as {\tt \#define
+  \verb|__CONCAT|(x,y) x \#\# y}\,---\,the incidence of pasting is higher
+than the direct uses reflected by this statistic.
 
 \item[Use argument as type]
   This macro uses one of its arguments as a type.  Not all uses can be
@@ -74,13 +75,17 @@
   the original name.
 
 \item[Stringization]
-  The body uses argument stringization ({\tt \#}), which converts its
-  argument from a token stream into a string.  Examples include {\tt
-  \#define spam1(OP,DOC) \verb|{|\#OP, OP, 1, DOC\verb|}|,} (the comma is
-part of the macro body) and {\tt \#define REG(xx) register long int xx asm
-(\#xx)}.  No C or C++ language mechanism can replace such macros.  This
-feature is particularly useful in debugging, in order to print or record
-the exact operations being performed.
+  The body uses argument stringization ({\tt \#}), which replaces its
+  argument (a preprocessor symbol) by its contents as a C string.  After
+  {\tt \#define FOO BAR BAZ}, the expression {\tt \#FOO} expands to {\tt
+  "BAR~BAZ"}.  Examples using stringization include
+\begin{verbatim}
+    #define spam1(OP,DOC) {#OP, OP, 1, DOC},
+    #define REG(xx) register long int xx asm (#xx)
+\end{verbatim}
+  No C or C++ language mechanism can replace such macros.  This feature is
+  particularly useful in debugging, in order to print or record the exact
+  operations being performed.
 
 \end{description}
 
