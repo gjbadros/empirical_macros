@@ -1,0 +1,5 @@
+#!/bin/sh -
+# This just gives us c/c++ source + headers
+# and skips things that start with ./usr/include
+# (Need it to be a shell script for other scripts, not just an alias)
+find . \( -path './usr/*' -o -path './homes/gws/gjb/include/Xm/*' -o -name UNUSED -o -name CVS -o -name SCCS -o -name RCS \) -prune -o \( -name "*.[chCH]" -o -name "*.[cC][cC]" -o -name "*.[cC][pP][pP]" \) -print "$@"

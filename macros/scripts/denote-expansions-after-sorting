@@ -1,0 +1,3 @@
+#!/uns/bin/zsh -f
+FORCE=""
+denote-expansions  =(sort +0 -1 +2 -3n "$@" | uniq)
