@@ -10,4 +10,7 @@ pwd
 echo "em_analyze $FLAGS -i -t -d $TM:$TARGET > $TM/$TARGET.out 2> $TM/$TARGET.err"
 ( grep -v '^#' c-files-listing || find-c ) \
      | em_analyze $FLAGS -i -t -d $TM:$TARGET > $TM/$TARGET.out 2> $TM/$TARGET.err
+RESULT=$?
 popd
+# propagate the em_analyze return value
+exit $RESULT
