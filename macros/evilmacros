@@ -2430,6 +2430,9 @@ sub cpp_merge_candidates
 THENPART:
   # At this point we are already past the initial #if
   $next_line = peek_line($prev_sizes+1);
+  if (!defined($next_line)) {
+    return (0);
+  }
   if ($debug_peek)
     { my $peeked_at = $prev_sizes+1;
       print "Just peeked at $peeked_at (ungot 1+$#getline_ungot_raw_lines): $next_line";
@@ -2449,6 +2452,9 @@ THENPART:
       if (!defined($prev_sizes))
 	{ return undef; }
       $next_line = peek_line($prev_sizes+1);
+      if (!defined($next_line)) {
+	return (0);
+      }
       if (!($next_line =~ /^\#\s*els(e|if)\b/))
 	{ return undef; }
       $prev_sizes++;
@@ -2466,6 +2472,9 @@ THENPART:
 	{ return undef; }
       push(@parts, $then_clause);
       $next_line = peek_line($prev_sizes); # not $prev_sizes+1
+      if (!defined($next_line)) {
+	return (0);
+      }
     }
 
   if ($debug_merge_branches) { print "cpp_merge_branches: thenpart $parts[$#parts]"; }
@@ -2480,6 +2489,9 @@ THENPART:
 
 ELSEPART:
   $next_line = peek_line($prev_sizes+1);
+  if (!defined($next_line)) {
+    return (0);
+  }
   if ($next_line =~ /^\#\s*if(n?def)?\b/)
     # This was else ... if; treat it like elsif and go back to then part
     { if ($debug_merge_branches)
@@ -2491,6 +2503,9 @@ ELSEPART:
       if (!defined($sub_prev_sizes))
 	{ return undef; }
       $next_line = peek_line($sub_prev_sizes+1);
+      if (!defined($next_line)) {
+	return (0);
+      }
       if (!($next_line =~ /^\#\s*endif\b/))
 	{ return undef; }
       $prev_sizes = $sub_prev_sizes+1;
@@ -2504,6 +2519,9 @@ ELSEPART:
 	{ return undef; }
       push(@parts, $else_clause);
       $next_line = peek_line($prev_sizes); # not prev_sizes+1
+      if (!defined($next_line)) {
+	return (0);
+      }
     }
   if ($debug_merge_branches) { print "cpp_merge_branches: elsepart $parts[$#parts]"; }
   if (!($next_line =~ /^\#\s*endif/))
@@ -2609,7 +2627,11 @@ sub cpp_merged_branches
   # declarations at the front of a function body.
 
   { # print "peeking for function body at ", peek_line($parts_size+1), "\n";
-    if (peek_line($parts_size+1) =~ /^\s*\{/)
+    my $ln = peek_line($parts_size+1);
+    if (!defined($ln)) {
+      return undef;
+    }
+    if ($ln =~ /^\s*\{/)
       { # print "found an open brace\n";
 	if ($parts[0] =~ /^\s*$type_declarator_re\s*\(/o)
 	  { my $rettype = $1;
