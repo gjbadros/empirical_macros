@@ -1,0 +1,18 @@
+#!/uns/bin/zsh -
+# macros-make-data
+
+if [[ $# != 1 ]]; then
+  echo "Usage: $0 <packages-directory>"
+  exit -1
+fi
+
+TM=$PWD
+PKG=$1
+cd $PKG
+
+for i in *(/); do 
+  echo $i
+  pushd $i
+  find-c | evilmacros -i -d $TM:${i%%-*} >$TM/${i%%-*}.out 2> $TM/${i%%-*}.err
+  popd
+done
