@@ -5276,7 +5276,7 @@ sub update_categories_for ($$) {
 
   if ($debug_categorize_macro)
     { print STDERR "CAT: $category got incremented -- now is ",
-        $ {$rg_category_counts[$current_ftype_index]}{$category}, "\n"; }
+        $ {$rg_category_counts[$ftype_index]}{$category}, "\n"; }
 }
 
 
