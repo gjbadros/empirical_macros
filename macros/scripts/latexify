@@ -10,7 +10,7 @@ cat $INPUT >$OUT
 COLS=`awk <$OUT '{print NF; exit}'`
 echo -n "\\\\begin{tabular}{|l|"
 for i in {1..$[COLS-1]}; do echo -n "r|"; done
-echo "}\\\\hline"
-sed -e 's/	\+/ \& /g' -e 's/\( \& *\)\?$/\\\\\\hline/' $OUT
+echo "} \\\\hline"
+sed -e 's/	\+/ \& /g' -e 's/\( \& *\)\?$/ \\\\ \\hline/' $OUT
 echo "\\\\end{tabular}"
 rm -f $OUT
