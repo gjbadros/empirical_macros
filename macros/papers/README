@@ -1,11 +1,16 @@
 As of 10/1/97:
 
-new-outline:  the new outline
+new-outline	the new outline
+emp-use-2.tex	main body
 expl-*:		explanations of categories, properties, etc.
-cannibalize.tex:  sections of the old empirical-uses.tex that haven't yet
+cannibalize.tex   sections of the old empirical-uses.tex that haven't yet
 		been merged into one of the above.
 
+empirical-uses.tex	old version of paper; don't update any longer.
+
 ===========================================================================
+
+** The following info is very old **
 
 Files in this directory:
 
