@@ -30,7 +30,7 @@ How To Use Pcp3 To Preprocess A Package
       perl -ibak and a tricky zsh pattern like **/Makefile 
 
 4) make -k in all appropriate directories -- the link step will fail
-4c) Ignore most of the make output (it's largely redefinition warnings),
+4b) Ignore most of the make output (it's largely redefinition warnings),
     but do search for "**", which marks a pcp3 error.
 
 5) cd to the top level directory
@@ -39,18 +39,20 @@ How To Use Pcp3 To Preprocess A Package
    pcp3-compare-exps-vs-c-files-listing
    # check that for every .c file, a .exps file exists
 
-6b) For each file remaining, create the .exps file by making that .o file
-        make -k CC=gcc-pcp3
+6b) For each .c file remaining, create the .exps file by making that .o file
+        make -k CC=gcc-pcp3 *****.o
     (may need to touch-oldify the .o file first).
     Do this in its own directory, not from the top-level directory.
 
+    Ignore the following:
+     * files for a different architecture (OS/2, Amiga, etc.)
+     * system-related files already provided by Linux (alloca, vms*)
 
-
-7) pcp3-combine-expansions to create 
+7) pcp3-combine-expansions
    # To create expansions.lst
    
 8) denote-expansions expansions.lst 2> denote-expansions.err
-   # (zsh syntax)
+   # (zsh syntax; capture output so it isn't lost, unnecessary under Emacs)
    # create munged/* directory hierarchy with preprocessed files
    # If anything went wrong here, it's *bad news*.
 
