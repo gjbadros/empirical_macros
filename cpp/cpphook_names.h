@@ -36,6 +36,7 @@ char *hook_names[] = {
 "DONE_INCLUDE_FILE",
 "TOKEN",
 "FUNCTION",
+"FUNC_PROTO",
 "FUNC_CALL",
 "TYPEDEF",
 "VARDECL",
