@@ -13,7 +13,7 @@
   /* Cause the `yydebug' variable to be defined.  */
   #define YYDEBUG 1
   
-!   int  yydebug = 1;  
+!   int  yydebug = 0;  
   
   /* ###################################################### */
   #line 168 "gram.y"
