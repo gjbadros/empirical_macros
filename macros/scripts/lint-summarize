@@ -12,6 +12,12 @@ elsif (/^Excluding libraries, (\d+) macros defined (\d+) times$/)
   { $macros += $1;
     $defs += $2;
     $packages++; }
+elsif (/^([0-9]+)\s+\([0-9]+\.[0-9]+%\) any warning by name$/)
+  { $names_any_warning += $1;
+    $names_any_warning_files++; }
+elsif (/^([0-9]+)\s+\([0-9]+\.[0-9]+%\) any warning by def$/)
+  { $defs_any_warning += $1;
+    $defs_any_warning_files++; }
 elsif (/^([0-9]+)\s+\([0-9]+\.[0-9]+%\) inconsistent arity$/)
   { $different_arity += $1;
     $different_arity_files++; }
@@ -50,6 +56,10 @@ END
 {
   if (!defined($packages))
     { die "Undefined packages"; }
+  if (!defined($names_any_warning_files))
+    { die "Undefined names_any_warning_files"; }
+  if (!defined($defs_any_warning_files))
+    { die "Undefined defs_any_warning_files"; }
   if (!defined($different_arity_files))
     { die "Undefined different_arity_files"; }
   if (!defined($null_body_files))
@@ -73,7 +83,9 @@ END
   if (!defined($formal_modified_files))
     { die "Undefined formal_modified_files"; }
 
-  if (($packages != $different_arity_files)
+  if (($packages != $names_any_warning_files)
+      || ($packages != $defs_any_warning_files)
+      || ($packages != $different_arity_files)
       || ($packages != $null_body_files)
       || ($packages != $newline_body_files)
       || ($packages != $unparen_body_files)
@@ -84,11 +96,12 @@ END
       || ($packages != $formal_adjacent_use_files)
       || ($packages != $formal_unparen_use_files)
       || ($packages != $formal_modified_files))
-    { die "Inconsistent number of files with info: '$packages' '$null_body_files' '$newline_body_files' '$unparen_body_files' '$swallow_semi_files' '$free_var_files' '$formal_name_files' '$formal_mult_use_files' '$formal_adjacent_use_files' '$formal_unparen_use_files' '$formal_modified_files'"; }
+    { die "Inconsistent number of files with info: '$packages' '$names_any_warning_files' '$defs_any_warning_files' '$different_arity_files' '$null_body_files' '$newline_body_files' '$unparen_body_files' '$swallow_semi_files' '$free_var_files' '$formal_name_files' '$formal_mult_use_files' '$formal_adjacent_use_files' '$formal_unparen_use_files' '$formal_modified_files'"; }
 
   print_lint_summary($different_arity, $null_body, $newline_body,
 		     $unparen_body, $swallow_semi, $free_var, $formal_name,
 		     $formal_mult_use, $formal_adjacent_use,
 		     $formal_unparen_use, $formal_modified,
-		     $macros, $defs, $packages);
+		     $macros, $defs, $names_any_warning, $defs_any_warning,
+		     $packages);
 }
