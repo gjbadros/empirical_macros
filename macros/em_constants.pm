@@ -16,6 +16,12 @@ require Exporter;
 $true = (1 == 1);
 $false = (1 == 0);
 
+#use Boolean;  # probably need to add TRUE FALSE to the export list, too
+# Boolean uses constant.pm to basically do this:
+# sub name TRUE () { 1==1 }
+# sub name FALSE () { 1==0 }
+# In Perl 5.004, this allegedly will be expanded inline
+
 # some evilness (pasting, stringization) is independent of the others,
 # though it may not be able to be classified (actually, stringization
 # is pretty easy to classify, when we see that a macro argument follows #).
