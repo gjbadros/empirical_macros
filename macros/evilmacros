@@ -4,25 +4,27 @@
 
 # Test: $foo isn't defined
 
+# TODO: learn perldb, any perl profiler?, learn perl compiler
+# TODO: split up this huge file, use fewer globals, write packages
+
+# TERMS:
+#   project file == a file passed in via -i, or on cmd line
+#                   it is also called an NI (not-included) file
+#   system file == a file that got parsed because another file
+#                  #include-d it
+
+
+# FIX: handle #define /* badly-placed-comment */ MACRONAME  properly
+# FIX: getline should probably always return a simplified and an
+# FIX:   unsimplified version of the line so that if we're not looking
+# FIX:   at simplified lines, we don't have to duplicate the simplification
+# FIX:   in an ad-hoc way
+
 # Can't use "use", as it is executed upon parsing even if in guard.
 BEGIN { if (defined $ENV{"PERLINC"})
 	  { unshift(@INC, split(/[ :]+/, $ENV{"PERLINC"})); } }
 
-# Report "evil" CPP macros:
-#  Illegal macros:
-#   Unterminated string
-#   Wrong length character constant
-#   Unterminated character constant
-#   Pasting via comments (syntactically legal, but no pasting occurs in ISO C)
-#  Potentially dangerous macros:
-#   Unbalanced parens, braces, and brackets
-#   Pasting via ##
-#   Stringization via #
-#   Arguments but no body
-#  Turned off testing for:
-#   Empty string
-
-my $getopts_option_letters = "ihvtIAauD:S:F:C:E:";
+my $getopts_option_letters = "ihvtIAau1D:S:F:C:E:";
 
 # Remove the asterisks below when the options
 # are known to the users
@@ -38,7 +40,8 @@ New options marked with *, options with ':', above, take an argument
   -I  ignore include files--just parse files passed in
 * -A  do the second pass on all files, not just those passed in
 * -a  do macro statistics on all files, not just those passed in
-  -u  ignore usage--do only a single pass
+* -u  ignore usage
+* -1  do only the first pass (don't do function parsing, usage)
   -D [file]  output the names of the macros (and number of times defined)
   -S [file]  output the per directive statistics to file
   -F [file]  output the function information to a file
@@ -73,7 +76,7 @@ New options marked with *, options with ':', above, take an argument
 #   commands.
 # However, continuation line pasting apparently occurs before comment removal.
 
-
+
 ###########################################################################
 ### To do
 ###
@@ -81,7 +84,7 @@ New options marked with *, options with ':', above, take an argument
 ## Temporarily moved into my notes-macros file.
 
 
-
+
 ###########################################################################
 ### Strictures
 ###
@@ -97,7 +100,7 @@ use strict;
 use English;
 
 
-
+
 ###########################################################################
 ### Other packages
 ###
@@ -105,7 +108,7 @@ use English;
 use checkargs;
 
 
-
+
 ###########################################################################
 ### Constants
 ###
@@ -598,8 +601,8 @@ my $cMacrosInTables = 0;
 # Highly unlikely filename, used for $mfile[$i] for builtin macros
 my $szBuiltInFakeFile = "%Built In%";
 
-# %files_lines is a hash from filename to a list of elements of "lineNum{fnStart"
-# or "lineNum}fnEnd"
+# %files_lines is a hash from filename to a list of elements like:
+# (start_line, function_name, end_line)
 my %files_lines;
 
 # %functions is a hash from function name to a list of lists of (file,start,end)
@@ -615,6 +618,15 @@ my $current_ft_index;		# the index of the @ft_'s for the current file
 my $current_function;		# the current function
 my $current_function_start_line; # the first line of the current function
 				# (sometimes function headers span lines)
+
+# cached values for which_function
+# FIX: perhaps we can simulate static function variables
+# by putting functions that need them after a "package" declaration
+# to change their scope.  We might then need to access globals explicitly,
+# but it could be worth it-- definitely if we move to separate files
+my $wf_last_filename;
+my $wf_last_line_no;
+my $wf_last_index;
 
 # @files contains the list of files we want to process
 # %files tells where the file got added
@@ -636,8 +648,28 @@ use vars '@include_path';
 
 # perhaps make %macros proper just index into other arrays.
 
+# FIX: this data structure is especially HACKY
 my %macros = ();	  # for each macro, list of indexes for info about it
 			  # (first list element is number of following elements)
+
+my %macros_c_undefs = ();	# hashes macro names to the number of times they
+				# are #undef-d
+
+# enumeration for the macros_uses indices
+my ($i_usage_code, $i_usage_cpp) = (0..1);
+
+my %macros_uses = ();		# hashes macro names to an array
+                                # listing the number of times they are
+                                # used in (code,cpp_directives)
+
+# can compute the number of uses at global scope with macros_uses and
+# the length of the list in macros_used_in_functions
+my %macros_used_in_functions = (); # hashes macro names to list of 
+				# file/functions that use it.  Will
+				# contain same function name
+				# repeatedly if the macro is used more
+				# than once in that function.
+
 
 # Also want to have summary info true about all definitions...
 # FIX: This data structure of parallel arrays needs to be improved
@@ -662,10 +694,10 @@ my $debug_parse_function = $false;
 ## Command-line processing
 use vars qw($opt_i $opt_I $opt_h $opt_v $opt_t 
 	    $opt_D $opt_S $opt_F $opt_C $opt_E 
-	    $opt_u $opt_A $opt_a);
+	    $opt_u $opt_1 $opt_A $opt_a);
 my $fIgnoreIncludes = $false;
 
-
+
 ###########################################################################
 ### Main loop routines
 ###
@@ -743,8 +775,17 @@ sub process_macro_definition
   # Do not just use $cppcmdcount{"define"}, since our builtins require
   # some space in the @mXXXXX arrays
   my ($thisnum) = next_available_macro_index();
-  if (!defined($macros{$name}[0]))
-    { $macros{$name}[0] = 0; }
+
+  # initialize all the parallel arrays here,
+  # so that we don't have to check the defined-ness later
+  if (!defined($macros{$name}[0])) {
+    $macros{$name}[0] = 0;
+    $macros_c_undefs{$name} = 0;
+    $macros_uses{$name} = [0,0];
+    $macros_used_in_functions{$name} = [];
+  }
+
+
   $macros{$name}[0] += 1;
   $macros{$name}[$macros{$name}[0]] = $thisnum;
   # print "def number $macros{$name}[0]:";
@@ -784,12 +825,15 @@ sub process_macro_definition
 
 
 # process_macro_undefinition is called to handle #undef-s
-#FIX: Write this for #undef-s
-#FIX: count the number of #undef-s for each macro, too
 #FIX: Get stats on number of macros only #undef-d, etc.
 sub process_macro_undefinition {
-  my ($name) = check_args(1,"process_macro_undefinition",caller,@_);
-  die "Function not written; $!";
+  my ($cpp_cmd_args) = check_args(1,"process_macro_undefinition",caller,@_);
+
+  # Pull out first word
+  $cpp_cmd_args =~ /^(\w+)\b/;
+  my $macro_name  = $1;
+
+  $macros_c_undefs{$macro_name}++;
 }
 
 # Given a macro name, try to merge the dependentons for all its definitions,
@@ -932,7 +976,7 @@ sub output_stats
 
   my $logical_lines = sum_array(@rg_logl_lines);
   my $physical_lines = sum_array(@rg_phys_lines);
-  my $ncnb_physical_lines = sum_array(@rg_phys_lines);
+  my $ncnb_physical_lines = sum_array(@rg_ncnb_lines);
   my $cpp_physical_lines = sum_array(@rg_cp_phys_lines);
   my $cpp_physical_code_lines = sum_array(@rg_cp_phys_code_lines);  
 
@@ -941,7 +985,7 @@ sub output_stats
   my $physical_lines_ni =
     sum_array(@rg_phys_lines[@ft_NOT_INCLUDED]);
   my $ncnb_physical_lines_ni =
-    sum_array(@rg_phys_lines[@ft_NOT_INCLUDED]);
+    sum_array(@rg_ncnb_lines[@ft_NOT_INCLUDED]);
   my $cpp_physical_lines_ni =
     sum_array(@rg_cp_phys_lines[@ft_NOT_INCLUDED]);
   my $cpp_physical_code_lines_ni =
@@ -1006,18 +1050,33 @@ sub output_stats
   # -D = dump the defines
   if ($opt_D) {
     my $name;
-    print DEFINES "MACROS#: name cDefs\n";
+    select DEFINES;
+    # FIX: add function/global uses
+    print  "#MACROS#: name cDefs cUndefs cCodeUses cCppUses ListOfFunctionUses\n";
     foreach $name (sort keys %macros) {
-      # Could also print number of times it's defined.
       #print STDERR "MNAME=$name, @{$macros{$name}}\n";
       my $i = $macros{$name}[1];
-      if ($mfile[$i] ne $szBuiltInFakeFile) {
-	print DEFINES "$name", $macros{$name}[0], "\n";
-      }
+      die "i not defined for $name" if (!defined($i));
+      next if ($mfile[$i] eq $szBuiltInFakeFile);
+      die if (!defined($macros_uses{$name}));
+      die if (!defined($macros_c_undefs{$name}));
+      die if (!defined($macros_uses{$name}));
+      die if (!defined($macros_used_in_functions{$name}));
+
+      # FIXPERL: cperl mode doesn't count , as a statement continuer
+      # in a print
+
+      print "$name", $macros{$name}[0], $macros_c_undefs{$name},
+      $macros_uses{$name}[$i_usage_code], 
+      $macros_uses{$name}[$i_usage_cpp], "\n" .
+        join("\n",@{$macros_used_in_functions{$name}}),
+        "\n";
     }
-    print DEFINES "\n";
+
+# don't want extra lines-- harder for postprocessing tools
+#    print  "\n";
     # FIX: add cTimesUsed, $mncategory, $mntype
-    print DEFINES "DEFINITIONS#: name iDef file line args plines pclines\n";
+    print "#DEFINITIONS#: name iDef file line args plines pclines\n";
     foreach $name (sort keys %macros) {
       # Could also print number of times it's defined.
       my $iDef = 1;
@@ -1025,7 +1084,7 @@ sub output_stats
 	my $i = $macros{$name}[$iDef];
 	if ($mfile[$i] ne $szBuiltInFakeFile) {
 	  #print STDERR "NAME=$name,", join(", ",@{$macros{$name}}),"\n";
-	  print DEFINES "$name", $iDef, $i, $mfile[$i], $mline[$i], count_macro_args($margs[$i]),
+	  print "$name", $iDef, $i, $mfile[$i], $mline[$i], count_macro_args($margs[$i]),
 	  $mplines[$i], $mpclines[$i], "\n";
 	}
       }
@@ -1111,7 +1170,7 @@ sub test_typedecl_regexp
 }
 
 
-
+
 ###########################################################################
 ### Parsing
 ###
@@ -1143,6 +1202,8 @@ $commaop = $true;		# whether commas should be operators or not
 #   and not in string or comment.
 # Result ends with newline.
 # With argument, doesn't pop (actually, shift) from getline_ungotlines.
+# FIX: when simplifying (2nd pass), don't we need to remove the chars betwen < & >
+# on a #include line-- they act like quotes
 sub getline
 { my ($dont_pop) = check_args_range(0, 1, "getline", caller, @_);
   if (!defined($dont_pop))
@@ -1235,6 +1296,17 @@ sub getline
   }
 
   # FIX: Check for macro uses here
+  # FIX: maybe we should have variables $firstPass, $secondPass, or $pass_num
+  #      instead of checking $finding_macro_defs, or $getting_macro_call_types
+
+  # look for uses only on the second pass,
+  if ($getting_macro_call_types) {
+    # and also only if -a is set or this is a project file
+    # don't do it if -u is set (user want to ignore usage)
+    if (!$opt_u && ($opt_a || !current_file_was_included())) {
+      analyze_for_macro_use($result);
+    }
+  }
 
   if (($result =~ /^\#/) && !$getline_nocpp)
     { # Preprocessor line; usually just return "\n";
@@ -1705,7 +1777,7 @@ sub getline_handle_preprocessor_command
       }
     }
   elsif ($cpp_cmd eq "undef")
-    { # FIX: handle #undef
+    { process_macro_undefinition($cpp_cmd_arg)
     }
   else
     { # Some other cpp command
@@ -2713,8 +2785,8 @@ ATCOMMA:
 			  }
 			  # update our per-file list of functions
 			  push @{$files_lines{$current_file}}, 
-			  ("$current_function_start_line:{$current_function",
-			   "$end_line:}$current_function");
+			  ($current_function_start_line,"$current_function",
+			   $end_line);
 			  #print STDERR "FN: $current_function $current_file [$current_function_start_line,", current_line_no(), "]\n";
 			  # update our per-function list of [file,startline,endline]
 			  push @{$functions{$current_function}}, 
@@ -3071,7 +3143,7 @@ sub symtab_lookup
 }
 
 
-
+
 ###########################################################################
 ### Check and categorize macros
 ###
@@ -3093,7 +3165,6 @@ sub symtab_lookup
 #   }
 # }
 
-#FIX: Where do we want to call check_macro_body?
 #
 sub test_categorize_macro
 { my ($body) = check_args(1, "test_categorize_macro", caller, @_);
@@ -3327,6 +3398,9 @@ sub is_fun_decl_arg_macro
     return $false;
   }
 
+  my $one_expanded_to_just_parens = $false;
+  my $one_expanded_to_itself = $false;
+
   foreach (1..$macros{$identifier}[0]) {
     if (count_macro_args($margs[$macros{$identifier}[$_]]) != 1) {
 #      print STDERR "=> false1 at $_\n";
@@ -3342,37 +3416,36 @@ sub is_fun_decl_arg_macro
     # Remove leading/trailing whitespace
     $body =~ s%^\s*%%g;
     $body =~ s%\s*$%%g;
+
+
+    my $expands_to_just_parens = $false;
+    my $expands_to_itself = $false;
     # FIX: can this be $body ne "()"?
-    if ($body !~ /\(\s*\)/ && $args !~ /^\(\s*\Q$body\E\s*\)$/ ) {
+    if ($body =~ /\(\s*\)/) {
+      $expands_to_just_parens = $true;
+      $one_expanded_to_just_parens = $true;
+    } elsif ($args =~ /^\(\s*\Q$body\E\s*\)$/) {
+      $expands_to_itself = $true;
+      $one_expanded_to_itself = $true;
+    }
+
+#    if ($body !~ /\(\s*\)/ && $args !~ /^\(\s*\Q$body\E\s*\)$/ ) {
+    if (!$expands_to_just_parens && !$expands_to_itself) {
 #      print STDERR "=> false2 at $_: \"$body\",\"$args\"\n";
       return $false;
     }
+
   }
 #  print STDERR "=> true\n";
-  return $true;
+
+  # only return true if we got at least one definition of each kind
+  if ($one_expanded_to_itself && $one_expanded_to_just_parens) {
+    return $true;
+  }
+
+#  print STDERR "false3\n";
+  return $false;
 }
-
-
-#  if (($macros{$identifier}[0] == 2)
-#      && count_macro_args($margs[$macros{$identifier}[1]]) == 1
-#      && count_macro_args($margs[$macros{$identifier}[2]]) == 1)
-#    ## Two expansions, each with one argument
-#    { # print STDERR "is_fun_decl_arg_macro stage 2\n";
-#      my $empty_parens;
-#      if ($mbody[$macros{$identifier}[1]] =~ /^\(\s*\)$/)
-#	 { $empty_parens = 1; }
-#      elsif ($mbody[$macros{$identifier}[2]] =~ /^\(\s*\)$/)
-#	 { $empty_parens = 2; }
-#      if (defined($empty_parens))
-#	 { my $body = $mbody[$macros{$identifier}[3-$empty_parens]];
-#	   my $args = $margs[$macros{$identifier}[3-$empty_parens]];
-#	   # print "is_fun_decl_arg_macro $empty_parens $args $body", scalar($args =~ /^\(\s*$body\s*\)$/), "\n";
-# OLD BUG! need to use \Q$body\E to quote regexp meta characters in the match!!!!
-#	   if ($args =~ /^\(\s*$body\s*\)$/)
-#	     { return $true; } } }
-#  return $false;
-#}
-
 
 # # Uses $lastline global, too
 # sub categorize_macro
@@ -3450,9 +3523,25 @@ sub is_fun_decl_arg_macro
 #   }
 # }
 
+#FIX: what is this for?  Nobody calls it.
 sub checkmacrodef
 {
 }
+
+# Report "evil" CPP macros:
+#  Illegal macros:
+#   Unterminated string
+#   Wrong length character constant
+#   Unterminated character constant
+#   Pasting via comments (syntactically legal, but no pasting occurs in ISO C)
+#  Potentially dangerous macros:
+#   Unbalanced parens, braces, and brackets
+#   Pasting via ##
+#   Stringization via #
+#   Arguments but no body
+#  Turned off testing for:
+#   Empty string
+
 
 # Perhaps pass in macro name, for better error messages.
 
@@ -3570,7 +3659,6 @@ sub check_macro_body
 }
 
 
-
 ###########################################################################
 ### Miscellaneous
 ###
@@ -3581,14 +3669,14 @@ sub check_macro_body
 # Still use regular die for real fatal errors
 sub mdie {
   my ($msg) = check_args_at_least(1,"mdie",caller,@_);
-  print STDERR "at $current_file line @{[ current_line_no() ]}: ", @_, "\n";
+  print STDERR "$current_file:@{[ current_line_no() ]}: ", @_, "\n";
   exit -1;
 }
 
 # Print a message to the EVIL stream, with file and line number prefix
 sub evilprint {
   my ($msg) = check_args_at_least(1,"evilprint",caller,@_);
-  unshift @_, "at $current_file line @{[ current_line_no() ]}: ";
+  unshift @_, "$current_file:@{[ current_line_no() ]}: ";
   print EVIL @_;
   return undef;
 }
@@ -3710,7 +3798,149 @@ sub initialize_builtin_macros {
 
   return undef;
 }
-
+
+
+# analyze_for_macro_use($logl_line)
+# looks for macros in $logl_line and saves the file,line#
+
+# This won't be quite right since we currently don't look through
+# include-s in order note that this is still subject to differences
+# from the actual parse by cpp, since not all files are included by
+# all files, but we work with a global (to the project) macro
+# defintions list
+#
+# We can do better by ensuring that before we count a macro usage,
+# double check to make sure the current file includes a (or is the)
+# file which defines the macro (and if it is the file, then make sure
+# that the macro was defined on an earlier line number than we're at)
+# 
+# None of this is done for now, but probably should be later
+# Currently, we err on the side of reporting too many uses of macros
+
+# Note: another possible way to do this is with gjb's
+# make-inclkude-for-defs-file -- see that in ~gjb/bin/share for eg.
+sub analyze_for_macro_use {
+  my ($line) = check_args(1,"analyze_for_macro_use",caller,@_);
+
+  die "Shouldn't be analyzing for macro use when finding defs!" 
+    if $finding_macro_defs;
+
+  # study $line;  # use this if you're gonna do lots of pattern matches
+
+  # it's interesting whether the use is of a system macro or a project
+  # macro
+#  foreach $macro (keys %macros) {
+#    if ($line =~ /\b\Q$macro\E\b/) {
+#    if (index($line,$macro) >= $[) {
+#      #print STDERR "AFMU: $macro in $line";
+#    }
+
+  my $word;
+
+  my $cpp_line = $false;
+  my $cpp_defining_macro_name;
+
+  if (substr($line,0,1) eq "#") {
+    $cpp_line = $true;
+  }
+  # FIX: does this handle #define /* */ TEST properly?
+  # ie. have comments been removed for us
+  if ($line =~ /^\# *define\b(\w+)\b/) {
+    $cpp_defining_macro_name = $1;
+  }
+
+  foreach $word (split /\W+/,$line) {
+    if (defined($macros{$word}) && (!defined($cpp_defining_macro_name) ||
+				    $cpp_defining_macro_name ne "$word")) {
+      # Need to remember that this macro was used on a code line, or not
+      # and that the macro was used on a preprocessor line, or not
+      # and that the macro was used in the current function, if any
+      # and that the macro was used globally, if it wasn't in a function
+      # FIX: do we want to include information about a macro's expansion
+      # including another macro?  (like dependent-macros)
+      $macros_uses{$word}[$cpp_line? $i_usage_cpp:$i_usage_code ]++;
+      # FIX: need to look for if we're in a function now and update that
+      my $function_name;
+#      if ($function_name = which_function($current_file,current_line_no())) {
+      # FIX: current_function is only an approximation to the analysis
+      # that needs to be done-- it gets set too late
+      if (!($function_name = $current_function)) {
+	$function_name = "%global%";
+      }
+      # print STDERR "USEIN: $function_name\n";
+      push @{$macros_used_in_functions{$word}}, "$current_file:" 
+	. current_line_no() . ": $function_name";
+    }
+  }
+    
+  # print STDERR "AFMU: $line";
+}
+
+# Note: which_function can only be used after a complete second parse
+# if you want to be sure you get things right
+# use the $files_lines{$filename} list to find what function we're in,
+# if any
+sub which_function {
+  my ($filename, $line_no) = check_args(2,"which_function",caller,@_);
+
+  my $i = 0;
+
+  my $listref = $files_lines{$filename};
+
+  # FIXPERL: what is the implementation of lists? vector or linked-list?
+  # FIXPERL: any way to do c-style static lexical variables?
+  if ($filename eq $wf_last_filename &&
+      $line_no >= $wf_last_line_no) {
+    # we're moving forward in the same file, so use our old $wf_last_index
+    $i=$wf_last_index;
+  }
+
+  # $$listref[i] is starting line of function,
+  # $$listref[i+1] is name of function w/ leading "{"
+  # $$listref[i+2] is ending line of function,
+  # $$listref[i+3] is the information for the next function linearly
+
+  # so if $line_no is between $$listref[i] and $$listref[i+2], inclusively,
+  # we return $$listref[i+1]
+
+  # first step through the list to the interesting case
+  while ( $i <= $#{$listref} && $line_no < $$listref[$i]) {
+    $i += 3;
+  }
+
+  # three possibilities:
+  # 1) $i > $#{$listref} => return undef, since it's past all the fns listed
+  # 2) $line_no is in the range $$listref[$i] thru $$listref[$i+2] (inclusive),
+  #      so return $$listref[$i+1]
+  # 3) $line_no > $$listref[$i] => return undef since we're past the line we want
+
+  my $fn_name;			# starts out undefined
+
+  if ($i > $#{$listref}) {
+    # undef
+  } elsif ($line_no >= $$listref[$i] && $line_no <= $$listref[$i+2]) {
+    $fn_name = $$listref[$i+1];
+  } elsif ($line_no > $$listref[$i]) {
+    # undef
+  } else {
+    die "Uexpected case in which_function";
+  }
+
+  # FIX: remove these debug messages
+  if (defined($fn_name)) {
+    print STDERR "Checking for the function:$filename:$line_no: got $fn_name\n";
+  } else {
+    print STDERR "$filename:$line_no: No function\n";
+  }
+    
+
+  ($wf_last_filename, $wf_last_line_no ) = ($filename,$line_no);
+  $wf_last_index = $i;
+
+  return $fn_name;
+}
+
+
 ###########################################################################
 ### data structure ops for orthogonal file types
 ###
@@ -3718,12 +3948,15 @@ sub initialize_builtin_macros {
 sub update_cpp_directives_for {
   my ($cpp_cmd) = check_args(1,"update_cpp_directives_for",caller,@_);
 
+  #FIXPERL: emacs cperl mode requires the space between $ and { below
+  #to correctly not parse the { as an open block
+
   # This code avoids warnings about using uninitialized values
   if (!defined($ {$rg_cppcmdcounts[$current_ft_index]}{$cpp_cmd})) {
     $ {$rg_cppcmdcounts[$current_ft_index]}{$cpp_cmd} = 0;
   }
   $ {$rg_cppcmdcounts[$current_ft_index]}{$cpp_cmd}++;
-
+  
   $rg_cpp_cmds[$current_ft_index]++;
   #print STDERR "GOTCPP: $cpp_cmd, for $current_ft_index, so have $rg_cpp_cmds[$current_ft_index]\n";
 }
@@ -3732,14 +3965,10 @@ sub update_cpp_directives_for {
 # %cppcmpdcount, %cppcmdcount_ni
 sub compute_global_cpp_sums {
   check_args(0,"compute_global_cpp_sums",caller,@_);
-
+  
   $cpp_cmds = sum_array(@rg_cpp_cmds[@ft_ALL]);
   $cpp_cmds_ni = sum_array(@rg_cpp_cmds[@ft_NOT_INCLUDED]);
-
-  #FIXNOW: cppcmdcount needs to be computed
-  # for each key, needs to sum the values across a set of
-  # hashes
-
+  
   my $hashref;
   my $key;
 
@@ -3753,7 +3982,7 @@ sub compute_global_cpp_sums {
 	$cppcmdcount{$key} = 0;
       }
       $cppcmdcount{$key} += $ {$hashref}{$key};
-      #print STDERR "KEY=$key, adding ", $ {$hashref}{$key}, "\n"; #FIXNOW
+      #print STDERR "KEY=$key, adding ", $ {$hashref}{$key}, "\n";
     }
   }
 
@@ -3765,7 +3994,7 @@ sub compute_global_cpp_sums {
 	$cppcmdcount_ni{$key} = 0;
       }
       $cppcmdcount_ni{$key} += $ {$hashref}{$key};
-      #print STDERR "KEY=$key, adding ", $ {$hashref}{$key}, "\n"; #FIXNOW
+      #print STDERR "KEY=$key, adding ", $ {$hashref}{$key}, "\n";
     }
   }
 }
@@ -3773,7 +4002,7 @@ sub compute_global_cpp_sums {
   
 
 
-
+
 ###########################################################################
 ### #include handling
 ###
@@ -3818,7 +4047,7 @@ sub complete_include_pathname {
 
 
 
-
+
 ###########################################################################
 ### Testing
 ###
@@ -3941,6 +4170,10 @@ if ($opt_i) {
   }
 }
 
+if ($opt_a && ($opt_u || $opt_1)) {
+  die "Option -a is incompatible with options -u or -1";
+}
+
 if ($opt_E) { open(EVIL,">$opt_E") || die "Failed opening $opt_E"; }
   else { open(EVIL,">-") || die "Failed opening stdout!"; }
 if ($opt_S) { open(STATS,">$opt_S") || die "Failed opening $opt_S"; }
@@ -3988,7 +4221,7 @@ find_macro_definitions();	# also counts other preprocessor usage
 #   for $name (sort keys %macros)
 #     { print "$name $macros{$name}[0]\n"; } }
 
-get_macro_call_types() if (!$opt_u);
+get_macro_call_types() if (!$opt_1);
 
 compute_global_cpp_sums();
 
@@ -4026,3 +4259,7 @@ output_stats();
 #print STDERR "Included files:", join("\n",@files_included), "\n";
 
 exit();
+
+### Local Variables:
+### page-delimiter: "^#################################################*\n"
+### End:
