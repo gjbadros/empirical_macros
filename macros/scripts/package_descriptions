@@ -1,0 +1,28 @@
+bash	Command shell 
+bc	Desktop calculator 
+bison	Parser generator 
+cvs	Revision control system 
+dejagnu	Testing framework 
+flex	Scanner generator 
+fvwm	Window manager 
+g77	Fortran compiler 
+gawk	GAWK interpreter 
+genscript	Text-to-PostScript converter 
+ghostview	PostScript previewer 
+glibc	C library 
+gnuchess	Chess player 
+gnuplot	Graph Plotter 
+groff	Text formatter 
+gs	PostScript interpreter 
+gzip	File compressor 
+m4	Macro expander 
+perl	Perl interpreter 
+plan	Schedule planner 
+python	Python interpreter 
+rcs	Revision control system 
+remind	Schedule reminder 
+workman	Audio CD player 
+xfig	Drawing program 
+zephyr	Notification system 
+zsh	Command shell 
+zzz<total>	 
