@@ -21,7 +21,7 @@ print '
 \rotatebox{90}{Unknown symbol~} &
 \rotatebox{90}{Not C code~} &
 \rotatebox{90}{Other~} &
-\rotatebox{90}{Failed classification~} &
+\rotatebox{90}{Failed classification~}
 \\\\\\hline
 ';
 }
