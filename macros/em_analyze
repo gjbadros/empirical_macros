@@ -88,10 +88,6 @@ cat c-files-listing | $0 -i -d ~/macros/data/stable:pkgname
 ### To do
 ###
 
-# Categorize essential macros.
-
-# Make sure info about uses of built-in macros like __STDC__ gets output.
-
 # fixgjb:
 #    Change current_line_no() into two functions which return
 #    the first and last physical lines associated with the current lines being
@@ -726,7 +722,7 @@ my %macros_used_in_functions = (); # hashes macro names to list of
 
 # Two types of elements: macros and other symbols (which CPP treats as zero
 # and which are probably bugs anyway; I'll assume everything is a macro).
-my %macros_used_by_cpp = ();	# used as a set; value is always $true.
+my %macros_used_by_cpp = ();	# value is a file and line number
 
 sub introduce_new_macro ($)
 { my ($name) = check_args(1, @_);
@@ -743,9 +739,9 @@ sub introduce_new_macro ($)
 }
 
 
-# Number of macros defined before parsing -- don't reuse the first
-# $cBuiltinMacros elements of @mdef_XXXXX arrays
-my $cBuiltinMacros = 0;
+# # Number of macros defined before parsing -- don't reuse the first
+# # $cBuiltinMacros elements of @mdef_XXXXX arrays
+# my $cBuiltinMacros = 0;
 # Total number of entries in @mdef_XXXX arrays; rename $c_mdef?
 my $cMacrosInTables = 0;
 
@@ -761,8 +757,8 @@ my @mdef_physical_lines;
 my @mdef_physical_ncnb_lines;
 my %mdef_freevars;
 my @mdef_freefuns;
-my @mdef_inclusion_dependenton;		# direct inclusion dependences
-my @mdef_expansion_uses;
+my @mdef_direct_inclusion_dependenton;		# cpp conditions, not just symbols
+my @mdef_direct_expansion_uses;	# direct expansion uses (symbols in expansion)
 my @mdef_type;
 my @mdef_category;
 my @mdef_evilness;
@@ -911,16 +907,16 @@ sub process_macro_definition ($$$$)
 
   $mdef_physical_lines[$this_macro_index] = $macro_physical_lines;
   $mdef_physical_ncnb_lines[$this_macro_index] = $macro_physical_ncnb_lines;
-  $mdef_inclusion_dependenton[$this_macro_index] = [ @inclusion_dependenton ];
+  $mdef_direct_inclusion_dependenton[$this_macro_index] = [ @inclusion_dependenton ];
   if (!defined($current_file))
     { mdie("undefined current_file while processing $name"); }
   $mdef_file[$this_macro_index] = $current_file;
   $mdef_line[$this_macro_index] = current_line_no();
   # PERLNOTE: be careful not to do
-  # $mdef_expansion_uses[$this_macro_index] = ();  ##WRONG
+  # $mdef_direct_expansion_uses[$this_macro_index] = ();  ##WRONG
   # you'll get a weird error message at the point of use
-  # mdef_expansion_uses is a list of references to arrays
-  @{$mdef_expansion_uses[$this_macro_index]} = ();
+  # mdef_direct_expansion_uses is a list of references to arrays
+  @{$mdef_direct_expansion_uses[$this_macro_index]} = ();
 }
 
 
@@ -941,7 +937,8 @@ sub process_macro_undefinition ($$) {
 ### Dependenton processing
 ###
 
-# Given a macro name, return a list of three lists containing (direct)
+## Not currently called anywhere.
+# Given a macro name, return a list of some of (direct)
 # must include, expansion, and may include dependences.
 sub macro_must_and_may_dependences ($)
 {
@@ -953,7 +950,7 @@ sub macro_must_and_may_dependences ($)
     for $dep (@$must_dependences)
       { $must_dep{$dep} = $true; } }
   { my $mdef_dep;
-    for $mdef_dep (map { $mdef_inclusion_dependenton[$_] } @{$macros{$macro_name}})
+    for $mdef_dep (map { $mdef_direct_inclusion_dependenton[$_] } @{$macros{$macro_name}})
       { if (! (defined($must_dep{$mdef_dep})))
 	  { $may_dep{$mdef_dep} = $true; } } }
   return ($must_dependences, keys %may_dep);
@@ -971,7 +968,7 @@ sub macro_must_and_may_dependences ($)
 sub macro_defined_dependenton ($$)
 {
   my ($macro_name, $extra_dependenton) = check_args_range(1, 2, @_);
-  my @dependentons = map { $mdef_inclusion_dependenton[$_] } @{$macros{$macro_name}};
+  my @dependentons = map { $mdef_direct_inclusion_dependenton[$_] } @{$macros{$macro_name}};
   if (defined($extra_dependenton))
     { push @dependentons, $extra_dependenton; }
 
@@ -1004,15 +1001,17 @@ MDLOOP:
 # but that last element.  Otherwise return $false.
 sub merge_dependenton ($$)
 { my ($do1, $do2) = check_args(2, @_);
-  my $len1 = $#{$do1};
+  my $len1 = $#{$do1};		# actually maximal index, not length
   my $len2 = $#{$do2};
 
   if ($len1 != $len2)
     { return $false; }
   { my $i;
     for $i (0..$len1-1)
-      { if ($do1->[$i] ne negate_cpp_if_condition($do2->[$i]))
+      { if ($do1->[$i] ne $do2->[$i])
 	  { return $false; } } }
+  if ($do1->[$len2] ne negate_cpp_if_condition($do2->[$len1]))
+    { return $false; }
   my $result = [ @$do1 ];
   pop(@$result);
   return $result;
@@ -1027,19 +1026,33 @@ sub negate_cpp_if_condition ($)
   if ($cond =~ /^!defined\($identifier_re\)$/)
     { return substr($cond,1); }
   elsif ($cond =~ /^!\((.*)\)$/)
-    # Problem: what if those parens weren't balanced??  Need to check here.
-    { return $1; }
+    { my $negated = $1;
+      # avoid converting "!(A) && (B)" into "A) && (B".
+      if (paren_change($negated))
+	{ return "!($cond)"; }
+      else
+	{ return $1; } }
   else
     { return "!($cond)"; }
 }
 
 
+# Not sure whether it would be faster and just as effective to merely check
+# for a set of common trivially false conditions, like this used to do.
 sub cpp_trivially_false_condition ($)
 { my ($cond) = check_args(1, @_);
-  if ($cond =~ /^(0|\(\s*0\s*\))$/)
+  if ($cond eq "0")
     { return $true; }
-  elsif ($cond =~ /^(!1|!\s*\(\s*1\s*\)|!\s*\(\s*\(\s*1\s*\)\s*\))$/)
+  elsif ($cond =~ /^\(\s*(.*)\s*\)$/)
+    { return cpp_trivially_false_condition($1); }
+  elsif ($cond =~ /^!\s*1$/)
     { return $true; }
+  elsif ($cond =~ /^!\((.*)\)$/)
+    { my $negated = $1;
+      if (paren_change($negated))
+	{ return $false; }
+      else
+	{ return cpp_trivially_true_condition(negate_cpp_if_condition($cond)); } }
   else
     { return $false; }
 }
@@ -1048,10 +1061,18 @@ sub cpp_trivially_false_condition ($)
 # Just like the above, with 0 and 1 reversed
 sub cpp_trivially_true_condition ($)
 { my ($cond) = check_args(1, @_);
-  if ($cond =~ /^(1|\(\s*1\s*\))$/)
+  if ($cond eq "1")
     { return $true; }
-  elsif ($cond =~ /^(!0|!\s*\(\s*0\s*\)|!\s*\(\s*\(\s*0\s*\)\s*\))$/)
+  elsif ($cond =~ /^\(\s*(.*)\s*\)$/)
+    { return cpp_trivially_true_condition($1); }
+  elsif ($cond =~ /^!\s*1$/)
     { return $true; }
+  elsif ($cond =~ /^!\((.*)\)$/)
+    { my $negated = $1;
+      if (paren_change($negated))
+	{ return $false; }
+      else
+	{ return cpp_trivially_false_condition(negate_cpp_if_condition($cond)); } }
   else
     { return $false; }
 }
@@ -1061,20 +1082,18 @@ sub cpp_trivially_true_condition ($)
 # Perl has no first-class closures or nested procedures so far as I know.
 
 # These hashes map a macro name to another hash representing a set of macro names.
+# They are transitive dependences, not just direct dependences.
 my %inclusion_dependenton = ();
-my %new_inclusion_dependenton = ();
 my %inclusion_dependees = (); # inverse of inclusion_dependenton
 my %expansion_dependenton = ();
-my %new_expansion_dependenton = ();
 my %expansion_dependees = ();	# inverse of expansion_dependenton
 
-# These hashes map to a number.
+# These hashes map to a number; the dependees are transitive, not just direct.
 my %inclusion_dependee_lines = ();
 my %expansion_dependee_lines = ();
 
 # An element is on the worklist if its dependence information has changed
-# but macros dependent on it haven't been updated (ie, if
-# $new_{inclusion,expansion}_dependenton is non-empty).
+# but macros dependent on it haven't been updated.
 my @dependence_worklist = ();
 my %dependence_worklist_members = ();
 
@@ -1123,18 +1142,6 @@ sub check_dependence_invariants ()
 	    print join(" ", @sorted_wl_2), "\n";
 	    croak "Disagreement in worklists at $i: $sorted_wl_1[$i] $sorted_wl_2[$i]"; } } }
 
-  for $key (keys %new_inclusion_dependenton)
-    { if (!defined($dependence_worklist_members{$key}))
-	{ print "<<$new_inclusion_dependenton{$key}>>\n";
-	  croak "new inclusion dependences " . join(",",keys %{$new_inclusion_dependenton{$key}}) . " for $key, but not on worklist"; } }
-  for $key (keys %new_expansion_dependenton)
-    { if (!defined($dependence_worklist_members{$key}))
-	{ croak "new expansion dependences " . join(",",keys %{$new_expansion_dependenton{$key}}) . " for $key, but not on worklist"; } }
-
-  for $key (@dependence_worklist)
-    { if ((!defined($new_inclusion_dependenton{$key}))
-	  && (!defined($new_expansion_dependenton{$key})))
-	{ croak "$key on worklist, but nothing new"; } }
 }
 
 
@@ -1143,13 +1150,14 @@ sub add_inclusion_dependence ($$)
   if ((!$dependent) || (!$controller))
     { croak "Empty argument: <$dependent> <$controller>"; }
   if ($debug_dependences)
-    { print "Adding dependence: $dependent dependent on $controller\n"; }
+    { print "Adding inclusion dependence: $dependent dependent on $controller\n"; }
   # if ($debug_dependences)
   #   { check_dependence_invariants(); }
   if (!defined($inclusion_dependenton{$dependent}{$controller}))
     { if (defined($inclusion_dependees{$controller}{$dependent}))
 	{ die "This can't happen: $dependent $controller"; }
-      $new_inclusion_dependenton{$dependent}{$controller} = $true;
+      $inclusion_dependenton{$dependent}{$controller} = $true;
+      $inclusion_dependees{$controller}{$dependent} = $true;
       if (!defined($dependence_worklist_members{$dependent}))
 	{ push(@dependence_worklist, $dependent);
 	  $dependence_worklist_members{$dependent} = $true; } }
@@ -1161,12 +1169,15 @@ sub add_expansion_dependence ($$)
 { my ($dependent, $controller) = check_args(2, @_);
   if ((!$dependent) || (!$controller))
     { croak "Empty argument: <$dependent> <$controller>"; }
+  if ($debug_dependences)
+    { print "Adding expansion dependence: $dependent dependent on $controller\n"; }
   # if ($debug_dependences)
   #   { check_dependence_invariants(); }
   if (!defined($expansion_dependenton{$dependent}{$controller}))
     { if (defined($expansion_dependees{$controller}{$dependent}))
 	{ die "This can't happen: $dependent $controller"; }
-      $new_expansion_dependenton{$dependent}{$controller} = $true;
+      $expansion_dependenton{$dependent}{$controller} = $true;
+      $expansion_dependees{$controller}{$dependent} = $true;
       if (!defined($dependence_worklist_members{$dependent}))
 	{ push(@dependence_worklist, $dependent);
 	  $dependence_worklist_members{$dependent} = $true; } }
@@ -1175,6 +1186,8 @@ sub add_expansion_dependence ($$)
 }
 
 
+# This runs before pass 2, so that it can quickly determine computele
+# transitive dependences given direct dependences.
 sub compute_transitive_macro_dependences ()
 { check_args(0, @_);
 
@@ -1185,9 +1198,6 @@ sub compute_transitive_macro_dependences ()
 	$inclusion_dependees{$name} = {};
 	$expansion_dependenton{$name} = {};
 	$expansion_dependees{$name} = {};
-	# Don't define these; we expect them to be undefined rather than empty.
-	# $new_inclusion_dependenton{$name} = {};
-	# $new_expansion_dependenton{$name} = {};
 	$inclusion_dependee_lines{$name} = 0;
 	$expansion_dependee_lines{$name} = 0; } }
 
@@ -1197,17 +1207,17 @@ sub compute_transitive_macro_dependences ()
       { my $index;
 	for $index (@{$macros{$name}})
 	  {
-	    { # direct inclusion dependences are mdef_inclusion_dependenton
+	    { # direct inclusion dependences are mdef_direct_inclusion_dependenton
 	      my $incl_dep;
-	      for $incl_dep (@{$mdef_inclusion_dependenton[$index]})
+	      for $incl_dep (@{$mdef_direct_inclusion_dependenton[$index]})
 		{ my $word;
 		  foreach $word (macros_appearing_in($incl_dep))
 		    { add_inclusion_dependence($name, $word); } } }
-	    ## This version depends on mdef_expansion_uses; compute the
+	    ## This version depends on mdef_direct_expansion_uses; compute the
 	    ## same info myself so needn't wait until after pass 2.
-	    # { # direct expansion dependences are mdef_expansion_uses
+	    # { # direct expansion dependences are mdef_direct_expansion_uses
 	    #   my $exp_dep;
-	    #   for $exp_dep (@{$mdef_expansion_uses[$this_macro_index]})
+	    #   for $exp_dep (@{$mdef_direct_expansion_uses[$this_macro_index]})
 	    #    { add_expansion_dependence($name, $exp_dep); } }
 	    { my $exp_dep;
 	      for $exp_dep (macros_appearing_in(cline_simplify($mdef_body_noc[$index])))
@@ -1237,92 +1247,52 @@ sub compute_transitive_macro_dependences ()
       if ($debug_dependences)
 	{ print "removed $elt from dependence worklist (", scalar(@dependence_worklist), ",", scalar(keys %dependence_worklist_members), ")\n"; }
 
-      # dependence invariants are violated here: non-empty new_*_dependences
-
-      if ((scalar(keys %{$new_inclusion_dependenton{$elt}}) == 0)
-	  && (scalar(keys %{$new_expansion_dependenton{$elt}}) == 0))
-	{ print "worklist = @dependence_worklist\n";
-	  die "Element $elt on worklist has no new dependences"; }
-
       # In the comments below, "IC =I=> IE" means "IE is inclusion-dependent
       # on IC".  IC stands for inclusion controller and IE for inclusion
       # controlee.
 
-      { my @new_incl_deps = keys %{$new_inclusion_dependenton{$elt}};
-	my @new_exp_deps = keys %{$new_expansion_dependenton{$elt}};
-	delete($new_inclusion_dependenton{$elt});
-	delete($new_expansion_dependenton{$elt});
-	my $new_incl_dep;
-	my $new_exp_dep;
-
-	# First, some testing
-	if ($debug_dependences)
-	  { for $new_incl_dep (@new_incl_deps)
-	      { if (defined($inclusion_dependenton{$elt}{$new_incl_dep}))
-		  { die "This can't happen (incl): <$elt> <$new_incl_dep> <"
-		      . join(",",@new_incl_deps) . ">"; }
-		if (defined($inclusion_dependees{$new_incl_dep}{$elt}))
-		  { die "This can't happen either (incl)"; } }
-	    for $new_exp_dep (@new_exp_deps)
-	      { if (defined($inclusion_dependenton{$elt}{$new_exp_dep}))
-		  { die "This can't happen (exp): <$elt> <$new_exp_dep> <"
-		      . join(",",@new_exp_deps) . ">"; }
-		if (defined($inclusion_dependees{$new_exp_dep}{$elt}))
-		  { die "This can't happen either (exp)"; } } }
-
-	# Now make the changes.  We can't put testing and changes in a single
-	# loop because all testing must happen before any changes.
-	for $new_incl_dep (@new_incl_deps)
-	  { $inclusion_dependenton{$elt}{$new_incl_dep} = $true;
-	    $inclusion_dependees{$new_incl_dep}{$elt} = $true; }
-	for $new_exp_dep (@new_exp_deps)
-	  { $inclusion_dependenton{$elt}{$new_exp_dep} = $true;
-	    $inclusion_dependees{$new_exp_dep}{$elt} = $true; }
-
+      {
+	# It might be slightly faster to play this game only with the changes
+	# rather than the whole dependences; but don't bother until we know that
+	# this is a problem.
+	my @i_controllers = keys %{$inclusion_dependenton{$elt}};
+	my @i_controlees = keys %{$inclusion_dependees{$elt}};
+	my @e_controllers = keys %{$expansion_dependenton{$elt}};
+	my @e_controlees = keys %{$expansion_dependees{$elt}};
 
 	if ($debug_dependences)
 	  { check_dependence_invariants(); }
 
-	for $new_incl_dep (@new_incl_deps)
-	  { # We know that $new_incl_dep =I=> $elt
-	    { my $incl_depee;
-	      for $incl_depee (keys %{$inclusion_dependees{$elt}})
-		{ # IC =I=> this =I=> IE  implies  IC =I=> IE
-		  add_inclusion_dependence($incl_depee, $new_incl_dep); } }
-	    { my $exp_depee;
-	      for $exp_depee (keys %{$expansion_dependees{$elt}})
-		{ # IC =I=> this =E=> EE  implies  IC =I=> EE
-		  add_inclusion_dependence($exp_depee, $new_incl_dep); } } }
+	{ my $i_controller;
+	  for $i_controller (@i_controllers)
+	    { # We know that $i_controller =I=> $elt
+	      { my $i_controllee;
+		for $i_controllee (@i_controlees)
+		  { # IC =I=> this =I=> IE  implies  IC =I=> IE
+		    add_inclusion_dependence($i_controllee, $i_controller); } }
+	      { my $e_controllee;
+		for $e_controllee (@e_controlees)
+		  { # IC =I=> this =E=> EE  implies  IC =I=> EE
+		    add_inclusion_dependence($e_controllee, $i_controller); } } } }
 
-	for $new_exp_dep (@new_exp_deps)
-	  { # We know that $new_exp_dep =E=> $elt
-	    { my $incl_depee;
-	      for $incl_depee (keys %{$inclusion_dependees{$elt}})
-		{ # EC =E=> this =I=> IE  implies  EC =I=> IE
-		  add_inclusion_dependence($incl_depee, $new_exp_dep); } }
-	    { my $exp_depee;
-	      for $exp_depee (keys %{$expansion_dependees{$elt}})
-		{ # EC =E=> this =E=> EE  implies  EC =E=> EE
-		  add_expansion_dependence($exp_depee, $new_exp_dep); } } } }
+	{ my $e_controller;
+	  for $e_controller (@e_controllers)
+	    { # We know that $e_controller =E=> $elt
+	      { my $i_controllee;
+		for $i_controllee (@i_controlees)
+		  { # EC =E=> this =I=> IE  implies  EC =I=> IE
+		    add_inclusion_dependence($i_controllee, $e_controller); } }
+	      { my $e_controllee;
+		for $e_controllee (@e_controlees)
+		  { # EC =E=> this =E=> EE  implies  EC =E=> EE
+		    add_expansion_dependence($e_controllee, $e_controller); } } } } }
 
       if ($debug_dependences)
 	{ check_dependence_invariants(); }
     }
-  if ((scalar(keys %new_inclusion_dependenton) != 0)
-      || (scalar(keys %new_expansion_dependenton) != 0))
-    { die "new_*_dependenton not empty: " . join(" ",keys %new_inclusion_dependenton) . ";; " . join(" ",keys %new_expansion_dependenton) . "\n"; }
 
   # whew, done computing %inclusion_dependenton %inclusion_dependees
   # %expansion_dependenton %expansion_dependees.
-
-  # now do something with the info...
-
-  # The right thing is probably a third pass collecting information; I
-  # don't still have dependenton info for the entire file (and it might be
-  # excessively large anyway), and it the second pass provided information
-  # about macros used in the definitions of other macros.
-  # And in this third pass I can fail to merge any dependenton
-
 }
 
 
@@ -1784,9 +1754,9 @@ sub getline_handle_preprocessor_command ($$$$$)
 	  { add_macro_used_by_cpp($word); } }
   }
 
-  
+
   if (!$finding_macro_defs) { # only on second pass
-    if ($cpp_cmd eq "ifdef" || $cpp_cmd eq "ifndef" || 
+    if ($cpp_cmd eq "ifdef" || $cpp_cmd eq "ifndef" ||
 	$cpp_cmd eq "if" || $cpp_cmd eq "elif" &&
 	!cpp_trivially_false_condition($cpp_cmd_arg_noc)) {
       # get the category of this #if based solely on the macro name checked
@@ -4984,70 +4954,76 @@ sub initialize_builtin_macros () {
 
   { my $mac;
     foreach $mac (@empty_def_macros) {
-      my $i = introduce_builtin_mdef($mac);
-      $mdef_body[$i] = " /* Fake built-in null define */";
-      $mdef_body_noc[$i] = "";
+#       my $i = introduce_builtin_mdef($mac);
+#       $mdef_body[$i] = " /* Fake built-in null define */";
+#       $mdef_body_noc[$i] = "";
       $mncategory{$mac} = $catNULLDEFINE;
       $mntype{$mac} = $typeUNSPECIFIED;
+      $macros_used_by_cpp{$mac} = "builtin_empty_def";
     }
 
     foreach $mac (@string_def_macros) {
-      my $i = introduce_builtin_mdef($mac);
-      $mdef_body[$i] = "\"\" /* Fake built-in string */";
-      $mdef_body_noc[$i] = "\"\"";
+#       my $i = introduce_builtin_mdef($mac);
+#       $mdef_body[$i] = "\"\" /* Fake built-in string */";
+#       $mdef_body_noc[$i] = "\"\"";
       $mncategory{$mac} = $catLITERAL;
       $mntype{$mac} = $typeSTRING;
+      $macros_used_by_cpp{$mac} = "builtin_string_def";
     }
 
     foreach $mac (@num_def_macros) {
-      my $i = introduce_builtin_mdef($mac);
-      $mdef_body[$i] = "1 /* Fake built-in number */";
-      $mdef_body_noc[$i] = "1";
+#       my $i = introduce_builtin_mdef($mac);
+#       $mdef_body[$i] = "1 /* Fake built-in number */";
+#       $mdef_body_noc[$i] = "1";
       $mncategory{$mac} = $catLITERAL;
       # This isn't quite right; some are long, some float.
       $mntype{$mac} = $typeINT;
+      $macros_used_by_cpp{$mac} = "builtin_num_def";
     } }
 
   # This works:
   # print "HERE:", join(',',@$macros{"__LINE__"}), "\n";
 
-  $cMacrosInTables = $cBuiltinMacros;
+#   $cMacrosInTables = $cBuiltinMacros;
 
   return;
 }
 
-# Returns the index in the mdef arrays where the info is stored.
-sub introduce_builtin_mdef ($mac)
-{
-  my ($mac) = check_args(1, @_);
-  my $index = $cBuiltinMacros;
-  $cBuiltinMacros++;
-
-  introduce_new_macro($mac);
-  $macros{$mac} = [$index];
-  $mdef_name[$index] = $mac;
-  $mdef_args[$index] = "";
-  $mdef_inclusion_dependenton[$index] = [];
-  $mdef_file[$index] = $built_in_fake_file;
-  $mdef_line[$index] = 0;
-  $mdef_physical_lines[$index] = 0;
-  $mdef_category[$index] = $catNOTYET;
-
-  $mdef_expansion_uses[$index] = [];
-
-  # FIX: initialize all the mdef_XXX arrays
-  #    $mdef_physical_ncnb_lines[$index] = 0;
-  #    $mdef_physical_dependenton[$index] = 0;
-  #    $mdef_physical_expansion_uses[$index] = 0;
-  #    $mdef_physical_type[$index] = 0;
-  #    $mdef_physical_category[$index] = 0;
-  #    $mdef_physical_evilness[$index] = 0;
-
-  return $index;
-}
+## Should not be called any longer.
+# # Returns the index in the mdef arrays where the info is stored.
+# sub introduce_builtin_mdef ($mac)
+# {
+#   my ($mac) = check_args(1, @_);
+#   croak "Shouldn't call introduce_builtin_mdef";
+#   my $index = 0;
+# #  my $index = $cBuiltinMacros;
+# #  $cBuiltinMacros++;
+# 
+#   introduce_new_macro($mac);
+#   $macros{$mac} = [$index];
+#   $mdef_name[$index] = $mac;
+#   $mdef_args[$index] = "";
+#   $mdef_direct_inclusion_dependenton[$index] = [];
+#   $mdef_file[$index] = $built_in_fake_file;
+#   $mdef_line[$index] = 0;
+#   $mdef_physical_lines[$index] = 0;
+#   $mdef_category[$index] = $catNOTYET;
+# 
+#   $mdef_direct_expansion_uses[$index] = [];
+# 
+#   # FIX: initialize all the mdef_XXX arrays
+#   #    $mdef_physical_ncnb_lines[$index] = 0;
+#   #    $mdef_physical_dependenton[$index] = 0;
+#   #    $mdef_physical_expansion_uses[$index] = 0;
+#   #    $mdef_physical_type[$index] = 0;
+#   #    $mdef_physical_category[$index] = 0;
+#   #    $mdef_physical_evilness[$index] = 0;
+# 
+#   return $index;
+# }
 
 # analyze_for_macro_use($spliced_line)
-# looks for macros in $spliced_line and saves the file,line#
+# looks for macros in $spliced_line (which is simplified) and saves the file,line#
 
 # These are macro expansions, not mere uses/appearances:  we don't count the
 # argument to #undef, for instance.
@@ -5079,13 +5055,16 @@ sub analyze_for_macro_use ($) {
   if ($finding_macro_defs)
     { die "Shouldn't be analyzing for macro use when finding defs!"; }
 
+  if ($line =~ /^\s*$/)
+    { return; }
+
   # study $line;  # use this if you're gonna do lots of pattern matches
 
 
   my $macro_uses_index = $i_usage_code;
   my $cpp_defining_macro_name;
   if (substr($line,0,1) eq "#") {
-    $line =~ s/^\#\s+//;
+    $line =~ s/^\#\s*//;
     $macro_uses_index = $i_usage_cond;
     if ($line =~ /^define\s+($identifier_re)/o)
       { $cpp_defining_macro_name = $1;
@@ -5128,7 +5107,7 @@ sub analyze_for_macro_use ($) {
 	my $mi = mindex_from_name_file_line($cpp_defining_macro_name,
 					    $current_file,
 					    current_line_no());
-	push @{$mdef_expansion_uses[$mi]}, $word;
+	push @{$mdef_direct_expansion_uses[$mi]}, $word;
 	# print STDERR "Macro $cpp_defining_macro_name expands to something with $word-- using index $mi\n";
     }
     push @{$macros_file_line_uses{$word}}, ($current_file,current_line_no());
@@ -5147,23 +5126,23 @@ sub analyze_for_macro_use ($) {
   #       print "  incl_dep: ", join(" ",(keys %incl_deps)), "\n";
   #       print "  exp_dep: ", join(" ",(keys %incl_deps)), "\n"; }
 
-  my $incl_dep_phrase;
-  foreach $incl_dep_phrase (@inclusion_dependenton)
-    { my $word;
-      # This work is redone for every inclusion dependence of every line.  Bad!
-      foreach $word (macros_appearing_in($incl_dep_phrase))
-	{ $incl_deps{$word} = $true;
-	  if ($debug_dependences)
-	    { print "processing $word; ", join(" ", keys %{$inclusion_dependenton{$word}}), ";", join(" ", keys %{$expansion_dependenton{$word}}), "\n"; }
-	  { my $incl_dep;
-	    foreach $incl_dep (keys %{$inclusion_dependenton{$word}})
-	      { $incl_deps{$incl_dep} = $true; } }
-	  { my $exp_dep;
-	    foreach $exp_dep (keys %{$expansion_dependenton{$word}})
-	      { $incl_deps{$exp_dep} = $true; } } } }
+  { my $incl_dep_phrase;
+    foreach $incl_dep_phrase (@inclusion_dependenton)
+      { my $word;
+	# This work is redone for every inclusion dependence of every line.  Bad!
+	foreach $word (macros_appearing_in($incl_dep_phrase))
+	  { $incl_deps{$word} = $true;
+	    if ($debug_dependences)
+	      { print "processing $word; ", join(" ", keys %{$inclusion_dependenton{$word}}), ";", join(" ", keys %{$expansion_dependenton{$word}}), "\n"; }
+	    { my $incl_dep;
+	      foreach $incl_dep (keys %{$inclusion_dependenton{$word}})
+		{ $incl_deps{$incl_dep} = $true; } }
+	    { my $exp_dep;
+	      foreach $exp_dep (keys %{$expansion_dependenton{$word}})
+		{ $incl_deps{$exp_dep} = $true; } } } } }
 
   if ($debug_dependences)
-    { print "$current_file:",current_line_no(),": $line";
+    { print "$current_file:",current_line_no(),": ", add_newline($line);
       print "  incl_dep: ", join(" ",(keys %incl_deps)), "\n";
       print "  exp_dep: ", join(" ",(keys %exp_deps)), "\n"; }
 
@@ -5775,8 +5754,9 @@ sub SaveMacroAnalysisState
     %macros_file_line_uses %macros_used_in_functions
     @mdef_name @mdef_args @mdef_body @mdef_body_noc
     @mdef_file @mdef_line @mdef_physical_lines
-    @mdef_physical_ncnb_lines @mdef_freefuns @mdef_inclusion_dependenton
-    @mdef_expansion_uses @mdef_type @mdef_category
+    @mdef_physical_ncnb_lines @mdef_freefuns
+    @mdef_direct_inclusion_dependenton @mdef_direct_expansion_uses
+    @mdef_type @mdef_category
     @mdef_evilness %mdef_freevars
     %mntype %mncategory
     @rg_cppcmdcounts @rg_category_counts
@@ -5787,7 +5767,7 @@ sub SaveMacroAnalysisState
     %files_function_lines %function_to_locs
     %inclusion_dependenton %inclusion_dependees %inclusion_dependee_lines
     %expansion_dependenton %expansion_dependees %expansion_dependee_lines
-    @rg_ccd_cat_counts	     
+    @rg_ccd_cat_counts
 		     );
 
   my $i = 0;
@@ -5894,7 +5874,7 @@ if ($opt_g)
       $debug_getline = $false;
       $debug_categorize_macro = $false;
       $debug_cpp_if_comments = $false;
-      $debug_dependences = $false; 
+      $debug_dependences = $false;
       $debug_ccd_categories = $false;
     }
   elsif ($opt_g == 1) { $fDebugCmdProcessing = $true; }
@@ -5942,6 +5922,7 @@ initialize_lists_of_hashes();
 if ($opt_v) { print STDERR "Processing ", scalar(@files), " files",
   	                   ($opt_I ? "" : " (plus \#included files)"), "...\n"; }
 
+## This is pass 1 over the input files
 find_macro_definitions();	# also counts other preprocessor usage
 { my $word;
   for $word (keys %macros_used_by_cpp)
@@ -5976,6 +5957,7 @@ find_macro_definitions();	# also counts other preprocessor usage
 if (!$opt_1)
 { if ($opt_v) { print STDERR "done finding macro definitions; now finding macro uses...\n"; }
   compute_transitive_macro_dependences();
+  ## This is pass 2 over the input files
   process_macro_calls();
 }
 
@@ -5983,28 +5965,36 @@ if ($debug_dependences)
 { print "===========================================================================\n";
   print "Macro dependence info\n";
   my $macro_name;
-  for $macro_name (keys %macros)
+  for $macro_name (sort keys %macros)
     { print "$macro_name\n";
-      my $i;
-      for $i (@{$macros{$macro_name}})
-	{ print "  $i: incl_dep: @{$mdef_inclusion_dependenton[$i]}\n";
-	  print "      exp_dep: @{$mdef_expansion_uses[$i]}\n"; }
-      print "  i_depon: ", join(' ',keys %{$inclusion_dependenton{$macro_name}}), "\n";
-      print "  i_depee: ", join(' ',keys %{$inclusion_dependees{$macro_name}}), "\n";
-      print "  i_depee_lines: ", $inclusion_dependee_lines{$macro_name}, "\n";
-      print "  e_depon: ", join(' ',keys %{$expansion_dependenton{$macro_name}}), "\n";
-      print "  e_depee: ", join(' ',keys %{$expansion_dependees{$macro_name}}), "\n";
-      print "  e_depee_lines: ", $expansion_dependee_lines{$macro_name}, "\n"; } }
+      if (scalar(@{$macros{$macro_name}}) > 0)
+	{ my $i;
+	  for $i (@{$macros{$macro_name}})
+	    { print "  def #$i: incl_dep: @{$mdef_direct_inclusion_dependenton[$i]}\n";
+	      print "           exp_dep: @{$mdef_direct_expansion_uses[$i]}\n"; } }
+      else
+	{ print "  no def; used on $macros_used_by_cpp{$macro_name}\n"; }
+      if (scalar(keys %{$inclusion_dependenton{$macro_name}}) > 0)
+	{ print "  i_depon: ", join(' ',keys %{$inclusion_dependenton{$macro_name}}), "\n"; }
+      if (scalar(keys %{$inclusion_dependees{$macro_name}}) > 0)
+	{ print "  i_depee: ", join(' ',keys %{$inclusion_dependees{$macro_name}}), "\n"; }
+      if ($inclusion_dependee_lines{$macro_name} > 0)
+	{ print "  i_depee_lines: ", $inclusion_dependee_lines{$macro_name}, "\n"; }
+      if (scalar(keys %{$expansion_dependenton{$macro_name}}) > 0)
+	{ print "  e_depon: ", join(' ',keys %{$expansion_dependenton{$macro_name}}), "\n"; }
+      if (scalar(keys %{$expansion_dependees{$macro_name}}) > 0)
+	{ print "  e_depee: ", join(' ',keys %{$expansion_dependees{$macro_name}}), "\n"; }
+      if ($expansion_dependee_lines{$macro_name} > 0)
+	{ print "  e_depee_lines: ", $expansion_dependee_lines{$macro_name}, "\n"; } } }
 
 if ($opt_v) { print STDERR "Computing macro/function use relations...\n"; }
 compute_macros_used_in_functions();
 
 ### All the files have been read; now process the macros
-# Expression used to have +1, but that wasn't right.
-print STDERR "Categorizing " . ($cMacrosInTables - $cBuiltinMacros) . " macros\n";
+print STDERR "Categorizing $cMacrosInTables macros\n";
 { my $i;
   local $categorizing_macros = $true;
-  for ($i = $cBuiltinMacros;
+  for ($i = 0;
        $i < $cMacrosInTables;
        $i++ )
     { # print "$i: $mdef_body[$i]\n";
