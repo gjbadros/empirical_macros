@@ -183,8 +183,8 @@ tbl-properties-percents: $(PROP)
 	combine-histogram -p'\)' -s'#.*percentages: total defs = (.*)' -e '^#' $^ > $@
 
 package_num_files:
-	cd $(PKG_DIR); \
-	wc -l */c-files-listing | awk -F/ '{print $$1}' | awk -F- '{print $$1}' | awk '{print $$2 "\t" $$1}' > $(ANALYZE_OUTPUT_DIR)/$@
+	cd $(USER_PREFIX)/packages; \
+	wc -l *c-files-listing | awk -F- '{print $$1}' | awk '{print $$2 "\t" $$1}' > $(ANALYZE_OUTPUT_DIR)/$@
 
 
 tbl-inclusion-dependences-by-line: $(SDEPEND)
