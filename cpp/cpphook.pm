@@ -5,6 +5,7 @@ use English;
 
 use hook_index_constants;
 use hook_datatypes;
+use enum_node_type;
 use vars qw( *CHOUT @Hooks );
 
 sub AddHook {
@@ -71,9 +72,28 @@ sub create_predef {
 
 sub cpp_error {
   my ($file,$line,$col,$msg) = @_;
-  print STDERR "cpp_error: $file:$line:$col, $msg\n";
+  print "cpp_error: $file:$line:$col, $msg\n";
 }
 
+sub do_undef {
+  my ($keyword) = @_;
+  print "do_undef of $keyword\n";
+}
+
+sub delete_def {
+  my ($keyword, $fExists) = @_;
+  print "delete_def $keyword, $fExists\n";
+}
+
+sub expand_macro {
+  my ($mname) = @_;
+  print "expand_macro $mname\n";
+}
+
+sub special_symbol {
+  my ($symbol,$enum_node_type) = @_;
+  print "special_symbol $symbol => $node_type_name[$enum_node_type]\n";
+}
 
 
 # Add the hooks, now
@@ -81,8 +101,12 @@ AddHook($STARTUP,\&Startup);
 AddHook($DO_DEFINE,\&do_define);
 AddHook($HANDLE_DIRECTIVE,\&handle_directive);
 AddHook($CREATE_PREDEF,\&create_predef);
-#AddHook($CREATE_DEF,\&create_def);
+AddHook($CREATE_DEF,\&create_def);
+AddHook($DELETE_DEF,\&delete_def);
+AddHook($DO_UNDEF,\&do_undef);
 AddHook($CPP_ERROR,\&cpp_error);
+AddHook($EXPAND_MACRO,\&expand_macro);
+AddHook($SPECIAL_SYMBOL,\&special_symbol);
 
 
 1;

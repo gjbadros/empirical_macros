@@ -76,6 +76,24 @@ gjb_call_hooks_sz(struct cpp_options *opts, HOOK_INDEX ih, char *sz)
   perl_call_sv(psvFunc, G_DISCARD);
 }
 
+void
+gjb_call_hooks_sz_i(struct cpp_options *opts, HOOK_INDEX ih, char *sz, int i)
+{
+  SV *psvFunc = NULL;
+
+  dSP;
+  
+  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+    return;
+
+  PUSHMARK(sp);
+  XPUSHs(sv_2mortal(newSVpv(sz, 0)));
+  XPUSHs(sv_2mortal(newSViv(i)));
+  PUTBACK ;
+     
+  perl_call_sv(psvFunc, G_DISCARD);
+}
+
 /* return a single new SV * which is the various arguments
  * OR-ed in together into one integer, each integer getting a bit
  * The list should be terminated with a negative number

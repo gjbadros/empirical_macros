@@ -2348,6 +2348,8 @@ special_symbol (hp, pfile)
 	       "Predefined macro `%s' used inside `#if' during precompilation",
 	       hp->name);
 #endif
+
+  gjb_call_hooks_sz_i(CPP_OPTIONS(pfile),SPECIAL_SYMBOL,hp->name,hp->type);
     
   for (ip = CPP_BUFFER (pfile); ; ip = CPP_PREV_BUFFER (ip))
     {
@@ -2689,6 +2691,9 @@ macroexpand (pfile, hp)
   if (pcp_inside_if && pcp_outfile && defn->predefined)
     dump_single_macro (hp, pcp_outfile);
 #endif
+
+  /* FIXGJB: give more info here! */
+  gjb_call_hooks_sz(CPP_OPTIONS(pfile),EXPAND_MACRO,hp->name);
 
   pfile->output_escapes++;
   cpp_buf_line_and_col (cpp_file_buffer (pfile), &start_line, &start_column);
@@ -3894,6 +3899,7 @@ do_undef (pfile, keyword, buf, limit)
   int sym_length;
   HASHNODE *hp;
   U_CHAR *orig_buf = buf;
+  int fExists = 0;
 
 #if 0
   /* If this is a precompiler run (with -pcp) pass thru #undef commands.  */
@@ -3912,8 +3918,11 @@ do_undef (pfile, keyword, buf, limit)
 	pass_thru_directive (orig_buf, limit, pfile, keyword);
       if (hp->type != T_MACRO)
 	cpp_warning (pfile, "undefining `%s'", hp->name);
-      delete_macro (hp);
+      delete_macro (pfile,hp);
+      fExists = 1;
     }
+
+  gjb_call_hooks_sz_i(CPP_OPTIONS(pfile),DO_UNDEF,keyword->name,fExists);
 
   if (CPP_PEDANTIC (pfile)) {
     buf += sym_length;
@@ -4188,7 +4197,7 @@ eval_if_expression (pfile, buf, length)
 
   value = cpp_parse_expr (pfile);
   pfile->pcp_inside_if = 0;
-  delete_macro (save_defined);	/* clean up special symbol */
+  delete_special_macro (save_defined);	/* clean up special symbol */
 
   CPP_SET_WRITTEN (pfile, old_written); /* Pop */
 

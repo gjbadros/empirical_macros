@@ -24,6 +24,7 @@ Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include "cpplib.h"
 #include "cpphash.h"
+#include "cpphook.h"
 
 extern char *xmalloc PARAMS ((unsigned));
 
@@ -109,9 +110,12 @@ cpp_lookup (pfile, name, len, hash)
    If #undef freed the DEFINITION, that would crash.  */
 
 void
-delete_macro (hp)
+delete_macro (pfile, hp)
+     cpp_reader *pfile;
      HASHNODE *hp;
 {
+  if (pfile != NULL)  
+    gjb_call_hooks_sz(CPP_OPTIONS(pfile),DELETE_DEF,hp->name);
 
   if (hp->prev != NULL)
     hp->prev->next = hp->next;
@@ -140,11 +144,24 @@ delete_macro (hp)
 
   free (hp);
 }
+
+
+/* install/delete-macro is used when evalling and #if expression
+ * we do not want to call any hooks for that pseudo-undef
+ */
+void
+delete_special_macro(hp)
+  HASHNODE *hp;
+{
+  delete_macro(NULL,hp);
+}
+  
 /*
  * install a name in the main hash table, even if it is already there.
  *   name stops with first non alphanumeric, except leading '#'.
  * caller must check against redefinition if that is desired.
  * delete_macro () removes things installed by install () in fifo order.
+ * (or delete-special-macro --gjb)
  * this is important because of the `defined' special symbol used
  * in #if, and also if pushdef/popdef directives are ever implemented.
  *
@@ -209,6 +226,6 @@ cpp_hash_cleanup (pfile)
   for (i = HASHSIZE; --i >= 0; )
     {
       while (hashtab[i])
-	delete_macro (hashtab[i]);
+	delete_macro (pfile,hashtab[i]);
     }
 }

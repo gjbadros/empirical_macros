@@ -26,6 +26,7 @@
        
 *************************************************************************/
 
+//#include <stdio.h>
 
 typedef enum {PLUS, MINUS} sign;
 
@@ -61,3 +62,8 @@ typedef bc_struct *bc_num;
 
 #define foo(x,y,z...) ## x x x x x x x y y y y z y y y 
 
+#undef foo
+
+MAX(x,y);
+
+__FILE__

@@ -9,20 +9,31 @@
 
 // start hook_index_constants
 typedef enum hook_index_constants {
-  DO_DEFINE,
-  HANDLE_DIRECTIVE,
   STARTUP,
+  HANDLE_DIRECTIVE,
+  DO_DEFINE,
+  DO_UNDEF,
   CREATE_PREDEF,
   CREATE_DEF,
+  DELETE_DEF,
+  SPECIAL_SYMBOL,
+  EXPAND_MACRO,
   CPP_ERROR,
   CPP_WARN,
   CPP_PEDWARN
 } HOOK_INDEX;
 // end hook_index_constants
 
+/* Notes:
+ * DO_UNDEF gets called *after* DELETE_DEF for a #undef, since it gets
+ * the extra arg about whether the name was defined
+ */
+
 void gjb_call_hooks_void(struct cpp_options *, HOOK_INDEX);
 
 void gjb_call_hooks_sz(struct cpp_options *, HOOK_INDEX, char *);
+
+void gjb_call_hooks_sz_i(struct cpp_options *, HOOK_INDEX, char *, int);
 
 void gjb_call_hooks_szl_sz_defn(struct cpp_options *, HOOK_INDEX, char *, 
 				int, char *, DEFINITION *);
