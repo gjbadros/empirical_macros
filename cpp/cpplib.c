@@ -104,6 +104,8 @@ extern char *rindex ();
 #define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
 #define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
 
+#define DEF_STR(s,d) ((s)?(char *)(s):(d))
+
 /* Find the largest host integer type and set its size and type.  */
 
 #ifndef HOST_BITS_PER_WIDE_INT
@@ -3552,6 +3554,7 @@ do_include (pfile, keyword, unused1, unused2)
 
     /* Record file on "seen" list for #import. */
     add_import (pfile, f, fname);
+    gjb_call_hooks_sz_i(CPP_OPTIONS(pfile),ADD_IMPORT,fname,f);
 
     pcftry = (char *) alloca (strlen (fname) + 30);
     pcfbuf = 0;
@@ -3597,6 +3600,8 @@ do_include (pfile, keyword, unused1, unused2)
 
     /* Actually process the file */
     cpp_push_buffer (pfile, NULL, 0);
+    gjb_call_hooks_sz_i(CPP_OPTIONS(pfile),INCLUDE_FILE,fname,
+			is_system_include(pfile,fname));
     if (finclude (pfile, f, fname, is_system_include (pfile, fname),
 		  searchptr != dsp ? searchptr : SELF_DIR_DUMMY))
       {
@@ -4641,7 +4646,7 @@ do_else (pfile, keyword, buf, limit)
     output_line_command (pfile, 1, same_file);
   }
   gjb_call_hooks_sz_szl_szl(CPP_OPTIONS(pfile),DO_ELSE,
-			    pfile->if_stack->control_macro,
+			    DEF_STR(pfile->if_stack->control_macro,"@??@"),
 			    pchStartGarbage,pchEndGarbage-pchStartGarbage,
 			    pchEndGarbage,ip->cur-pchEndGarbage);
   return 0;
@@ -4782,7 +4787,7 @@ cpp_get_token (pfile)
     handle_eof:
       if (CPP_BUFFER (pfile)->seen_eof)
 	{
-	  if (cpp_pop_buffer (pfile) != CPP_NULL_BUFFER (pfile))
+	  if (cpp_pop_buffer (pfile) != CPP_NULL_BUFFER (pfile)) 
 	    goto get_next;
 	  else
 	    return CPP_EOF;
@@ -6935,6 +6940,15 @@ cpp_finish (pfile)
 	}
     }
 }
+
+/* FIXGJB: this should go somewhere! */
+#if 0
+	  gjb_call_hooks_sz_i(CPP_OPTIONS(pfile),DONE_INCLUDE_FILE,
+			      DEF_STR(CPP_BUFFER(pfile)->fname,"@TOP@"),
+			      (CPP_BUFFER(pfile)->fname?
+			       is_system_include(pfile,CPP_BUFFER(pfile)->fname):
+			       -1));
+#endif
 
 /* Free resources used by PFILE. */
 

@@ -26,7 +26,7 @@
        
 *************************************************************************/
 
-//#include <stdio.h>
+#include <stdio.h>
 
 typedef enum {PLUS, MINUS} sign;
 

@@ -172,6 +172,7 @@ main (int argc, char **argv, char **env)
   int argi = 1;  /* Next argument to handle. */
   int perl_exit_status = 0;
   struct cpp_options *opts = &options;
+  int return_exit_code = SUCCESS_EXIT_CODE;
 
   /* Perl startup code */
   char *startup_code[] = { "", "-I", "/tmp/gjb/cpp", "-e", "use cpphook;" };
@@ -234,11 +235,14 @@ main (int argc, char **argv, char **env)
 
   if (parse_in.errors)
     {
-    exit (FATAL_EXIT_CODE);
+    return_exit_code = FATAL_EXIT_CODE;
     }
-  exit (SUCCESS_EXIT_CODE);
+
+  gjb_call_hooks_i(opts,EXIT,return_exit_code);
+  exit (return_exit_code);
 }
 
+#include "cpphash.h"
 
 // Get the XS functions that allow calling back into this C code from perl
 // Created w/ something like:

@@ -23,6 +23,12 @@ sub Startup {
 #  select CHOUT;
 }
 
+sub Exit {
+  my ($retval) = @_;
+  close(CHOUT); # Not really necessary of course
+  print "Exiting with status $retval\n";
+}
+
 sub do_define {
   my ($body) = @_;
   print "In do_define w/ body = $body\n";
@@ -88,6 +94,7 @@ sub delete_def {
 
 sub expand_macro {
   my ($mname,$expansion) = @_;
+  print "Lookup = ", cpp::lookup($mname), "\n";
   print "expand_macro $mname => $expansion\n";
 }
 
@@ -150,6 +157,21 @@ sub do_endif {
   print "do_endif (orig conditional was $orig_conditional) [$trailing_garbage]\n";
 }
 
+sub add_import {
+  my ($filename, $f) = @_;
+  print "do_import on $filename, $f\n"
+}
+
+sub include_file {
+  my ($filename, $fSystemInclude) = @_;
+  print "include_file $filename, $fSystemInclude\n";
+}
+
+sub done_include_file {
+  my ($filename, $fSystemInclude) = @_;
+  print "done_include_file $filename, $fSystemInclude\n";
+}
+
 # Add the hooks, now
 AddHook($STARTUP,\&Startup);
 AddHook($DO_DEFINE,\&do_define);
@@ -171,6 +193,10 @@ AddHook($DO_IFDEF,\&do_ifdef);
 AddHook($DO_IFNDEF,\&do_ifndef);
 AddHook($DO_ELSE,\&do_else);
 AddHook($DO_ENDIF,\&do_endif);
+AddHook($ADD_IMPORT,\&add_import);
+AddHook($INCLUDE_FILE,\&include_file);
+AddHook($DONE_INCLUDE_FILE,\&done_include_file);
+AddHook($EXIT,\&Exit);
 
 
 1;

@@ -104,6 +104,23 @@ gjb_call_hooks_void(struct cpp_options *opts, HOOK_INDEX ih)
 
 
 void
+gjb_call_hooks_i(struct cpp_options *opts, HOOK_INDEX ih, int i)
+{
+  SV *psvFunc = NULL;
+
+  dSP;
+  
+  if ((psvFunc = get_hook_for(ih,opts->fWarnMissingHooks)) == 0)
+    return;
+
+  PUSHMARK(sp);
+  XPUSHs(sv_2mortal(newSViv(i)));
+  PUTBACK ;
+     
+  perl_call_sv(psvFunc, G_DISCARD);
+}
+
+void
 gjb_call_hooks_sz(struct cpp_options *opts, HOOK_INDEX ih, char *sz)
 {
   SV *psvFunc = NULL;

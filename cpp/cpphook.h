@@ -10,6 +10,7 @@
 // start hook_index_constants
 typedef enum hook_index_constants {
   STARTUP,
+  EXIT,
   HANDLE_DIRECTIVE,
   DO_DEFINE,
   DO_UNDEF,
@@ -30,7 +31,10 @@ typedef enum hook_index_constants {
   STRING_CONSTANT,
   CPP_ERROR,
   CPP_WARN,
-  CPP_PEDWARN
+  CPP_PEDWARN,
+  ADD_IMPORT,
+  INCLUDE_FILE,
+  DONE_INCLUDE_FILE,
 } HOOK_INDEX;
 // end hook_index_constants
 
@@ -40,6 +44,8 @@ typedef enum hook_index_constants {
  */
 
 void gjb_call_hooks_void(struct cpp_options *, HOOK_INDEX);
+
+void gjb_call_hooks_i(struct cpp_options *, HOOK_INDEX, int);
 
 void gjb_call_hooks_sz(struct cpp_options *, HOOK_INDEX, char *);
 
