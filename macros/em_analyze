@@ -735,6 +735,7 @@ my $debug_type_match = $false;
 my $debug_parse_function = $false;
 my $debug_parse_expression = $false;
 my $debug_parse_statement = $false;
+my $debug_parse_declaration = $false;
 my $debug_merge_branches = $false;
 my $debug_parse_array_init = $false;
 my $debug_peek = $false;
@@ -2838,57 +2839,76 @@ sub parse_function_decl_args ($)
   return ($false, $text, ());
 }
 
-# Return the remaining string after the open brace and an associative array
+# Return the remaining string, reference to a list of warnings, and an associative array of names to types,
+# (They're in that order because the multiple-value thing must be last.)
+# If there are warnings, then the parse failed; otherwise, it succeeded.
+# Don't bother sharing code with argument declarator parsing; too much work.
+sub parse_declarations ($)
+{
+  my ($decls) = check_args(1, @_);
+  my %nametype = ();
+  my $warnings = [];
+  if ($debug_parse_declaration)
+    { print "type_declarator_re = '$type_declarator_re'\n"; }
+  while ($decls =~ /^\s*$type_declarator_re\s*([,;\(=])/o)
+    { if ($debug_parse_declaration) { print "parsing decls $decls\n"; }
+      my $typespec = $1;
+      my $declarator = $2;
+      my $nextchar = $LAST_PAREN_MATCH;
+      $decls = $POSTMATCH;
+      my ($type, $identifier) = parse_declarator($typespec, $declarator);
+      if ($nextchar eq "=")
+	{ my $postexp = skip_expression_nocommaop($decls);
+	  if ($postexp =~ /^\s*([,;])/)
+	    { $decls = $POSTMATCH;
+	      $nextchar = $1; }
+	  else
+	    { push(@$warnings, "No comma or semicolon after skipping initializer expression in $decls");
+	      return ($postexp, $warnings, %nametype); } }
+      if ($nextchar eq "\(")
+	{ # This function argument declarator declares a function.
+	  my ($success, $remaining, @sub_arg_decls) = parse_function_decl_args($decls);
+	  if ($success && ($remaining !~ m/^\s*;/))
+	    { $nextchar = ';';
+	      $decls = $POSTMATCH;
+	      # For now, put it back together and make someone else re-parse it.
+	      $type .= "(" . join(", ", @sub_arg_decls) . ")"; }
+	  else
+	    { push(@$warnings, "Couldn't parse sub-function arg declaration $decls");
+	      return ($decls, $warnings, %nametype); }
+	}
+      $nametype{$identifier} = $type;
+      while ($nextchar eq ",")
+	{ if ($decls =~ /^\s*$declarator_re\s*([,;])/o)
+	    { $declarator = $1;
+	      $nextchar = $LAST_PAREN_MATCH;
+	      $decls = $POSTMATCH;
+	      ($type, $identifier) = parse_declarator($typespec, $declarator);
+	      $nametype{$identifier} = $type; }
+	  else
+	    { push(@$warnings, "Couldn't parse declarator following comma after '$typespec $declarator $nextchar': $decls\n");
+	      return ($decls, $warnings, %nametype); } } }
+  return ($decls, $warnings, %nametype);
+}
+
+## I think this can be discarded in favor of a check for open brace plus a call
+## to parse_declarations.
+# Return the remaining string (after the open brace), and an associative array
 # of names to types.
 # Don't bother sharing code with argument declarator parsing; too much work.
 sub parse_KandR_function_arg_decls ($)
 {
   my ($argdecls) = check_args(1, @_);
-  my %argnametype = ();
-  while ($argdecls !~ /^\s*\{/)
-    { # print "parsing K&R function arg decls $argdecls\n";
-      if ($argdecls !~ /^\s*$type_declarator_re\s*([,;\(])/o)
-	{ parse_error("Couldn't parse K&R-style type declarator $argdecls");
-	  if ($argdecls !~ /\{/)
-	    { evilprint("parse_KandR_function_arg_decls: no open brace in '$argdecls'\n"); }
-	  return ($POSTMATCH, %argnametype); }
-      my $typespec = $1;
-      my $declarator = $2;
-      my $nextchar = $LAST_PAREN_MATCH;
-      $argdecls = $POSTMATCH;
-      my ($type, $identifier) = parse_declarator($typespec, $declarator);
-      if ($nextchar eq "\(")
-	{ # This function argument declarator declares a function.
-	  my ($success, $remaining, @sub_arg_decls) = parse_function_decl_args($argdecls);
-	  if ((!$success) || ($remaining !~ m/^\s*(;)/))
-	    { parse_error("Couldn't parse sub-function arg declaration $argdecls");
-	      if ($argdecls !~ /\{/)
-		{ evilprint("parse_KandR_function_arg_decls: no open brace in '$argdecls'\n"); }
-	      return ($POSTMATCH, %argnametype); }
-	  $nextchar = $1;
-	  $argdecls = $POSTMATCH;
-	  # For now, put it back together and make someone else re-parse it.
-	  $type .= "(" . join(", ", @sub_arg_decls) . ")";
-	}
-      $argnametype{$identifier} = $type;
-      while ($nextchar eq ",")
-	{ if ($argdecls !~ /^\s*$declarator_re\s*([,;])/o)
-	    { parse_error("Couldn't parse declarator following comma after '$typespec $declarator $nextchar': $argdecls\n");
-	      if ($argdecls !~ /\{/)
-		{ evilprint("parse_KandR_function_arg_decls: no open brace in '$argdecls'\n"); }
-	      return ($POSTMATCH, %argnametype); }
-	  $declarator = $1;
-	  $nextchar = $LAST_PAREN_MATCH;
-	  $argdecls = $POSTMATCH;
-	  ($type, $identifier) = parse_declarator($typespec, $declarator);
-	  $argnametype{$identifier} = $type; } }
-
-  # This doesn't work; rematch the open brace instead
-  # print "after K&R, remainder $POSTMATCH\n";
-  # return $POSTMATCH;
-  if ($argdecls !~ /^\s*\{/)
-    { mdie("parse_KandR_function_arg_decls: didn't find open brace previously found in $argdecls"); }
-  return ($POSTMATCH, %argnametype);
+  my ($remaining, $warnings, %nametype) = parse_declarations($argdecls);
+  map {parse_error($_)} @$warnings;
+  if ($remaining =~ /^\s*\{/)
+    { $remaining = $POSTMATCH; }
+  elsif ($remaining =~ /\{/)
+    { parse_error("Couldn't parse K&R-style type declarator $remaining");
+      $remaining = $POSTMATCH; }
+  else
+    { parse_error("parse_KandR_function_arg_decls: no open brace in '$argdecls'\n"); }
+  return ($remaining, %nametype);
 }
 
 
@@ -3017,30 +3037,24 @@ use vars qw($parsing_do_statement);
 
 # Returns a category (probably $catSTATEMENT, $catSTATEMENT_SANS_SEMI,
 # $catPARTIAL_STATEMENT, or $catFAILURE), plus the remaining string.
+# For now, this does not recognize the null statement (simply a semicolon).
 sub parse_statement ($)
 {
   my ($body) = check_args(1, @_);
   $body =~ s/^\s+//;
-  if ($debug_parse_statement) { print add_newline("parse_statement $body"); }
+  if ($debug_parse_statement) { print add_newline("parse_statement <= $body"); }
 
   if ($body eq "")
     { return ($catFAILURE, ""); }
 
+  elsif ($body =~ /^(break|continue)\b/)
+    { return statement_or_sans_semi($POSTMATCH); }
   elsif ($body =~ /^return\b\s*/)
     { my ($type, $remaining) = parse_expression($POSTMATCH);
-      # print "type = $type; remaining = $remaining\n";
-      if (!$type)
-	{ return ($catPARTIAL_STATEMENT, $remaining); }
-      elsif ($remaining =~ /^\s*;/)
-	{ return ($catSTATEMENT, $POSTMATCH); }
-      else
-	{ return ($catSTATEMENT_SANS_SEMI, $remaining); } }
+      # return is allowed not to take an argument, so ignore return type
+      return statement_or_sans_semi($remaining); }
   elsif ($body =~ /^goto\s*$identifier_re/o)
-    { my $remaining = $POSTMATCH;
-      if ($remaining =~ /^\s*;/)
-	{ return ($catSTATEMENT, $POSTMATCH); }
-      else
-	{ return ($catSTATEMENT_SANS_SEMI, $remaining); } }
+    { return statement_or_sans_semi($POSTMATCH); }
   elsif ($body =~ /^(if|while|switch)\s*\(/)
     { # Don't try to parse the open paren, as it might look like a cast.
       my ($type, $remaining) = parse_expression($POSTMATCH);
@@ -3057,8 +3071,7 @@ sub parse_statement ($)
 	  elsif (($subcat == $catSTATEMENT) && ($subremaining =~ /^\s*else\b/))
 	    { my ($subsubcat, $subsubremaining) = parse_statement($POSTMATCH);
 	      if ($subsubcat == $catFAILURE)
-		# Perhaps this should be $catPARTIAL_STATEMENT instead
-		{ return ($catPARTIAL_STATEMENT, $subremaining); }
+		{ return ($catPARTIAL_STATEMENT, $subsubremaining); }
 	      else
 		{ return ($subsubcat, $subsubremaining); } }
 	  else
@@ -3073,10 +3086,8 @@ sub parse_statement ($)
 	  my ($exp_type, $exp_remaining) = parse_expression($remaining);
 	  if (!$exp_type)
 	    { return ($catPARTIAL_STATEMENT, $remaining); }
-	  elsif ($exp_remaining =~ /^\s*;/)
-	    { return ($catSTATEMENT, $POSTMATCH); }
 	  else
-	    { return ($catSTATEMENT_SANS_SEMI, $exp_remaining); } } }
+	    { return statement_or_sans_semi($exp_remaining); } } }
   elsif ($body =~ /^for\s*\(/)
     { # It doesn't matter whether the calls to parse_expression succeed or not,
       # as parts the for init, test, or step may be omitted.
@@ -3114,12 +3125,16 @@ sub parse_statement ($)
 	{ print "parsed as expression $exptype, leaving '$expremaining' from '$body'\n"; }
       if (!$exptype)
 	{ return ($catFAILURE, $body); }
-      elsif ($expremaining =~ /^\s*;/)
-	{ return ($catSTATEMENT, $POSTMATCH); }
       else
-	{ return ($catSTATEMENT_SANS_SEMI, $expremaining); } }
+	{ return statement_or_sans_semi($expremaining); } }
 }
 
+sub statement_or_sans_semi ($)
+{ my ($arg) = check_args(1, @_);
+  if ($arg =~ /^\s*;/)
+    { return ($catSTATEMENT, $POSTMATCH); }
+  else
+    { return ($catSTATEMENT_SANS_SEMI, $arg); } }
 
 # This shouldn't return $catSTATEMENT except via a call to
 # parse_statement_follower.
@@ -3128,6 +3143,8 @@ sub parse_statements ($)
   my ($body) = check_args(1, @_);
 
   my ($cat, $remaining) = parse_statement($body);
+  if ($debug_parse_statement)
+    { print "parse_statements: first statement category $cat, remaining '$remaining'\n"; }
   if ($cat == $catSTATEMENT)
     { return parse_statement_follower($remaining); }
   else
@@ -4442,6 +4459,8 @@ sub categorize_macro_def ($)
     { $category = $catRECURSIVE; }
   elsif ($body =~ /-\w+([= ]\w+)?([ \t]+-\w+([= ]\w+)?)+$/)
     { $category = $catCOMMAND_LINE; }
+  elsif (contains_mismatch($body))
+    { $category = $catUNBALANCED; }
   # Not caught by previous tests, so an expression, statement, or failure.
   else {
     my $remaining;
@@ -4469,19 +4488,42 @@ sub categorize_macro_def ($)
 	else
 	  { $category = $catEXP; }
       }
-    # Not an expression; try statements of various sorts
     elsif ($type && ($remaining =~ /^\s*;\s*$/))
-      {
-	$category = $catSTATEMENT;
-      }
+      # Expression plus semicolon = statement
+      { $category = $catSTATEMENT; }
+    # Not an expression; try statements
     else
       { my $stmt_remaining;
 	($category, $stmt_remaining) = parse_statements($body);
 	if ($stmt_remaining !~ /^\s*$/)
-	  { if ($body =~ /^__asm__/)
+	  { if ($body =~ /^(__)?asm(__)?/)
 	      { $category = $catASSEMBLY_CODE; }
 	    else
-	      { $category = $catFAILURE; } } }
+	      # try parsing as declaration
+	      { my ($decl_remaining, $warnings, %nametype) = parse_declarations($body);
+		if ($debug_parse_declaration)
+		  { if (scalar(@$warnings) == 0)
+		      { print "parse_declarations: no warnings\n"; }
+		    else
+		      { print "parse_declarations warnings:\n";
+			map {print "  $_\n";} @$warnings; }
+		    print "parse_declarations remaining: '$decl_remaining'\n"; }
+		if (($decl_remaining =~ /^\s*$/) && (scalar(@$warnings) == 0))
+		  { $category = $catDECLARATION; }
+		else
+		  # add semicolon and try parsing as declaration
+		  { my ($decl_remaining, $warnings, %nametype) = parse_declarations("$body;");
+		    if ($debug_parse_declaration)
+		      { if (scalar(@$warnings) == 0)
+			  { print "parse_declarations: no warnings\n"; }
+			else
+			  { print "parse_declarations warnings:\n";
+			    map {print "  $_\n";} @$warnings; }
+			print "parse_declarations remaining: '$decl_remaining'\n"; }
+		    if (($decl_remaining =~ /^\s*$/) && (scalar(@$warnings) == 0))
+		      { $category = $catDECLARATION_SANS_SEMI; }
+		    else
+		      { $category = $catFAILURE; } } } } }
   }
 
 
@@ -5469,60 +5511,74 @@ sub test_categorize_macro_def ($$$)
     { print "Property $mdef_properties[1000] should have been $properties: $body\n"; }
 }
 
+sub test_cat ($$$)
+{ my ($category,$properties,$body) = check_args(3, @_);
+  test_categorize_macro_def($category,$properties,$body); }
+
 # This needs to test properties too
 sub test_categorize_macro_defs ()
 {
   $current_file = "testing";	# hack, for input_file_and_line
   $current_ftype_index = 1;	# hack, for update_categories_for
 
-  test_categorize_macro_def("literal", $propNONE, "\"\\037\\235\"");
-  test_categorize_macro_def("literal", $propNONE, "\"\037\235\"");
-  test_categorize_macro_def("expression", $propNONE, "(uch)get_byte()");
-  test_categorize_macro_def("expression", $propNONE, "memset ((voidp)(s), 0, (n))");
-  test_categorize_macro_def("expression", $propNONE, "((char_type *)(&d_buf[DIST_BUFSIZE-1]))");
-  test_categorize_macro_def("expression", $propNONE, "((ush)(uch)((p)[0]) | ((ush)(uch)((p)[1]) << 8))");
-  test_categorize_macro_def("expression", $propNONE, "((ulg)(SH(p)) | ((ulg)(SH((p)+2)) << 16))");
-  test_categorize_macro_def("expression", $propNONE, "malloc((size_t)(items)*(size_t)(size))");
-  test_categorize_macro_def("expression", $propASSIGN, "(inptr < insize ? inbuf[inptr++] : fill_inbuf(0))");
-  test_categorize_macro_def($catTYPE, $propNONE, "struct bsdtty");
-  test_categorize_macro_def($catTYPE, $propNONE, "extern inline");
-  test_categorize_macro_def("statement", $propASSIGN, "if (status < 0) { perror(name); error=1; }");
-  test_categorize_macro_def($catSTATEMENT_SANS_SEMI, $propNONE, "if (foo) bar(baz)");
-  test_categorize_macro_def("statement", $propNONE, "if (foo) bar(baz);");
-  test_categorize_macro_def($catSTATEMENT_SANS_SEMI, $propNONE, "while (b - bufp->buffer + (n) > bufp->allocated)  EXTEND_BUFFER ()");
-  test_categorize_macro_def("statement", $propNONE, "while (b - bufp->buffer + (n) > bufp->allocated)  EXTEND_BUFFER ();");
-  test_categorize_macro_def($catSTATEMENT_SANS_SEMI, $propNONE, "goto yyerrlab1");
-  test_categorize_macro_def("statement", $propNONE, "goto yyerrlab1;");
-  test_categorize_macro_def($catSTATEMENT_SANS_SEMI, $propNONE, "return 0");
-  test_categorize_macro_def("statement", $propNONE, "return 0;");
-  test_categorize_macro_def($catSTATEMENT_SANS_SEMI, $propNONE, "return err__fl((int)f,m,s)");
-  test_categorize_macro_def("statement", $propNONE, "return err__fl((int)f,m,s);");
-  test_categorize_macro_def($catSTATEMENT_SANS_SEMI, $propNONE, "if (auth != mach_task_self () && ! __USEPORT (AUTH, port == auth))  return EPERM");
-  test_categorize_macro_def("statement", $propNONE, "if (auth != mach_task_self () && ! __USEPORT (AUTH, port == auth))  return EPERM;");
-  test_categorize_macro_def($catSTATEMENT_SANS_SEMI, $propNONE, "if (x == NULL) goto error");
-  test_categorize_macro_def("statement", $propNONE, "goto error;");
-  test_categorize_macro_def("statement", $propNONE, "if (x == NULL) goto error;");
-  test_categorize_macro_def("statement", $propNONE, "do { foo(); } while (0);");
-  test_categorize_macro_def($catSTATEMENT_SANS_SEMI, $propNONE, "do { foo(); } while (0)");
-  test_categorize_macro_def("statement", $propASSIGN, "do { GET_BUFFER_SPACE (1); *b++ = (unsigned char) (c); } while (0);");
-  test_categorize_macro_def($catSTATEMENT_SANS_SEMI, $propASSIGN, "do { GET_BUFFER_SPACE (1); *b++ = (unsigned char) (c); } while (0)");
+  test_cat("literal", $propNONE, "\"\\037\\235\"");
+  test_cat("literal", $propNONE, "\"\037\235\"");
+  test_cat("expression", $propNONE, "(uch)get_byte()");
+  test_cat("expression", $propNONE, "memset ((voidp)(s), 0, (n))");
+  test_cat("expression", $propNONE, "((char_type *)(&d_buf[DIST_BUFSIZE-1]))");
+  test_cat("expression", $propNONE, "((ush)(uch)((p)[0]) | ((ush)(uch)((p)[1]) << 8))");
+  test_cat("expression", $propNONE, "((ulg)(SH(p)) | ((ulg)(SH((p)+2)) << 16))");
+  test_cat("expression", $propNONE, "malloc((size_t)(items)*(size_t)(size))");
+  test_cat("expression", $propASSIGN, "(inptr < insize ? inbuf[inptr++] : fill_inbuf(0))");
+  test_cat($catTYPE, $propNONE, "struct bsdtty");
+  test_cat($catTYPE, $propNONE, "extern inline");
+  test_cat("statement", $propASSIGN, "if (status < 0) { perror(name); error=1; }");
+  test_cat($catSTATEMENT_SANS_SEMI, $propNONE, "if (foo) bar(baz)");
+  test_cat("statement", $propNONE, "if (foo) bar(baz);");
+  test_cat($catSTATEMENT_SANS_SEMI, $propNONE, "while (b - bufp->buffer + (n) > bufp->allocated)  EXTEND_BUFFER ()");
+  test_cat("statement", $propNONE, "while (b - bufp->buffer + (n) > bufp->allocated)  EXTEND_BUFFER ();");
+  test_cat($catSTATEMENT_SANS_SEMI, $propNONE, "goto yyerrlab1");
+  test_cat("statement", $propNONE, "goto yyerrlab1;");
+  test_cat($catSTATEMENT_SANS_SEMI, $propNONE, "return 0");
+  test_cat("statement", $propNONE, "return 0;");
+  test_cat($catSTATEMENT_SANS_SEMI, $propNONE, "return err__fl((int)f,m,s)");
+  test_cat("statement", $propNONE, "return err__fl((int)f,m,s);");
+  test_cat($catSTATEMENT_SANS_SEMI, $propNONE, "if (auth != mach_task_self () && ! __USEPORT (AUTH, port == auth))  return EPERM");
+  test_cat("statement", $propNONE, "if (auth != mach_task_self () && ! __USEPORT (AUTH, port == auth))  return EPERM;");
+  test_cat($catSTATEMENT_SANS_SEMI, $propNONE, "if (x == NULL) goto error");
+  test_cat("statement", $propNONE, "goto error;");
+  test_cat("statement", $propNONE, "if (x == NULL) goto error;");
+  test_cat("statement", $propNONE, "do { foo(); } while (0);");
+  test_cat($catSTATEMENT_SANS_SEMI, $propNONE, "do { foo(); } while (0)");
+  test_cat("statement", $propASSIGN, "do { GET_BUFFER_SPACE (1); *b++ = (unsigned char) (c); } while (0);");
+  test_cat($catSTATEMENT_SANS_SEMI, $propASSIGN, "do { GET_BUFFER_SPACE (1); *b++ = (unsigned char) (c); } while (0)");
 
-  test_categorize_macro_def("recursive", $propNONE, "foo(dummy)");
-  test_categorize_macro_def("recursive", $propNONE, "foo(dummy);");
+  test_cat("recursive", $propNONE, "foo(dummy)");
+  test_cat("recursive", $propNONE, "foo(dummy);");
 
-  test_categorize_macro_def("expression", $propPASSES_TYPE_AS_ARG, "((d)->d_reclen - offsetof (struct direct, d_name) - 1)");
-  test_categorize_macro_def("expression", $propPASSES_TYPE_AS_ARG, "_IOR('m', 2, struct mtget)");
-  test_categorize_macro_def("expression", $propPASSES_TYPE_AS_ARG, "__BITS(char*)");
-  test_categorize_macro_def("expression", $propSTRINGIZE, "((void) ((expression) ? 0 : __assert (#expression, __FILE__, __LINE__)))");
-  test_categorize_macro_def($catSTATEMENTS, $propASSIGN, "if (var) free (var); var = NULL;");
-  test_categorize_macro_def($catSTATEMENTS_SANS_SEMI, $propASSIGN, "if (var) free (var); var = NULL");
-  test_categorize_macro_def($catSTATEMENT_SANS_SEMI, $propASSIGN,
+  test_cat("expression", $propPASSES_TYPE_AS_ARG, "((d)->d_reclen - offsetof (struct direct, d_name) - 1)");
+  test_cat("expression", $propPASSES_TYPE_AS_ARG, "_IOR('m', 2, struct mtget)");
+  test_cat("expression", $propPASSES_TYPE_AS_ARG, "__BITS(char*)");
+  test_cat("expression", $propSTRINGIZE, "((void) ((expression) ? 0 : __assert (#expression, __FILE__, __LINE__)))");
+  test_cat($catSTATEMENTS, $propASSIGN, "if (var) free (var); var = NULL;");
+  test_cat($catSTATEMENTS_SANS_SEMI, $propASSIGN, "if (var) free (var); var = NULL");
+  test_cat($catSTATEMENT_SANS_SEMI, $propASSIGN,
 			    "if (CHUNK_VAR->sp == ((char *)CHUNK_VAR + sizeof(*CHUNK_VAR))) { random code in here; } else (CHUNK_VAR->sp -= BYTES), (CHUNK_VAR->bytes_left += BYTES)");
 
-  test_categorize_macro_def($catSTATEMENT, $propASSIGN, "for (rl = 0;;) { code goes here; }");
-  test_categorize_macro_def($catSTATEMENT, $propNONE, "for ( ; ; ) { code goes here; }");
-  test_categorize_macro_def($catSTATEMENT, $propASSIGN, "for ( ; ; i++) { code goes here; }");
-  test_categorize_macro_def($catSTATEMENT, $propNONE, "switch (a ? b : c) { case d: e; case 'f': g(h); }");
+  test_cat($catSTATEMENT, $propASSIGN, "for (rl = 0;;) { code goes here; }");
+  test_cat($catSTATEMENT, $propNONE, "for ( ; ; ) { code goes here; }");
+  test_cat($catSTATEMENT, $propASSIGN, "for ( ; ; i++) { code goes here; }");
+  test_cat($catSTATEMENT, $propNONE, "switch (a ? b : c) { case d: e; case 'f': g(h); }");
+
+  test_cat($catDECLARATION, $propASSIGN, "register gx_clip_rect *rptr = rdev->current.rptr;  gx_device *tdev = rdev->target;");
+  test_cat($catDECLARATION_SANS_SEMI, $propASSIGN, "register gx_clip_rect *rptr = rdev->current.rptr;  gx_device *tdev = rdev->target");
+  test_cat($catSTATEMENTS_SANS_SEMI, $propASSIGN, "if ( --h == 0 ) break;  bptr += sdelta; dbptr += ddelta");
+  test_cat($catPARTIAL_STATEMENT, $propNONE, "if ( cp != 0 ) { statements; } else");
+  test_cat($catPARTIAL_STATEMENTS, $propASSIGN, "cp = foo; if ( cp != 0 ) { statements; } else");
+  test_cat($catPARTIAL_STATEMENTS, $propASSIGN, "cp = (alloc_change *)alloc(2, sizeof(alloc_change), cname); if ( cp != 0 ) { cp->next = ap->changes; cp[1].next = cp; cp[1].where = 0; cp[1].contents.value.refs = 0; r_set_size(&cp[1].contents, 0); ap->changes = cp + 1; } else");
+  test_cat($catDECLARATION_SANS_SEMI, $propNONE, "gs_paint_cspace_params gs_base_cspace_params; gs_separation_params separation; gs_indexed_params indexed");
+  # because one argument is "goto fail"
+  test_cat($catFAILURE, $propNONE, "rc_allocate_struct(pgs->element, gx_transfer_map, pgs->memory_procs, goto fail, cname);");
 }
 
 
@@ -5743,6 +5799,8 @@ sub test_typedecl_regexps ()
   test_type_declarator_re_plus("int (*close_func)(");
   test_type_declarator_arglist_re("int (*close_func)(CL_Handle)");
   test_type_declarator_arglist_re("int (*func)(CL_Handle, int *, int)");
+  test_type_declarator_re("register gx_clip_rect *rptr");
+  test_type_declarator_re_plus("register gx_clip_rect *rptr =");
 }
 
 
@@ -5928,6 +5986,7 @@ if ($opt_g)
       $debug_parse_function = $false;
       $debug_parse_expression = $false;
       $debug_parse_statement = $false;
+      $debug_parse_declaration = $false;
       $debug_merge_branches = $false;
       $debug_parse_array_init = $false;
       $debug_peek = $false;
@@ -5952,6 +6011,7 @@ if ($opt_g)
   elsif ($opt_g == 13) { $debug_dependences = $true; }
   elsif ($opt_g == 14) { $debug_ccd_categories = $true; }
   elsif ($opt_g == 15) { $debug_parse_statement = $true; }
+  elsif ($opt_g == 16) { $debug_parse_declaration = $true; }
   else { die "Bad -g option $opt_g"; }
 }
 

@@ -13,8 +13,9 @@ require Exporter;
  $catSOME_CONSTANT $catCONSTANT $catLITERAL
  $catSTATEMENT $catSTATEMENT_SANS_SEMI $catPARTIAL_STATEMENT
  $catSTATEMENTS $catSTATEMENTS_SANS_SEMI $catPARTIAL_STATEMENTS
- $catTYPE $catPARTIAL_TYPE $catRESERVED_WORD
- $catFUNCTION_NAME $catSYMBOL_UNKNOWN $catSYMBOLS $catRECURSIVE
+ $catTYPE $catPARTIAL_TYPE $catDECLARATION $catDECLARATION_SANS_SEMI
+ $catRESERVED_WORD $catFUNCTION_NAME $catSYMBOL_UNKNOWN $catSYMBOLS
+ $catRECURSIVE
  $catUNBALANCED $catPUNCTUATION $catCOMMAND_LINE $catASSEMBLY_CODE
  $catMULTIPLE $catFAILURE $catLast @categoryname
 
@@ -126,31 +127,35 @@ $catPARTIAL_STATEMENTS = 13;	# multiple statements, last one incomplete
 $catTYPE = 14;			# expands to a type
 $catPARTIAL_TYPE = 15;
 
+$catDECLARATION = 16;		# add partial_declaration?
+$catDECLARATION_SANS_SEMI = 17;
+
 ## Single symbol (no $catMACRONAME: if expands to a macro, inherit its type)
-$catRESERVED_WORD = 16;		# expands to (just) non-type reserved word -- irrelevant?
-$catFUNCTION_NAME = 17;		# expands to name of function declared in package
-$catSYMBOL_UNKNOWN = 18;	# symbol (not function, macro, or reserved word)
+$catRESERVED_WORD = 18;		# expands to (just) non-type reserved word -- irrelevant?
+$catFUNCTION_NAME = 19;		# expands to name of function declared in package
+$catSYMBOL_UNKNOWN = 20;	# symbol (not function, macro, or reserved word)
 				#   (probably a macro whose def we didn't see,
 				#    or possibly a local or global variable)
 
-$catSYMBOLS = 19;		# multiple space-separated symbols: #def P(x,y) x y
+$catSYMBOLS = 21;		# multiple space-separated symbols: #def P(x,y) x y
 
-$catRECURSIVE = 20;		# not sure there are enough of these to justify;
+$catRECURSIVE = 22;		# not sure there are enough of these to justify;
 				# currently all but about 5 are misclassifications
 
 ## Fragments
-$catUNBALANCED = 21;		# unbalanced parentheses; was $catMISMATCH;
-				#   includes {), so perhaps that was better
-$catPUNCTUATION = 22;	# expands to just punctuation token(s); was $catSYNTAX
+$catUNBALANCED = 23;		# unbalanced parentheses; was $catMISMATCH;
+				#   includes {), so perhaps that was better,
+				#   but "mismatch" isn't as evocative
+$catPUNCTUATION = 24;	# expands to just punctuation token(s); was $catSYNTAX
 
 ## Not C code:
-$catCOMMAND_LINE = 23;		# Command-line arguments
-$catASSEMBLY_CODE = 24;
+$catCOMMAND_LINE = 25;		# Command-line arguments
+$catASSEMBLY_CODE = 26;
 
-$catMULTIPLE = 25; # a def gets this if it expands to a macro with this category
-$catFAILURE = 26;		# other sorts of failure (for example...?)
+$catMULTIPLE = 27; # a def gets this if it expands to a macro with this category
+$catFAILURE = 28;		# other sorts of failure (for example...?)
 
-$catLast = 26;			# same as last one
+$catLast = 28;			# same as last one
 
 @categoryname = (
 		 'uncategorized', 'being_categorized', 'never_defined',
@@ -159,6 +164,7 @@ $catLast = 26;			# same as last one
 		 'statement', 'semicolonless_statement', 'partial_statement',
 		 'statements', 'semicolonless_statements', 'partial_statements',
 		 'type', 'partial_type',
+		 'declaration', 'semicolonless_declaration',
 		 'reserved_word', 'function_name', 'unknown_symbol',
 		 'symbols',
 		 'recursive',
@@ -448,7 +454,7 @@ $string_literal_re = 'L?\"(|.*?[^\\\\])(\\\\\\\\)*\"'; # string literal
 # In general, use $identifier_re in preference to "\w+"
 $identifier_no_dollar_re = '\b[a-zA-Z_]\w*\b';	# 0 groups
 # Fix: $ as first character doesn't work: the leading \b won't match.
-$identifier_re = '\b[a-zA-Z_\$][a-zA-Z0-9_\$]*\b';	# 0 groups
+$identifier_re = '(?:\b[a-zA-Z_]|\$)[a-zA-Z0-9_\$]*\b';	# 0 groups
 $type_specifier_re = $identifier_re . '(?:\s+' . $identifier_re. ')*'; # 0 groups
 # Gross special case.  I'm sorry.  [I think this isn't necessary any more.]
 # Don't combine with type_re because that is sometimes combined with
@@ -468,7 +474,7 @@ $type_re = $type_specifier_re . $type_suffix_re . '*'; # 0 groups
 
 # Declarators are actually rather more complicated than this:  see H&S p. 85.
 # We can't really use a regexp to catch them all.  Just hope to catch most...
-$type_qualifier_re = '\b(?:const|volatile)\b'; # 0 groups
+$type_qualifier_re = '\b(?:const|volatile|register)\b'; # 0 groups
 $pointer_declarator_prefix_re = '\*(?:\s*' . $type_qualifier_re . ')*'; # 0 groups
 $pointer_declarator_prefixes_re = '(?:' . $pointer_declarator_prefix_re . '\s*)*'; # 0 groups
 $array_declarator_suffix_re = '\[(?:' . $constant_or_upcase_exp_re . ')?\]'; # 0 groups

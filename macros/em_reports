@@ -442,8 +442,10 @@ sub output_stats ()
 	    || ($category == $catLITERAL)
 	    || ($category == $catCONSTANT)
 	    || ($category == $catSOME_CONSTANT))
-	  { # These used to be commas, but those turn into tabs with -t option
-	    print "(" . type_name($type) . ")"; }
+	  { # These dots used to be commas, but those turn into tabs with -t option
+	    print "(" . (defined($type) ? type_name($type) : "UNDEFINED_TYPE") . ")"; }
+	elsif ($category == $catFAILURE)
+	  { print "($mdef_properties[$index])"; }
 	print ": $mdef_name[$index]$mdef_args[$index] $mdef_body[$index]\n";
       }
     }
@@ -552,16 +554,23 @@ sub output_stats ()
 		       || ($category == $catPARTIAL_STATEMENTS));
 		  my $properties = $mdef_properties[$i];
 
-		  # Check for formals but no body -- "#define foo(bar)" might
-		  # have been intended as "#define foo (bar)".
-		  # Suppress if body contains an empty comment.
-		  if ((!$body) && $args && !($mdef_body[$i] =~ /\/\*\s*\*\/$/))
-		    { push(@complaints,
-			   (($args =~ /\(\s*\Q$macro_name\E\s*\)/) ? "" : "possible ")
-			   . "missing space between macro name and parenthesized body (suppress w/empty comment)"); }
-		  # Check uses of each formal
+		  # Check formals
 		  if ($args)
 		    { my @args = args_array($args);
+		      # Check for formals but no body -- "#define foo(bar)"
+		      # might have been intended as "#define foo (bar)".
+		      # Suppress if body contains an empty comment.
+		      if ((!$body) && !($mdef_body[$i] =~ /\/\*\s*\*\/$/))
+			{ if (((scalar(@args) == 1) && ($args[0] eq $macro_name))
+			      || ($args !~ /\(\s*$identifier_re\s*(,\s*$identifier_re\s*)*\s*\)/))
+			    { push(@complaints,
+				   "missing space between macro name and parenthesized body (empty comment suppresses)"); }
+			  elsif ((scalar(@args) == 1) && ($macro_name !~ /^DEBUG_/))
+			    # Suppress warning if multiple arguments or debugging macro
+			    { push(@complaints,
+				   "possible missing space between macro name and parenthesized body (empty comment suppresses)"); } }
+
+		      # Check uses of each formal
 		      for my $arg (@args)
 			{ my @formal_complaints = ();
 			  if ($arg !~ /^$identifier_re$/o)
