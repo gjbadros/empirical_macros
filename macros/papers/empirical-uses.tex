@@ -192,7 +192,7 @@ were preprocessor directives, including a breakdown of the frequency
 of specific directives such as \verb+#define+ (see
 Section~\ref{sec:directives}). It was not unusual to find C programs 
 in which over 10\% of the total lines were preprocessor directives, and 
-three of the 23 packages had directives as over 20\% of their lines.
+three of the 24 packages had directives as over 20\% of their lines.
 
 \item We computed how often each macro was defined and expanded (see
 Section~\ref{sec:usage}).  In general we found that identifiers are in
@@ -209,7 +209,8 @@ Section~\ref{sec:categorization}).  We were particularly interested in
 determining the frequency of use of macros are difficult to convert to
 other language features, such as those that string together characters
 (as opposed to manipulating lexemes or syntactic units).  We found a
-very small number of macros of this type.
+very small number (under one third of a percent of all macro
+definitions) of macros of this type.
 \end{itemize}
 
 Overall, our analysis confirms that the C preprocessor is used in
@@ -361,7 +362,7 @@ package; this is accounted for by its aggressive use of the
 percentage (0.04\%) of \verb+#include+s.
 
 \begin{figure}
-\vspace{4.5in}
+\vspace{8in}
 \caption{Percentages of Total Directives\label{fig:total_directives}}
 \end{figure}
 
@@ -443,9 +444,10 @@ macros with 10 or fewer uses covers approximately 75-80\% of the cases.
 
 Figure~\ref{fig:define_usage} shows the percentage of defined macros
 that are used in C code, in Cpp code, in both, or in neither (i.e. no
-uses).  (Slightly more than half of the packages are included in this
-figure; the analysis requires a second pass that does not yet handle
-all packages.)
+uses).  No package expanded all of its defined macros; two did not
+expand as many as 40\% of the defined macros.  The dominant usage was
+in C code only; these uses don't, therefore, have any affect on
+conditional compilation (for example).  
 
 \begin{figure}
 \vspace{4.5in}
@@ -468,14 +470,6 @@ studying our analyses, we have refined (and continue to refine) the
 heuristics to do a better job of categorization.  A straightforward
 refinement that we are pursuing looks at the specific uses of macros
 to help in this categorization.
-
-\begin{figure}
-{\small
-  \setlength{\tabcolsep}{.25em}
-  \input{categories-tbl.tex}%
-}
-\caption{Percentage Categorization of Macros\label{fig:categorization}}
-\end{figure}
 
 In addition to classifying each macro as taking arguments or not, our tool
 identifies the following specific categories (and a few more rarely-used
@@ -557,9 +551,9 @@ classification heuristics failed
   names (\verb|#define FAT$C_VFC 3| for VMS compilation), tokens
   (\verb|#define| \verb|LIB_PATH| \verb|/usr/ucblib|), and constants (\verb|1ULL| for
   \verb|unsigned long long|).  Of the fewer than 1000 classification
-  failures in the 23 packages, over half appeared in gnuplot; gnuplot, cvs,
+  failures in the 24 packages, over half appeared in gnuplot; gnuplot, cvs,
   and grof accounted for over 75\% of the failures, many of which could be
-  eliminated by relaxing the parsing rules.  Only 5 packages had no
+  eliminated by relaxing the parsing rules.  Only five packages had no
   macro classification failures at all.
 
 
@@ -597,7 +591,31 @@ classification heuristics failed
 
 \end{description}
 
-[Fix: Probably need something here.]
+Figure~\ref{fig:categorization} shows the percentage of macros that
+fit into these categories for each package.  The null define and
+literal categories together account for just under 60\% of the total
+macro definitions; usefully converting these into C++ constructs
+should be simple.  The extremely small percentage (0.33\%) of
+``essential'' macros---those such as stringization and pasting that
+have no simple mapping into any programming language---is encouraging;
+these would have to be studied individually, but the overall cost
+may well be low.  Further analysis of the conditional compilation
+structure (in the style of Krone and Snelting~\cite{Krone94}) and of
+the macros with free variables (essentially achieving dynamic scoping)
+is needed to see which of the roughly 33\% of expression macros should
+be easy to handle in a conversion process.
+
+\begin{figure}
+{\small
+  \setlength{\tabcolsep}{.25em}
+  \input{categories-tbl.tex}%
+}
+\caption{Percentage Categorization of Macros\label{fig:categorization}}
+\end{figure}
+
+
+
+
 
 %In anticipation of the translator tool, the analysis tool infers
 %types, using techniques similar to those of Siff and Reps~\cite{Siff-fse96}
