@@ -290,7 +290,12 @@ sub do_include {
 #  print STDERR "do_include $file_as_given [$s_start:$s_end] -> ", simplify_path_name($file_as_resolved),";  $flags\n";
 #  print "Was working on: ", pcp3::Fname(), "\n";
   my $retval = $true;
-  $retval = $false if exists $already_included{$file_as_resolved};
+  if (exists $already_included{$file_as_resolved}) {
+    return false;
+  }
+  # Mark the file as included in the expansions list
+  my $fname = $file_as_resolved;
+  print EXPAND "$fname: FILE_IS_BEING_INCLUDED_GJB_MDE, -1, -1\n";
   $already_included{$file_as_resolved} = $true;
   return $retval;
 }
