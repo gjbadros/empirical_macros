@@ -1330,7 +1330,7 @@ The least frequently redefined macros are those classified as unknown
 symbol.  This is partially due to our method of coalescing multiple
 definitions:  macro definitions classified as unknown symbol are overriden
 by definitions with any other classification (see
-Figure~\fig{fig:category-lub}).  Our
+Figure~\ref{fig:category-lub}).  Our
 analysis included enough library header files to include some
 recognizable definition of most common macros.
 
@@ -1962,7 +1962,10 @@ dependences across file boundaries: if a macro controls whether a file is
   fewer).  For instance, 93\% of all lines are expansion-dependent on two
   or fewer macros, and 90\% of all lines are inclusion-dependent on 27 or
   fewer macros.\comment{This is read off the 90\% line.}  Lines higher in the graph indicate dependence on fewer macros.
-  \comment{Give the numbers for zero in the caption here.}}
+  \comment{Give the numbers for zero in the caption here:
+Incl 63.1
+exp 75.0
+any 59.6}}
 \label{fig:dep-byline}
 \end{figure}
 
@@ -2034,11 +2037,11 @@ macros.
   labeled percent of the lines in its package (but fewer than the next
   bar).  For instance, the .17 bar in the expansion dependence chart
   indicates that 286 macros each control between .17\% and .26\% of the
-  entire package which contains that macro.  The maximum falls in the last
-  bucket specified (i.e., the first bucket off the chart is the first empty
-  one).  The $\varepsilon$ bar represents a small non-zero value, so that
-  macros not controlling any lines are not conflated with macros
-  controlling very few lines.  A log scale is used for the x axis.}
+  entire package which contains that macro.  The maximum falls in the
+  penultimate bucket (i.e., the rightmost bucket is the first empty one).
+  The $\varepsilon$ bar represents a small non-zero value, so that macros
+  not controlling any lines are not conflated with macros controlling very
+  few lines.  A log scale is used for the x axis.}
 
 %% expansion is red; inclusion is blue
 \label{fig:dep-bymacro}
@@ -2270,6 +2273,22 @@ performed on macro uses rather than reporting problematic definitions.  The
 authors do not report on the effectiveness of the tool in practice or
 justify their tradeoffs between techniques that perform parsing and those
 that do not.
+
+\comment{\cite{GriswoldAM96}
+  Section 6.2 discusses macros at some length; the approach is to try parsing
+the body.  If the macro body parses as a C expression or statement
+(possibly sans a trailing semicolon), then leave it in the parse tree,
+along with putting it in a global data structure.  (The authors state that
+Scruple makes a similar suggestion for handling macros.)  Otherwise, first
+try parsing assuming that each macro argument (in turn) is a typedef; if
+those parses all fail, then expand the macro.  (A special version of cpp
+does this, and emits pragmas for type arguments and typedefs.)  The claim
+is that this works for the vast majority of macros.  This is somewhat
+plausible, but apparently no testing was done on programs that support
+multiple dialects/languages, etc.
+  It also discusses how well macros are coped with -- only 4% to
+9% of uses need to be expanded (or is that uses of 4% to 9% of macros need
+to be expanded?), but this apparently doesn't include header files.}
 
 A limited number of tools assist software engineers to
 understand code with containing Cpp directives.  Emacs's
