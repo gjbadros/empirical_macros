@@ -37,7 +37,7 @@ New options marked with *; options with ':', above, take an argument
   -F [file]  output the function information to file
   -L [file]  output the file's lines/functions information to file
   -C [file]  output categorizations to file
-  -P [file]  output dependence info to file
+  -P [file]  output dependence info to file; to suppress, delete .dstate file
   -p [file]  output property info to file
   -c [file]  output cond. compilation directive statistics to file
 * -l [file]  output macro lint information to file
@@ -156,7 +156,7 @@ use vars qw(@macros_c_number_uses
 	   $macros_c_most_defs_distinct
 	   @macros_c_most_defs_distinct_for);
 
-foreach my $i (0..$catLast) { 
+foreach my $i (0..$catLast) {
    $macros_c_most_uses_for[$i] = 0;
 }
 
@@ -1004,7 +1004,12 @@ sub output_freqdef ( )
 # Use to print out the PROP file's output
 sub prop_line_for {
   my ($label,$value,$total) = check_args(3,@_);
-  printf "%d${OFS}(%2.2f%%)${OFS}%s\n", $value, 100*$value/$total,$label;
+  my $percentage;
+  if ($total != 0)
+    { $percentage = 100*$value/$total; }
+  else
+    { $percentage = 0; }
+  printf "%d${OFS}(%2.2f%%)${OFS}%s\n", $value, $percentage, $label;
 }
 
 sub HistogramNumericFromList ( @ ) {
@@ -1203,7 +1208,11 @@ sub macro_name_lub_category( $ ) {
   foreach my $index (@{$macros{$name}}) {
     $result = category_lub( $result, $mdef_category[$index] );
   }
-  warn "Mismatch: $result vs. $mncategory{$name} for $name!" if ($result ne $mncategory{$name});
+  # As of Jan 26, 1999, this warning is raised for __STDC__ in flex and
+  # for __FILE__ in gs5.10; probably can be ignored.
+  # Newline is in case we are in the middle of printing a line of output
+  # when we encounter this problem.
+  warn "\nCategory mismatch for $name: $result ($categoryname[$result]) vs. $mncategory{$name} ($categoryname[$mncategory{$name}])" if ($result ne $mncategory{$name});
   return $result;
 }
 
@@ -1276,7 +1285,6 @@ sub OutputCountsHistogramCum ( $$@ ) {
 
 sub read_variables {
   my ($file) = check_args(1,@_);
-  # print STDERR "Reading variables from file $file\n";
   print STDERR "Reading variables from file $file\n";
   if (-f "$file.0") {
     my $i = 9;
