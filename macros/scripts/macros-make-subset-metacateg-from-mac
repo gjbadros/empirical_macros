@@ -31,16 +31,17 @@ BEGIN {
 # headings in latexify-meta-mark-table
   %categoryname = ("NoDefinitions" => $i++ );
 
-  make_mapping_for($i++,@mcat_FAILURE);
+  # The order here is the left->right order in the table
   make_mapping_for($i++,@mcat_NULL);
-  make_mapping_for($i++,@mcat_LITERAL);
+  make_mapping_for($i++,@mcat_LITERAL); # This is "Constant"
   make_mapping_for($i++,@mcat_NONLITERAL_EXPRESSION);
   make_mapping_for($i++,@mcat_STATEMENT);
   make_mapping_for($i++,@mcat_TYPE);
   make_mapping_for($i++,@mcat_SYNTAX);
-  make_mapping_for($i++,@mcat_NON_C_CODE);
   make_mapping_for($i++,@mcat_SYMBOL_UNKNOWN);
+  make_mapping_for($i++,@mcat_NON_C_CODE);
   make_mapping_for($i++,@mcat_OTHER);
+  make_mapping_for($i++,@mcat_FAILURE);
   $cCategoryNames = $i;
 
   sub make_mapping_for {
