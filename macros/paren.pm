@@ -125,7 +125,9 @@ sub find_close_paren ($;$)
       if (($next_close != -1)
 	  && (($next_open == -1) || ($next_close < $next_open)))
 	{ if (defined($brace_pos) && ($next_close > $brace_pos))
-	    { croak "Found brace before matching paren in $exp"; }
+	    { # croak "Found brace before matching paren in $exp";
+	      print STDERR "Found brace before matching paren in $exp\n";
+	      return $false; }
 	  $opens--;
 	  $pos = $next_close+1; }
       elsif (($next_open != -1)
