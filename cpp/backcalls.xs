@@ -84,7 +84,7 @@ SumCchExpansionOffset()
 ###% Return the number of macro expansions deep that we currently are in
 ###% the current expansion.  This returns 0 if we are not expanding a macro.
 ###% The number returned is the number of non-file buffers in the current
-###% stack of expansions (so it's not increased by nested #include-s).
+###% stack of expansions (so it is not increased by nested #include-s).
 int
 CbuffersBack()
         CODE:
